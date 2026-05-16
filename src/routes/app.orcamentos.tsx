@@ -32,8 +32,8 @@ const itemSchema = z.object({
   descricao: z.string().min(1, "Descrição obrigatória"),
   quantidade: z.coerce.number().min(0.001),
   unidade: z.string().default("un"),
-  custo_unit: z.coerce.number().min(0),
-  preco_unit: z.coerce.number().min(0),
+  preco_custo: z.coerce.number().min(0),
+  preco_unitario: z.coerce.number().min(0),
 });
 
 const schema = z.object({
@@ -54,14 +54,14 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { status: "rascunho", margem_pct: 35, itens: [{ descricao: "", quantidade: 1, unidade: "un", custo_unit: 0, preco_unit: 0 }] },
+    defaultValues: { status: "rascunho", margem_pct: 35, itens: [{ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 }] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "itens" });
   const itens = watch("itens");
   const margem = watch("margem_pct");
 
-  const subtotal = itens.reduce((s, i) => s + (Number(i.preco_unit) || 0) * (Number(i.quantidade) || 0), 0);
+  const subtotal = itens.reduce((s, i) => s + (Number(i.preco_unitario) || 0) * (Number(i.quantidade) || 0), 0);
   const total = subtotal;
 
   useEffect(() => {
@@ -86,8 +86,8 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     if (!mat) return;
     setValue(`itens.${idx}.descricao`, mat.nome);
     setValue(`itens.${idx}.unidade`, mat.unidade || "un");
-    setValue(`itens.${idx}.custo_unit`, mat.custo);
-    setValue(`itens.${idx}.preco_unit`, applyMargem(mat.custo));
+    setValue(`itens.${idx}.preco_custo`, mat.custo);
+    setValue(`itens.${idx}.preco_unitario`, applyMargem(mat.custo));
   };
 
   const askAI = async () => {
@@ -98,7 +98,7 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
       const system = `Você é um especialista em marcenaria planejada. O usuário vai descrever um móvel. 
 Responda APENAS com um JSON válido (sem markdown, sem explicações) no formato:
-{"itens":[{"descricao":"string","quantidade":number,"unidade":"string","custo_unit":number,"preco_unit":number}]}
+{"itens":[{"descricao":"string","quantidade":number,"unidade":"string","preco_custo":number,"preco_unitario":number}]}
 Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidades: chapa, par, un, metro.`;
 
       let text = "";
@@ -156,8 +156,8 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
         descricao: it.descricao,
         quantidade: it.quantidade,
         unidade: it.unidade,
-        custo_unit: it.custo_unit,
-        preco_unit: it.preco_unit,
+        preco_custo: it.preco_custo,
+        preco_unitario: it.preco_unitario,
       }));
       await supabase.from("orcamento_itens").insert(itensData);
 
@@ -244,7 +244,7 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
                 <Label>Itens do orçamento</Label>
                 <button
                   type="button"
-                  onClick={() => append({ descricao: "", quantidade: 1, unidade: "un", custo_unit: 0, preco_unit: 0 })}
+                  onClick={() => append({ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 })}
                   className="text-[12px] text-accent hover:text-accent/80 inline-flex items-center gap-1"
                 >
                   <Plus className="size-3" /> Adicionar item
@@ -267,7 +267,7 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
                   <tbody>
                     {fields.map((field, idx) => {
                       const linha = itens[idx];
-                      const tot = (Number(linha?.preco_unit)||0) * (Number(linha?.quantidade)||0);
+                      const tot = (Number(linha?.preco_unitario)||0) * (Number(linha?.quantidade)||0);
                       return (
                         <tr key={field.id} className="border-b border-border last:border-0">
                           <td className="px-3 py-1.5">
@@ -304,11 +304,11 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
                               className="w-full h-7 rounded border border-border bg-surface-2 px-1 text-[12px] outline-none" />
                           </td>
                           <td className="px-2 py-1.5">
-                            <input {...register(`itens.${idx}.custo_unit`)} type="number" step="0.01" min="0"
+                            <input {...register(`itens.${idx}.preco_custo`)} type="number" step="0.01" min="0"
                               className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
                           </td>
                           <td className="px-2 py-1.5">
-                            <input {...register(`itens.${idx}.preco_unit`)} type="number" step="0.01" min="0"
+                            <input {...register(`itens.${idx}.preco_unitario`)} type="number" step="0.01" min="0"
                               className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
                           </td>
                           <td className="px-2 py-1.5 text-right num text-muted-foreground">
