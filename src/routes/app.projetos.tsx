@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Calendar, User, Loader2, AlertCircle, X } from "lucide-react";
+import { Plus, Calendar, User, Loader2, X, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -140,6 +140,21 @@ function Projetos() {
     setProjetos((ps) => ps.map((p) => p.id === proj.id ? { ...p, status: newStatus } : p));
   };
 
+  const handleDelete = (proj: Projeto) => {
+    toast(`Excluir "${proj.nome}"?`, {
+      action: {
+        label: "Excluir",
+        onClick: async () => {
+          const { error } = await supabase.from("projetos").delete().eq("id", proj.id);
+          if (error) { toast.error(error.message); return; }
+          toast.success("Projeto excluído");
+          setProjetos((ps) => ps.filter((p) => p.id !== proj.id));
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -191,14 +206,20 @@ function Projetos() {
                           {format(new Date(proj.created_at), "d MMM", { locale: ptBR })}
                         </span>
                       </div>
-                      {/* Quick move buttons */}
-                      <div className="mt-2 flex gap-1 opacity-0 group-hover:opacity-100 transition flex-wrap">
+                      <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition flex-wrap">
                         {COLUNAS.filter((c) => c.key !== col.key).map((c) => (
                           <button key={c.key} onClick={() => moveStatus(proj, c.key)}
                             className="text-[10.5px] px-1.5 py-0.5 border border-border rounded hover:bg-secondary text-muted-foreground">
                             → {c.label}
                           </button>
                         ))}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(proj); }}
+                          className="ml-auto p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Excluir projeto"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
                     </Surface>
                   ))}

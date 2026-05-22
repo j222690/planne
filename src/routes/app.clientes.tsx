@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getClientes, getEmpresaAtual, upsertCliente } from "@/lib/db";
+import { getClientes, getEmpresaAtual, upsertCliente, updateCliente, deleteCliente } from "@/lib/db";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -35,17 +35,34 @@ type FormData = z.infer<typeof schema>;
 
 const origens = ["Indicação", "Instagram", "Google", "Facebook", "Direto", "Arquiteto parceiro", "Outro"];
 
-function ClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function ClienteModal({
+  onClose, onSaved, initialData,
+}: {
+  onClose: () => void; onSaved: () => void; initialData?: Cliente;
+}) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: initialData ? {
+      nome: initialData.nome,
+      email: initialData.email ?? "",
+      telefone: initialData.telefone ?? "",
+      cidade: initialData.cidade ?? "",
+      origem: initialData.origem ?? "",
+      observacoes: initialData.observacoes ?? "",
+    } : {},
   });
 
   const onSubmit = async (data: FormData) => {
     try {
-      const empresa = await getEmpresaAtual();
-      if (!empresa) throw new Error("Empresa não encontrada");
-      await upsertCliente(empresa.id, data);
-      toast.success("Cliente cadastrado com sucesso!");
+      if (initialData) {
+        await updateCliente(initialData.id, data);
+        toast.success("Cliente atualizado!");
+      } else {
+        const empresa = await getEmpresaAtual();
+        if (!empresa) throw new Error("Empresa não encontrada");
+        await upsertCliente((empresa as { id: string }).id, data);
+        toast.success("Cliente cadastrado com sucesso!");
+      }
       onSaved();
       onClose();
     } catch (e) {
@@ -65,7 +82,7 @@ function ClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h2 className="text-[15px] font-semibold">Novo cliente</h2>
+            <h2 className="text-[15px] font-semibold">{initialData ? "Editar cliente" : "Novo cliente"}</h2>
             <p className="text-[12px] text-muted-foreground mt-0.5">Preencha os dados do cliente</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -122,11 +139,69 @@ function ClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
               className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
             >
               {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              Salvar cliente
+              {initialData ? "Salvar alterações" : "Salvar cliente"}
             </button>
           </div>
         </form>
       </motion.div>
+    </div>
+  );
+}
+
+function RowMenu({ cliente, onEdit, onDeleted }: { cliente: Cliente; onEdit: () => void; onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const handleDelete = () => {
+    setOpen(false);
+    toast(`Excluir "${cliente.nome}"?`, {
+      action: {
+        label: "Excluir",
+        onClick: async () => {
+          try {
+            await deleteCliente(cliente.id);
+            toast.success("Cliente excluído");
+            onDeleted();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Erro ao excluir");
+          }
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="text-muted-foreground hover:text-foreground p-1 rounded"
+        aria-label="Mais opções"
+      >
+        <MoreHorizontal className="size-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[130px]">
+          <button
+            onClick={(e) => { e.stopPropagation(); setOpen(false); onEdit(); }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-[12.5px] hover:bg-secondary text-foreground"
+          >
+            <Pencil className="size-3.5" /> Editar
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-[12.5px] hover:bg-secondary text-destructive"
+          >
+            <Trash2 className="size-3.5" /> Excluir
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -137,13 +212,17 @@ function Clientes() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [editando, setEditando] = useState<Cliente | null>(null);
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
 
   const load = async () => {
     try {
       setLoading(true);
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
-      const data = await getClientes(empresa.id);
+      const eid = (empresa as { id: string }).id;
+      setEmpresaId(eid);
+      const data = await getClientes(eid);
       setClientes(data as Cliente[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao carregar");
@@ -165,7 +244,13 @@ function Clientes() {
   return (
     <>
       <AnimatePresence>
-        {showModal && <ClienteModal onClose={() => setShowModal(false)} onSaved={load} />}
+        {(showModal || editando) && (
+          <ClienteModal
+            onClose={() => { setShowModal(false); setEditando(null); }}
+            onSaved={load}
+            initialData={editando ?? undefined}
+          />
+        )}
       </AnimatePresence>
 
       <PageHeader
@@ -226,7 +311,7 @@ function Clientes() {
                     </td>
                   </tr>
                 ) : filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer">
+                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="size-8 rounded-md bg-secondary text-foreground/70 grid place-items-center text-[11.5px] font-semibold shrink-0">
@@ -250,9 +335,7 @@ function Clientes() {
                     <td className="px-5 py-3 text-muted-foreground">{c.cidade ?? "—"}</td>
                     <td className="px-5 py-3 text-muted-foreground">{c.origem ?? "—"}</td>
                     <td className="px-5 py-3 text-right">
-                      <button className="text-muted-foreground hover:text-foreground" aria-label="Mais opções">
-                        <MoreHorizontal className="size-4" />
-                      </button>
+                      <RowMenu cliente={c} onEdit={() => setEditando(c)} onDeleted={load} />
                     </td>
                   </tr>
                 ))}

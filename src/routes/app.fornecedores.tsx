@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Upload, Globe, Loader2, AlertCircle, X } from "lucide-react";
+import { Plus, Upload, Globe, Loader2, AlertCircle, X, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getEmpresaAtual } from "@/lib/db";
+import { getEmpresaAtual, updateFornecedor, deleteFornecedor } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,9 +19,10 @@ type Fornecedor = {
   modo_sync: string | null; ativo: boolean; created_at: string;
 };
 
-const SYNC_TONE: Record<string, "green"|"amber"|"blue"|"neutral"> = {
+const SYNC_TONE: Record<string, "green" | "amber" | "blue" | "neutral"> = {
   api: "green", planilha: "blue", pdf: "amber", manual: "neutral",
 };
+const SYNC_LABEL: Record<string, string> = { api: "API", planilha: "Planilha", pdf: "PDF · OCR", manual: "Manual" };
 
 const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
@@ -41,19 +42,39 @@ const FORNECEDORES_PADRAO = [
   { nome: "Guararapes", categoria: "Chapas", modo_sync: "planilha" },
 ];
 
-function NovoFornecedorModal({ onClose, onSaved, empresaId }: { onClose: () => void; onSaved: () => void; empresaId: string }) {
+function FornecedorModal({
+  onClose, onSaved, empresaId, initialData,
+}: {
+  onClose: () => void; onSaved: () => void; empresaId: string; initialData?: Fornecedor;
+}) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema), defaultValues: { modo_sync: "manual" },
+    resolver: zodResolver(schema),
+    defaultValues: initialData
+      ? { nome: initialData.nome, categoria: initialData.categoria ?? "", modo_sync: initialData.modo_sync ?? "manual" }
+      : { modo_sync: "manual" },
   });
 
   const onSubmit = async (data: FormData) => {
-    const { error } = await supabase.from("fornecedores").insert({
-      empresa_id: empresaId, nome: data.nome,
-      categoria: data.categoria || null, modo_sync: data.modo_sync,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Fornecedor adicionado!");
-    onSaved(); onClose();
+    try {
+      if (initialData) {
+        await updateFornecedor(initialData.id, {
+          nome: data.nome,
+          categoria: data.categoria || null,
+          modo_sync: data.modo_sync,
+        });
+        toast.success("Fornecedor atualizado!");
+      } else {
+        const { error } = await supabase.from("fornecedores").insert({
+          empresa_id: empresaId, nome: data.nome,
+          categoria: data.categoria || null, modo_sync: data.modo_sync,
+        });
+        if (error) throw new Error(error.message);
+        toast.success("Fornecedor adicionado!");
+      }
+      onSaved(); onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+    }
   };
 
   const importarPadrao = async () => {
@@ -74,17 +95,21 @@ function NovoFornecedorModal({ onClose, onSaved, empresaId }: { onClose: () => v
         className="relative w-full max-w-md bg-surface border border-border rounded-lg shadow-xl"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-[15px] font-semibold">Adicionar fornecedor</h2>
+          <h2 className="text-[15px] font-semibold">{initialData ? "Editar fornecedor" : "Adicionar fornecedor"}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
         </div>
         <div className="p-5 space-y-4">
-          <button onClick={importarPadrao}
-            className="w-full h-10 rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center justify-center gap-2">
-            <Upload className="size-4" /> Importar fornecedores padrão (Arauco, Berneck, Hettich…)
-          </button>
-          <div className="relative flex items-center gap-2 text-[11.5px] text-muted-foreground">
-            <div className="flex-1 border-t border-border" /> ou adicionar manualmente <div className="flex-1 border-t border-border" />
-          </div>
+          {!initialData && (
+            <>
+              <button onClick={importarPadrao}
+                className="w-full h-10 rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center justify-center gap-2">
+                <Upload className="size-4" /> Importar fornecedores padrão (Arauco, Berneck, Hettich…)
+              </button>
+              <div className="relative flex items-center gap-2 text-[11.5px] text-muted-foreground">
+                <div className="flex-1 border-t border-border" /> ou adicionar manualmente <div className="flex-1 border-t border-border" />
+              </div>
+            </>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div>
               <div className="text-[11.5px] text-muted-foreground mb-1">Nome *</div>
@@ -111,7 +136,7 @@ function NovoFornecedorModal({ onClose, onSaved, empresaId }: { onClose: () => v
               <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary">Cancelar</button>
               <button type="submit" disabled={isSubmitting}
                 className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
-                {isSubmitting && <Loader2 className="size-3.5 animate-spin" />} Salvar
+                {isSubmitting && <Loader2 className="size-3.5 animate-spin" />} {initialData ? "Salvar alterações" : "Salvar"}
               </button>
             </div>
           </form>
@@ -126,6 +151,7 @@ function Fornecedores() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editando, setEditando] = useState<Fornecedor | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
 
   const load = async () => {
@@ -133,9 +159,10 @@ function Fornecedores() {
       setLoading(true);
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
-      setEmpresaId(empresa.id);
+      const eid = (empresa as { id: string }).id;
+      setEmpresaId(eid);
       const { data, error } = await supabase.from("fornecedores")
-        .select("*").eq("empresa_id", empresa.id).order("nome");
+        .select("*").eq("empresa_id", eid).order("nome");
       if (error) throw error;
       setFornecedores(data ?? []);
     } catch (e) {
@@ -153,13 +180,34 @@ function Fornecedores() {
     setFornecedores((fs) => fs.map((x) => x.id === f.id ? { ...x, ativo: !f.ativo } : x));
   };
 
-  const SYNC_LABEL: Record<string, string> = { api: "API", planilha: "Planilha", pdf: "PDF · OCR", manual: "Manual" };
+  const handleDelete = (f: Fornecedor) => {
+    toast(`Excluir "${f.nome}"?`, {
+      action: {
+        label: "Excluir",
+        onClick: async () => {
+          try {
+            await deleteFornecedor(f.id);
+            toast.success("Fornecedor excluído");
+            load();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Erro ao excluir");
+          }
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
+  };
 
   return (
     <>
       <AnimatePresence>
-        {showModal && empresaId && (
-          <NovoFornecedorModal onClose={() => setShowModal(false)} onSaved={load} empresaId={empresaId} />
+        {(showModal || editando) && empresaId && (
+          <FornecedorModal
+            onClose={() => { setShowModal(false); setEditando(null); }}
+            onSaved={load}
+            empresaId={empresaId}
+            initialData={editando ?? undefined}
+          />
         )}
       </AnimatePresence>
 
@@ -214,9 +262,22 @@ function Fornecedores() {
                 <Pill tone={SYNC_TONE[f.modo_sync ?? "manual"] ?? "neutral"}>
                   {SYNC_LABEL[f.modo_sync ?? "manual"] ?? f.modo_sync}
                 </Pill>
-                <span className={`text-[11.5px] ${f.ativo ? "text-emerald-600" : "text-muted-foreground"}`}>
-                  {f.ativo ? "Ativo" : "Inativo"}
-                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditando(f)}
+                    className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    title="Editar"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(f)}
+                    className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors"
+                    title="Excluir"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </div>
             </Surface>
           ))}

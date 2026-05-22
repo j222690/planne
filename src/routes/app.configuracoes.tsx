@@ -85,8 +85,8 @@ function Configuracoes() {
           <div className="text-[12.5px] font-medium mb-1">Integrações de IA</div>
           <div className="text-[11.5px] text-muted-foreground mb-4">Configure as chaves no arquivo <code className="font-mono bg-secondary px-1 rounded">.env</code></div>
           {[
-            { n: "Groq (Llama 3.3 · primário)", key: "VITE_GROQ_API_KEY", color: "text-violet-500" },
-            { n: "OpenAI GPT-4o mini (fallback)", key: "VITE_OPENAI_API_KEY", color: "text-emerald-600" },
+            { n: "Groq (Llama 3.3 · primário)", key: "GROQ_API_KEY", color: "text-violet-500" },
+            { n: "OpenAI GPT-4o mini (fallback)", key: "OPENAI_API_KEY", color: "text-emerald-600" },
           ].map(({ n, key, color }) => (
             <div key={key} className="py-2.5 border-b border-border last:border-0">
               <div className={`text-[12.5px] font-medium ${color}`}>{n}</div>

@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, StatCard } from "@/components/planne/primitives";
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-import { useState, useEffect } from "react";
-import { getEmpresaAtual, getFinanceiroMeses } from "@/lib/db";
-import { Loader2, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { getEmpresaAtual, upsertLancamento, updateLancamento, deleteLancamento } from "@/lib/db";
+import { Loader2, Plus, X, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/app/financeiro")({
   component: Financeiro,
@@ -16,60 +20,274 @@ export const Route = createFileRoute("/app/financeiro")({
 type Lancamento = {
   id: string; tipo: string; descricao: string; valor: number;
   status: string; vencimento: string | null; pago_em: string | null;
-  categoria: string | null;
+  categoria: string | null; created_at: string;
 };
+
+const lancSchema = z.object({
+  tipo: z.enum(["entrada", "saida"]),
+  descricao: z.string().min(1, "Descrição obrigatória"),
+  valor: z.coerce.number().positive("Valor deve ser positivo"),
+  categoria: z.string().optional(),
+  status: z.string().default("pendente"),
+  vencimento: z.string().optional(),
+});
+type LancForm = z.infer<typeof lancSchema>;
+
+const CATEGORIAS_ENTRADA = ["Orçamento aprovado", "Adiantamento", "Medição", "Saldo final", "Outro"];
+const CATEGORIAS_SAIDA = ["Materiais", "Mão de obra", "Frete", "Ferramentas", "Overhead", "Impostos", "Outro"];
+
+function LancamentoModal({
+  onClose, onSaved, empresaId, initialData,
+}: {
+  onClose: () => void; onSaved: () => void; empresaId: string; initialData?: Lancamento;
+}) {
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<LancForm>({
+    resolver: zodResolver(lancSchema),
+    defaultValues: initialData ? {
+      tipo: initialData.tipo as "entrada" | "saida",
+      descricao: initialData.descricao,
+      valor: initialData.valor,
+      categoria: initialData.categoria ?? "",
+      status: initialData.status,
+      vencimento: initialData.vencimento ?? "",
+    } : { tipo: "entrada", status: "pendente" },
+  });
+  const tipo = watch("tipo");
+  const categorias = tipo === "entrada" ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
+
+  const onSubmit = async (data: LancForm) => {
+    try {
+      const payload = {
+        tipo: data.tipo,
+        descricao: data.descricao,
+        valor: data.valor,
+        categoria: data.categoria || null,
+        status: data.status,
+        vencimento: data.vencimento || null,
+      };
+      if (initialData) {
+        await updateLancamento(initialData.id, payload);
+        toast.success("Lançamento atualizado!");
+      } else {
+        await upsertLancamento(empresaId, payload);
+        toast.success("Lançamento registrado!");
+      }
+      onSaved();
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        className="relative w-full max-w-md bg-surface border border-border rounded-lg shadow-xl"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-[15px] font-semibold">{initialData ? "Editar lançamento" : "Novo lançamento"}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-3">
+          {/* Tipo */}
+          <div>
+            <div className="text-[11.5px] text-muted-foreground mb-1">Tipo *</div>
+            <div className="flex gap-2">
+              {(["entrada", "saida"] as const).map((t) => (
+                <label key={t} className="flex-1">
+                  <input type="radio" value={t} {...register("tipo")} className="sr-only" />
+                  <div className={`h-9 rounded-md border text-[13px] font-medium flex items-center justify-center cursor-pointer transition-colors ${
+                    tipo === t
+                      ? t === "entrada" ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-destructive bg-destructive/10 text-destructive"
+                      : "border-border text-muted-foreground hover:bg-secondary"
+                  }`}>
+                    {t === "entrada" ? "Entrada" : "Saída"}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Descrição */}
+          <div>
+            <div className="text-[11.5px] text-muted-foreground mb-1">Descrição *</div>
+            <input
+              {...register("descricao")}
+              placeholder={tipo === "entrada" ? "Ex: Adiantamento — Família Mendes" : "Ex: Chapas MDF Arauco"}
+              className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
+            />
+            {errors.descricao && <div className="text-[11px] text-destructive mt-1">{errors.descricao.message}</div>}
+          </div>
+
+          {/* Valor + Categoria */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Valor (R$) *</div>
+              <input
+                {...register("valor")}
+                type="number" step="0.01" min="0"
+                placeholder="0,00"
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
+              />
+              {errors.valor && <div className="text-[11px] text-destructive mt-1">{errors.valor.message}</div>}
+            </div>
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Categoria</div>
+              <select
+                {...register("categoria")}
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground"
+              >
+                <option value="">Selecione...</option>
+                {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Status + Vencimento */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Status</div>
+              <select
+                {...register("status")}
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground"
+              >
+                <option value="pendente">Pendente</option>
+                <option value="pago">Pago / Recebido</option>
+                <option value="atrasado">Atrasado</option>
+              </select>
+            </div>
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Vencimento</div>
+              <input
+                {...register("vencimento")}
+                type="date"
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-2 border-t border-border">
+            <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary">Cancelar</button>
+            <button type="submit" disabled={isSubmitting}
+              className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
+              {isSubmitting && <Loader2 className="size-3.5 animate-spin" />} {initialData ? "Salvar alterações" : "Registrar"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function LancRowMenu({ lanc, onEdit, onDeleted }: { lanc: Lancamento; onEdit: () => void; onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+  const handleDelete = () => {
+    setOpen(false);
+    toast(`Excluir "${lanc.descricao}"?`, {
+      action: {
+        label: "Excluir",
+        onClick: async () => {
+          try {
+            await deleteLancamento(lanc.id);
+            toast.success("Lançamento excluído");
+            onDeleted();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Erro");
+          }
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
+  };
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="opacity-0 group-hover:opacity-100 transition p-1 rounded text-muted-foreground hover:text-foreground"
+      >
+        <MoreHorizontal className="size-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[130px]">
+          <button onClick={(e) => { e.stopPropagation(); setOpen(false); onEdit(); }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-[12.5px] hover:bg-secondary text-foreground">
+            <Pencil className="size-3.5" /> Editar
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-[12.5px] hover:bg-secondary text-destructive">
+            <Trash2 className="size-3.5" /> Excluir
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Financeiro() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<{m:string;entrada:number;saida:number}[]>([]);
   const [totais, setTotais] = useState({ receita: 0, despesa: 0, aReceber: 0, aPagar: 0 });
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editando, setEditando] = useState<Lancamento | null>(null);
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const empresa = await getEmpresaAtual();
-        if (!empresa) return;
+  const load = async () => {
+    try {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) return;
+      const eid = (empresa as {id:string}).id;
+      setEmpresaId(eid);
 
-        const { data: lancs } = await supabase
-          .from("financeiro")
-          .select("*")
-          .eq("empresa_id", empresa.id)
-          .order("created_at", { ascending: false })
-          .limit(50);
+      const { data: lancs } = await supabase
+        .from("financeiro")
+        .select("*")
+        .eq("empresa_id", eid)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-        const all = lancs ?? [];
-        setLancamentos(all as Lancamento[]);
+      const all = (lancs ?? []) as Lancamento[];
+      setLancamentos(all);
 
-        // Totais
-        const receita   = all.filter(l => l.tipo === "entrada" && l.status === "pago").reduce((s,l) => s + Number(l.valor), 0);
-        const despesa   = all.filter(l => l.tipo === "saida"   && l.status === "pago").reduce((s,l) => s + Number(l.valor), 0);
-        const aReceber  = all.filter(l => l.tipo === "entrada" && l.status !== "pago").reduce((s,l) => s + Number(l.valor), 0);
-        const aPagar    = all.filter(l => l.tipo === "saida"   && l.status !== "pago").reduce((s,l) => s + Number(l.valor), 0);
-        setTotais({ receita, despesa, aReceber, aPagar });
+      const receita  = all.filter(l => l.tipo === "entrada" && l.status === "pago").reduce((s,l) => s + Number(l.valor), 0);
+      const despesa  = all.filter(l => l.tipo === "saida"   && l.status === "pago").reduce((s,l) => s + Number(l.valor), 0);
+      const aReceber = all.filter(l => l.tipo === "entrada" && l.status !== "pago").reduce((s,l) => s + Number(l.valor), 0);
+      const aPagar   = all.filter(l => l.tipo === "saida"   && l.status !== "pago").reduce((s,l) => s + Number(l.valor), 0);
+      setTotais({ receita, despesa, aReceber, aPagar });
 
-        // Gráfico 6 meses
-        const months = [];
-        for (let i = 5; i >= 0; i--) {
-          const ref   = subMonths(new Date(), i);
-          const start = startOfMonth(ref);
-          const end   = endOfMonth(ref);
-          const label = format(ref, "MMM", { locale: ptBR });
-          const mes   = all.filter(l => {
-            const d = new Date(l.created_at ?? l.vencimento ?? "");
-            return d >= start && d <= end;
-          });
-          const entrada = mes.filter(l => l.tipo === "entrada").reduce((s,l) => s + Number(l.valor), 0);
-          const saida   = mes.filter(l => l.tipo === "saida").reduce((s,l) => s + Number(l.valor), 0);
-          months.push({ m: label, entrada: Math.round(entrada/1000*10)/10, saida: Math.round(saida/1000*10)/10 });
-        }
-        setChartData(months);
-      } finally {
-        setLoading(false);
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+        const ref   = subMonths(new Date(), i);
+        const start = startOfMonth(ref);
+        const end   = endOfMonth(ref);
+        const label = format(ref, "MMM", { locale: ptBR });
+        const mes   = all.filter(l => {
+          const d = new Date(l.created_at ?? l.vencimento ?? "");
+          return d >= start && d <= end;
+        });
+        const entrada = mes.filter(l => l.tipo === "entrada").reduce((s,l) => s + Number(l.valor), 0);
+        const saida   = mes.filter(l => l.tipo === "saida").reduce((s,l) => s + Number(l.valor), 0);
+        months.push({ m: label, entrada: Math.round(entrada/1000*10)/10, saida: Math.round(saida/1000*10)/10 });
       }
+      setChartData(months);
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const fmt = (n: number) => "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -79,12 +297,26 @@ function Financeiro() {
 
   return (
     <>
+      <AnimatePresence>
+        {(showModal || editando) && empresaId && (
+          <LancamentoModal
+            onClose={() => { setShowModal(false); setEditando(null); }}
+            onSaved={load}
+            empresaId={empresaId}
+            initialData={editando ?? undefined}
+          />
+        )}
+      </AnimatePresence>
+
       <PageHeader
         eyebrow="Inteligência"
         title="Financeiro"
         description="Entradas, saídas e fluxo de caixa da operação."
         actions={
-          <button className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5">
+          <button
+            onClick={() => setShowModal(true)}
+            className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5"
+          >
             <Plus className="size-3.5" /> Lançamento
           </button>
         }
@@ -159,7 +391,6 @@ function Financeiro() {
             </Surface>
           </div>
 
-          {/* Tabela completa */}
           <Surface padded={false}>
             <div className="p-4 border-b border-border text-[12.5px] font-medium">Todos os lançamentos</div>
             <div className="overflow-x-auto">
@@ -171,15 +402,16 @@ function Financeiro() {
                     <th className="text-left font-medium px-5 py-2.5">Tipo</th>
                     <th className="text-right font-medium px-5 py-2.5">Valor</th>
                     <th className="text-left font-medium px-5 py-2.5">Status</th>
+                    <th className="px-3 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {lancamentos.length === 0 ? (
-                    <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground text-[13px]">
-                      Nenhum lançamento. Clique em "Lançamento" para adicionar.
+                    <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground text-[13px]">
+                      Nenhum lançamento. <button onClick={() => setShowModal(true)} className="text-foreground underline">Adicionar primeiro →</button>
                     </td></tr>
                   ) : lancamentos.map((l) => (
-                    <tr key={l.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                    <tr key={l.id} className="border-b border-border last:border-0 hover:bg-secondary/40 group">
                       <td className="px-5 py-3 font-medium">{l.descricao}</td>
                       <td className="px-5 py-3 text-muted-foreground">{l.categoria ?? "—"}</td>
                       <td className="px-5 py-3">
@@ -190,6 +422,9 @@ function Financeiro() {
                       <td className="px-5 py-3 text-right num">R$ {Number(l.valor).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
                       <td className="px-5 py-3">
                         <span className={`text-[12px] ${STATUS_COLOR[l.status] ?? "text-muted-foreground"}`}>{l.status}</span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <LancRowMenu lanc={l} onEdit={() => setEditando(l)} onDeleted={load} />
                       </td>
                     </tr>
                   ))}

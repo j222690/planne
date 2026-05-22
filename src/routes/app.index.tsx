@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader, StatCard, Surface, Pill } from "@/components/planne/primitives";
 import { useState, useEffect } from "react";
 import { Plus, Download, Loader2 } from "lucide-react";
-import { getEmpresaAtual, getDashboardStats, getOrcamentos } from "@/lib/db";
+import { getEmpresaAtual, getDashboardStats, getOrcamentos, getMargemSemanal } from "@/lib/db";
 import {
-  AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
+  ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
 } from "recharts";
 
 export const Route = createFileRoute("/app/")({
@@ -18,16 +18,10 @@ const STATUS_LABEL: Record<string, string> = {
   rascunho: "Rascunho", analise: "Em análise", aprovado: "Aprovado", recusado: "Recusado",
 };
 
-const marginData = [
-  { m: "Sem 1", real: 38, est: 34 },
-  { m: "Sem 2", real: 41, est: 36 },
-  { m: "Sem 3", real: 39, est: 35 },
-  { m: "Sem 4", real: 44, est: 38 },
-];
-
 function Dashboard() {
   const [stats, setStats] = useState<{faturamentoMes:number;margemMedia:number;projetosAtivos:number;emAnalise:number}|null>(null);
-  const [recentes, setRecentes] = useState<any[]>([]);
+  const [orcs, setOrcs] = useState<{id:string;status:string;total:number;created_at:string;clientes:{nome:string}|null;projetos:{nome:string}|null}[]>([]);
+  const [marginData, setMarginData] = useState<{m:string;real:number;est:number}[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +29,15 @@ function Dashboard() {
       try {
         const empresa = await getEmpresaAtual();
         if (!empresa) return;
-        const [s, orcs] = await Promise.all([
-          getDashboardStats(empresa.id),
-          getOrcamentos(empresa.id),
+        const eid = (empresa as {id:string}).id;
+        const [s, allOrcs, margem] = await Promise.all([
+          getDashboardStats(eid),
+          getOrcamentos(eid),
+          getMargemSemanal(eid),
         ]);
         setStats(s);
-        setRecentes(orcs.slice(0, 5));
+        setOrcs(allOrcs as typeof orcs);
+        setMarginData(margem);
       } finally {
         setLoading(false);
       }
@@ -87,30 +84,36 @@ function Dashboard() {
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Surface className="lg:col-span-2">
               <div className="text-[12.5px] font-medium">Margem real vs. estimada</div>
-              <div className="text-[11.5px] text-muted-foreground mb-3">Últimas 4 semanas</div>
+              <div className="text-[11.5px] text-muted-foreground mb-3">Últimas 4 semanas · % de margem</div>
               <div className="flex items-center gap-3 mb-3 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-accent inline-block"/>Real</span>
-                <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-muted-foreground/35 inline-block"/>Estimada</span>
+                <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-accent inline-block"/>Real (aprovados)</span>
+                <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-muted-foreground/35 inline-block"/>Estimada (todos)</span>
               </div>
-              <div className="h-[220px] -mx-2">
-                <ResponsiveContainer>
-                  <BarChart data={marginData} barCategoryGap={20}>
-                    <CartesianGrid stroke="var(--border)" vertical={false}/>
-                    <XAxis dataKey="m" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false}/>
-                    <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} width={28}/>
-                    <Tooltip contentStyle={{background:"var(--popover)",border:"1px solid var(--border)",borderRadius:6,fontSize:12}} cursor={{fill:"var(--secondary)"}}/>
-                    <Bar dataKey="real" name="Real" fill="var(--accent)" radius={[2,2,0,0]}/>
-                    <Bar dataKey="est" name="Estimada" fill="var(--muted-foreground)" opacity={0.35} radius={[2,2,0,0]}/>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {marginData.every((d) => d.real === 0 && d.est === 0) ? (
+                <div className="h-[220px] flex items-center justify-center text-[13px] text-muted-foreground">
+                  Nenhum orçamento nas últimas 4 semanas.
+                </div>
+              ) : (
+                <div className="h-[220px] -mx-2">
+                  <ResponsiveContainer>
+                    <BarChart data={marginData} barCategoryGap={20}>
+                      <CartesianGrid stroke="var(--border)" vertical={false}/>
+                      <XAxis dataKey="m" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false}/>
+                      <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} width={28}/>
+                      <Tooltip contentStyle={{background:"var(--popover)",border:"1px solid var(--border)",borderRadius:6,fontSize:12}} cursor={{fill:"var(--secondary)"}}/>
+                      <Bar dataKey="real" name="Real" fill="var(--accent)" radius={[2,2,0,0]}/>
+                      <Bar dataKey="est" name="Estimada" fill="var(--muted-foreground)" opacity={0.35} radius={[2,2,0,0]}/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </Surface>
 
             <Surface>
               <div className="text-[12.5px] font-medium mb-1">Status dos orçamentos</div>
-              <div className="text-[11.5px] text-muted-foreground mb-4">Distribuição atual</div>
+              <div className="text-[11.5px] text-muted-foreground mb-4">Distribuição total</div>
               {["rascunho","analise","aprovado","recusado"].map((s) => {
-                const count = recentes.filter((o:any) => o.status === s).length;
+                const count = orcs.filter((o) => o.status === s).length;
                 return (
                   <div key={s} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-[13px]">
                     <Pill tone={STATUS_TONE[s]}>{STATUS_LABEL[s]}</Pill>
@@ -137,12 +140,12 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentes.length === 0 ? (
+                  {orcs.length === 0 ? (
                     <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground text-[13px]">Nenhum orçamento ainda.</td></tr>
-                  ) : recentes.map((o:any) => (
+                  ) : orcs.slice(0, 5).map((o) => (
                     <tr key={o.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
                       <td className="px-5 py-3 font-medium">{o.clientes?.nome ?? "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{o.projetos?.nome ?? "—"}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{(o as {projetos:{nome:string}|null}).projetos?.nome ?? "—"}</td>
                       <td className="px-5 py-3 text-right num">{(o.total??0).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
                       <td className="px-5 py-3"><Pill tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]??o.status}</Pill></td>
                     </tr>

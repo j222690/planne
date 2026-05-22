@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Filter, Loader2, AlertCircle, X, Trash2, FileDown, Sparkles } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento } from "@/lib/db";
+import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus, deleteOrcamento } from "@/lib/db";
+import { askAI } from "@/lib/ai";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,7 +48,7 @@ type FormData = z.infer<typeof schema>;
 
 function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [clientes, setClientes] = useState<{id:string;nome:string}[]>([]);
-  const [materiais, setMateriais] = useState<{id:string;nome:string;custo:number;unidade:string}[]>([]);
+  const [materiais, setMateriais] = useState<{id:string;nome:string;preco_custo:number;unidade:string}[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [empresaId, setEmpresaId] = useState<string|null>(null);
@@ -68,10 +69,10 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     async function load() {
       const empresa = await getEmpresaAtual();
       if (!empresa) return;
-      setEmpresaId(empresa.id);
-      const [c, m] = await Promise.all([getClientes(empresa.id), getMateriais(empresa.id)]);
-      setClientes(c as any[]);
-      setMateriais(m as any[]);
+      setEmpresaId((empresa as {id:string}).id);
+      const [c, m] = await Promise.all([getClientes((empresa as {id:string}).id), getMateriais((empresa as {id:string}).id)]);
+      setClientes(c as {id:string;nome:string}[]);
+      setMateriais(m as {id:string;nome:string;preco_custo:number;unidade:string}[]);
     }
     load();
   }, []);
@@ -86,41 +87,25 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     if (!mat) return;
     setValue(`itens.${idx}.descricao`, mat.nome);
     setValue(`itens.${idx}.unidade`, mat.unidade || "un");
-    setValue(`itens.${idx}.preco_custo`, mat.custo);
-    setValue(`itens.${idx}.preco_unitario`, applyMargem(mat.custo));
+    setValue(`itens.${idx}.preco_custo`, mat.preco_custo);
+    setValue(`itens.${idx}.preco_unitario`, applyMargem(mat.preco_custo));
   };
 
-  const askAI = async () => {
+  const handleAIGenerate = async () => {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
     try {
-      const groqKey = import.meta.env.VITE_GROQ_API_KEY;
-      const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
-      const system = `Você é um especialista em marcenaria planejada. O usuário vai descrever um móvel. 
+      const system = `Você é um especialista em marcenaria planejada. O usuário vai descrever um móvel.
 Responda APENAS com um JSON válido (sem markdown, sem explicações) no formato:
 {"itens":[{"descricao":"string","quantidade":number,"unidade":"string","preco_custo":number,"preco_unitario":number}]}
 Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidades: chapa, par, un, metro.`;
 
-      let text = "";
-      if (groqKey) {
-        const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 800, temperature: 0.2,
-            messages: [{ role: "system", content: system }, { role: "user", content: aiPrompt }] }),
-        });
-        const d = await r.json();
-        text = d.choices?.[0]?.message?.content ?? "";
-      } else if (openaiKey) {
-        const r = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
-          body: JSON.stringify({ model: "gpt-4o-mini", max_tokens: 800, temperature: 0.2,
-            messages: [{ role: "system", content: system }, { role: "user", content: aiPrompt }] }),
-        });
-        const d = await r.json();
-        text = d.choices?.[0]?.message?.content ?? "";
-      }
+      const { text } = await askAI({
+        system,
+        messages: [{ role: "user", content: aiPrompt }],
+        max_tokens: 800,
+        temperature: 0.2,
+      });
 
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
@@ -129,8 +114,8 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
         toast.success(`${parsed.itens.length} itens gerados pela IA!`);
         setAiPrompt("");
       }
-    } catch (e) {
-      toast.error("Erro ao gerar itens com IA. Verifique as chaves de API.");
+    } catch {
+      toast.error("Erro ao gerar itens com IA. Verifique as chaves de API no .env.local.");
     } finally {
       setAiLoading(false);
     }
@@ -139,7 +124,7 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
   const onSubmit = async (data: FormData) => {
     if (!empresaId) return;
     try {
-      const numero = `ORC-${Date.now().toString().slice(-5)}`;
+      // numero gerado automaticamente pelo trigger do banco
       const orc = await upsertOrcamento(empresaId, {
         cliente_id: data.cliente_id,
         status: data.status,
@@ -147,10 +132,8 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
         observacoes: data.observacoes,
         subtotal,
         total,
-        numero,
       });
 
-      // Insert itens
       const itensData = data.itens.map((it) => ({
         orcamento_id: orc.id,
         descricao: it.descricao,
@@ -161,7 +144,7 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
       }));
       await supabase.from("orcamento_itens").insert(itensData);
 
-      toast.success(`Orçamento ${numero} criado!`);
+      toast.success(`Orçamento ${orc.numero} criado!`);
       onSaved();
       onClose();
     } catch (e) {
@@ -198,13 +181,13 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
                 <input
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), askAI())}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleAIGenerate())}
                   placeholder='Ex: "Cozinha em L 3,8m × 2,6m MDF branco com torre de forno"'
                   className="flex-1 h-8 rounded-md border border-border bg-surface px-2.5 text-[13px] outline-none focus:border-accent"
                 />
                 <button
                   type="button"
-                  onClick={askAI}
+                  onClick={handleAIGenerate}
                   disabled={aiLoading || !aiPrompt.trim()}
                   className="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
@@ -390,13 +373,14 @@ function Orcamentos() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [showModal, setShowModal] = useState(false);
+  const [detalhe, setDetalhe] = useState<Orc | null>(null);
 
   const load = async () => {
     try {
       setLoading(true);
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
-      const data = await getOrcamentos(empresa.id);
+      const data = await getOrcamentos((empresa as {id:string}).id);
       setOrcs(data as Orc[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro");
@@ -416,14 +400,11 @@ function Orcamentos() {
 
   const totalPipeline = orcs.filter((o) => ["analise","aprovado"].includes(o.status)).reduce((s,o) => s+(o.total??0), 0);
 
-  const exportPDF = async (orc: Orc) => {
-    toast.info("Gerando PDF... (integração com PDF será configurada em breve)");
-  };
-
   return (
     <>
       <AnimatePresence>
         {showModal && <OrcamentoModal onClose={() => setShowModal(false)} onSaved={load} />}
+        {detalhe && <OrcDetalheModal orc={detalhe} onClose={() => setDetalhe(null)} onChanged={load} />}
       </AnimatePresence>
 
       <PageHeader
@@ -448,8 +429,8 @@ function Orcamentos() {
       <div className="grid md:grid-cols-4 gap-3 mb-5">
         {[
           { l: "Em análise", v: orcs.filter((o) => o.status === "analise").length },
-          { l: "Aprovados", v: orcs.filter((o) => o.status === "aprovado").length },
-          { l: "Total", v: orcs.length },
+          { l: "Aprovados",  v: orcs.filter((o) => o.status === "aprovado").length },
+          { l: "Total",      v: orcs.length },
           { l: "Pipeline (R$)", v: "R$ " + totalPipeline.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) },
         ].map((s) => (
           <Surface key={s.l} padded={false} className="p-4">
@@ -509,16 +490,18 @@ function Orcamentos() {
                     </td>
                   </tr>
                 ) : filtered.map((o) => (
-                  <tr key={o.id} className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer group">
+                  <tr
+                    key={o.id}
+                    onClick={() => setDetalhe(o)}
+                    className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer group"
+                  >
                     <td className="px-5 py-3 font-mono text-[12px] text-muted-foreground">{o.numero ?? "—"}</td>
                     <td className="px-5 py-3 font-medium">{o.clientes?.nome ?? "—"}</td>
                     <td className="px-5 py-3 text-right num">{(o.total??0).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
                     <td className="px-5 py-3"><Pill tone={STATUS_TONE[o.status]??'neutral'}>{STATUS_LABEL[o.status]??o.status}</Pill></td>
                     <td className="px-5 py-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"})}</td>
                     <td className="px-5 py-3 text-right">
-                      <button onClick={() => exportPDF(o)} className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-foreground" aria-label="Exportar PDF">
-                        <FileDown className="size-4" />
-                      </button>
+                      <ChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition" />
                     </td>
                   </tr>
                 ))}
@@ -528,6 +511,170 @@ function Orcamentos() {
         )}
       </Surface>
     </>
+  );
+}
+
+type OrcItem = {
+  id: string; descricao: string; quantidade: number; unidade: string;
+  preco_custo: number; preco_unitario: number;
+};
+
+const STATUS_NEXT: Record<string, string[]> = {
+  rascunho: ["analise"],
+  analise: ["aprovado", "recusado"],
+  aprovado: [],
+  recusado: ["rascunho"],
+};
+
+function OrcDetalheModal({ orc, onClose, onChanged }: { orc: Orc; onClose: () => void; onChanged: () => void }) {
+  const [itens, setItens] = useState<OrcItem[]>([]);
+  const [loadingItens, setLoadingItens] = useState(true);
+  const [changingStatus, setChangingStatus] = useState(false);
+
+  useEffect(() => {
+    getOrcamentoItens(orc.id)
+      .then((data) => setItens(data as OrcItem[]))
+      .finally(() => setLoadingItens(false));
+  }, [orc.id]);
+
+  const handleStatus = async (newStatus: string) => {
+    setChangingStatus(true);
+    try {
+      await updateOrcamentoStatus(orc.id, newStatus);
+      toast.success(`Status atualizado para ${STATUS_LABEL[newStatus]}`);
+      onChanged();
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar status");
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
+  const handleDelete = () => {
+    toast(`Excluir orçamento ${orc.numero ?? ""}?`, {
+      action: {
+        label: "Excluir",
+        onClick: async () => {
+          try {
+            await deleteOrcamento(orc.id);
+            toast.success("Orçamento excluído");
+            onChanged();
+            onClose();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Erro ao excluir");
+          }
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
+  };
+
+  const nextStatuses = STATUS_NEXT[orc.status] ?? [];
+  const totalItens = itens.reduce((s, i) => s + Number(i.preco_unitario) * Number(i.quantidade), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        className="relative w-full max-w-xl bg-surface border border-border rounded-lg shadow-xl max-h-[85vh] flex flex-col"
+      >
+        <div className="flex items-start justify-between px-5 py-4 border-b border-border shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[12px] text-muted-foreground">{orc.numero ?? "—"}</span>
+              <Pill tone={STATUS_TONE[orc.status] ?? "neutral"}>{STATUS_LABEL[orc.status] ?? orc.status}</Pill>
+            </div>
+            <div className="text-[15px] font-semibold mt-0.5">{orc.clientes?.nome ?? "—"}</div>
+            <div className="text-[12px] text-muted-foreground">{new Date(orc.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground mt-1"><X className="size-4" /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Itens */}
+          <div>
+            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Itens do orçamento</div>
+            {loadingItens ? (
+              <div className="flex items-center gap-2 text-[13px] text-muted-foreground py-4">
+                <Loader2 className="size-4 animate-spin" /> Carregando itens...
+              </div>
+            ) : itens.length === 0 ? (
+              <div className="text-[13px] text-muted-foreground py-4 text-center">Nenhum item registrado.</div>
+            ) : (
+              <table className="w-full text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider">
+                    <th className="text-left py-1.5">Descrição</th>
+                    <th className="text-right py-1.5 pr-2">Qtd</th>
+                    <th className="text-right py-1.5">Custo unit.</th>
+                    <th className="text-right py-1.5">Preço unit.</th>
+                    <th className="text-right py-1.5">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itens.map((it) => (
+                    <tr key={it.id} className="border-b border-border last:border-0">
+                      <td className="py-2 pr-2">{it.descricao}</td>
+                      <td className="py-2 pr-2 text-right num text-muted-foreground">{it.quantidade} {it.unidade}</td>
+                      <td className="py-2 text-right num text-muted-foreground">{Number(it.preco_custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 text-right num">{Number(it.preco_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 text-right num font-medium">{(Number(it.preco_unitario) * Number(it.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={4} className="pt-3 text-right text-muted-foreground text-[12px]">Total</td>
+                    <td className="pt-3 text-right num font-semibold">R$ {totalItens.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+
+          {/* Mudança de status */}
+          {nextStatuses.length > 0 && (
+            <div>
+              <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Alterar status</div>
+              <div className="flex gap-2 flex-wrap">
+                {nextStatuses.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleStatus(s)}
+                    disabled={changingStatus}
+                    className={`h-8 px-3 rounded-md border text-[12.5px] font-medium transition-colors disabled:opacity-60 ${
+                      s === "aprovado" ? "border-emerald-500 text-emerald-600 hover:bg-emerald-500/10"
+                      : s === "recusado" ? "border-destructive text-destructive hover:bg-destructive/10"
+                      : "border-amber-500 text-amber-600 hover:bg-amber-500/10"
+                    }`}
+                  >
+                    {changingStatus ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                    {STATUS_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-border flex items-center justify-between shrink-0">
+          <button
+            onClick={handleDelete}
+            className="flex items-center gap-1.5 text-[12.5px] text-destructive hover:opacity-80"
+          >
+            <Trash2 className="size-3.5" /> Excluir orçamento
+          </button>
+          <button onClick={onClose} className="h-8 px-4 rounded-md border border-border text-[12.5px] hover:bg-secondary">
+            Fechar
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
