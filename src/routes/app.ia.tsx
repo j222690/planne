@@ -1,46 +1,73 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Sparkles, Send, Loader2, Zap, Bot } from "lucide-react";
+import {
+  Sparkles, Send, Loader2, Zap, Bot,
+  Users, FileText, Wallet, Folder, UserPlus,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { askAI, type AIMessage } from "@/lib/ai";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/ia")({
   component: IA,
 });
 
 const examples = [
-  "Guarda-roupa casal 2,40m com 6 portas, MDF amadeirado",
-  "Cozinha em L 3,80m × 2,60m com torre de forno",
-  "Closet master 4m com gaveteiros internos",
-  "Estante TV suspensa 3,2m com nichos e iluminação LED",
+  "Quais clientes temos cadastrados em Chapecó?",
+  "Mostre os orçamentos aprovados",
+  "Qual é o resumo financeiro do mês?",
+  "Quantos projetos estão em andamento?",
+  "Cadastra um novo cliente: João Silva, (49) 99999-1234, Instagram",
 ];
 
-const SYSTEM = `Você é o Assistente Planne, especialista em marcenaria planejada brasileira.
-Quando o usuário descrever um móvel, responda com:
-1. Análise estrutural (módulos, portas, organização interna)
-2. Lista de materiais estimada com quantidades e custos aproximados em R$
-3. Custo total, margem recomendada (%) e preço de venda sugerido
+const TOOL_LABELS: Record<string, { label: string; Icon: React.ElementType }> = {
+  buscar_clientes:    { label: "Buscando clientes",    Icon: Users },
+  listar_orcamentos:  { label: "Listando orçamentos",  Icon: FileText },
+  resumo_financeiro:  { label: "Consultando financeiro", Icon: Wallet },
+  listar_projetos:    { label: "Listando projetos",    Icon: Folder },
+  criar_cliente:      { label: "Criando cliente",      Icon: UserPlus },
+};
 
-Use valores de mercado para Chapecó/SC em 2025. Responda em português, de forma concisa e estruturada.`;
+interface ToolCallSummary {
+  name: string;
+  result: unknown;
+}
 
 interface Msg {
   role: "user" | "assistant";
   content: string;
   loading?: boolean;
   provider?: "groq" | "openai";
+  toolCalls?: ToolCallSummary[];
+}
+
+function ToolCallBadge({ tc }: { tc: ToolCallSummary }) {
+  const meta = TOOL_LABELS[tc.name] ?? { label: tc.name, Icon: Sparkles };
+  const { Icon } = meta;
+  const hasError = tc.result && typeof tc.result === "object" && "erro" in (tc.result as object);
+  return (
+    <div className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border ${
+      hasError
+        ? "bg-destructive/8 text-destructive border-destructive/20"
+        : "bg-violet-500/8 text-violet-500 border-violet-500/20"
+    }`}>
+      <Icon className="size-3" />
+      <span>{meta.label}</span>
+      {hasError && <span className="text-destructive/70">· erro</span>}
+    </div>
+  );
 }
 
 function ProviderBadge({ provider }: { provider?: "groq" | "openai" }) {
   if (!provider) return null;
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm font-medium border ml-2 ${
+    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm font-medium border ${
       provider === "groq"
         ? "bg-violet-500/8 text-violet-500 border-violet-500/20"
         : "bg-emerald-500/8 text-emerald-600 border-emerald-500/20"
     }`}>
       {provider === "groq" ? <Zap className="size-2.5" /> : <Bot className="size-2.5" />}
-      {provider === "groq" ? "Groq" : "GPT-4o mini"}
+      {provider === "groq" ? "Groq · Llama 3.3" : "GPT-4o mini"}
     </span>
   );
 }
@@ -51,7 +78,7 @@ function IA() {
     {
       role: "assistant",
       content:
-        "Olá! Descreva um móvel em linguagem natural — vou interpretar as medidas, sugerir a estrutura, calcular chapas e ferragens, estimar o desperdício e propor a margem ideal.\n\nUso Groq (Llama 3.3) para velocidade e GPT-4o mini como fallback automático.",
+        "Olá! Sou o Grat, seu assistente do Planne.\n\nPosso buscar clientes, listar orçamentos, verificar o financeiro, listar projetos e cadastrar novos clientes — tudo diretamente no seu banco de dados.\n\nComo posso ajudar?",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -69,29 +96,41 @@ function IA() {
     setInput("");
     setLoading(true);
 
-    // Monta histórico no formato AIMessage (sem o placeholder)
-    const history: AIMessage[] = [...messages, userMsg]
+    const { data: { session } } = await supabase.auth.getSession();
+    const userToken = session?.access_token ?? "";
+
+    const history = [...messages, userMsg]
       .filter((m) => !m.loading)
       .map((m) => ({ role: m.role, content: m.content }));
 
     try {
-      const { text: reply, provider } = await askAI({
-        system: SYSTEM,
-        messages: history,
-        max_tokens: 1024,
-        temperature: 0.3,
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, userToken }),
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erro desconhecido" })) as { error: string };
+        throw new Error(err.error ?? "Erro no agente");
+      }
+
+      const { text: reply, toolCalls, provider } = await res.json() as {
+        text: string;
+        toolCalls: ToolCallSummary[];
+        provider: "groq" | "openai";
+      };
 
       setMessages((m) => [
         ...m.slice(0, -1),
-        { role: "assistant", content: reply, provider },
+        { role: "assistant", content: reply, provider, toolCalls },
       ]);
     } catch (err) {
       setMessages((m) => [
         ...m.slice(0, -1),
         {
           role: "assistant",
-          content: `Não consegui gerar uma resposta. Verifique se as chaves VITE_GROQ_API_KEY e VITE_OPENAI_API_KEY estão no seu arquivo .env.\n\nDetalhe: ${err instanceof Error ? err.message : String(err)}`,
+          content: `Não consegui processar sua solicitação.\n\nDetalhe: ${err instanceof Error ? err.message : String(err)}`,
         },
       ]);
     } finally {
@@ -103,43 +142,55 @@ function IA() {
     <>
       <PageHeader
         eyebrow="Inteligência"
-        title="Assistente Planne"
-        description="Pré-projetos, listas de materiais e cálculos — em linguagem natural."
+        title="Grat — Assistente Planne"
+        description="Consulte dados, cadastre clientes e gerencie seu negócio em linguagem natural."
       />
 
       <Surface padded={false} className="flex flex-col h-[calc(100vh-220px)] min-h-[520px]">
         <div className="flex-1 overflow-auto p-6 space-y-5">
-          {messages.map((m, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex gap-3"
-            >
-              <div
-                className={`size-7 shrink-0 rounded-md grid place-items-center text-[11px] font-semibold ${
-                  m.role === "user"
-                    ? "bg-foreground text-background"
-                    : "bg-accent/10 text-accent border border-accent/20"
-                }`}
+          <AnimatePresence initial={false}>
+            {messages.map((m, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex gap-3"
               >
-                {m.role === "user" ? "EU" : <Sparkles className="size-3.5" />}
-              </div>
-              <div className="flex-1 min-w-0 pt-0.5">
-                {m.loading ? (
-                  <Loader2 className="size-4 animate-spin text-muted-foreground mt-1" />
-                ) : (
-                  <>
-                    <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
-                    {m.role === "assistant" && i > 0 && (
-                      <ProviderBadge provider={m.provider} />
-                    )}
-                  </>
-                )}
-              </div>
-            </motion.div>
-          ))}
+                <div
+                  className={`size-7 shrink-0 rounded-md grid place-items-center text-[11px] font-semibold ${
+                    m.role === "user"
+                      ? "bg-foreground text-background"
+                      : "bg-accent/10 text-accent border border-accent/20"
+                  }`}
+                >
+                  {m.role === "user" ? "EU" : <Sparkles className="size-3.5" />}
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5 space-y-2">
+                  {m.loading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground text-[13px]">
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>Grat está pensando…</span>
+                    </div>
+                  ) : (
+                    <>
+                      {m.toolCalls && m.toolCalls.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.toolCalls.map((tc, j) => (
+                            <ToolCallBadge key={j} tc={tc} />
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                      {m.role === "assistant" && i > 0 && (
+                        <ProviderBadge provider={m.provider} />
+                      )}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
           <div ref={bottomRef} />
         </div>
 
@@ -168,7 +219,7 @@ function IA() {
                   send(input);
                 }
               }}
-              placeholder="Descreva o móvel ou o ambiente… (Enter para enviar)"
+              placeholder="Pergunte sobre clientes, orçamentos, financeiro… (Enter para enviar)"
               rows={1}
               className="flex-1 bg-transparent resize-none outline-none text-[14px] py-1.5 placeholder:text-muted-foreground"
             />
@@ -187,7 +238,7 @@ function IA() {
             </button>
           </div>
           <div className="mt-1.5 text-[11px] text-muted-foreground px-1">
-            Primário: <span className="text-violet-500">Groq · Llama 3.3 70b</span> — Fallback: <span className="text-emerald-600">GPT-4o mini</span>
+            Grat usa <span className="text-violet-500">Groq · Llama 3.3 70b</span> com acesso ao banco de dados da sua empresa
           </div>
         </div>
       </Surface>

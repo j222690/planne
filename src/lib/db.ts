@@ -235,6 +235,7 @@ export async function updateOrcamentoStatus(id: string, status: string) {
   if (error) throw error;
 }
 export async function deleteOrcamento(id: string) {
+  await supabase.from("orcamento_moveis").delete().eq("orcamento_id", id);
   await supabase.from("orcamento_itens").delete().eq("orcamento_id", id);
   const { error } = await supabase.from("orcamentos").delete().eq("id", id);
   if (error) throw error;
