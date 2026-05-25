@@ -291,6 +291,27 @@ function IAProjetoPage() {
 
   const gerarRender = useCallback(async () => {
     if (!wizard?.analise) return;
+
+    // Verifica créditos de render
+    try {
+      const empresa = await getEmpresaAtual();
+      if (empresa) {
+        const params = (empresa as { parametros?: Record<string, number> }).parametros ?? {};
+        const creditos = params.creditos_render ?? 10;
+        if (creditos <= 0) {
+          toast.error("Sem créditos de render. Recarregue em Configurações.");
+          return;
+        }
+        // Deduz 1 crédito
+        await supabase.from("empresas").update({
+          parametros: { ...params, creditos_render: creditos - 1 },
+        }).eq("id", (empresa as { id: string }).id);
+        toast.info(`Crédito utilizado. Restam ${creditos - 1} créditos de render.`);
+      }
+    } catch {
+      // não bloqueia o render por falha de crédito
+    }
+
     update({ renderLoading: true, error: null });
 
     try {

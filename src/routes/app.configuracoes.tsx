@@ -65,6 +65,8 @@ function Configuracoes() {
     if (!file || !empresa) return;
     setLogoUploading(true);
     try {
+      // Cria o bucket caso não exista
+      await supabase.storage.createBucket("logos", { public: true }).catch(() => {});
       const ext = file.name.split(".").pop() ?? "png";
       const path = `${empresa.id}/logo.${ext}`;
       const { error } = await supabase.storage.from("logos").upload(path, file, { upsert: true });

@@ -4,7 +4,8 @@ import {
   LayoutDashboard, FileText, Users, Boxes, Truck, Sparkles,
   Hammer, Wallet, Settings, Search, Bell, Command, ChevronsUpDown,
   Folder, LogOut, Menu, X, Sun, Moon, UserSearch, Wand2,
-  CalendarDays, GitBranch, BarChart3,
+  CalendarDays, GitBranch, BarChart3, History,
+  CheckCheck, FileText as FileText2, UserPlus, FolderPlus,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const nav = [
     { to: "/app/materiais", label: "Central de materiais", icon: Boxes },
     { to: "/app/fornecedores", label: "Fornecedores", icon: Truck },
     { to: "/app/producao", label: "Produção", icon: Hammer },
+    { to: "/app/historico-precos", label: "Histórico de preços", icon: History },
   ]},
   { group: "Inteligência", items: [
     { to: "/app/ia-projetos", label: "IA Projetos", icon: Wand2 },
@@ -195,6 +197,95 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [searchQ, doSearch]);
 
+  // ── Notificações ──────────────────────────────────────────────────────────
+  type Notif = { id: string; tipo: "orcamento"|"cliente"|"projeto"; titulo: string; sub: string; data: Date; unread: boolean };
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const fetchNotifs = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data: membros } = await supabase.from("empresa_membros").select("empresa_id").eq("user_id", session.user.id).single();
+    if (!membros) return;
+    const eid = membros.empresa_id;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 14);
+
+    const [{ data: orcs }, { data: clientes }, { data: projs }] = await Promise.all([
+      supabase.from("orcamentos").select("id,numero,status,created_at,clientes(nome)").eq("empresa_id", eid).gte("created_at", cutoff.toISOString()).order("created_at", { ascending: false }).limit(8),
+      supabase.from("clientes").select("id,nome,created_at").eq("empresa_id", eid).gte("created_at", cutoff.toISOString()).order("created_at", { ascending: false }).limit(5),
+      supabase.from("projetos").select("id,nome,status,created_at").eq("empresa_id", eid).gte("created_at", cutoff.toISOString()).order("created_at", { ascending: false }).limit(5),
+    ]);
+
+    const lastSeen = new Date(localStorage.getItem("planne_notif_seen") || "2000-01-01");
+    const items: Notif[] = [
+      ...(orcs ?? []).map((o: { id: string; numero: string | null; status: string; created_at: string; clientes: { nome: string } | null }) => ({
+        id: "orc-" + o.id,
+        tipo: "orcamento" as const,
+        titulo: `Orçamento ${o.numero ?? ""}${o.status === "aprovado" ? " aprovado" : o.status === "recusado" ? " recusado" : " criado"}`,
+        sub: (o.clientes as { nome: string } | null)?.nome ?? "",
+        data: new Date(o.created_at),
+        unread: new Date(o.created_at) > lastSeen,
+      })),
+      ...(clientes ?? []).map((c: { id: string; nome: string; created_at: string }) => ({
+        id: "cli-" + c.id,
+        tipo: "cliente" as const,
+        titulo: `Novo cliente: ${c.nome}`,
+        sub: "",
+        data: new Date(c.created_at),
+        unread: new Date(c.created_at) > lastSeen,
+      })),
+      ...(projs ?? []).map((p: { id: string; nome: string; status: string; created_at: string }) => ({
+        id: "proj-" + p.id,
+        tipo: "projeto" as const,
+        titulo: `Projeto: ${p.nome}`,
+        sub: p.status,
+        data: new Date(p.created_at),
+        unread: new Date(p.created_at) > lastSeen,
+      })),
+    ].sort((a, b) => b.data.getTime() - a.data.getTime()).slice(0, 15);
+
+    setNotifs(items);
+    setUnreadCount(items.filter((n) => n.unread).length);
+  }, []);
+
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
+
+  const markAllRead = () => {
+    localStorage.setItem("planne_notif_seen", new Date().toISOString());
+    setUnreadCount(0);
+    setNotifs((prev) => prev.map((n) => ({ ...n, unread: false })));
+  };
+
+  const openNotifs = () => {
+    setNotifOpen((v) => !v);
+    setSearchOpen(false);
+  };
+
+  // fecha ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const notifIcon = (tipo: Notif["tipo"]) => {
+    if (tipo === "orcamento") return <FileText2 className="size-3.5 text-blue-500" />;
+    if (tipo === "cliente") return <UserPlus className="size-3.5 text-emerald-500" />;
+    return <FolderPlus className="size-3.5 text-violet-500" />;
+  };
+
+  const relativeTime = (d: Date) => {
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 3600) return `${Math.round(diff / 60)}min atrás`;
+    if (diff < 86400) return `${Math.round(diff / 3600)}h atrás`;
+    return `${Math.round(diff / 86400)}d atrás`;
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {mobileOpen && (
@@ -290,9 +381,59 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
 
-            <button className="size-8 grid place-items-center rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" aria-label="Notificações">
-              <Bell className="size-4" />
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={openNotifs}
+                className="relative size-8 grid place-items-center rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Notificações"
+              >
+                <Bell className="size-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 size-4 rounded-full bg-accent text-white text-[9px] font-bold grid place-items-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[340px] bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <span className="text-[13px] font-semibold">Notificações</span>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-[11.5px] text-accent hover:underline flex items-center gap-1">
+                        <CheckCheck className="size-3" /> Marcar como lido
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-[380px] overflow-y-auto">
+                    {notifs.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-[13px] text-muted-foreground">
+                        Nenhuma atividade recente.
+                      </div>
+                    ) : notifs.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`flex items-start gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors ${n.unread ? "bg-accent/4" : ""}`}
+                      >
+                        <div className={`mt-0.5 size-6 rounded-full grid place-items-center shrink-0 ${
+                          n.tipo === "orcamento" ? "bg-blue-500/10"
+                          : n.tipo === "cliente" ? "bg-emerald-500/10"
+                          : "bg-violet-500/10"
+                        }`}>
+                          {notifIcon(n.tipo)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-[12.5px] truncate ${n.unread ? "font-medium" : ""}`}>{n.titulo}</div>
+                          {n.sub && <div className="text-[11.5px] text-muted-foreground truncate">{n.sub}</div>}
+                          <div className="text-[11px] text-muted-foreground/60 mt-0.5">{relativeTime(n.data)}</div>
+                        </div>
+                        {n.unread && <div className="size-1.5 rounded-full bg-accent mt-1.5 shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div
               title={userEmail ?? ""}

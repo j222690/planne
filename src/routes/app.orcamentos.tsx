@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer } from "lucide-react";
+import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer, Pencil } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus, deleteOrcamento } from "@/lib/db";
+import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus, deleteOrcamento, updateOrcamento, replaceOrcamentoItens } from "@/lib/db";
 import { askAI } from "@/lib/ai";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -46,7 +46,7 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; onSaved: () => void; editOrc?: Orc & { itens?: OrcItem[] } }) {
   const [clientes, setClientes] = useState<{id:string;nome:string}[]>([]);
   const [materiais, setMateriais] = useState<{id:string;nome:string;preco_custo:number;unidade:string}[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
@@ -54,6 +54,7 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   const [pdfLoading, setPdfLoading] = useState(false);
   const [empresaId, setEmpresaId] = useState<string|null>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
+  const isEdit = !!editOrc;
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -71,10 +72,28 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     async function load() {
       const empresa = await getEmpresaAtual();
       if (!empresa) return;
-      setEmpresaId((empresa as {id:string}).id);
-      const [c, m] = await Promise.all([getClientes((empresa as {id:string}).id), getMateriais((empresa as {id:string}).id)]);
+      const eid = (empresa as {id:string}).id;
+      setEmpresaId(eid);
+      const [c, m] = await Promise.all([getClientes(eid), getMateriais(eid)]);
       setClientes(c as {id:string;nome:string}[]);
       setMateriais(m as {id:string;nome:string;preco_custo:number;unidade:string}[]);
+
+      // Pré-popula se é edição
+      if (editOrc) {
+        setValue("cliente_id", editOrc.cliente_id ?? "");
+        setValue("status", editOrc.status);
+        setValue("margem_pct", editOrc.margem_pct ?? 35);
+        const itensExistentes = editOrc.itens ?? await getOrcamentoItens(editOrc.id) as OrcItem[];
+        if (itensExistentes.length > 0) {
+          setValue("itens", itensExistentes.map((it) => ({
+            descricao: it.descricao,
+            quantidade: Number(it.quantidade),
+            unidade: it.unidade,
+            preco_custo: Number(it.preco_custo),
+            preco_unitario: Number(it.preco_unitario),
+          })));
+        }
+      }
     }
     load();
   }, []);
@@ -159,27 +178,43 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
   const onSubmit = async (data: FormData) => {
     if (!empresaId) return;
     try {
-      // numero gerado automaticamente pelo trigger do banco
-      const orc = await upsertOrcamento(empresaId, {
-        cliente_id: data.cliente_id,
-        status: data.status,
-        margem_pct: data.margem_pct,
-        observacoes: data.observacoes,
-        subtotal,
-        total,
-      });
-
-      const itensData = data.itens.map((it) => ({
-        orcamento_id: orc.id,
-        descricao: it.descricao,
-        quantidade: it.quantidade,
-        unidade: it.unidade,
-        preco_custo: it.preco_custo,
-        preco_unitario: it.preco_unitario,
-      }));
-      await supabase.from("orcamento_itens").insert(itensData);
-
-      toast.success(`Orçamento ${orc.numero} criado!`);
+      if (isEdit && editOrc) {
+        await updateOrcamento(editOrc.id, {
+          cliente_id: data.cliente_id,
+          status: data.status,
+          margem_pct: data.margem_pct,
+          observacoes: data.observacoes,
+          subtotal,
+          total,
+        });
+        await replaceOrcamentoItens(editOrc.id, data.itens.map((it) => ({
+          orcamento_id: editOrc.id,
+          descricao: it.descricao,
+          quantidade: it.quantidade,
+          unidade: it.unidade,
+          preco_custo: it.preco_custo,
+          preco_unitario: it.preco_unitario,
+        })));
+        toast.success("Orçamento atualizado!");
+      } else {
+        const orc = await upsertOrcamento(empresaId, {
+          cliente_id: data.cliente_id,
+          status: data.status,
+          margem_pct: data.margem_pct,
+          observacoes: data.observacoes,
+          subtotal,
+          total,
+        });
+        await supabase.from("orcamento_itens").insert(data.itens.map((it) => ({
+          orcamento_id: orc.id,
+          descricao: it.descricao,
+          quantidade: it.quantidade,
+          unidade: it.unidade,
+          preco_custo: it.preco_custo,
+          preco_unitario: it.preco_unitario,
+        })));
+        toast.success(`Orçamento ${orc.numero} criado!`);
+      }
       onSaved();
       onClose();
     } catch (e) {
@@ -199,7 +234,7 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h2 className="text-[15px] font-semibold">Novo orçamento</h2>
+            <h2 className="text-[15px] font-semibold">{isEdit ? `Editar orçamento ${editOrc?.numero ?? ""}` : "Novo orçamento"}</h2>
             <p className="text-[12px] text-muted-foreground mt-0.5">Preencha manualmente ou use a IA para gerar os itens</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
@@ -403,7 +438,7 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
                 className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
               >
                 {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                Criar orçamento
+                {isEdit ? "Salvar alterações" : "Criar orçamento"}
               </button>
             </div>
           </div>
@@ -421,6 +456,7 @@ function Orcamentos() {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [showModal, setShowModal] = useState(false);
   const [detalhe, setDetalhe] = useState<Orc | null>(null);
+  const [editando, setEditando] = useState<Orc | null>(null);
 
   const load = async () => {
     try {
@@ -451,7 +487,10 @@ function Orcamentos() {
     <>
       <AnimatePresence>
         {showModal && <OrcamentoModal onClose={() => setShowModal(false)} onSaved={load} />}
-        {detalhe && <OrcDetalheModal orc={detalhe} onClose={() => setDetalhe(null)} onChanged={load} />}
+        {editando && <OrcamentoModal onClose={() => setEditando(null)} onSaved={() => { load(); setDetalhe(null); }} editOrc={editando} />}
+        {detalhe && !editando && (
+          <OrcDetalheModal orc={detalhe} onClose={() => setDetalhe(null)} onChanged={load} onEdit={() => setEditando(detalhe)} />
+        )}
       </AnimatePresence>
 
       <PageHeader
@@ -573,15 +612,23 @@ const STATUS_NEXT: Record<string, string[]> = {
   recusado: ["rascunho"],
 };
 
-function OrcDetalheModal({ orc, onClose, onChanged }: { orc: Orc; onClose: () => void; onChanged: () => void }) {
+function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: { orc: Orc; onClose: () => void; onChanged: () => void; onEdit: () => void }) {
   const [itens, setItens] = useState<OrcItem[]>([]);
   const [loadingItens, setLoadingItens] = useState(true);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [empresaNome, setEmpresaNome] = useState("");
 
   useEffect(() => {
     getOrcamentoItens(orc.id)
       .then((data) => setItens(data as OrcItem[]))
       .finally(() => setLoadingItens(false));
+    getEmpresaAtual().then((e) => {
+      if (e) {
+        setEmpresaNome((e as { nome: string }).nome ?? "");
+        setLogoUrl((e as { logo_url?: string | null }).logo_url ?? null);
+      }
+    });
   }, [orc.id]);
 
   const handleStatus = async (newStatus: string) => {
@@ -709,14 +756,17 @@ function OrcDetalheModal({ orc, onClose, onChanged }: { orc: Orc; onClose: () =>
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-border flex items-center justify-between shrink-0">
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1.5 text-[12.5px] text-destructive hover:opacity-80"
-          >
-            <Trash2 className="size-3.5" /> Excluir orçamento
+        <div className="px-5 py-3 border-t border-border flex items-center justify-between shrink-0 flex-wrap gap-2">
+          <button onClick={handleDelete} className="flex items-center gap-1.5 text-[12.5px] text-destructive hover:opacity-80">
+            <Trash2 className="size-3.5" /> Excluir
           </button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={onEdit}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5"
+            >
+              <Pencil className="size-3.5" /> Editar
+            </button>
             <button
               onClick={() => {
                 const printWin = window.open("", "_blank");
@@ -728,17 +778,36 @@ function OrcDetalheModal({ orc, onClose, onChanged }: { orc: Orc; onClose: () =>
                     <td style="text-align:right">R$ ${Number(it.preco_unitario).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
                     <td style="text-align:right">R$ ${(Number(it.preco_unitario)*Number(it.quantidade)).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
                   </tr>`).join("");
-                printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Orçamento ${orc.numero ?? ""}</title>
-                  <style>body{font-family:sans-serif;padding:32px;color:#111}h1{font-size:20px;margin-bottom:4px}
-                  .sub{color:#666;font-size:13px;margin-bottom:24px}table{width:100%;border-collapse:collapse;font-size:13px}
-                  th{text-align:left;border-bottom:1px solid #ddd;padding:6px 8px;font-size:11px;text-transform:uppercase;color:#666}
-                  td{padding:6px 8px;border-bottom:1px solid #eee}.total{font-weight:700;font-size:15px;text-align:right;margin-top:16px}
-                  @media print{button{display:none}}</style></head><body>
-                  <h1>Orçamento ${orc.numero ?? "—"}</h1>
-                  <div class="sub">Cliente: ${orc.clientes?.nome ?? "—"} · Data: ${new Date(orc.created_at).toLocaleDateString("pt-BR")}</div>
-                  <table><thead><tr><th>Descrição</th><th>Qtd</th><th>Preço unit.</th><th>Total</th></tr></thead>
-                  <tbody>${rows}</tbody></table>
-                  <div class="total">Total: R$ ${totalItens.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                const logoHtml = logoUrl
+                  ? `<img src="${logoUrl}" style="height:48px;object-fit:contain;margin-bottom:8px" /><br>`
+                  : "";
+                printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+                  <title>Orçamento ${orc.numero ?? ""}</title>
+                  <style>
+                    body{font-family:sans-serif;padding:40px;color:#111;max-width:800px;margin:0 auto}
+                    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;border-bottom:2px solid #111;padding-bottom:16px}
+                    .empresa{font-size:11px;color:#666;margin-top:4px}
+                    .orc-num{font-size:12px;color:#666;text-align:right}
+                    .orc-title{font-size:22px;font-weight:700;text-align:right}
+                    .cliente-box{background:#f5f5f5;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:13px}
+                    table{width:100%;border-collapse:collapse;font-size:13px}
+                    th{text-align:left;border-bottom:2px solid #ddd;padding:8px;font-size:11px;text-transform:uppercase;color:#666;letter-spacing:.06em}
+                    td{padding:8px;border-bottom:1px solid #eee}
+                    tfoot td{font-weight:700;border-top:2px solid #111;padding-top:12px}
+                    .footer{margin-top:40px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:12px}
+                    @media print{body{padding:20px}}
+                  </style></head><body>
+                  <div class="header">
+                    <div>${logoHtml}<div style="font-size:16px;font-weight:700">${empresaNome}</div><div class="empresa">Proposta comercial</div></div>
+                    <div><div class="orc-num">Orçamento</div><div class="orc-title">${orc.numero ?? "—"}</div><div class="orc-num">${new Date(orc.created_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}</div></div>
+                  </div>
+                  <div class="cliente-box"><strong>Cliente:</strong> ${orc.clientes?.nome ?? "—"}</div>
+                  <table>
+                    <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Preço unit.</th><th style="text-align:right">Total</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot><tr><td colspan="3" style="text-align:right">Total</td><td style="text-align:right">R$ ${totalItens.toLocaleString("pt-BR",{minimumFractionDigits:2})}</td></tr></tfoot>
+                  </table>
+                  <div class="footer">Documento gerado pelo Planne ERP · ${new Date().toLocaleDateString("pt-BR")}</div>
                   <script>window.onload=()=>window.print()</script></body></html>`);
                 printWin.document.close();
               }}

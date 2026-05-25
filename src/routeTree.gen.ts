@@ -20,6 +20,7 @@ import { Route as AppOrcamentosRouteImport } from './routes/app.orcamentos'
 import { Route as AppMateriaisRouteImport } from './routes/app.materiais'
 import { Route as AppIaProjetosRouteImport } from './routes/app.ia-projetos'
 import { Route as AppIaRouteImport } from './routes/app.ia'
+import { Route as AppHistoricoPrecosRouteImport } from './routes/app.historico-precos'
 import { Route as AppFornecedoresRouteImport } from './routes/app.fornecedores'
 import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
 import { Route as AppDashboardIaRouteImport } from './routes/app.dashboard-ia'
@@ -83,6 +84,11 @@ const AppIaRoute = AppIaRouteImport.update({
   path: '/ia',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHistoricoPrecosRoute = AppHistoricoPrecosRouteImport.update({
+  id: '/historico-precos',
+  path: '/historico-precos',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFornecedoresRoute = AppFornecedoresRouteImport.update({
   id: '/fornecedores',
   path: '/fornecedores',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/app/dashboard-ia': typeof AppDashboardIaRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
+  '/app/historico-precos': typeof AppHistoricoPrecosRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/app/dashboard-ia': typeof AppDashboardIaRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
+  '/app/historico-precos': typeof AppHistoricoPrecosRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/app/dashboard-ia': typeof AppDashboardIaRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
+  '/app/historico-precos': typeof AppHistoricoPrecosRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/app/dashboard-ia'
     | '/app/financeiro'
     | '/app/fornecedores'
+    | '/app/historico-precos'
     | '/app/ia'
     | '/app/ia-projetos'
     | '/app/materiais'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/app/dashboard-ia'
     | '/app/financeiro'
     | '/app/fornecedores'
+    | '/app/historico-precos'
     | '/app/ia'
     | '/app/ia-projetos'
     | '/app/materiais'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/app/dashboard-ia'
     | '/app/financeiro'
     | '/app/fornecedores'
+    | '/app/historico-precos'
     | '/app/ia'
     | '/app/ia-projetos'
     | '/app/materiais'
@@ -326,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/historico-precos': {
+      id: '/app/historico-precos'
+      path: '/historico-precos'
+      fullPath: '/app/historico-precos'
+      preLoaderRoute: typeof AppHistoricoPrecosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/fornecedores': {
       id: '/app/fornecedores'
       path: '/fornecedores'
@@ -386,6 +405,7 @@ interface AppRouteChildren {
   AppDashboardIaRoute: typeof AppDashboardIaRoute
   AppFinanceiroRoute: typeof AppFinanceiroRoute
   AppFornecedoresRoute: typeof AppFornecedoresRoute
+  AppHistoricoPrecosRoute: typeof AppHistoricoPrecosRoute
   AppIaRoute: typeof AppIaRoute
   AppIaProjetosRoute: typeof AppIaProjetosRoute
   AppMateriaisRoute: typeof AppMateriaisRoute
@@ -404,6 +424,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardIaRoute: AppDashboardIaRoute,
   AppFinanceiroRoute: AppFinanceiroRoute,
   AppFornecedoresRoute: AppFornecedoresRoute,
+  AppHistoricoPrecosRoute: AppHistoricoPrecosRoute,
   AppIaRoute: AppIaRoute,
   AppIaProjetosRoute: AppIaProjetosRoute,
   AppMateriaisRoute: AppMateriaisRoute,

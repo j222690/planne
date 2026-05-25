@@ -174,12 +174,25 @@ function Pipeline() {
     const eid = (empresa as { id: string }).id;
     setEmpresaId(eid);
 
-    const [{ data: est }, { data: opData }] = await Promise.all([
-      supabase.from("pipeline_estagios").select("*").eq("empresa_id", eid).order("ordem"),
-      supabase.from("oportunidades").select("*,clientes(nome)").eq("empresa_id", eid).order("created_at", { ascending: false }),
-    ]);
+    let { data: est } = await supabase
+      .from("pipeline_estagios").select("*").eq("empresa_id", eid).order("ordem");
 
-    setEstagios(est && est.length > 0 ? est : DEFAULT_ESTAGIOS);
+    if (!est || est.length === 0) {
+      const seeds = [
+        { nome: "Prospecção",        ordem: 1, cor: "#6366f1", empresa_id: eid },
+        { nome: "Primeiro contato",  ordem: 2, cor: "#f59e0b", empresa_id: eid },
+        { nome: "Proposta enviada",  ordem: 3, cor: "#3b82f6", empresa_id: eid },
+        { nome: "Negociação",        ordem: 4, cor: "#8b5cf6", empresa_id: eid },
+        { nome: "Fechado",           ordem: 5, cor: "#10b981", empresa_id: eid },
+      ];
+      const { data: inserted } = await supabase.from("pipeline_estagios").insert(seeds).select("*");
+      est = inserted ?? [];
+    }
+
+    const { data: opData } = await supabase
+      .from("oportunidades").select("*,clientes(nome)").eq("empresa_id", eid).order("created_at", { ascending: false });
+
+    setEstagios(est ?? []);
     setOps(opData ?? []);
     setLoading(false);
   };

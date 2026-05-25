@@ -249,3 +249,16 @@ export async function getOrcamentoItens(orcamentoId: string) {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function updateOrcamento(id: string, data: Record<string, unknown>) {
+  const { error } = await supabase.from("orcamentos").update(data).eq("id", id);
+  if (error) throw error;
+}
+
+export async function replaceOrcamentoItens(orcamentoId: string, itens: Record<string, unknown>[]) {
+  await supabase.from("orcamento_itens").delete().eq("orcamento_id", orcamentoId);
+  if (itens.length > 0) {
+    const { error } = await supabase.from("orcamento_itens").insert(itens);
+    if (error) throw error;
+  }
+}
