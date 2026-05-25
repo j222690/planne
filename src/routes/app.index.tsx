@@ -58,8 +58,26 @@ function Dashboard() {
         description="Panorama da operação."
         actions={
           <>
-            <button className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5">
-              <Download className="size-3.5" /> Exportar
+            <button
+              onClick={() => {
+                const rows = [["Número","Cliente","Projeto","Total","Status","Data"]]
+                  .concat(orcs.map((o) => [
+                    (o as {numero?:string|null}).numero ?? "",
+                    o.clientes?.nome ?? "",
+                    (o as {projetos:{nome:string}|null}).projetos?.nome ?? "",
+                    String(o.total ?? 0),
+                    o.status,
+                    new Date(o.created_at).toLocaleDateString("pt-BR"),
+                  ]));
+                const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+                a.download = `orcamentos_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+              }}
+              className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5"
+            >
+              <Download className="size-3.5" /> Exportar CSV
             </button>
             <Link to="/app/orcamentos" className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5">
               <Plus className="size-3.5" /> Novo orçamento

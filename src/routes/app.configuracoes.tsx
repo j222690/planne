@@ -1,117 +1,230 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Save, Loader2, AlertCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/configuracoes")({
   component: Configuracoes,
 });
 
+type Empresa = {
+  id: string; nome: string; cnpj: string | null; cidade: string | null;
+  estado: string | null; endereco: string | null; telefone: string | null;
+  email: string | null; cor_primaria: string | null; logo_url: string | null;
+  parametros: Record<string, number> | null;
+};
+
 function Configuracoes() {
-  const [empresa, setEmpresa] = useState<any>(null);
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string|null>(null);
-  const [form, setForm] = useState({ nome: "", cnpj: "", cidade: "" });
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoRef = useRef<HTMLInputElement>(null);
+
+  const [form, setForm] = useState({
+    nome: "", cnpj: "", cidade: "", estado: "", endereco: "",
+    telefone: "", email: "", cor_primaria: "#3B82F6",
+  });
+
+  const [params, setParams] = useState({
+    mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35, creditos_render: 10,
+  });
+
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     getEmpresaAtual().then((e) => {
-      if (e) {
-        setEmpresa(e);
-        setForm({ nome: e.nome ?? "", cnpj: e.cnpj ?? "", cidade: e.cidade ?? "" });
-      }
+      if (!e) return;
+      const emp = e as Empresa;
+      setEmpresa(emp);
+      setForm({
+        nome: emp.nome ?? "",
+        cnpj: emp.cnpj ?? "",
+        cidade: emp.cidade ?? "",
+        estado: emp.estado ?? "",
+        endereco: emp.endereco ?? "",
+        telefone: emp.telefone ?? "",
+        email: emp.email ?? "",
+        cor_primaria: emp.cor_primaria ?? "#3B82F6",
+      });
+      const p = emp.parametros ?? {};
+      setParams({
+        mdf_custo_chapa: p.mdf_custo_chapa ?? 85,
+        mao_obra_hora: p.mao_obra_hora ?? 45,
+        margem_padrao: p.margem_padrao ?? 35,
+        creditos_render: p.creditos_render ?? 10,
+      });
+      setLogoUrl(emp.logo_url ?? null);
     });
   }, []);
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresa) return;
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${empresa.id}/logo.${ext}`;
+      const { error } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("logos").getPublicUrl(path);
+      await supabase.from("empresas").update({ logo_url: publicUrl }).eq("id", empresa.id);
+      setLogoUrl(publicUrl + "?t=" + Date.now());
+      toast.success("Logo atualizado!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar logo");
+    } finally {
+      setLogoUploading(false);
+      if (logoRef.current) logoRef.current.value = "";
+    }
+  };
+
   const handleSave = async () => {
     if (!empresa) return;
-    setSaving(true); setError(null);
-    const { error } = await supabase
-      .from("empresas")
-      .update({ nome: form.nome, cnpj: form.cnpj, cidade: form.cidade })
-      .eq("id", empresa.id);
+    setSaving(true);
+    const { error } = await supabase.from("empresas").update({
+      nome: form.nome,
+      cnpj: form.cnpj || null,
+      cidade: form.cidade || null,
+      estado: form.estado || null,
+      endereco: form.endereco || null,
+      telefone: form.telefone || null,
+      email: form.email || null,
+      cor_primaria: form.cor_primaria || null,
+      parametros: params,
+    }).eq("id", empresa.id);
     setSaving(false);
-    if (error) { setError(error.message); return; }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Configurações salvas!");
   };
+
+  const setParam = (key: keyof typeof params, val: string) =>
+    setParams((p) => ({ ...p, [key]: parseFloat(val) || 0 }));
 
   return (
     <>
       <PageHeader
         eyebrow="Sistema"
         title="Configurações"
-        description="Empresa, equipe, integrações e segurança."
+        description="Empresa, integrações e parâmetros de precificação."
         actions={
           <button
             onClick={handleSave}
             disabled={saving}
             className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5 disabled:opacity-60"
           >
-            {saving ? <Loader2 className="size-3.5 animate-spin"/> : <Save className="size-3.5"/>}
-            {saved ? "Salvo!" : "Salvar"}
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            Salvar alterações
           </button>
         }
       />
 
-      {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/8 px-3.5 py-2.5 text-[13px] text-destructive">
-          <AlertCircle className="size-4 shrink-0"/> {error}
-        </div>
-      )}
-
       <div className="grid lg:grid-cols-3 gap-4">
-        <Surface>
-          <div className="text-[12.5px] font-medium mb-4">Empresa</div>
-          {[
-            { label: "Razão social", key: "nome" },
-            { label: "CNPJ", key: "cnpj" },
-            { label: "Cidade", key: "cidade" },
-          ].map(({ label, key }) => (
-            <label key={key} className="block mb-3">
-              <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
+        {/* Dados da empresa */}
+        <Surface className="lg:col-span-2">
+          <div className="text-[12.5px] font-semibold mb-4">Dados da empresa</div>
+
+          {/* Logo upload */}
+          <div className="flex items-center gap-4 mb-5 pb-5 border-b border-border">
+            <div className="size-16 rounded-lg border border-border bg-surface-2 overflow-hidden grid place-items-center shrink-0">
+              {logoUrl
+                ? <img src={logoUrl} alt="Logo" className="size-full object-contain" />
+                : <ImageIcon className="size-6 text-muted-foreground" />}
+            </div>
+            <div>
+              <button
+                onClick={() => logoRef.current?.click()}
+                disabled={logoUploading}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-60 transition-colors"
+              >
+                {logoUploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                {logoUrl ? "Trocar logo" : "Enviar logo"}
+              </button>
+              <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              <div className="text-[11px] text-muted-foreground mt-1">PNG, SVG ou JPG · máx. 1 MB</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Nome / Razão social", key: "nome", col: 2 },
+              { label: "CNPJ", key: "cnpj" },
+              { label: "Telefone", key: "telefone" },
+              { label: "E-mail", key: "email" },
+              { label: "Cidade", key: "cidade" },
+              { label: "Estado (UF)", key: "estado" },
+              { label: "Endereço", key: "endereco", col: 2 },
+            ].map(({ label, key, col }) => (
+              <label key={key} className={`block ${col === 2 ? "col-span-2" : ""}`}>
+                <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
+                <input
+                  value={form[key as keyof typeof form]}
+                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                  className="input"
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-3">
+            <div className="text-[11.5px] text-muted-foreground mb-1 flex items-center gap-1.5">
+              <Palette className="size-3" /> Cor primária da marca
+            </div>
+            <div className="flex items-center gap-2">
               <input
-                value={form[key as keyof typeof form]}
-                onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
+                type="color"
+                value={form.cor_primaria}
+                onChange={(e) => setForm((f) => ({ ...f, cor_primaria: e.target.value }))}
+                className="h-9 w-16 rounded-md border border-border bg-surface-2 cursor-pointer p-0.5"
               />
-            </label>
-          ))}
-        </Surface>
-
-        <Surface>
-          <div className="text-[12.5px] font-medium mb-1">Integrações de IA</div>
-          <div className="text-[11.5px] text-muted-foreground mb-4">Configure as chaves no arquivo <code className="font-mono bg-secondary px-1 rounded">.env</code></div>
-          {[
-            { n: "Groq (Llama 3.3 · primário)", key: "GROQ_API_KEY", color: "text-violet-500" },
-            { n: "OpenAI GPT-4o mini (fallback)", key: "OPENAI_API_KEY", color: "text-emerald-600" },
-          ].map(({ n, key, color }) => (
-            <div key={key} className="py-2.5 border-b border-border last:border-0">
-              <div className={`text-[12.5px] font-medium ${color}`}>{n}</div>
-              <div className="text-[11.5px] text-muted-foreground font-mono mt-0.5">{key}</div>
+              <span className="text-[12.5px] font-mono text-muted-foreground">{form.cor_primaria}</span>
             </div>
-          ))}
+          </div>
         </Surface>
 
-        <Surface>
-          <div className="text-[12.5px] font-medium mb-1">Supabase</div>
-          <div className="text-[11.5px] text-muted-foreground mb-4">Banco de dados conectado</div>
-          {[
-            { n: "Autenticação", s: "Ativo" },
-            { n: "Row Level Security", s: "Ativo" },
-            { n: "Multi-empresa", s: "Ativo" },
-            { n: "Trigger auto-empresa", s: "Ativo" },
-          ].map(({ n, s }) => (
-            <div key={n} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 text-[13px]">
-              <div>{n}</div>
-              <div className="text-[11.5px] flex items-center gap-1.5 text-emerald-600">
-                <span className="size-1.5 rounded-full bg-emerald-500 inline-block"/> {s}
+        <div className="space-y-4">
+          {/* Parâmetros de precificação */}
+          <Surface>
+            <div className="text-[12.5px] font-semibold mb-4">Precificação padrão</div>
+            <div className="space-y-3">
+              {[
+                { label: "MDF — custo por chapa (R$)", key: "mdf_custo_chapa", step: "1" },
+                { label: "Mão de obra — custo/hora (R$)", key: "mao_obra_hora", step: "1" },
+                { label: "Margem padrão (%)", key: "margem_padrao", step: "0.5" },
+                { label: "Créditos de render", key: "creditos_render", step: "1" },
+              ].map(({ label, key, step }) => (
+                <label key={key} className="block">
+                  <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
+                  <input
+                    type="number"
+                    value={params[key as keyof typeof params]}
+                    onChange={(e) => setParam(key as keyof typeof params, e.target.value)}
+                    className="input"
+                    min={0}
+                    step={step}
+                  />
+                </label>
+              ))}
+            </div>
+          </Surface>
+
+          {/* Status da infraestrutura */}
+          <Surface>
+            <div className="text-[12.5px] font-semibold mb-3">Infraestrutura</div>
+            {[
+              "Autenticação", "Row Level Security", "Multi-empresa", "Trigger número ORC",
+            ].map((n) => (
+              <div key={n} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-[12.5px]">
+                <span>{n}</span>
+                <span className="flex items-center gap-1.5 text-emerald-600 text-[11.5px]">
+                  <CheckCircle2 className="size-3.5" /> Ativo
+                </span>
               </div>
-            </div>
-          ))}
-        </Surface>
+            ))}
+          </Surface>
+        </div>
       </div>
     </>
   );

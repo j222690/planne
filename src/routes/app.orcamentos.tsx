@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,7 +51,9 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   const [materiais, setMateriais] = useState<{id:string;nome:string;preco_custo:number;unidade:string}[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [empresaId, setEmpresaId] = useState<string|null>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -89,6 +91,39 @@ function OrcamentoModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     setValue(`itens.${idx}.unidade`, mat.unidade || "un");
     setValue(`itens.${idx}.preco_custo`, mat.preco_custo);
     setValue(`itens.${idx}.preco_unitario`, applyMargem(mat.preco_custo));
+  };
+
+  const handlePdfImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPdfLoading(true);
+    try {
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/pdf-orcamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf_b64: b64, tipo_mime: file.type || "image/jpeg" }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (data.itens?.length) {
+        setValue("itens", data.itens);
+        if (data.margem_detectada) setValue("margem_pct", data.margem_detectada);
+        toast.success(`${data.itens.length} itens importados do PDF!`);
+      } else {
+        toast.error("Nenhum item encontrado no documento.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao processar PDF");
+    } finally {
+      setPdfLoading(false);
+      if (pdfRef.current) pdfRef.current.value = "";
+    }
   };
 
   const handleAIGenerate = async () => {
@@ -172,10 +207,22 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="p-5 space-y-4">
-            {/* IA prompt */}
-            <div className="rounded-md border border-accent/30 bg-accent/5 p-3">
-              <div className="flex items-center gap-1.5 text-[12px] font-medium text-accent mb-2">
-                <Sparkles className="size-3.5" /> Gerar itens com IA
+            {/* IA prompt + PDF import */}
+            <div className="rounded-md border border-accent/30 bg-accent/5 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
+                  <Sparkles className="size-3.5" /> Gerar itens com IA
+                </div>
+                <button
+                  type="button"
+                  onClick={() => pdfRef.current?.click()}
+                  disabled={pdfLoading}
+                  className="text-[11.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-60 transition-colors"
+                >
+                  {pdfLoading ? <Loader2 className="size-3 animate-spin" /> : <FileUp className="size-3" />}
+                  Importar PDF/imagem
+                </button>
+                <input ref={pdfRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handlePdfImport} />
               </div>
               <div className="flex gap-2">
                 <input
@@ -669,9 +716,40 @@ function OrcDetalheModal({ orc, onClose, onChanged }: { orc: Orc; onClose: () =>
           >
             <Trash2 className="size-3.5" /> Excluir orçamento
           </button>
-          <button onClick={onClose} className="h-8 px-4 rounded-md border border-border text-[12.5px] hover:bg-secondary">
-            Fechar
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const printWin = window.open("", "_blank");
+                if (!printWin) return;
+                const rows = itens.map((it) => `
+                  <tr>
+                    <td>${it.descricao}</td>
+                    <td style="text-align:center">${it.quantidade} ${it.unidade}</td>
+                    <td style="text-align:right">R$ ${Number(it.preco_unitario).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">R$ ${(Number(it.preco_unitario)*Number(it.quantidade)).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
+                  </tr>`).join("");
+                printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Orçamento ${orc.numero ?? ""}</title>
+                  <style>body{font-family:sans-serif;padding:32px;color:#111}h1{font-size:20px;margin-bottom:4px}
+                  .sub{color:#666;font-size:13px;margin-bottom:24px}table{width:100%;border-collapse:collapse;font-size:13px}
+                  th{text-align:left;border-bottom:1px solid #ddd;padding:6px 8px;font-size:11px;text-transform:uppercase;color:#666}
+                  td{padding:6px 8px;border-bottom:1px solid #eee}.total{font-weight:700;font-size:15px;text-align:right;margin-top:16px}
+                  @media print{button{display:none}}</style></head><body>
+                  <h1>Orçamento ${orc.numero ?? "—"}</h1>
+                  <div class="sub">Cliente: ${orc.clientes?.nome ?? "—"} · Data: ${new Date(orc.created_at).toLocaleDateString("pt-BR")}</div>
+                  <table><thead><tr><th>Descrição</th><th>Qtd</th><th>Preço unit.</th><th>Total</th></tr></thead>
+                  <tbody>${rows}</tbody></table>
+                  <div class="total">Total: R$ ${totalItens.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                  <script>window.onload=()=>window.print()</script></body></html>`);
+                printWin.document.close();
+              }}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5"
+            >
+              <Printer className="size-3.5" /> Imprimir
+            </button>
+            <button onClick={onClose} className="h-8 px-4 rounded-md border border-border text-[12.5px] hover:bg-secondary">
+              Fechar
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

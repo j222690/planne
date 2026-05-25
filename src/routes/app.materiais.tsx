@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Upload, Sparkles, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Upload, Sparkles, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, FileText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 import { getMateriais, getEmpresaAtual, getFornecedores, upsertMaterial, updateMaterial, deleteMaterial } from "@/lib/db";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
@@ -265,6 +266,8 @@ function Materiais() {
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Material | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const csvRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     try {
@@ -282,6 +285,42 @@ function Materiais() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresaId) return;
+    setCsvImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) { toast.error("CSV vazio ou inválido"); return; }
+      const headers = lines[0].split(",").map((h) => h.replace(/^"|"$/g, "").trim().toLowerCase());
+      const rows = lines.slice(1).map((line) => {
+        const vals = line.split(",").map((v) => v.replace(/^"|"$/g, "").trim());
+        return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
+      });
+      const payload = rows.filter((r) => r.nome || r["nome"]).map((r) => ({
+        nome: r.nome ?? r["nome"] ?? "",
+        codigo: r.codigo ?? r["código"] ?? null,
+        unidade: r.unidade ?? "un",
+        preco_custo: parseFloat(r.preco_custo ?? r["preço_custo"] ?? r["custo"] ?? "0") || 0,
+        preco_venda: parseFloat(r.preco_venda ?? r["preço_venda"] ?? r["venda"] ?? "0") || 0,
+        categoria: r.categoria || null,
+        empresa_id: empresaId,
+        ativo: true,
+      }));
+      if (payload.length === 0) { toast.error("Nenhuma linha válida no CSV"); return; }
+      const { error } = await supabase.from("materiais").insert(payload);
+      if (error) throw error;
+      toast.success(`${payload.length} materiais importados!`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao importar CSV");
+    } finally {
+      setCsvImporting(false);
+      if (csvRef.current) csvRef.current.value = "";
+    }
+  };
 
   const filtered = materiais.filter((m) =>
     search === "" ||
@@ -309,9 +348,15 @@ function Materiais() {
         description="Catálogo unificado de chapas, ferragens, fitas e acessórios."
         actions={
           <>
-            <button className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5">
-              <Upload className="size-3.5" /> Importar catálogo
+            <button
+              onClick={() => csvRef.current?.click()}
+              disabled={csvImporting}
+              className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {csvImporting ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              Importar CSV
             </button>
+            <input ref={csvRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvImport} />
             <button
               onClick={() => setShowModal(true)}
               className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5"

@@ -9,7 +9,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { getEmpresaAtual } from "@/lib/db";
+import { getEmpresaAtual, getClientes, upsertOrcamento } from "@/lib/db";
+import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, type MovelCanvas } from "@/components/planne/RoomCanvas";
 
 export const Route = createFileRoute("/app/ia-projetos")({
@@ -45,6 +46,7 @@ interface AnaliseIA {
 
 interface WizardState {
   step: 1 | 2 | 3 | 4 | 5;
+  projetoId: string | null;
   form: {
     nome: string;
     ambiente: string;
@@ -64,6 +66,11 @@ interface WizardState {
   renderJobId: string | null;
   error: string | null;
 }
+
+type SavedProject = {
+  id: string; nome: string; ambiente: string; estilo: string;
+  created_at: string; render_url: string | null;
+};
 
 const AMBIENTES = ["Sala de estar", "Quarto casal", "Quarto solteiro", "Cozinha", "Home office", "Closet", "Banheiro", "Área gourmet", "Escritório"];
 const ESTILOS = ["Moderno Minimalista", "Contemporâneo", "Clássico", "Industrial", "Escandinavo", "Boho Chic", "Rústico", "Luxo"];
@@ -179,10 +186,30 @@ function StepIndicator({ step }: { step: number }) {
 
 function IAProjetoPage() {
   const [wizard, setWizard] = useState<WizardState | null>(null);
+  const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function loadProjects() {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) return;
+      const { data } = await supabase
+        .from("room_projects")
+        .select("id,nome,ambiente,estilo,created_at,render_url")
+        .eq("empresa_id", (empresa as { id: string }).id)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      setSavedProjects(data ?? []);
+      setLoadingProjects(false);
+    }
+    loadProjects();
+  }, []);
 
   const initWizard = () =>
     setWizard({
       step: 1,
+      projetoId: null,
       form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "" },
       planta: null,
       referencias: [],
@@ -233,7 +260,28 @@ function IAProjetoPage() {
       }
 
       const { analise } = await res.json() as { analise: AnaliseIA };
-      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4 });
+
+      // Persist to room_projects
+      let projetoId: string | null = null;
+      try {
+        const empresa = await getEmpresaAtual();
+        if (empresa) {
+          const { data: proj } = await supabase.from("room_projects").insert({
+            empresa_id: (empresa as { id: string }).id,
+            nome: wizard.form.nome,
+            ambiente: wizard.form.ambiente,
+            estilo: wizard.form.estilo,
+            medidas: { largura: parseFloat(wizard.form.largura) || 4, profundidade: parseFloat(wizard.form.profundidade) || 3, altura: parseFloat(wizard.form.altura) || 2.7 },
+            analise_json: analise,
+            orcamento_base_texto: analise.descricao_comercial,
+          }).select("id").single();
+          projetoId = proj?.id ?? null;
+        }
+      } catch {
+        // persist failure is non-blocking
+      }
+
+      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId });
     } catch (e) {
       update({ analisando: false, error: e instanceof Error ? e.message : "Erro" });
     }
@@ -261,7 +309,17 @@ function IAProjetoPage() {
 
       const data = await res.json() as { provider: string; url?: string; job_id?: string; status: string };
 
+      const saveRenderUrl = async (url: string, jobId?: string) => {
+        if (wizard.projetoId) {
+          await supabase.from("room_projects").update({ render_url: url }).eq("id", wizard.projetoId);
+        }
+        if (jobId) {
+          await supabase.from("render_jobs").update({ url_resultado: url, status: "completed" }).eq("job_id", jobId);
+        }
+      };
+
       if (data.status === "completed" && data.url) {
+        await saveRenderUrl(data.url);
         update({ renderUrl: data.url, renderLoading: false, step: 5 });
         return;
       }
@@ -273,6 +331,7 @@ function IAProjetoPage() {
           const s = await r.json() as { status: string; url?: string };
           if (s.status === "completed" && s.url) {
             clearInterval(poll);
+            await saveRenderUrl(s.url, data.job_id);
             update({ renderUrl: s.url, renderLoading: false, step: 5 });
           } else if (s.status === "error") {
             clearInterval(poll);
@@ -285,7 +344,45 @@ function IAProjetoPage() {
     }
   }, [wizard]);
 
-  if (!wizard) return <LandingPage onStart={initWizard} />;
+  const criarOrcamentoFormal = useCallback(async () => {
+    if (!wizard?.analise) return;
+    try {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) throw new Error("Empresa não encontrada");
+      const eid = (empresa as { id: string }).id;
+      const clientes = await getClientes(eid);
+      const clienteId = clientes[0]?.id ?? null;
+
+      const orc = await upsertOrcamento(eid, {
+        status: "rascunho",
+        margem_pct: wizard.analise.orcamento.margem_pct,
+        subtotal: wizard.analise.orcamento.subtotal,
+        total: wizard.analise.orcamento.total,
+        observacoes: wizard.analise.descricao_comercial,
+        cliente_id: clienteId,
+      });
+
+      const itensData = (wizard.analise.moveis ?? []).map((m) => ({
+        orcamento_id: orc.id,
+        descricao: m.nome,
+        quantidade: 1,
+        unidade: "un",
+        preco_custo: Math.round(m.preco_estimado * (1 - wizard.analise!.orcamento.margem_pct / 100)),
+        preco_unitario: m.preco_estimado,
+      }));
+
+      if (itensData.length > 0) {
+        await supabase.from("orcamento_itens").insert(itensData);
+      }
+
+      toast.success(`Orçamento ${orc.numero} criado com sucesso!`);
+      navigate({ to: "/app/orcamentos" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
+    }
+  }, [wizard, navigate]);
+
+  if (!wizard) return <LandingPage onStart={initWizard} savedProjects={savedProjects} loading={loadingProjects} />;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -316,7 +413,7 @@ function IAProjetoPage() {
           {wizard.step === 1 && <Step1Form wizard={wizard} update={update} />}
           {wizard.step === 2 && <Step2Upload wizard={wizard} update={update} />}
           {wizard.step === 3 && <Step3Analyzing wizard={wizard} analisar={analisar} />}
-          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} />}
+          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} />}
           {wizard.step === 5 && <Step5Render wizard={wizard} update={update} />}
         </motion.div>
       </AnimatePresence>
@@ -527,10 +624,11 @@ function Step3Analyzing({ wizard, analisar }: { wizard: WizardState; analisar: (
 
 // ─── Step 4: Layout + Orçamento ───────────────────────────────────────────────
 
-function Step4Layout({ wizard, update, gerarRender }: {
+function Step4Layout({ wizard, update, gerarRender, criarOrcamento }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   gerarRender: () => void;
+  criarOrcamento: () => void;
 }) {
   const { analise, moveis } = wizard;
   if (!analise) return null;
@@ -639,24 +737,32 @@ function Step4Layout({ wizard, update, gerarRender }: {
       </Surface>
 
       {/* Actions */}
-      <Surface className="flex items-center justify-between">
+      <Surface className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-[14px] font-semibold">Gerar Render Premium</div>
+          <div className="text-[14px] font-semibold">Próximas ações</div>
           <div className="text-[12px] text-muted-foreground mt-0.5">
-            Fotorrealístico · Cinematográfico · DALL-E 3 / Flux Pro
+            Crie o orçamento formal ou gere o render cinematográfico
           </div>
         </div>
-        <button
-          onClick={gerarRender}
-          disabled={wizard.renderLoading}
-          className="h-10 px-5 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2 shadow-lg shadow-violet-500/20"
-        >
-          {wizard.renderLoading ? (
-            <><Loader2 className="size-4 animate-spin" /> Gerando render…</>
-          ) : (
-            <><Zap className="size-4" /> Gerar Render</>
-          )}
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={criarOrcamento}
+            className="h-10 px-4 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-2"
+          >
+            <FileText className="size-4" /> Criar orçamento formal
+          </button>
+          <button
+            onClick={gerarRender}
+            disabled={wizard.renderLoading}
+            className="h-10 px-5 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2 shadow-lg shadow-violet-500/20"
+          >
+            {wizard.renderLoading ? (
+              <><Loader2 className="size-4 animate-spin" /> Gerando…</>
+            ) : (
+              <><Zap className="size-4" /> Gerar Render</>
+            )}
+          </button>
+        </div>
       </Surface>
     </div>
   );
@@ -740,7 +846,11 @@ function Step5Render({ wizard, update }: {
 
 // ─── Landing ──────────────────────────────────────────────────────────────────
 
-function LandingPage({ onStart }: { onStart: () => void }) {
+function LandingPage({ onStart, savedProjects, loading }: {
+  onStart: () => void;
+  savedProjects: SavedProject[];
+  loading: boolean;
+}) {
   return (
     <>
       <PageHeader
@@ -764,7 +874,7 @@ function LandingPage({ onStart }: { onStart: () => void }) {
         ))}
       </div>
 
-      <Surface className="flex items-center justify-between">
+      <Surface className="flex items-center justify-between mb-6">
         <div>
           <div className="text-[15px] font-semibold">Criar novo projeto com IA</div>
           <div className="text-[12.5px] text-muted-foreground mt-0.5">
@@ -778,6 +888,31 @@ function LandingPage({ onStart }: { onStart: () => void }) {
           <Sparkles className="size-4" /> Criar projeto IA
         </button>
       </Surface>
+
+      {/* Saved projects */}
+      {!loading && savedProjects.length > 0 && (
+        <Surface>
+          <div className="text-[13px] font-semibold mb-4">Projetos salvos</div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {savedProjects.map((p) => (
+              <div key={p.id} className="rounded-lg border border-border overflow-hidden hover:border-border-strong transition-colors">
+                <div className="h-28 bg-surface-2 grid place-items-center overflow-hidden">
+                  {p.render_url
+                    ? <img src={p.render_url} alt={p.nome} className="size-full object-cover" />
+                    : <Sparkles className="size-6 text-muted-foreground/40" />}
+                </div>
+                <div className="p-2.5">
+                  <div className="text-[12.5px] font-medium truncate">{p.nome}</div>
+                  <div className="text-[11.5px] text-muted-foreground">{p.ambiente} · {p.estilo}</div>
+                  <div className="text-[10.5px] text-muted-foreground/60 mt-0.5">
+                    {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Surface>
+      )}
     </>
   );
 }

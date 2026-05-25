@@ -15,14 +15,17 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppProjetosRouteImport } from './routes/app.projetos'
 import { Route as AppProducaoRouteImport } from './routes/app.producao'
+import { Route as AppPipelineRouteImport } from './routes/app.pipeline'
 import { Route as AppOrcamentosRouteImport } from './routes/app.orcamentos'
 import { Route as AppMateriaisRouteImport } from './routes/app.materiais'
 import { Route as AppIaProjetosRouteImport } from './routes/app.ia-projetos'
 import { Route as AppIaRouteImport } from './routes/app.ia'
 import { Route as AppFornecedoresRouteImport } from './routes/app.fornecedores'
 import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
+import { Route as AppDashboardIaRouteImport } from './routes/app.dashboard-ia'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppCalendarioRouteImport } from './routes/app.calendario'
 import { Route as AppBuscaLeadRouteImport } from './routes/app.busca-lead'
 
 const LoginRoute = LoginRouteImport.update({
@@ -55,6 +58,11 @@ const AppProducaoRoute = AppProducaoRouteImport.update({
   path: '/producao',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOrcamentosRoute = AppOrcamentosRouteImport.update({
   id: '/orcamentos',
   path: '/orcamentos',
@@ -85,6 +93,11 @@ const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
   path: '/financeiro',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDashboardIaRoute = AppDashboardIaRouteImport.update({
+  id: '/dashboard-ia',
+  path: '/dashboard-ia',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -93,6 +106,11 @@ const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
 const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCalendarioRoute = AppCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBuscaLeadRoute = AppBuscaLeadRouteImport.update({
@@ -106,14 +124,17 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/app/busca-lead': typeof AppBuscaLeadRoute
+  '/app/calendario': typeof AppCalendarioRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/dashboard-ia': typeof AppDashboardIaRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
+  '/app/pipeline': typeof AppPipelineRoute
   '/app/producao': typeof AppProducaoRoute
   '/app/projetos': typeof AppProjetosRoute
   '/app/': typeof AppIndexRoute
@@ -122,14 +143,17 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/app/busca-lead': typeof AppBuscaLeadRoute
+  '/app/calendario': typeof AppCalendarioRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/dashboard-ia': typeof AppDashboardIaRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
+  '/app/pipeline': typeof AppPipelineRoute
   '/app/producao': typeof AppProducaoRoute
   '/app/projetos': typeof AppProjetosRoute
   '/app': typeof AppIndexRoute
@@ -140,14 +164,17 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/app/busca-lead': typeof AppBuscaLeadRoute
+  '/app/calendario': typeof AppCalendarioRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/dashboard-ia': typeof AppDashboardIaRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
+  '/app/pipeline': typeof AppPipelineRoute
   '/app/producao': typeof AppProducaoRoute
   '/app/projetos': typeof AppProjetosRoute
   '/app/': typeof AppIndexRoute
@@ -159,14 +186,17 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/app/busca-lead'
+    | '/app/calendario'
     | '/app/clientes'
     | '/app/configuracoes'
+    | '/app/dashboard-ia'
     | '/app/financeiro'
     | '/app/fornecedores'
     | '/app/ia'
     | '/app/ia-projetos'
     | '/app/materiais'
     | '/app/orcamentos'
+    | '/app/pipeline'
     | '/app/producao'
     | '/app/projetos'
     | '/app/'
@@ -175,14 +205,17 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/app/busca-lead'
+    | '/app/calendario'
     | '/app/clientes'
     | '/app/configuracoes'
+    | '/app/dashboard-ia'
     | '/app/financeiro'
     | '/app/fornecedores'
     | '/app/ia'
     | '/app/ia-projetos'
     | '/app/materiais'
     | '/app/orcamentos'
+    | '/app/pipeline'
     | '/app/producao'
     | '/app/projetos'
     | '/app'
@@ -192,14 +225,17 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/app/busca-lead'
+    | '/app/calendario'
     | '/app/clientes'
     | '/app/configuracoes'
+    | '/app/dashboard-ia'
     | '/app/financeiro'
     | '/app/fornecedores'
     | '/app/ia'
     | '/app/ia-projetos'
     | '/app/materiais'
     | '/app/orcamentos'
+    | '/app/pipeline'
     | '/app/producao'
     | '/app/projetos'
     | '/app/'
@@ -255,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProducaoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/pipeline': {
+      id: '/app/pipeline'
+      path: '/pipeline'
+      fullPath: '/app/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/orcamentos': {
       id: '/app/orcamentos'
       path: '/orcamentos'
@@ -297,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFinanceiroRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/dashboard-ia': {
+      id: '/app/dashboard-ia'
+      path: '/dashboard-ia'
+      fullPath: '/app/dashboard-ia'
+      preLoaderRoute: typeof AppDashboardIaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/configuracoes': {
       id: '/app/configuracoes'
       path: '/configuracoes'
@@ -311,6 +361,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/calendario': {
+      id: '/app/calendario'
+      path: '/calendario'
+      fullPath: '/app/calendario'
+      preLoaderRoute: typeof AppCalendarioRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/busca-lead': {
       id: '/app/busca-lead'
       path: '/busca-lead'
@@ -323,14 +380,17 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppBuscaLeadRoute: typeof AppBuscaLeadRoute
+  AppCalendarioRoute: typeof AppCalendarioRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppDashboardIaRoute: typeof AppDashboardIaRoute
   AppFinanceiroRoute: typeof AppFinanceiroRoute
   AppFornecedoresRoute: typeof AppFornecedoresRoute
   AppIaRoute: typeof AppIaRoute
   AppIaProjetosRoute: typeof AppIaProjetosRoute
   AppMateriaisRoute: typeof AppMateriaisRoute
   AppOrcamentosRoute: typeof AppOrcamentosRoute
+  AppPipelineRoute: typeof AppPipelineRoute
   AppProducaoRoute: typeof AppProducaoRoute
   AppProjetosRoute: typeof AppProjetosRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -338,14 +398,17 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBuscaLeadRoute: AppBuscaLeadRoute,
+  AppCalendarioRoute: AppCalendarioRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppDashboardIaRoute: AppDashboardIaRoute,
   AppFinanceiroRoute: AppFinanceiroRoute,
   AppFornecedoresRoute: AppFornecedoresRoute,
   AppIaRoute: AppIaRoute,
   AppIaProjetosRoute: AppIaProjetosRoute,
   AppMateriaisRoute: AppMateriaisRoute,
   AppOrcamentosRoute: AppOrcamentosRoute,
+  AppPipelineRoute: AppPipelineRoute,
   AppProducaoRoute: AppProducaoRoute,
   AppProjetosRoute: AppProjetosRoute,
   AppIndexRoute: AppIndexRoute,
