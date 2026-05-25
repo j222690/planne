@@ -212,4 +212,7 @@
   }
   .text-balance { text-wrap: balance; }
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .input {
+    @apply w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong transition-colors;
+  }
 }

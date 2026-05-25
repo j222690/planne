@@ -4,4 +4,9 @@
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+  // Variáveis de ambiente server-side (não expostas ao cliente)
+  // Em produção: wrangler secret put GROQ_API_KEY
+  //              wrangler secret put OPENAI_API_KEY
+  //              wrangler secret put VITE_SUPABASE_URL
+  //              wrangler secret put VITE_SUPABASE_ANON_KEY
 }

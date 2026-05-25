@@ -17,6 +17,7 @@ import { Route as AppProjetosRouteImport } from './routes/app.projetos'
 import { Route as AppProducaoRouteImport } from './routes/app.producao'
 import { Route as AppOrcamentosRouteImport } from './routes/app.orcamentos'
 import { Route as AppMateriaisRouteImport } from './routes/app.materiais'
+import { Route as AppIaProjetosRouteImport } from './routes/app.ia-projetos'
 import { Route as AppIaRouteImport } from './routes/app.ia'
 import { Route as AppFornecedoresRouteImport } from './routes/app.fornecedores'
 import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
@@ -64,6 +65,11 @@ const AppMateriaisRoute = AppMateriaisRouteImport.update({
   path: '/materiais',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIaProjetosRoute = AppIaProjetosRouteImport.update({
+  id: '/ia-projetos',
+  path: '/ia-projetos',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppIaRoute = AppIaRouteImport.update({
   id: '/ia',
   path: '/ia',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
   '/app/ia': typeof AppIaRoute
+  '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
   '/app/producao': typeof AppProducaoRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
   '/app/ia': typeof AppIaRoute
+  '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
   '/app/producao': typeof AppProducaoRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/fornecedores': typeof AppFornecedoresRoute
   '/app/ia': typeof AppIaRoute
+  '/app/ia-projetos': typeof AppIaProjetosRoute
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
   '/app/producao': typeof AppProducaoRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/app/financeiro'
     | '/app/fornecedores'
     | '/app/ia'
+    | '/app/ia-projetos'
     | '/app/materiais'
     | '/app/orcamentos'
     | '/app/producao'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/app/financeiro'
     | '/app/fornecedores'
     | '/app/ia'
+    | '/app/ia-projetos'
     | '/app/materiais'
     | '/app/orcamentos'
     | '/app/producao'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/app/financeiro'
     | '/app/fornecedores'
     | '/app/ia'
+    | '/app/ia-projetos'
     | '/app/materiais'
     | '/app/orcamentos'
     | '/app/producao'
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMateriaisRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ia-projetos': {
+      id: '/app/ia-projetos'
+      path: '/ia-projetos'
+      fullPath: '/app/ia-projetos'
+      preLoaderRoute: typeof AppIaProjetosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ia': {
       id: '/app/ia'
       path: '/ia'
@@ -309,6 +328,7 @@ interface AppRouteChildren {
   AppFinanceiroRoute: typeof AppFinanceiroRoute
   AppFornecedoresRoute: typeof AppFornecedoresRoute
   AppIaRoute: typeof AppIaRoute
+  AppIaProjetosRoute: typeof AppIaProjetosRoute
   AppMateriaisRoute: typeof AppMateriaisRoute
   AppOrcamentosRoute: typeof AppOrcamentosRoute
   AppProducaoRoute: typeof AppProducaoRoute
@@ -323,6 +343,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFinanceiroRoute: AppFinanceiroRoute,
   AppFornecedoresRoute: AppFornecedoresRoute,
   AppIaRoute: AppIaRoute,
+  AppIaProjetosRoute: AppIaProjetosRoute,
   AppMateriaisRoute: AppMateriaisRoute,
   AppOrcamentosRoute: AppOrcamentosRoute,
   AppProducaoRoute: AppProducaoRoute,

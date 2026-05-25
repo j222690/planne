@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   LayoutDashboard, FileText, Users, Boxes, Truck, Sparkles,
   Hammer, Wallet, Settings, Search, Bell, Command, ChevronsUpDown,
-  Folder, LogOut, Menu, X, Sun, Moon, UserSearch,
+  Folder, LogOut, Menu, X, Sun, Moon, UserSearch, Wand2,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,8 @@ const nav = [
     { to: "/app/producao", label: "Produção", icon: Hammer },
   ]},
   { group: "Inteligência", items: [
-    { to: "/app/ia", label: "Assistente IA", icon: Sparkles },
+    { to: "/app/ia-projetos", label: "IA Projetos", icon: Wand2 },
+    { to: "/app/ia", label: "Grat — Assistente", icon: Sparkles },
     { to: "/app/financeiro", label: "Financeiro", icon: Wallet },
   ]},
 ];
