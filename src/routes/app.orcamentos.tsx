@@ -1,12 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer, Pencil } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer, Pencil, Check, ImageUp, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus, deleteOrcamento, updateOrcamento, replaceOrcamentoItens } from "@/lib/db";
-import { askAI } from "@/lib/ai";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,51 +45,67 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+type MatCatalog = {
+  id: string; nome: string; unidade: string;
+  preco_custo: number; preco_venda: number; categoria: string | null;
+};
+
+const AMBIENTES = ["Cozinha", "Quarto", "Sala", "Banheiro", "Escritório", "Lavanderia", "Área gourmet", "Closet", "Garagem", "Outro"];
+
 function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; onSaved: () => void; editOrc?: Orc & { itens?: OrcItem[] } }) {
-  const [clientes, setClientes] = useState<{id:string;nome:string}[]>([]);
-  const [materiais, setMateriais] = useState<{id:string;nome:string;preco_custo:number;unidade:string}[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [empresaId, setEmpresaId] = useState<string|null>(null);
-  const pdfRef = useRef<HTMLInputElement>(null);
   const isEdit = !!editOrc;
+  const [fase, setFase] = useState<"configurar" | "revisar">(isEdit ? "revisar" : "configurar");
+  const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
+  const [catalogo, setCatalogo] = useState<MatCatalog[]>([]);
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
+
+  // Fase configurar — AI inputs
+  const [clienteId, setClienteId] = useState("");
+  const [margemPct, setMargemPct] = useState(35);
+  const [ambiente, setAmbiente] = useState("Cozinha");
+  const [descricao, setDescricao] = useState("");
+  const [medidas, setMedidas] = useState({ largura: 0, profundidade: 0, altura: 2.7 });
+  const [plantaB64, setPlantaB64] = useState<string | null>(null);
+  const [plantaNome, setPlantaNome] = useState<string | null>(null);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [catSearch, setCatSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [aiLoading, setAiLoading] = useState(false);
+  const plantaRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { status: "rascunho", margem_pct: 35, itens: [{ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 }] },
   });
-
   const { fields, append, remove } = useFieldArray({ control, name: "itens" });
   const itens = watch("itens");
-  const margem = watch("margem_pct");
-
   const subtotal = itens.reduce((s, i) => s + (Number(i.preco_unitario) || 0) * (Number(i.quantidade) || 0), 0);
-  const total = subtotal;
 
   useEffect(() => {
     async function load() {
       const empresa = await getEmpresaAtual();
       if (!empresa) return;
-      const eid = (empresa as {id:string}).id;
+      const eid = (empresa as { id: string }).id;
       setEmpresaId(eid);
       const [c, m] = await Promise.all([getClientes(eid), getMateriais(eid)]);
-      setClientes(c as {id:string;nome:string}[]);
-      setMateriais(m as {id:string;nome:string;preco_custo:number;unidade:string}[]);
+      setClientes(c as { id: string; nome: string }[]);
+      const raw = m as unknown as { id: string; nome: string; unidade: string; preco_custo: number; preco_venda: number; categorias_material?: { nome: string } | null }[];
+      setCatalogo(raw.map((r) => ({
+        id: r.id, nome: r.nome, unidade: r.unidade,
+        preco_custo: r.preco_custo, preco_venda: r.preco_venda,
+        categoria: r.categorias_material?.nome ?? null,
+      })));
 
-      // Pré-popula se é edição
       if (editOrc) {
-        setValue("cliente_id", editOrc.cliente_id ?? "");
+        setValue("cliente_id", (editOrc as unknown as { cliente_id?: string }).cliente_id ?? "");
         setValue("status", editOrc.status);
-        setValue("margem_pct", editOrc.margem_pct ?? 35);
+        setValue("margem_pct", (editOrc as unknown as { margem_pct?: number }).margem_pct ?? 35);
         const itensExistentes = editOrc.itens ?? await getOrcamentoItens(editOrc.id) as OrcItem[];
         if (itensExistentes.length > 0) {
           setValue("itens", itensExistentes.map((it) => ({
-            descricao: it.descricao,
-            quantidade: Number(it.quantidade),
-            unidade: it.unidade,
-            preco_custo: Number(it.preco_custo),
-            preco_unitario: Number(it.preco_unitario),
+            descricao: it.descricao, quantidade: Number(it.quantidade),
+            unidade: it.unidade, preco_custo: Number(it.preco_custo), preco_unitario: Number(it.preco_unitario),
           })));
         }
       }
@@ -98,24 +113,53 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; on
     load();
   }, []);
 
-  const applyMargem = (custo: number) => {
-    const m = Number(margem) || 35;
-    return parseFloat((custo / (1 - m / 100)).toFixed(2));
+  const categorias = useMemo(() => {
+    const q = catSearch.toLowerCase();
+    const map: Record<string, MatCatalog[]> = {};
+    for (const m of catalogo) {
+      if (q && !m.nome.toLowerCase().includes(q)) continue;
+      const cat = m.categoria ?? "Geral";
+      if (!map[cat]) map[cat] = [];
+      map[cat].push(m);
+    }
+    return map;
+  }, [catalogo, catSearch]);
+
+  const toggleMaterial = (id: string) => {
+    setSelecionados((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
-  const handleMaterialSelect = (idx: number, matId: string) => {
-    const mat = materiais.find((m) => m.id === matId);
-    if (!mat) return;
-    setValue(`itens.${idx}.descricao`, mat.nome);
-    setValue(`itens.${idx}.unidade`, mat.unidade || "un");
-    setValue(`itens.${idx}.preco_custo`, mat.preco_custo);
-    setValue(`itens.${idx}.preco_unitario`, applyMargem(mat.preco_custo));
+  const toggleCategoria = (cat: string) => {
+    const ids = categorias[cat]?.map((m) => m.id) ?? [];
+    const allSelected = ids.every((id) => selecionados.has(id));
+    setSelecionados((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => allSelected ? next.delete(id) : next.add(id));
+      return next;
+    });
+  };
+
+  const handlePlantaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const b64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    setPlantaB64(b64);
+    setPlantaNome(file.name);
+    if (plantaRef.current) plantaRef.current.value = "";
   };
 
   const handlePdfImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPdfLoading(true);
     try {
       const b64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -133,6 +177,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; on
       if (data.itens?.length) {
         setValue("itens", data.itens);
         if (data.margem_detectada) setValue("margem_pct", data.margem_detectada);
+        setFase("revisar");
         toast.success(`${data.itens.length} itens importados do PDF!`);
       } else {
         toast.error("Nenhum item encontrado no documento.");
@@ -140,36 +185,39 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; on
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao processar PDF");
     } finally {
-      setPdfLoading(false);
       if (pdfRef.current) pdfRef.current.value = "";
     }
   };
 
-  const handleAIGenerate = async () => {
-    if (!aiPrompt.trim()) return;
+  const handleGerarIA = async () => {
+    if (!clienteId) { toast.error("Selecione um cliente."); return; }
+    if (!medidas.largura || !medidas.profundidade || !medidas.altura) { toast.error("Informe as medidas do ambiente."); return; }
+    if (selecionados.size === 0) { toast.error("Selecione ao menos um material do catálogo."); return; }
+
     setAiLoading(true);
     try {
-      const system = `Você é um especialista em marcenaria planejada. O usuário vai descrever um móvel.
-Responda APENAS com um JSON válido (sem markdown, sem explicações) no formato:
-{"itens":[{"descricao":"string","quantidade":number,"unidade":"string","preco_custo":number,"preco_unitario":number}]}
-Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidades: chapa, par, un, metro.`;
-
-      const { text } = await askAI({
-        system,
-        messages: [{ role: "user", content: aiPrompt }],
-        max_tokens: 800,
-        temperature: 0.2,
+      const materiaisParam = catalogo.filter((m) => selecionados.has(m.id));
+      const body = {
+        ambiente, descricao, medidas, margem_pct: margemPct,
+        materiais: materiaisParam,
+        ...(plantaB64 ? { planta_b64: plantaB64 } : {}),
+      };
+      const res = await fetch("/api/calcular-orcamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
-
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
-      if (parsed.itens?.length) {
-        setValue("itens", parsed.itens);
-        toast.success(`${parsed.itens.length} itens gerados pela IA!`);
-        setAiPrompt("");
-      }
-    } catch {
-      toast.error("Erro ao gerar itens com IA. Verifique as chaves de API no .env.local.");
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (!data.itens?.length) throw new Error("A IA não retornou itens.");
+      setValue("itens", data.itens);
+      setValue("cliente_id", clienteId);
+      setValue("margem_pct", margemPct);
+      if (data.resumo) setValue("observacoes", data.resumo);
+      setFase("revisar");
+      toast.success(`${data.itens.length} itens calculados pela IA!`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao calcular orçamento");
     } finally {
       setAiLoading(false);
     }
@@ -180,38 +228,22 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
     try {
       if (isEdit && editOrc) {
         await updateOrcamento(editOrc.id, {
-          cliente_id: data.cliente_id,
-          status: data.status,
-          margem_pct: data.margem_pct,
-          observacoes: data.observacoes,
-          subtotal,
-          total,
+          cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
+          observacoes: data.observacoes, subtotal, total: subtotal,
         });
         await replaceOrcamentoItens(editOrc.id, data.itens.map((it) => ({
-          orcamento_id: editOrc.id,
-          descricao: it.descricao,
-          quantidade: it.quantidade,
-          unidade: it.unidade,
-          preco_custo: it.preco_custo,
-          preco_unitario: it.preco_unitario,
+          orcamento_id: editOrc.id, descricao: it.descricao, quantidade: it.quantidade,
+          unidade: it.unidade, preco_custo: it.preco_custo, preco_unitario: it.preco_unitario,
         })));
         toast.success("Orçamento atualizado!");
       } else {
         const orc = await upsertOrcamento(empresaId, {
-          cliente_id: data.cliente_id,
-          status: data.status,
-          margem_pct: data.margem_pct,
-          observacoes: data.observacoes,
-          subtotal,
-          total,
+          cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
+          observacoes: data.observacoes, subtotal, total: subtotal,
         });
         await supabase.from("orcamento_itens").insert(data.itens.map((it) => ({
-          orcamento_id: orc.id,
-          descricao: it.descricao,
-          quantidade: it.quantidade,
-          unidade: it.unidade,
-          preco_custo: it.preco_custo,
-          preco_unitario: it.preco_unitario,
+          orcamento_id: orc.id, descricao: it.descricao, quantidade: it.quantidade,
+          unidade: it.unidade, preco_custo: it.preco_custo, preco_unitario: it.preco_unitario,
         })));
         toast.success(`Orçamento ${orc.numero} criado!`);
       }
@@ -234,215 +266,329 @@ Calcule custos realistas para Chapecó/SC 2025. Use margem de ${margem}%. Unidad
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h2 className="text-[15px] font-semibold">{isEdit ? `Editar orçamento ${editOrc?.numero ?? ""}` : "Novo orçamento"}</h2>
-            <p className="text-[12px] text-muted-foreground mt-0.5">Preencha manualmente ou use a IA para gerar os itens</p>
+            <h2 className="text-[15px] font-semibold">
+              {isEdit ? `Editar orçamento ${editOrc?.numero ?? ""}` : fase === "configurar" ? "Novo orçamento" : "Revisar itens"}
+            </h2>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              {isEdit ? "Edite os itens e salve" : fase === "configurar" ? "Informe as medidas e materiais — a IA calcula tudo" : "Confira e ajuste antes de salvar"}
+            </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="p-5 space-y-4">
-            {/* IA prompt + PDF import */}
-            <div className="rounded-md border border-accent/30 bg-accent/5 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
-                  <Sparkles className="size-3.5" /> Gerar itens com IA
-                </div>
-                <button
-                  type="button"
-                  onClick={() => pdfRef.current?.click()}
-                  disabled={pdfLoading}
-                  className="text-[11.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-60 transition-colors"
-                >
-                  {pdfLoading ? <Loader2 className="size-3 animate-spin" /> : <FileUp className="size-3" />}
-                  Importar PDF/imagem
-                </button>
-                <input ref={pdfRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handlePdfImport} />
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleAIGenerate())}
-                  placeholder='Ex: "Cozinha em L 3,8m × 2,6m MDF branco com torre de forno"'
-                  className="flex-1 h-8 rounded-md border border-border bg-surface px-2.5 text-[13px] outline-none focus:border-accent"
-                />
-                <button
-                  type="button"
-                  onClick={handleAIGenerate}
-                  disabled={aiLoading || !aiPrompt.trim()}
-                  className="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5"
-                >
-                  {aiLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                  Gerar
-                </button>
-              </div>
-            </div>
-
-            {/* Header fields */}
+        {/* ── FASE CONFIGURAR ── */}
+        {fase === "configurar" && (
+          <div className="p-5 space-y-5">
+            {/* Cliente + Margem */}
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
                 <Label>Cliente *</Label>
                 <select
-                  {...register("cliente_id")}
+                  value={clienteId}
+                  onChange={(e) => setClienteId(e.target.value)}
                   className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong text-foreground"
                 >
                   <option value="">Selecione...</option>
                   {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
-                {errors.cliente_id && <div className="text-[11px] text-destructive mt-1">{errors.cliente_id.message}</div>}
               </div>
               <div>
                 <Label>Margem (%)</Label>
                 <input
-                  {...register("margem_pct")}
-                  type="number"
-                  min={0} max={100}
+                  type="number" min={0} max={100} value={margemPct}
+                  onChange={(e) => setMargemPct(Number(e.target.value))}
                   className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
                 />
               </div>
             </div>
 
-            {/* Itens */}
+            {/* Ambiente + Medidas */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Itens do orçamento</Label>
-                <button
-                  type="button"
-                  onClick={() => append({ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 })}
-                  className="text-[12px] text-accent hover:text-accent/80 inline-flex items-center gap-1"
+              <Label>Ambiente e medidas</Label>
+              <div className="grid grid-cols-4 gap-2">
+                <select
+                  value={ambiente}
+                  onChange={(e) => setAmbiente(e.target.value)}
+                  className="col-span-1 h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
                 >
-                  <Plus className="size-3" /> Adicionar item
-                </button>
+                  {AMBIENTES.map((a) => <option key={a}>{a}</option>)}
+                </select>
+                {(["largura", "profundidade", "altura"] as const).map((dim) => (
+                  <div key={dim} className="relative">
+                    <input
+                      type="number" step="0.01" min="0" placeholder={dim === "largura" ? "Larg m" : dim === "profundidade" ? "Prof m" : "Alt m"}
+                      value={medidas[dim] || ""}
+                      onChange={(e) => setMedidas((prev) => ({ ...prev, [dim]: Number(e.target.value) }))}
+                      className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
+                    />
+                  </div>
+                ))}
               </div>
-
-              <div className="rounded-md border border-border overflow-hidden">
-                <table className="w-full text-[12.5px]">
-                  <thead className="bg-surface-2">
-                    <tr className="border-b border-border">
-                      <th className="text-left font-medium px-3 py-2 text-muted-foreground w-[34%]">Descrição</th>
-                      <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[10%]">Qtd</th>
-                      <th className="text-left font-medium px-2 py-2 text-muted-foreground w-[8%]">Un</th>
-                      <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[14%]">Custo R$</th>
-                      <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[14%]">Preço R$</th>
-                      <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[14%]">Total R$</th>
-                      <th className="w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fields.map((field, idx) => {
-                      const linha = itens[idx];
-                      const tot = (Number(linha?.preco_unitario)||0) * (Number(linha?.quantidade)||0);
-                      return (
-                        <tr key={field.id} className="border-b border-border last:border-0">
-                          <td className="px-3 py-1.5">
-                            {materiais.length > 0 ? (
-                              <div className="flex gap-1">
-                                <input
-                                  {...register(`itens.${idx}.descricao`)}
-                                  placeholder="Descrição"
-                                  className="flex-1 h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none focus:border-border-strong min-w-0"
-                                />
-                                <select
-                                  onChange={(e) => handleMaterialSelect(idx, e.target.value)}
-                                  className="w-6 h-7 rounded border border-border bg-surface-2 text-[10px] outline-none"
-                                  title="Selecionar do catálogo"
-                                >
-                                  <option value="">↓</option>
-                                  {materiais.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                                </select>
-                              </div>
-                            ) : (
-                              <input
-                                {...register(`itens.${idx}.descricao`)}
-                                placeholder="Descrição"
-                                className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none focus:border-border-strong"
-                              />
-                            )}
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <input {...register(`itens.${idx}.quantidade`)} type="number" step="0.01" min="0"
-                              className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <input {...register(`itens.${idx}.unidade`)}
-                              className="w-full h-7 rounded border border-border bg-surface-2 px-1 text-[12px] outline-none" />
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <input {...register(`itens.${idx}.preco_custo`)} type="number" step="0.01" min="0"
-                              className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <input {...register(`itens.${idx}.preco_unitario`)} type="number" step="0.01" min="0"
-                              className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
-                          </td>
-                          <td className="px-2 py-1.5 text-right num text-muted-foreground">
-                            {tot.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-2 py-1.5">
-                            <button type="button" onClick={() => remove(idx)} className="text-muted-foreground hover:text-destructive">
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {errors.itens?.root && <div className="text-[11px] text-destructive mt-1">{errors.itens.root.message}</div>}
-            </div>
-
-            {/* Totals */}
-            <div className="flex justify-end">
-              <div className="min-w-[200px] space-y-1 text-[13px]">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between font-semibold border-t border-border pt-1">
-                  <span>Total</span>
-                  <span className="num">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label>Observações / Condições comerciais</Label>
-              <textarea
-                {...register("observacoes")}
-                rows={2}
-                placeholder="Prazo de entrega, condições de pagamento, garantias..."
-                className="w-full rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] outline-none focus:border-border-strong resize-none"
+              <input
+                type="text" placeholder="Descrição adicional (ex: cozinha em L com torre de forno, gavetas)"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                className="mt-2 w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
               />
             </div>
-          </div>
 
-          <div className="flex items-center justify-between px-5 py-4 border-t border-border">
+            {/* Planta baixa */}
             <div>
-              <select
-                {...register("status")}
-                className="h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none"
+              <div className="flex items-center justify-between mb-1">
+                <Label>Planta baixa (opcional)</Label>
+                {plantaNome && (
+                  <button type="button" onClick={() => { setPlantaB64(null); setPlantaNome(null); }}
+                    className="text-[11px] text-destructive hover:opacity-70">remover</button>
+                )}
+              </div>
+              {plantaNome ? (
+                <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-surface-2 text-[13px] text-muted-foreground">
+                  <ImageUp className="size-3.5" /> {plantaNome}
+                </div>
+              ) : (
+                <button type="button" onClick={() => plantaRef.current?.click()}
+                  className="flex items-center gap-2 h-9 px-3 w-full rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                  <ImageUp className="size-3.5" /> Adicionar imagem da planta (melhora a precisão da IA)
+                </button>
+              )}
+              <input ref={plantaRef} type="file" accept="image/*" className="hidden" onChange={handlePlantaUpload} />
+            </div>
+
+            {/* Seleção de materiais */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Materiais do catálogo ({selecionados.size} selecionados)</Label>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setSelecionados(new Set(catalogo.map((m) => m.id)))}
+                    className="text-[11px] text-accent hover:opacity-80">Todos</button>
+                  <span className="text-muted-foreground text-[11px]">·</span>
+                  <button type="button" onClick={() => setSelecionados(new Set())}
+                    className="text-[11px] text-muted-foreground hover:text-foreground">Nenhum</button>
+                </div>
+              </div>
+              <input
+                type="text" placeholder="Buscar material..." value={catSearch}
+                onChange={(e) => setCatSearch(e.target.value)}
+                className="mb-2 w-full h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong"
+              />
+              <div className="border border-border rounded-md overflow-hidden max-h-52 overflow-y-auto">
+                {Object.entries(categorias).length === 0 ? (
+                  <div className="px-3 py-4 text-[13px] text-muted-foreground text-center">
+                    {catalogo.length === 0 ? "Catálogo vazio — cadastre materiais primeiro." : "Nenhum resultado."}
+                  </div>
+                ) : Object.entries(categorias).map(([cat, mats]) => {
+                  const allSel = mats.every((m) => selecionados.has(m.id));
+                  const someSel = mats.some((m) => selecionados.has(m.id));
+                  const isOpen = !collapsed[cat];
+                  return (
+                    <div key={cat} className="border-b border-border last:border-0">
+                      <button
+                        type="button"
+                        onClick={() => setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }))}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-surface-2 hover:bg-secondary text-[12px] font-medium text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleCategoria(cat); }}
+                            className={`size-4 rounded border flex items-center justify-center shrink-0 transition-colors ${allSel ? "bg-accent border-accent" : someSel ? "bg-accent/30 border-accent/50" : "border-border"}`}
+                          >
+                            {(allSel || someSel) && <Check className="size-2.5 text-white" />}
+                          </button>
+                          {cat}
+                          <span className="text-muted-foreground font-normal">({mats.length})</span>
+                        </div>
+                        {isOpen ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
+                      </button>
+                      {isOpen && (
+                        <div className="divide-y divide-border">
+                          {mats.map((m) => (
+                            <button
+                              key={m.id} type="button"
+                              onClick={() => toggleMaterial(m.id)}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left text-[12.5px]"
+                            >
+                              <span className={`size-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selecionados.has(m.id) ? "bg-accent border-accent" : "border-border"}`}>
+                                {selecionados.has(m.id) && <Check className="size-2.5 text-white" />}
+                              </span>
+                              <span className="flex-1 truncate">{m.nome}</span>
+                              <span className="text-muted-foreground text-[11px] shrink-0">{m.unidade}</span>
+                              <span className="text-muted-foreground text-[11px] shrink-0 num">R$ {Number(m.preco_custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => pdfRef.current?.click()}
+                  className="text-[12px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+                  <FileUp className="size-3.5" /> Importar PDF existente
+                </button>
+                <input ref={pdfRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handlePdfImport} />
+                <span className="text-muted-foreground text-[11px]">·</span>
+                <button type="button" onClick={() => setFase("revisar")}
+                  className="text-[12px] text-muted-foreground hover:text-foreground">
+                  Preencher manualmente
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleGerarIA}
+                disabled={aiLoading}
+                className="h-9 px-4 rounded-md bg-accent text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2"
               >
+                {aiLoading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                {aiLoading ? "Calculando..." : "Gerar orçamento com IA"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── FASE REVISAR / MODO MANUAL / EDIÇÃO ── */}
+        {(fase === "revisar" || isEdit) && (
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="p-5 space-y-4">
+              {!isEdit && (
+                <div className="flex items-center justify-between">
+                  <button type="button" onClick={() => setFase("configurar")}
+                    className="text-[12px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                    ← Voltar à configuração
+                  </button>
+                  <div className="text-[12px] text-muted-foreground">{fields.length} itens gerados</div>
+                </div>
+              )}
+
+              {/* Cliente + Margem (repeat for manual mode) */}
+              {(!isEdit) && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <Label>Cliente *</Label>
+                    <select
+                      {...register("cliente_id")}
+                      className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong text-foreground"
+                    >
+                      <option value="">Selecione...</option>
+                      {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                    {errors.cliente_id && <div className="text-[11px] text-destructive mt-1">{errors.cliente_id.message}</div>}
+                  </div>
+                  <div>
+                    <Label>Margem (%)</Label>
+                    <input {...register("margem_pct")} type="number" min={0} max={100}
+                      className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
+                  </div>
+                </div>
+              )}
+
+              {/* Itens table */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Itens do orçamento</Label>
+                  <button type="button"
+                    onClick={() => append({ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 })}
+                    className="text-[12px] text-accent hover:text-accent/80 inline-flex items-center gap-1">
+                    <Plus className="size-3" /> Adicionar item
+                  </button>
+                </div>
+                <div className="rounded-md border border-border overflow-hidden">
+                  <table className="w-full text-[12.5px]">
+                    <thead className="bg-surface-2">
+                      <tr className="border-b border-border">
+                        <th className="text-left font-medium px-3 py-2 text-muted-foreground w-[35%]">Descrição</th>
+                        <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[10%]">Qtd</th>
+                        <th className="text-left font-medium px-2 py-2 text-muted-foreground w-[8%]">Un</th>
+                        <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[14%]">Custo R$</th>
+                        <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[14%]">Preço R$</th>
+                        <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[13%]">Total R$</th>
+                        <th className="w-7"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fields.map((field, idx) => {
+                        const linha = itens[idx];
+                        const tot = (Number(linha?.preco_unitario) || 0) * (Number(linha?.quantidade) || 0);
+                        return (
+                          <tr key={field.id} className="border-b border-border last:border-0">
+                            <td className="px-3 py-1.5">
+                              <input {...register(`itens.${idx}.descricao`)} placeholder="Descrição"
+                                className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none focus:border-border-strong" />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input {...register(`itens.${idx}.quantidade`)} type="number" step="0.01" min="0"
+                                className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input {...register(`itens.${idx}.unidade`)}
+                                className="w-full h-7 rounded border border-border bg-surface-2 px-1 text-[12px] outline-none" />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input {...register(`itens.${idx}.preco_custo`)} type="number" step="0.01" min="0"
+                                className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input {...register(`itens.${idx}.preco_unitario`)} type="number" step="0.01" min="0"
+                                className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-right" />
+                            </td>
+                            <td className="px-2 py-1.5 text-right num text-muted-foreground">
+                              {tot.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <button type="button" onClick={() => remove(idx)} className="text-muted-foreground hover:text-destructive">
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {errors.itens?.root && <div className="text-[11px] text-destructive mt-1">{errors.itens.root.message}</div>}
+              </div>
+
+              <div className="flex justify-end">
+                <div className="min-w-[200px] space-y-1 text-[13px]">
+                  <div className="flex justify-between font-semibold border-t border-border pt-1">
+                    <span>Total</span>
+                    <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label>Observações</Label>
+                <textarea {...register("observacoes")} rows={2}
+                  placeholder="Prazo de entrega, condições de pagamento, garantias..."
+                  className="w-full rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] outline-none focus:border-border-strong resize-none" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-5 py-4 border-t border-border">
+              <select {...register("status")}
+                className="h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none">
                 <option value="rascunho">Salvar como rascunho</option>
                 <option value="analise">Enviar para análise</option>
               </select>
+              <div className="flex gap-2">
+                <button type="button" onClick={onClose}
+                  className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isSubmitting}
+                  className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
+                  {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                  {isEdit ? "Salvar alterações" : "Criar orçamento"}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary transition-colors">
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
-              >
-                {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                {isEdit ? "Salvar alterações" : "Criar orçamento"}
-              </button>
-            </div>
-          </div>
-        </form>
+          </form>
+        )}
       </motion.div>
     </div>
   );
