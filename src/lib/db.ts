@@ -77,10 +77,9 @@ export async function upsertMaterial(empresaId: string, material: Record<string,
 
 // ─── Projetos ─────────────────────────────────────────────────────────────────
 export async function upsertProjeto(empresaId: string, projeto: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession();
   const { data, error } = await supabase
     .from("projetos")
-    .insert({ ...projeto, empresa_id: empresaId, criado_por: session?.user.id })
+    .insert({ ...projeto, empresa_id: empresaId })
     .select()
     .single();
   if (error) throw error;

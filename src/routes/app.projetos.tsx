@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getProjetos, getClientes, getEmpresaAtual } from "@/lib/db";
+import { getProjetos, getClientes, getEmpresaAtual, upsertProjeto } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,17 +52,19 @@ function NovoProjetoModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
   const onSubmit = async (data: FormData) => {
     const empresa = await getEmpresaAtual();
     if (!empresa) return;
-    const { error } = await supabase.from("projetos").insert({
-      empresa_id: empresa.id,
-      nome: data.nome,
-      cliente_id: data.cliente_id || null,
-      descricao: data.descricao || null,
-      status: data.status,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Projeto criado!");
-    onSaved();
-    onClose();
+    try {
+      await upsertProjeto(empresa.id, {
+        nome: data.nome,
+        cliente_id: data.cliente_id || null,
+        descricao: data.descricao || null,
+        status: data.status,
+      });
+      toast.success("Projeto criado!");
+      onSaved();
+      onClose();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : ((e as { message?: string })?.message ?? "Erro ao criar projeto"));
+    }
   };
 
   return (
