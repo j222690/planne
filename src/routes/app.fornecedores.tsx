@@ -20,9 +20,9 @@ type Fornecedor = {
 };
 
 const SYNC_TONE: Record<string, "green" | "amber" | "blue" | "neutral"> = {
-  api: "green", planilha: "blue", pdf: "amber", manual: "neutral",
+  api: "green", xlsx: "blue", pdf: "amber", manual: "neutral",
 };
-const SYNC_LABEL: Record<string, string> = { api: "API", planilha: "Planilha", pdf: "PDF · OCR", manual: "Manual" };
+const SYNC_LABEL: Record<string, string> = { api: "API", xlsx: "Planilha", pdf: "PDF · OCR", manual: "Manual" };
 
 const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
@@ -32,14 +32,14 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const FORNECEDORES_PADRAO = [
-  { nome: "Arauco", categoria: "Chapas MDF / MDP", modo_sync: "planilha" },
-  { nome: "Berneck", categoria: "Chapas MDF", modo_sync: "planilha" },
+  { nome: "Arauco", categoria: "Chapas MDF / MDP", modo_sync: "xlsx" },
+  { nome: "Berneck", categoria: "Chapas MDF", modo_sync: "xlsx" },
   { nome: "Duratex", categoria: "Chapas / Pisos", modo_sync: "pdf" },
   { nome: "Hettich", categoria: "Ferragens", modo_sync: "manual" },
   { nome: "Blum", categoria: "Ferragens premium", modo_sync: "manual" },
   { nome: "GMAD", categoria: "Ferragens / Puxadores", modo_sync: "manual" },
   { nome: "Acasel Chapecó", categoria: "Distribuidor regional", modo_sync: "manual" },
-  { nome: "Guararapes", categoria: "Chapas", modo_sync: "planilha" },
+  { nome: "Guararapes", categoria: "Chapas", modo_sync: "xlsx" },
 ];
 
 function FornecedorModal({
@@ -127,7 +127,7 @@ function FornecedorModal({
               <select {...register("modo_sync")}
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground">
                 <option value="manual">Manual</option>
-                <option value="planilha">Planilha (XLSX/CSV)</option>
+                <option value="xlsx">Planilha (XLSX/CSV)</option>
                 <option value="pdf">PDF com OCR</option>
                 <option value="api">API (planejado)</option>
               </select>
