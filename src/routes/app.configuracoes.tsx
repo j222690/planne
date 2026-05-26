@@ -41,7 +41,7 @@ function Configuracoes() {
   });
 
   const [params, setParams] = useState({
-    mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35, creditos_render: 10,
+    mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35,
   });
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -84,7 +84,6 @@ function Configuracoes() {
         mdf_custo_chapa: p.mdf_custo_chapa ?? 85,
         mao_obra_hora: p.mao_obra_hora ?? 45,
         margem_padrao: p.margem_padrao ?? 35,
-        creditos_render: p.creditos_render ?? 10,
       });
       setLogoUrl(emp.logo_url ?? null);
     });
@@ -262,7 +261,6 @@ function Configuracoes() {
                 { label: "MDF — custo por chapa (R$)", key: "mdf_custo_chapa", step: "1" },
                 { label: "Mão de obra — custo/hora (R$)", key: "mao_obra_hora", step: "1" },
                 { label: "Margem padrão (%)", key: "margem_padrao", step: "0.5" },
-                { label: "Créditos de render", key: "creditos_render", step: "1" },
               ].map(({ label, key, step }) => (
                 <label key={key} className="block">
                   <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>

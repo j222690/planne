@@ -18,31 +18,55 @@ interface MovelConfig {
   tipo_porta: "abrir" | "correr" | "sem";
   gavetas: number;
   prateleiras: number;
+  tem_fundo?: boolean;
+  mdf_id?: string;
+  fundo_id?: string;
+  dobradica_id?: string;
+  corrediça_porta_id?: string;
+  corrediça_gaveta_id?: string;
+  puxador_id?: string;
 }
 
-function moveisToParagraph(moveis: MovelConfig[]): string {
+type CatItem = { id: string; nome: string; preco_custo: number; preco_venda: number; unidade: string; categoria: string | null };
+
+function moveisToParagraph(moveis: MovelConfig[], catalogo: CatItem[]): string {
+  const findMat = (id?: string) => id ? catalogo.find((m) => m.id === id) : null;
+
   return moveis.map((m, i) => {
-    const ferragensAuto: string[] = [];
-    if (m.portas > 0) {
-      if (m.tipo_porta === "abrir") {
-        ferragensAuto.push(`${m.portas * 2} dobradiças (2 por folha)`);
-        ferragensAuto.push(`${m.portas} puxador(es)`);
-      } else if (m.tipo_porta === "correr") {
-        const pares = Math.ceil(m.portas / 2);
-        ferragensAuto.push(`${pares} par(es) de corrediça de porta + trilho duplo`);
-      }
-    }
-    if (m.gavetas > 0) {
-      ferragensAuto.push(`${m.gavetas} par(es) de corrediça de gaveta telescópica`);
-      ferragensAuto.push(`${m.gavetas} puxador(es) de gaveta`);
-    }
+    const mdf = findMat(m.mdf_id);
+    const fundo = findMat(m.fundo_id);
+    const dobradica = findMat(m.dobradica_id);
+    const corrPt = findMat(m.corrediça_porta_id);
+    const corrGav = findMat(m.corrediça_gaveta_id);
+    const puxador = findMat(m.puxador_id);
+
+    const dobQtd = m.portas > 0 && m.tipo_porta === "abrir"
+      ? m.portas * (m.altura_cm > 150 ? 3 : 2)
+      : 0;
+    const corrPtPares = m.portas > 0 && m.tipo_porta === "correr"
+      ? Math.ceil(m.portas / 2)
+      : 0;
+
+    const matLinhas = [
+      mdf ? `  MDF estrutura: ID=${mdf.id} | ${mdf.nome} | custo R$${mdf.preco_custo} — USE ESTE` : "  MDF estrutura: escolher o mais adequado do catálogo",
+      (m.tem_fundo ?? true) && fundo ? `  Fundo 6mm: ID=${fundo.id} | ${fundo.nome} — USE ESTE` : "",
+      (m.tem_fundo ?? true) && !fundo ? "  Fundo 6mm: incluir obrigatoriamente (chapa 6mm do catálogo)" : "",
+      dobradica && dobQtd > 0 ? `  Dobradiça: ID=${dobradica.id} | ${dobradica.nome} | qtd=${dobQtd} — USE ESTA` : "",
+      !dobradica && dobQtd > 0 ? `  Dobradiças: ${dobQtd} unidades — escolher do catálogo` : "",
+      corrPt && corrPtPares > 0 ? `  Corrediça porta: ID=${corrPt.id} | ${corrPt.nome} | qtd=${corrPtPares} pares + trilho — USE ESTA` : "",
+      !corrPt && corrPtPares > 0 ? `  Corrediça porta: ${corrPtPares} par(es) + trilho — escolher do catálogo` : "",
+      corrGav && m.gavetas > 0 ? `  Corrediça gaveta: ID=${corrGav.id} | ${corrGav.nome} | qtd=${m.gavetas} pares — USE ESTA` : "",
+      !corrGav && m.gavetas > 0 ? `  Corrediça gaveta: ${m.gavetas} par(es) — escolher do catálogo` : "",
+      puxador && (m.portas + m.gavetas) > 0 ? `  Puxador: ID=${puxador.id} | ${puxador.nome} | qtd=${m.portas + m.gavetas} — USE ESTE` : "",
+      !puxador && (m.portas + m.gavetas) > 0 ? `  Puxadores: ${m.portas + m.gavetas} unidades — escolher do catálogo` : "",
+    ].filter(Boolean).join("\n");
 
     return [
-      `${i + 1}. ${m.nome} (${m.tipo})`,
+      `${i + 1}. ${m.nome}`,
       `   Dimensões: ${m.largura_cm}cm L × ${m.profundidade_cm}cm P × ${m.altura_cm}cm H`,
-      `   Portas: ${m.portas}${m.portas > 0 ? ` — abertura: ${m.tipo_porta}` : ""}`,
-      `   Gavetas: ${m.gavetas}   Prateleiras: ${m.prateleiras}`,
-      ferragensAuto.length > 0 ? `   Ferragens obrigatórias: ${ferragensAuto.join("; ")}` : "",
+      `   Portas: ${m.portas}${m.portas > 0 ? ` (${m.tipo_porta})` : ""}  Gavetas: ${m.gavetas}  Prateleiras: ${m.prateleiras}`,
+      `   Fundo traseiro: ${(m.tem_fundo ?? true) ? "SIM" : "NÃO"}`,
+      matLinhas,
     ].filter(Boolean).join("\n");
   }).join("\n\n");
 }
@@ -104,7 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `- ID: ${m.id} | ${m.nome} | unidade: ${m.unidade} | custo: R$${m.preco_custo} | venda: R$${m.preco_venda}`
   ).join("\n");
 
-  const moveisParagraph = moveis?.length ? moveisToParagraph(moveis) : "";
+  const moveisParagraph = moveis?.length ? moveisToParagraph(moveis, materiais) : "";
 
   const userPrompt = [
     `AMBIENTE: ${ambiente}`,

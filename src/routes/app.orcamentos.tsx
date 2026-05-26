@@ -48,6 +48,13 @@ type MovelConfig = {
   tipo_porta: "abrir" | "correr" | "sem";
   gavetas: number;
   prateleiras: number;
+  tem_fundo?: boolean;
+  mdf_id?: string;
+  fundo_id?: string;
+  dobradica_id?: string;
+  corrediça_porta_id?: string;
+  corrediça_gaveta_id?: string;
+  puxador_id?: string;
 };
 
 type MatCatalog = {
@@ -142,6 +149,7 @@ const schema = z.object({
   cliente_id: z.string().min(1, "Selecione um cliente"),
   status: z.string().default("rascunho"),
   margem_pct: z.coerce.number().min(0).max(100).default(35),
+  mao_de_obra: z.coerce.number().min(0).default(0),
   observacoes: z.string().optional(),
   itens: z.array(itemSchema).min(1, "Adicione ao menos um item"),
 });
@@ -219,12 +227,27 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     load();
   }, []);
 
+  // Filtros do catálogo por tipo de material
+  const mdfCatalog = useMemo(() => catalogo.filter((m) => /^MDF|^MDP/i.test(m.nome)), [catalogo]);
+  const fundoCatalog = useMemo(() => catalogo.filter((m) => /6mm|fundo/i.test(m.nome)), [catalogo]);
+  const dobCatalog = useMemo(() => catalogo.filter((m) => /dobrad/i.test(m.nome)), [catalogo]);
+  const corrPortaCatalog = useMemo(() => catalogo.filter((m) => /corredi/i.test(m.nome) && !/gaveta|telesc/i.test(m.nome)), [catalogo]);
+  const corrGavCatalog = useMemo(() => catalogo.filter((m) => /corredi/i.test(m.nome) && /gaveta|telesc/i.test(m.nome)), [catalogo]);
+  const puxadorCatalog = useMemo(() => catalogo.filter((m) => /^puxador/i.test(m.nome)), [catalogo]);
+
+  // Tipos que normalmente NÃO têm fundo
+  const TIPOS_SEM_FUNDO = new Set(["cabeceira", "ripado", "bancada", "painel-tv", "bancada-gourmet", "bancada-lav", "bancada-gar", "bancada-gen"]);
+
   // Móveis helpers
   const toggleMovel = (template: Omit<MovelConfig, "id">) => {
     setMoveis((prev) => {
       const exists = prev.find((m) => m.tipo === template.tipo);
       if (exists) return prev.filter((m) => m.tipo !== template.tipo);
-      const novo: MovelConfig = { ...template, id: Math.random().toString(36).slice(2) };
+      const novo: MovelConfig = {
+        ...template,
+        id: Math.random().toString(36).slice(2),
+        tem_fundo: !TIPOS_SEM_FUNDO.has(template.tipo),
+      };
       setExpandedMovel(novo.id);
       return [...prev, novo];
     });
@@ -608,16 +631,56 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           </div>
                         </div>
 
-                        {/* Resumo de ferragens */}
-                        {(m.portas > 0 || m.gavetas > 0) && (
-                          <div className="text-[11px] text-muted-foreground bg-secondary/50 rounded px-2.5 py-1.5">
-                            Ferragens automáticas:
-                            {m.portas > 0 && m.tipo_porta === "abrir" && ` ${m.portas * 2} dobradiças`}
-                            {m.portas > 0 && m.tipo_porta === "correr" && ` ${Math.ceil(m.portas / 2)} par(es) de corrediça + trilho`}
-                            {m.gavetas > 0 && ` · ${m.gavetas} par(es) corrediça de gaveta`}
-                            {(m.portas > 0 || m.gavetas > 0) && ` · ${m.portas + m.gavetas} puxador(es)`}
-                          </div>
-                        )}
+                        {/* Fundo 6mm */}
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input type="checkbox" checked={m.tem_fundo ?? true}
+                            onChange={(e) => updateMovel(m.id, { tem_fundo: e.target.checked })}
+                            className="rounded" />
+                          <span className="text-[12px]">Tem fundo (chapa 6mm)</span>
+                        </label>
+
+                        {/* Seleção de materiais */}
+                        <div className="border-t border-border pt-3 space-y-2">
+                          <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Materiais</div>
+
+                          {/* MDF estrutura */}
+                          <MatSelect label="Chapa MDF / estrutura" value={m.mdf_id}
+                            options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_id: v })} />
+
+                          {/* Fundo 6mm */}
+                          {(m.tem_fundo ?? true) && (
+                            <MatSelect label="Chapa fundo (6mm)" value={m.fundo_id}
+                              options={fundoCatalog} onChange={(v) => updateMovel(m.id, { fundo_id: v })} />
+                          )}
+
+                          {/* Dobradiças */}
+                          {m.portas > 0 && m.tipo_porta === "abrir" && (
+                            <MatSelect label={`Dobradiça (${m.portas * (m.altura_cm > 150 ? 3 : 2)} unid. auto)`}
+                              value={m.dobradica_id} options={dobCatalog}
+                              onChange={(v) => updateMovel(m.id, { dobradica_id: v })} />
+                          )}
+
+                          {/* Corrediça de porta */}
+                          {m.portas > 0 && m.tipo_porta === "correr" && (
+                            <MatSelect label={`Corrediça de porta (${Math.ceil(m.portas / 2)} par(es) + trilho)`}
+                              value={m.corrediça_porta_id} options={corrPortaCatalog}
+                              onChange={(v) => updateMovel(m.id, { corrediça_porta_id: v })} />
+                          )}
+
+                          {/* Corrediça de gaveta */}
+                          {m.gavetas > 0 && (
+                            <MatSelect label={`Corrediça de gaveta (${m.gavetas} par(es))`}
+                              value={m.corrediça_gaveta_id} options={corrGavCatalog}
+                              onChange={(v) => updateMovel(m.id, { corrediça_gaveta_id: v })} />
+                          )}
+
+                          {/* Puxador */}
+                          {(m.portas > 0 || m.gavetas > 0) && (
+                            <MatSelect label={`Puxador (${m.portas + m.gavetas} unid.)`}
+                              value={m.puxador_id} options={puxadorCatalog}
+                              onChange={(v) => updateMovel(m.id, { puxador_id: v })} />
+                          )}
+                        </div>
 
                         <button type="button" onClick={() => setMoveis((prev) => prev.filter((x) => x.id !== m.id))}
                           className="text-[11.5px] text-destructive hover:opacity-70 inline-flex items-center gap-1">
@@ -689,8 +752,31 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 {errors.itens?.root && <div className="text-[11px] text-destructive mt-1">{errors.itens.root.message}</div>}
               </div>
 
-              <div className="flex justify-end">
-                <div className="min-w-[200px] text-[13px]">
+              {/* Mão de obra + resumo financeiro */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Mão de obra / Instalação (R$)</Label>
+                  <input {...register("mao_de_obra")} type="number" step="0.01" min="0"
+                    placeholder="0,00"
+                    className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
+                  <div className="text-[10.5px] text-muted-foreground mt-0.5">Cobrado separadamente — não entra na margem</div>
+                </div>
+                <div className="text-[12.5px] space-y-1 pt-5">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Materiais</span>
+                    <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {(() => {
+                    const custo = itens.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 0), 0);
+                    const lucro = subtotal - custo;
+                    const margemReal = subtotal > 0 ? (lucro / subtotal * 100) : 0;
+                    return (
+                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                        <span>Lucro (~{margemReal.toFixed(0)}%)</span>
+                        <span className="num">R$ {lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    );
+                  })()}
                   <div className="flex justify-between font-semibold border-t border-border pt-1">
                     <span>Total</span>
                     <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
@@ -754,13 +840,13 @@ function ItemTable({ fields, itens, register, remove }: {
       <table className="w-full text-[12px]">
         <thead className="bg-surface-2 border-b border-border">
           <tr>
-            <th className="text-left font-medium px-3 py-2 text-muted-foreground w-[30%]">Descrição</th>
-            <th className="text-left font-medium px-2 py-2 text-muted-foreground w-[14%]">Móvel</th>
-            <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[8%]">Qtd</th>
+            <th className="text-left font-medium px-3 py-2 text-muted-foreground w-[28%]">Descrição</th>
+            <th className="text-left font-medium px-2 py-2 text-muted-foreground w-[13%]">Móvel</th>
+            <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[10%]">Qtd</th>
             <th className="text-left font-medium px-2 py-2 text-muted-foreground w-[6%]">Un</th>
             <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[12%]">Custo R$</th>
             <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[12%]">Preço R$</th>
-            <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[12%]">Total R$</th>
+            <th className="text-right font-medium px-2 py-2 text-muted-foreground w-[13%]">Total R$</th>
             <th className="w-7"></th>
           </tr>
         </thead>
@@ -1250,4 +1336,30 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
 
 function Label({ children }: { children: React.ReactNode }) {
   return <div className="text-[11.5px] text-muted-foreground mb-1">{children}</div>;
+}
+
+function MatSelect({ label, value, options, onChange }: {
+  label: string;
+  value?: string;
+  options: { id: string; nome: string; preco_custo: number; preco_venda: number }[];
+  onChange: (id: string | undefined) => void;
+}) {
+  if (options.length === 0) return null;
+  return (
+    <div>
+      <div className="text-[10.5px] text-muted-foreground mb-0.5">{label}</div>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value || undefined)}
+        className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[11.5px] outline-none text-foreground"
+      >
+        <option value="">Deixar IA escolher</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.nome} — R$ {Number(o.preco_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }
