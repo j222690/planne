@@ -19,6 +19,10 @@ interface MovelConfig {
   gavetas: number;
   prateleiras: number;
   tem_fundo?: boolean;
+  tem_rodape?: boolean;
+  tem_pes?: boolean;
+  tem_roda_teto?: boolean;
+  altura_teto_cm?: number;
   mdf_id?: string;
   fundo_id?: string;
   dobradica_id?: string;
@@ -66,6 +70,11 @@ function moveisToParagraph(moveis: MovelConfig[], catalogo: CatItem[]): string {
       `   Dimensões: ${m.largura_cm}cm L × ${m.profundidade_cm}cm P × ${m.altura_cm}cm H`,
       `   Portas: ${m.portas}${m.portas > 0 ? ` (${m.tipo_porta})` : ""}  Gavetas: ${m.gavetas}  Prateleiras: ${m.prateleiras}`,
       `   Fundo traseiro: ${(m.tem_fundo ?? true) ? "SIM" : "NÃO"}`,
+      m.tem_rodape ? "   Rodapé (faixa 15cm): SIM — incluir painel MDF 15cm × largura do móvel" : "",
+      m.tem_pes ? "   Pés reguláveis: SIM — 4 pés por corpo" : "",
+      m.tem_roda_teto && m.altura_teto_cm
+        ? `   Roda-teto: SIM — teto a ${m.altura_teto_cm}cm, móvel com ${m.altura_cm}cm → folga de ${m.altura_teto_cm - m.altura_cm}cm a preencher`
+        : "",
       matLinhas,
     ].filter(Boolean).join("\n");
   }).join("\n\n");
@@ -74,15 +83,23 @@ function moveisToParagraph(moveis: MovelConfig[], catalogo: CatItem[]): string {
 const SYSTEM = `Você é especialista em marcenaria planejada brasileira.
 Dado um projeto com móveis configurados, calcule EXATAMENTE quais materiais e quantidades são necessários.
 
+DIMENSÕES DOS MÓVEIS:
+- As dimensões (largura_cm, profundidade_cm, altura_cm) fornecidas pelo usuário são ABSOLUTAS e definitivas.
+- Use-as exatamente como especificadas para calcular todos os materiais — NÃO ajuste com base na planta baixa.
+- A planta baixa (quando fornecida) serve APENAS para contexto espacial: verificar se uma porta de abrir tem folga, identificar obstáculos, posição de janelas/tomadas. Nunca use a planta para redimensionar os móveis.
+
 REGRAS DE CÁLCULO:
 - Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.04m² (chapa padrão 2750×1830mm). Arredonde para cima.
-- Dobradiças: exatamente conforme especificado (2 por porta pequena ≤120cm, 3 por porta alta >120cm).
+- Dobradiças: 2 por porta altura ≤150cm, 3 por porta altura >150cm. USE OBRIGATORIAMENTE se tipo_porta = "abrir".
 - Corrediça de porta de correr: 1 par de corrediça + 1 trilho por par de folhas. USE OBRIGATORIAMENTE se tipo_porta = "correr".
 - Corrediça de gaveta: 1 par por gaveta. OBRIGATÓRIO se gavetas > 0.
 - Puxadores: 1 por porta + 1 por gaveta.
 - Fita de borda: perímetro dos painéis expostos × 1.15 (desperdício), em metros lineares.
 - Parafusos/conectores: estimativa por corpo de armário (Minifix, cavilhas).
-- Fundo em MDF 6mm: apenas se o móvel tiver fundo (armários, roupeiros — não bancadas ou ripados).
+- Fundo em MDF 6mm: incluir SE e SOMENTE SE "Fundo traseiro: SIM" estiver indicado no móvel.
+- Rodapé: se indicado, calcular faixa MDF 15cm × largura do móvel (frente + laterais expostas).
+- Pés reguláveis: 4 unidades por corpo de armário, se indicado.
+- Roda-teto: se indicado, painel MDF para fechar a folga entre topo do móvel e o teto (largura × diferença de altura).
 
 IMPORTANTE: Cada item deve ter obrigatoriamente os campos "movel" (nome exato do móvel) e "justificativa" (explicação curta de como chegou naquela quantidade).
 

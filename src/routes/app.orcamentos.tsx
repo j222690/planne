@@ -3,7 +3,7 @@ import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
 import {
   Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles,
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
-  ChevronDown, ChevronUp, Info,
+  ChevronDown, ChevronUp, Info, Search,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -49,6 +49,10 @@ type MovelConfig = {
   gavetas: number;
   prateleiras: number;
   tem_fundo?: boolean;
+  tem_rodape?: boolean;
+  tem_pes?: boolean;
+  tem_roda_teto?: boolean;
+  altura_teto_cm?: number;
   mdf_id?: string;
   fundo_id?: string;
   dobradica_id?: string;
@@ -340,25 +344,32 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const onSubmit = async (data: FormData) => {
     if (!empresaId) return;
     try {
+      const itensPayload = (orcId: string) => data.itens.map((it) => ({
+        orcamento_id: orcId,
+        movel: it.movel || null,
+        justificativa: it.justificativa || null,
+        descricao: it.descricao,
+        quantidade: it.quantidade,
+        unidade: it.unidade,
+        preco_custo: it.preco_custo,
+        preco_unitario: it.preco_unitario,
+        total: it.quantidade * it.preco_unitario,
+      }));
+
       if (isEdit && editOrc) {
         await updateOrcamento(editOrc.id, {
           cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
           observacoes: data.observacoes, subtotal, total: subtotal,
         });
-        await replaceOrcamentoItens(editOrc.id, data.itens.map((it) => ({
-          orcamento_id: editOrc.id, descricao: it.descricao, quantidade: it.quantidade,
-          unidade: it.unidade, preco_custo: it.preco_custo, preco_unitario: it.preco_unitario,
-        })));
+        await replaceOrcamentoItens(editOrc.id, itensPayload(editOrc.id));
         toast.success("Orçamento atualizado!");
       } else {
         const orc = await upsertOrcamento(empresaId, {
           cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
           observacoes: data.observacoes, subtotal, total: subtotal,
         });
-        await supabase.from("orcamento_itens").insert(data.itens.map((it) => ({
-          orcamento_id: orc.id, descricao: it.descricao, quantidade: it.quantidade,
-          unidade: it.unidade, preco_custo: it.preco_custo, preco_unitario: it.preco_unitario,
-        })));
+        const { error: insErr } = await supabase.from("orcamento_itens").insert(itensPayload(orc.id));
+        if (insErr) throw new Error(insErr.message);
         toast.success(`Orçamento ${orc.numero} criado!`);
       }
       onSaved();
@@ -631,13 +642,41 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           </div>
                         </div>
 
-                        {/* Fundo 6mm */}
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input type="checkbox" checked={m.tem_fundo ?? true}
-                            onChange={(e) => updateMovel(m.id, { tem_fundo: e.target.checked })}
-                            className="rounded" />
-                          <span className="text-[12px]">Tem fundo (chapa 6mm)</span>
-                        </label>
+                        {/* Extras */}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={m.tem_fundo ?? true}
+                              onChange={(e) => updateMovel(m.id, { tem_fundo: e.target.checked })}
+                              className="rounded" />
+                            <span className="text-[12px]">Tem fundo (chapa 6mm)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={m.tem_rodape ?? false}
+                              onChange={(e) => updateMovel(m.id, { tem_rodape: e.target.checked })}
+                              className="rounded" />
+                            <span className="text-[12px]">Rodapé (faixa 15cm)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={m.tem_pes ?? false}
+                              onChange={(e) => updateMovel(m.id, { tem_pes: e.target.checked })}
+                              className="rounded" />
+                            <span className="text-[12px]">Pés reguláveis</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={m.tem_roda_teto ?? false}
+                              onChange={(e) => updateMovel(m.id, { tem_roda_teto: e.target.checked })}
+                              className="rounded" />
+                            <span className="text-[12px]">Roda-teto</span>
+                          </label>
+                        </div>
+                        {m.tem_roda_teto && (
+                          <div className="w-44">
+                            <div className="text-[11px] text-muted-foreground mb-1">Altura do teto (cm)</div>
+                            <input type="number" min={200} max={400} value={m.altura_teto_cm ?? 270}
+                              onChange={(e) => updateMovel(m.id, { altura_teto_cm: Number(e.target.value) })}
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                          </div>
+                        )}
 
                         {/* Seleção de materiais */}
                         <div className="border-t border-border pt-3 space-y-2">
@@ -1344,22 +1383,86 @@ function MatSelect({ label, value, options, onChange }: {
   options: { id: string; nome: string; preco_custo: number; preco_venda: number }[];
   onChange: (id: string | undefined) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   if (options.length === 0) return null;
+
+  const selected = options.find((o) => o.id === value);
+  const filtered = query.trim()
+    ? options.filter((o) => o.nome.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  const fmt = (v: number) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+
   return (
-    <div>
+    <div ref={containerRef} className="relative">
       <div className="text-[10.5px] text-muted-foreground mb-0.5">{label}</div>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || undefined)}
-        className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[11.5px] outline-none text-foreground"
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[11.5px] outline-none text-foreground flex items-center justify-between gap-1"
       >
-        <option value="">Deixar IA escolher</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.nome} — R$ {Number(o.preco_venda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-          </option>
-        ))}
-      </select>
+        <span className="truncate text-left">
+          {selected ? `${selected.nome} — R$ ${fmt(selected.preco_venda)}` : "Deixar IA escolher"}
+        </span>
+        <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full min-w-[220px] rounded border border-border bg-popover shadow-lg overflow-hidden">
+          <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border">
+            <Search className="size-3 text-muted-foreground shrink-0" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Pesquisar..."
+              className="flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-muted-foreground"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")}>
+                <X className="size-3 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => { onChange(undefined); setOpen(false); setQuery(""); }}
+              className={`w-full text-left px-2.5 py-1.5 text-[11.5px] hover:bg-secondary transition-colors ${!value ? "bg-primary/10 text-primary font-medium" : ""}`}
+            >
+              Deixar IA escolher
+            </button>
+            {filtered.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => { onChange(o.id); setOpen(false); setQuery(""); }}
+                className={`w-full text-left px-2.5 py-1.5 text-[11.5px] hover:bg-secondary transition-colors ${value === o.id ? "bg-primary/10 text-primary font-medium" : ""}`}
+              >
+                {o.nome} — R$ {fmt(o.preco_venda)}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-2.5 py-2 text-[11px] text-muted-foreground">Nenhum resultado</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
