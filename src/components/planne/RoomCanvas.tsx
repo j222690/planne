@@ -16,7 +16,34 @@ interface Props {
   moveis: MovelCanvas[];
   medidas: { largura: number; profundidade: number };
   onChange?: (moveis: MovelCanvas[]) => void;
+  onExport?: (dataUrl: string) => void;
   readOnly?: boolean;
+}
+
+export function exportSvgToPng(svgEl: SVGSVGElement, filename = "planta.png"): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = CANVAS_W * 2;
+      canvas.height = CANVAS_H * 2;
+      const ctx = canvas.getContext("2d")!;
+      ctx.scale(2, 2);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = filename;
+      a.click();
+      resolve(dataUrl);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 const CANVAS_W = 760;
@@ -37,7 +64,7 @@ const CATEGORIA_COLORS: Record<string, string> = {
   outro: "#d0d0d0",
 };
 
-export function RoomCanvas({ moveis, medidas, onChange, readOnly = false }: Props) {
+export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = false }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [items, setItems] = useState<MovelCanvas[]>(moveis);
   const [selected, setSelected] = useState<string | null>(null);
@@ -217,6 +244,16 @@ export function RoomCanvas({ moveis, medidas, onChange, readOnly = false }: Prop
         <text x={CANVAS_W - 14} y={24} textAnchor="middle" fontSize={10} fill="#8b7355" fontFamily="system-ui" fontWeight="bold">N</text>
         <path d={`M ${CANVAS_W - 14} 28 L ${CANVAS_W - 14} 36`} stroke="#8b7355" strokeWidth="1" markerEnd="url(#arrow)" />
       </svg>
+
+      {/* Export button */}
+      {onExport && (
+        <button
+          onClick={() => svgRef.current && exportSvgToPng(svgRef.current).then(onExport)}
+          className="absolute top-2 right-2 h-7 px-2.5 rounded-md bg-background/80 backdrop-blur-sm border border-border text-[11px] font-medium hover:bg-background transition-colors"
+        >
+          Exportar PNG
+        </button>
+      )}
 
       {/* Selected info */}
       {selected && !readOnly && (() => {

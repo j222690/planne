@@ -15,50 +15,38 @@ function hexToVisual(hex?: string): string {
   if (!hex) return "";
   const h = hex.toLowerCase();
   if (h === "#ffffff" || h === "#fafafa" || h === "#f5f5f2") return "white";
-  if (h === "#f2ede8" || h === "#f0ebe0") return "off-white";
+  if (h === "#f2ede8" || h === "#f0ebe0" || h === "#f0e6d0") return "off-white";
   if (h === "#2c2c2c" || h === "#1a1a1a") return "matte black";
-  if (h.startsWith("#8") || h.startsWith("#7") || h.startsWith("#6") || h.startsWith("#5")) {
-    const r = parseInt(h.slice(1, 3), 16);
-    const g = parseInt(h.slice(3, 5), 16);
-    const b = parseInt(h.slice(5, 7), 16);
-    if (r > g && r > b) return "warm brown wood";
-    if (g > r && g > b) return "natural green";
-    return "dark charcoal";
-  }
-  if (h.startsWith("#c") || h.startsWith("#d") || h.startsWith("#e")) {
-    const r = parseInt(h.slice(1, 3), 16);
-    const g = parseInt(h.slice(3, 5), 16);
-    const b = parseInt(h.slice(5, 7), 16);
-    if (r > g + 20 && r > b + 20) return "warm beige";
-    if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15) return "light gray";
-    if (r > 180 && g > 150 && b < 120) return "warm oak";
-    return "light neutral";
-  }
-  return "neutral";
+  if (h === "#e8d8b8" || h === "#d4b070") return "champagne gold";
+  if (h === "#5a6a4a") return "moss green";
+  if (h === "#e8c0b0") return "rose gold pink";
+  const r = parseInt(h.slice(1, 3), 16);
+  const g = parseInt(h.slice(3, 5), 16);
+  const b = parseInt(h.slice(5, 7), 16);
+  const lum = (r + g + b) / 3;
+  if (lum < 60) return "dark charcoal";
+  if (lum > 210) return "light neutral";
+  if (r > g + 25 && r > b + 25) return "warm wood";
+  if (Math.abs(r - g) < 20 && Math.abs(g - b) < 20) return "gray";
+  return "natural wood";
 }
 
 function generateVisualContext(m: MovelInput): string {
   const color = hexToVisual(m.cor_hex);
-  const cat = m.categoria?.toLowerCase() ?? "";
-  const dim = m.largura_cm ? `${m.largura_cm}×${m.profundidade_cm}×${m.altura_cm}cm` : "";
-
   const catMap: Record<string, string> = {
     armario: "wardrobe cabinet",
     bancada: "countertop cabinet",
-    mesa: "table",
-    rack: "TV unit media console",
+    mesa: "dining table",
+    rack: "TV media console",
     estante: "open shelving unit",
-    cama: "bed frame",
+    cama: "bed frame platform",
     escritorio: "desk workstation",
     sofa: "sofa",
-    outro: "furniture piece",
+    outro: "custom furniture piece",
   };
-
-  const piece = catMap[cat] ?? "cabinet";
-  const colorDesc = color ? `${color} finish` : "";
-  const sizeDesc = dim ? `(${dim})` : "";
-
-  return [colorDesc, piece, sizeDesc].filter(Boolean).join(" ");
+  const piece = catMap[m.categoria?.toLowerCase() ?? "outro"] ?? "furniture";
+  const dim = m.largura_cm ? `${m.largura_cm}×${m.altura_cm}cm` : "";
+  return [color ? `${color} finish` : "", piece, dim].filter(Boolean).join(" ");
 }
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
@@ -70,61 +58,70 @@ interface RenderInput {
   moveis: MovelInput[];
   descricao: string;
   descricao_comercial?: string;
+  mode?: "schnell" | "pro";
 }
+
+const ESTILO_MAP: Record<string, string> = {
+  "Moderno Minimalista": "modern minimalist, clean lines, simple geometry, neutral palette",
+  "Contemporâneo": "contemporary sleek sophisticated, balanced proportions",
+  "Clássico": "classic elegant traditional, ornate crown molding, symmetrical",
+  "Industrial": "industrial loft, raw concrete walls, exposed black metal frames",
+  "Escandinavo": "Scandinavian hygge, warm birch wood, white walls, cozy textiles",
+  "Boho Chic": "bohemian eclectic, layered warm textures, rattan, earthy tones",
+  "Rústico": "rustic farmhouse, reclaimed wood beams, warm earthy stone",
+  "Luxo": "ultra luxury high-end, marble surfaces, gold brass accents, opulent",
+};
+
+const AMBIENTE_MAP: Record<string, string> = {
+  "Sala de estar": "living room",
+  "Quarto casal": "master bedroom",
+  "Quarto solteiro": "bedroom",
+  "Cozinha": "modern kitchen",
+  "Home office": "home office study",
+  "Closet": "walk-in closet dressing room",
+  "Banheiro": "bathroom",
+  "Área gourmet": "gourmet outdoor kitchen terrace",
+  "Escritório": "professional office workspace",
+};
 
 function buildRenderPrompt(input: RenderInput): string {
-  const { ambiente, estilo, moveis, descricao } = input;
+  const roomEn = AMBIENTE_MAP[input.ambiente] ?? input.ambiente;
+  const styleEn = ESTILO_MAP[input.estilo] ?? input.estilo;
+  const moveisList = input.moveis.slice(0, 8).map(generateVisualContext).filter(Boolean).join(", ");
+  const dominantColor = hexToVisual(input.moveis[0]?.cor_hex) || "neutral warm";
 
-  const styleMap: Record<string, string> = {
-    "Moderno Minimalista": "modern minimalist, clean lines, simple geometry, functional",
-    "Contemporâneo": "contemporary, sleek, sophisticated",
-    "Clássico": "classic elegant, traditional, ornate details",
-    "Industrial": "industrial loft, raw materials, exposed metal, concrete",
-    "Escandinavo": "Scandinavian, warm wood tones, cozy hygge, functional",
-    "Boho Chic": "bohemian eclectic, warm textures, layered decor",
-    "Rústico": "rustic farmhouse, natural wood, warm earthy tones",
-    "Luxo": "luxury high-end, premium materials, gold accents, opulent",
-  };
-
-  const ambienteMap: Record<string, string> = {
-    "Sala de estar": "living room",
-    "Quarto casal": "master bedroom",
-    "Quarto solteiro": "bedroom",
-    "Cozinha": "kitchen",
-    "Home office": "home office",
-    "Closet": "walk-in closet",
-    "Banheiro": "bathroom",
-    "Área gourmet": "gourmet outdoor kitchen area",
-    "Escritório": "professional office",
-  };
-
-  const roomEn = ambienteMap[ambiente] ?? ambiente;
-  const styleEn = styleMap[estilo] ?? estilo;
-  const moveisList = moveis.slice(0, 8).map(generateVisualContext).filter(Boolean).join(", ");
-
-  // Dominant color from first piece
-  const dominantColor = moveis[0]?.cor_hex ? hexToVisual(moveis[0].cor_hex) : "neutral";
-
-  const prompt = [
-    `Professional architectural visualization photograph`,
+  return [
+    "professional architectural visualization photograph",
     `${styleEn} ${roomEn}`,
-    `featuring ${moveisList}`,
+    moveisList ? `featuring ${moveisList}` : "",
     `dominant color palette: ${dominantColor}`,
-    `Brazilian luxury home interior`,
-    `photorealistic render`,
-    `8K ultra-detailed`,
-    `cinematic lighting with warm natural light from large windows`,
-    `premium MDF furniture with perfect finishing`,
-    `clean sophisticated composition`,
-    `shot with 24mm wide angle lens`,
-    `shallow depth of field`,
-    `golden hour lighting`,
-    `no people`,
-    descricao ? descricao.slice(0, 200) : "",
+    "Brazilian luxury planned furniture (marcenaria planejada)",
+    "photorealistic render 8K ultra-detailed",
+    "cinematic lighting, warm natural sunlight through large windows",
+    "premium MDF cabinet finishing, perfect edges",
+    "clean sophisticated composition, architectural magazine quality",
+    "24mm wide angle lens, shallow depth of field, golden hour",
+    "no people, no text",
+    input.descricao ? input.descricao.slice(0, 180) : "",
   ].filter(Boolean).join(", ");
-
-  return prompt;
 }
+
+// ─── Flux configs ──────────────────────────────────────────────────────────────
+
+const FLUX_CONFIGS = {
+  schnell: {
+    endpoint: "https://api.bfl.ml/v1/flux-schnell",
+    steps: 4,
+    guidance: 3.5,
+    label: "Flux Schnell (preview)",
+  },
+  pro: {
+    endpoint: "https://api.bfl.ml/v1/flux-pro-1.1",
+    steps: 40,
+    guidance: 3.5,
+    label: "Flux Pro 1.1 (premium)",
+  },
+} as const;
 
 // ─── Handler ───────────────────────────────────────────────────────────────────
 
@@ -134,7 +131,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = req.body as Partial<RenderInput> & { moveis_nomes?: string[] };
 
   // Compatibilidade com chamadas antigas (moveis_nomes)
-  const moveis: MovelInput[] = body.moveis ?? (body.moveis_nomes ?? []).map((n) => ({ nome: n, categoria: "outro" }));
+  const moveis: MovelInput[] = body.moveis
+    ?? (body.moveis_nomes ?? []).map((n) => ({ nome: n, categoria: "outro" }));
+
+  const mode: "schnell" | "pro" = body.mode === "schnell" ? "schnell" : "pro";
 
   const input: RenderInput = {
     ambiente: body.ambiente ?? "sala de estar",
@@ -143,6 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     moveis,
     descricao: body.descricao ?? "",
     descricao_comercial: body.descricao_comercial,
+    mode,
   };
 
   const fluxKey = process.env.FLUX_API_KEY;
@@ -153,19 +154,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const prompt = buildRenderPrompt(input);
+  const fluxCfg = FLUX_CONFIGS[mode];
 
-  // Flux Pro 1.1 (async — retorna job_id para polling)
+  // ── Flux (Schnell ou Pro) ──────────────────────────────────────────────────
   if (fluxKey) {
     try {
-      const response = await fetch("https://api.bfl.ml/v1/flux-pro-1.1", {
+      const response = await fetch(fluxCfg.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Key": fluxKey },
         body: JSON.stringify({
           prompt,
-          width: 1440,
-          height: 960,
-          steps: 40,
-          guidance: 3.5,
+          width: mode === "schnell" ? 1024 : 1440,
+          height: mode === "schnell" ? 680 : 960,
+          steps: fluxCfg.steps,
+          guidance: fluxCfg.guidance,
           output_format: "jpeg",
           safety_tolerance: 2,
         }),
@@ -173,14 +175,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (response.ok) {
         const data = (await response.json()) as { id: string };
-        return res.json({ provider: "flux", job_id: data.id, status: "processing", prompt });
+        return res.json({
+          provider: mode === "schnell" ? "flux-schnell" : "flux-pro",
+          job_id: data.id,
+          status: "processing",
+          mode,
+          prompt,
+        });
       }
+
+      const errText = await response.text();
+      // Se Flux falhou por crédito/key, cai no DALL-E
+      if (!openaiKey) return res.status(502).json({ error: `Flux: ${errText.slice(0, 300)}` });
     } catch {
-      // fallthrough para DALL-E
+      if (!openaiKey) return res.status(502).json({ error: "Flux indisponível e OPENAI_API_KEY não configurada" });
     }
   }
 
-  // DALL-E 3 fallback (síncrono)
+  // ── DALL-E 3 fallback (síncrono — só para modo pro) ───────────────────────
   if (openaiKey) {
     const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
@@ -190,7 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         prompt: prompt.slice(0, 4000),
         n: 1,
         size: "1792x1024",
-        quality: "hd",
+        quality: mode === "pro" ? "hd" : "standard",
         style: "natural",
       }),
     });
@@ -205,6 +217,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       provider: "dalle3",
       status: "completed",
       url: data.data[0].url,
+      mode,
       prompt,
       revised_prompt: data.data[0].revised_prompt,
     });

@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { getEmpresaAtual, getClientes, upsertOrcamento } from "@/lib/db";
 import { checkAndConsumeCredito } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
-import { RoomCanvas, type MovelCanvas } from "@/components/planne/RoomCanvas";
+import { RoomCanvas, exportSvgToPng, type MovelCanvas } from "@/components/planne/RoomCanvas";
 
 export const Route = createFileRoute("/app/ia-projetos")({
   component: IAProjetoPage,
@@ -87,6 +87,8 @@ interface WizardState {
   renderJobId: string | null;
   listaCorte: ListaCorteResult | null;
   listaCorteLoading: boolean;
+  renderMode: "schnell" | "pro";
+  previewUrl: string | null;
   error: string | null;
 }
 
@@ -252,6 +254,8 @@ function IAProjetoPage() {
       renderJobId: null,
       listaCorte: null,
       listaCorteLoading: false,
+      renderMode: "pro",
+      previewUrl: null,
       error: null,
     });
 
@@ -324,31 +328,29 @@ function IAProjetoPage() {
 
   // ── Step 5: Generate render ──────────────────────────────────────────────
 
-  const gerarRender = useCallback(async () => {
+  const gerarRender = useCallback(async (mode: "schnell" | "pro" = "pro") => {
     if (!wizard?.analise) return;
 
-    // Verifica e consome crédito de render
-    try {
-      const empresa = await getEmpresaAtual();
-      if (empresa) {
-        const result = await checkAndConsumeCredito((empresa as { id: string }).id, "render");
-        if (!result.ok) {
-          toast.error(result.mensagem ?? "Sem créditos de render.");
-          return;
+    // Crédito apenas para render premium
+    if (mode === "pro") {
+      try {
+        const empresa = await getEmpresaAtual();
+        if (empresa) {
+          const result = await checkAndConsumeCredito((empresa as { id: string }).id, "render");
+          if (!result.ok) { toast.error(result.mensagem ?? "Sem créditos de render."); return; }
+          toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
         }
-        toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
-      }
-    } catch {
-      // não bloqueia o render por falha de crédito
+      } catch { /* não bloqueia */ }
     }
 
-    update({ renderLoading: true, error: null });
+    update({ renderLoading: true, renderMode: mode, error: null });
 
     try {
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          mode,
           ambiente: wizard.form.ambiente,
           estilo: wizard.form.estilo,
           estilo_detectado: wizard.analise.estilo_detectado,
@@ -374,13 +376,18 @@ function IAProjetoPage() {
           await supabase.from("room_projects").update({ render_url: url }).eq("id", wizard.projetoId);
         }
         if (jobId) {
-          await supabase.from("render_jobs").update({ url_resultado: url, status: "completed" }).eq("job_id", jobId);
+          await supabase.from("render_jobs").update({ render_url: url, status: "completed" }).eq("id", jobId);
         }
       };
 
       if (data.status === "completed" && data.url) {
         await saveRenderUrl(data.url);
-        update({ renderUrl: data.url, renderLoading: false, step: 5 });
+        if (mode === "schnell") {
+          update({ previewUrl: data.url, renderLoading: false });
+          toast.success("Preview gerado!");
+        } else {
+          update({ renderUrl: data.url, renderLoading: false, step: 5 });
+        }
         return;
       }
 
@@ -392,10 +399,15 @@ function IAProjetoPage() {
           if (s.status === "completed" && s.url) {
             clearInterval(poll);
             await saveRenderUrl(s.url, data.job_id);
-            update({ renderUrl: s.url, renderLoading: false, step: 5 });
+            if (mode === "schnell") {
+              update({ previewUrl: s.url, renderLoading: false });
+              toast.success("Preview rápido gerado!");
+            } else {
+              update({ renderUrl: s.url, renderLoading: false, step: 5 });
+            }
           } else if (s.status === "error") {
             clearInterval(poll);
-            update({ renderLoading: false, error: "Erro no render" });
+            update({ renderLoading: false, error: "Erro no render. Tente novamente." });
           }
         }, 3000);
       }
@@ -718,7 +730,7 @@ function Step3Analyzing({ wizard, analisar }: { wizard: WizardState; analisar: (
 function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
-  gerarRender: () => void;
+  gerarRender: (mode?: "schnell" | "pro") => void;
   criarOrcamento: () => void;
   gerarListaCorte: () => void;
 }) {
@@ -755,6 +767,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               profundidade: parseFloat(wizard.form.profundidade) || 3,
             }}
             onChange={(updated) => update({ moveis: updated as Movel[] })}
+            onExport={() => {}}
           />
         </div>
       </Surface>
@@ -877,6 +890,23 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         )}
       </Surface>
 
+      {/* Preview rápido (Schnell) */}
+      {wizard.previewUrl && (
+        <Surface padded={false}>
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Zap className="size-4 text-violet-500" />
+              <span className="text-[14px] font-semibold">Preview rápido — Flux Schnell</span>
+              <span className="text-[11.5px] text-muted-foreground">Qualidade de visualização — use Render Premium para o cliente</span>
+            </div>
+            <button onClick={() => update({ previewUrl: null })} className="text-muted-foreground hover:text-foreground">
+              <X className="size-4" />
+            </button>
+          </div>
+          <img src={wizard.previewUrl} alt="Preview" className="w-full object-cover max-h-[400px]" />
+        </Surface>
+      )}
+
       {/* Texto comercial */}
       <Surface>
         <div className="flex items-center gap-2 mb-3">
@@ -912,18 +942,29 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             onClick={criarOrcamento}
             className="h-10 px-4 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-2"
           >
-            <FileText className="size-4" /> Criar orçamento formal
+            <FileText className="size-4" /> Criar orçamento
           </button>
+
           <button
-            onClick={gerarRender}
+            onClick={() => gerarRender("schnell")}
+            disabled={wizard.renderLoading}
+            className="h-10 px-4 rounded-md border border-violet-400 text-violet-700 dark:text-violet-300 text-[13px] font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 disabled:opacity-60 inline-flex items-center gap-2"
+            title="Flux Schnell — preview rápido ~10s, sem consumir crédito premium"
+          >
+            {wizard.renderLoading && wizard.renderMode === "schnell"
+              ? <><Loader2 className="size-4 animate-spin" /> Gerando preview…</>
+              : <><Zap className="size-4" /> Preview rápido</>}
+          </button>
+
+          <button
+            onClick={() => gerarRender("pro")}
             disabled={wizard.renderLoading}
             className="h-10 px-5 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2 shadow-lg shadow-violet-500/20"
+            title="Flux Pro 1.1 — render premium 1440×960px, consome 1 crédito"
           >
-            {wizard.renderLoading ? (
-              <><Loader2 className="size-4 animate-spin" /> Gerando…</>
-            ) : (
-              <><Zap className="size-4" /> Gerar Render</>
-            )}
+            {wizard.renderLoading && wizard.renderMode === "pro"
+              ? <><Loader2 className="size-4 animate-spin" /> Renderizando…</>
+              : <><Sparkles className="size-4" /> Render Premium</>}
           </button>
         </div>
       </Surface>
