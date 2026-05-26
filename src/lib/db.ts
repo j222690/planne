@@ -12,8 +12,11 @@ export async function getEmpresaAtual() {
     .single();
 
   if (!data) return null;
+  // PostgREST may return the nested join as object or array — handle both
+  const emp = Array.isArray(data.empresas) ? (data.empresas as Record<string, unknown>[])[0] : data.empresas as Record<string, unknown>;
   return {
-    ...(data.empresas as Record<string, unknown>),
+    ...(emp ?? {}),
+    id: data.empresa_id,   // always use empresa_id from empresa_membros directly
     role: data.role,
   };
 }
