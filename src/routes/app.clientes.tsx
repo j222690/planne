@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2 } from "lucide-react";
+import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2, CheckCircle2, Circle, CalendarClock, ChevronRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getClientes, getEmpresaAtual, upsertCliente, updateCliente, deleteCliente } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -213,6 +214,7 @@ function Clientes() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Cliente | null>(null);
+  const [detalhe, setDetalhe] = useState<Cliente | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
 
   const load = async () => {
@@ -249,6 +251,14 @@ function Clientes() {
             onClose={() => { setShowModal(false); setEditando(null); }}
             onSaved={load}
             initialData={editando ?? undefined}
+          />
+        )}
+        {detalhe && !editando && (
+          <ClienteDetalhePanel
+            cliente={detalhe}
+            empresaId={empresaId}
+            onClose={() => setDetalhe(null)}
+            onEdit={() => { setEditando(detalhe); setDetalhe(null); }}
           />
         )}
       </AnimatePresence>
@@ -311,7 +321,7 @@ function Clientes() {
                     </td>
                   </tr>
                 ) : filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                  <tr key={c.id} onClick={() => setDetalhe(c)} className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer group">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="size-8 rounded-md bg-secondary text-foreground/70 grid place-items-center text-[11.5px] font-semibold shrink-0">
@@ -334,8 +344,11 @@ function Clientes() {
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">{c.cidade ?? "—"}</td>
                     <td className="px-5 py-3 text-muted-foreground">{c.origem ?? "—"}</td>
-                    <td className="px-5 py-3 text-right">
-                      <RowMenu cliente={c} onEdit={() => setEditando(c)} onDeleted={load} />
+                    <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <RowMenu cliente={c} onEdit={() => setEditando(c)} onDeleted={load} />
+                        <ChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition" />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -345,6 +358,182 @@ function Clientes() {
         )}
       </Surface>
     </>
+  );
+}
+
+type Atividade = {
+  id: string; tipo: string; titulo: string; descricao: string | null;
+  data_atividade: string | null; concluida: boolean; created_at: string;
+};
+
+const TIPO_ATIV: Record<string, string> = {
+  ligacao: "Ligação", visita: "Visita", email: "E-mail",
+  whatsapp: "WhatsApp", reuniao: "Reunião", outro: "Outro",
+};
+
+function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
+  cliente: Cliente; empresaId: string | null; onClose: () => void; onEdit: () => void;
+}) {
+  const [atividades, setAtividades] = useState<Atividade[]>([]);
+  const [loadingAtiv, setLoadingAtiv] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [novoTipo, setNovoTipo] = useState("ligacao");
+  const [novoTitulo, setNovoTitulo] = useState("");
+  const [novaData, setNovaData] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const loadAtividades = async () => {
+    setLoadingAtiv(true);
+    const { data } = await supabase.from("atividades")
+      .select("*").eq("cliente_id", cliente.id)
+      .order("data_atividade", { ascending: false });
+    setAtividades((data ?? []) as Atividade[]);
+    setLoadingAtiv(false);
+  };
+
+  useEffect(() => { loadAtividades(); }, [cliente.id]);
+
+  const handleAdd = async () => {
+    if (!novoTitulo.trim() || !empresaId) return;
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error } = await supabase.from("atividades").insert({
+        empresa_id: empresaId, cliente_id: cliente.id,
+        usuario_id: session?.user.id,
+        tipo: novoTipo, titulo: novoTitulo,
+        data_atividade: novaData || new Date().toISOString(),
+        concluida: false,
+      });
+      if (error) throw error;
+      setNovoTitulo(""); setNovaData(""); setShowForm(false);
+      toast.success("Atividade registrada!"); loadAtividades();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+    finally { setSaving(false); }
+  };
+
+  const toggleConcluida = async (a: Atividade) => {
+    await supabase.from("atividades").update({ concluida: !a.concluida }).eq("id", a.id);
+    setAtividades((prev) => prev.map((x) => x.id === a.id ? { ...x, concluida: !x.concluida } : x));
+  };
+
+  const pendentes = atividades.filter((a) => !a.concluida).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch justify-end">
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+        transition={{ type: "spring", stiffness: 400, damping: 40 }}
+        className="relative w-full max-w-sm bg-surface border-l border-border shadow-2xl flex flex-col h-full"
+      >
+        <div className="flex items-start justify-between px-5 py-4 border-b border-border shrink-0">
+          <div>
+            <div className="size-10 rounded-lg bg-secondary text-foreground/70 grid place-items-center text-[13px] font-semibold mb-2">
+              {cliente.nome.split(" ").map((s) => s[0]).slice(0, 2).join("")}
+            </div>
+            <div className="text-[15px] font-semibold">{cliente.nome}</div>
+            <div className="text-[12px] text-muted-foreground">{cliente.origem ?? "—"} · {cliente.cidade ?? "—"}</div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground mt-1"><X className="size-4" /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Contato */}
+          <div className="space-y-1.5">
+            {cliente.email && (
+              <a href={`mailto:${cliente.email}`} className="flex items-center gap-2 text-[12.5px] text-muted-foreground hover:text-foreground">
+                <Mail className="size-3.5" /> {cliente.email}
+              </a>
+            )}
+            {cliente.telefone && (
+              <a href={`tel:${cliente.telefone}`} className="flex items-center gap-2 text-[12.5px] text-muted-foreground hover:text-foreground">
+                <Phone className="size-3.5" /> {cliente.telefone}
+              </a>
+            )}
+            {cliente.observacoes && (
+              <div className="text-[12px] text-muted-foreground mt-2 p-2 rounded bg-secondary">{cliente.observacoes}</div>
+            )}
+          </div>
+
+          {/* Atividades */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <CalendarClock className="size-3.5 text-muted-foreground" />
+                <span className="text-[12.5px] font-medium">Atividades</span>
+                {pendentes > 0 && (
+                  <span className="text-[10.5px] bg-accent text-white px-1.5 py-0.5 rounded-full">{pendentes}</span>
+                )}
+              </div>
+              <button onClick={() => setShowForm((v) => !v)}
+                className="h-6 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1">
+                <Plus className="size-3" /> Nova
+              </button>
+            </div>
+
+            {showForm && (
+              <div className="mb-3 p-3 rounded-md border border-border bg-surface-2 space-y-2">
+                <div className="flex gap-2">
+                  <select value={novoTipo} onChange={(e) => setNovoTipo(e.target.value)}
+                    className="h-8 rounded border border-border bg-surface px-2 text-[12px] outline-none">
+                    {Object.entries(TIPO_ATIV).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  <input type="datetime-local" value={novaData} onChange={(e) => setNovaData(e.target.value)}
+                    className="flex-1 h-8 rounded border border-border bg-surface px-2 text-[12px] outline-none" />
+                </div>
+                <input value={novoTitulo} onChange={(e) => setNovoTitulo(e.target.value)}
+                  placeholder="Descrição da atividade..." onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                  className="w-full h-8 rounded border border-border bg-surface px-2.5 text-[12px] outline-none focus:border-border-strong" />
+                <div className="flex justify-end gap-1.5">
+                  <button onClick={() => setShowForm(false)} className="h-7 px-2.5 rounded border border-border text-[11px] hover:bg-secondary">Cancelar</button>
+                  <button onClick={handleAdd} disabled={saving || !novoTitulo.trim()}
+                    className="h-7 px-2.5 rounded bg-foreground text-background text-[11px] font-medium disabled:opacity-60">
+                    {saving ? <Loader2 className="size-3 animate-spin" /> : "Salvar"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingAtiv ? (
+              <div className="flex items-center gap-2 text-[12px] text-muted-foreground py-2">
+                <Loader2 className="size-3.5 animate-spin" /> Carregando...
+              </div>
+            ) : atividades.length === 0 ? (
+              <div className="text-[12px] text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                Nenhuma atividade. <button onClick={() => setShowForm(true)} className="text-foreground underline">Registrar →</button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {atividades.map((a) => (
+                  <div key={a.id} className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-colors ${a.concluida ? "border-border/50 opacity-60" : "border-border hover:bg-secondary/50"}`}>
+                    <button onClick={() => toggleConcluida(a)} className="mt-0.5 shrink-0">
+                      {a.concluida
+                        ? <CheckCircle2 className="size-4 text-emerald-500" />
+                        : <Circle className="size-4 text-muted-foreground" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[12.5px] font-medium leading-tight ${a.concluida ? "line-through" : ""}`}>{a.titulo}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {TIPO_ATIV[a.tipo] ?? a.tipo}
+                        {a.data_atividade && ` · ${new Date(a.data_atividade).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-border shrink-0">
+          <button onClick={onEdit}
+            className="w-full h-9 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center justify-center gap-2">
+            <Pencil className="size-3.5" /> Editar cliente
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 

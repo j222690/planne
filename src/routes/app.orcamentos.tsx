@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer, Pencil, Check, ImageUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles, ChevronRight, FileUp, Printer, Pencil, Check, ImageUp, ChevronDown, ChevronUp, FolderPlus } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus, deleteOrcamento, updateOrcamento, replaceOrcamentoItens } from "@/lib/db";
+import { getOrcamentos, getClientes, getMateriais, getEmpresaAtual, upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus, deleteOrcamento, updateOrcamento, replaceOrcamentoItens, upsertProjeto } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -759,11 +759,14 @@ const STATUS_NEXT: Record<string, string[]> = {
 };
 
 function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: { orc: Orc; onClose: () => void; onChanged: () => void; onEdit: () => void }) {
+  const navigate = useNavigate();
   const [itens, setItens] = useState<OrcItem[]>([]);
   const [loadingItens, setLoadingItens] = useState(true);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [criandoProjeto, setCriandoProjeto] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [empresaNome, setEmpresaNome] = useState("");
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
 
   useEffect(() => {
     getOrcamentoItens(orc.id)
@@ -773,9 +776,33 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: { orc: Orc; onClos
       if (e) {
         setEmpresaNome((e as { nome: string }).nome ?? "");
         setLogoUrl((e as { logo_url?: string | null }).logo_url ?? null);
+        setEmpresaId((e as { id: string }).id);
       }
     });
   }, [orc.id]);
+
+  const handleCriarProjeto = async () => {
+    if (!empresaId) { toast.error("Empresa não encontrada"); return; }
+    const orcTyped = orc as unknown as { cliente_id?: string; total?: number };
+    setCriandoProjeto(true);
+    try {
+      const projeto = await upsertProjeto(empresaId, {
+        nome: `Projeto — ${orc.clientes?.nome ?? "Cliente"} (${orc.numero ?? ""})`,
+        descricao: `Gerado a partir do orçamento ${orc.numero ?? ""}`,
+        status: "planejamento",
+        cliente_id: orcTyped.cliente_id ?? null,
+        orcamento_id: orc.id,
+        valor_contrato: orcTyped.total ?? 0,
+      });
+      toast.success("Projeto criado com sucesso!");
+      onClose();
+      navigate({ to: "/app/projetos", search: { destaque: (projeto as { id: string }).id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar projeto");
+    } finally {
+      setCriandoProjeto(false);
+    }
+  };
 
   const handleStatus = async (newStatus: string) => {
     setChangingStatus(true);
@@ -907,6 +934,16 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: { orc: Orc; onClos
             <Trash2 className="size-3.5" /> Excluir
           </button>
           <div className="flex gap-2 flex-wrap">
+            {orc.status === "aprovado" && (
+              <button
+                onClick={handleCriarProjeto}
+                disabled={criandoProjeto}
+                className="h-8 px-3 rounded-md bg-emerald-600 text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
+              >
+                {criandoProjeto ? <Loader2 className="size-3.5 animate-spin" /> : <FolderPlus className="size-3.5" />}
+                Criar Projeto
+              </button>
+            )}
             <button
               onClick={onEdit}
               className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5"

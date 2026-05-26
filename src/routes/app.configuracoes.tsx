@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2 } from "lucide-react";
+import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -17,11 +17,21 @@ type Empresa = {
   parametros: Record<string, number> | null;
 };
 
+type Membro = { user_id: string; role: string; perfis: { nome: string; email: string; cargo: string | null } | null };
+
 function Configuracoes() {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [saving, setSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
+
+  // Perfil do usuário
+  const [perfil, setPerfil] = useState({ nome: "", cargo: "" });
+  const [savingPerfil, setSavingPerfil] = useState(false);
+
+  // Membros
+  const [membros, setMembros] = useState<Membro[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
 
   const [form, setForm] = useState({
     nome: "", cnpj: "", cidade: "", estado: "", endereco: "",
@@ -34,11 +44,29 @@ function Configuracoes() {
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
+  const loadMembros = async (eid: string) => {
+    const { data } = await supabase.from("empresa_membros")
+      .select("user_id, role, perfis(nome, email, cargo)")
+      .eq("empresa_id", eid);
+    setMembros((data ?? []) as Membro[]);
+  };
+
   useEffect(() => {
+    // Carrega perfil do usuário logado
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      supabase.from("perfis").select("nome, email, cargo").eq("id", session.user.id).single()
+        .then(({ data }) => {
+          if (data) setPerfil({ nome: data.nome ?? "", cargo: data.cargo ?? "" });
+          else setPerfil({ nome: session.user.email?.split("@")[0] ?? "", cargo: "" });
+        });
+    });
+
     getEmpresaAtual().then((e) => {
       if (!e) return;
       const emp = e as Empresa;
       setEmpresa(emp);
+      loadMembros(emp.id);
       setForm({
         nome: emp.nome ?? "",
         cnpj: emp.cnpj ?? "",
@@ -104,6 +132,20 @@ function Configuracoes() {
 
   const setParam = (key: keyof typeof params, val: string) =>
     setParams((p) => ({ ...p, [key]: parseFloat(val) || 0 }));
+
+  const handleSavePerfil = async () => {
+    setSavingPerfil(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await supabase.from("perfis").upsert({
+        id: session.user.id, empresa_id: empresa?.id,
+        email: session.user.email, nome: perfil.nome, cargo: perfil.cargo,
+      }, { onConflict: "id" });
+      toast.success("Perfil salvo!");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+    finally { setSavingPerfil(false); }
+  };
 
   return (
     <>
@@ -227,6 +269,70 @@ function Configuracoes() {
             ))}
           </Surface>
         </div>
+      </div>
+
+      {/* Perfil + Membros */}
+      <div className="grid lg:grid-cols-2 gap-4 mt-4">
+        {/* Meu perfil */}
+        <Surface>
+          <div className="flex items-center gap-2 mb-4">
+            <User className="size-3.5 text-muted-foreground" />
+            <div className="text-[12.5px] font-semibold">Meu perfil</div>
+          </div>
+          <div className="space-y-3">
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">Nome de exibição</div>
+              <input value={perfil.nome} onChange={(e) => setPerfil((p) => ({ ...p, nome: e.target.value }))}
+                placeholder="Seu nome" className="input" />
+            </label>
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">Cargo</div>
+              <input value={perfil.cargo} onChange={(e) => setPerfil((p) => ({ ...p, cargo: e.target.value }))}
+                placeholder="Ex: Diretor, Vendedor, Designer..." className="input" />
+            </label>
+            <button onClick={handleSavePerfil} disabled={savingPerfil}
+              className="h-8 px-4 rounded-md bg-foreground text-background text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
+              {savingPerfil ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />} Salvar perfil
+            </button>
+          </div>
+        </Surface>
+
+        {/* Membros da equipe */}
+        <Surface>
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="size-3.5 text-muted-foreground" />
+            <div className="text-[12.5px] font-semibold">Equipe</div>
+          </div>
+          <div className="space-y-2 mb-3">
+            {membros.length === 0 ? (
+              <div className="text-[12.5px] text-muted-foreground">Nenhum membro cadastrado.</div>
+            ) : membros.map((m) => (
+              <div key={m.user_id} className="flex items-center gap-2.5 py-2 border-b border-border last:border-0">
+                <div className="size-7 rounded-md bg-secondary grid place-items-center text-[11px] font-semibold shrink-0">
+                  {(m.perfis?.nome ?? m.perfis?.email ?? "?")[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12.5px] font-medium truncate">{m.perfis?.nome ?? m.perfis?.email ?? "Usuário"}</div>
+                  <div className="text-[11px] text-muted-foreground">{m.perfis?.cargo ?? m.role}</div>
+                </div>
+                <span className="text-[11px] text-muted-foreground px-2 py-0.5 rounded-full border border-border">{m.role}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="email@empresa.com" type="email"
+              className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none focus:border-border-strong" />
+            <button
+              onClick={() => toast.info("Convite por email em breve — use o painel Supabase por enquanto.")}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary shrink-0">
+              Convidar
+            </button>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1.5">
+            Por enquanto, adicione membros pelo painel do Supabase em <span className="font-mono">empresa_membros</span>.
+          </div>
+        </Surface>
       </div>
     </>
   );

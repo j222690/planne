@@ -52,10 +52,10 @@ export async function getFornecedores(empresaId: string) {
 }
 
 // ─── Materiais ────────────────────────────────────────────────────────────────
-export async function getMateriais(empresaId: string) {
+export async function getMateriais(_empresaId?: string) {
   const { data, error } = await supabase
     .from("materiais")
-    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,fornecedor_id,fornecedores(nome),categoria_id,categorias_material(nome)")
+    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,fornecedor_id,fornecedores(nome),categoria_id,categorias_material(nome)")
     .eq("ativo", true)
     .order("nome");
   if (error) throw error;
@@ -73,6 +73,17 @@ export async function upsertMaterial(empresaId: string, material: Record<string,
 }
 
 // ─── Projetos ─────────────────────────────────────────────────────────────────
+export async function upsertProjeto(empresaId: string, projeto: Record<string, unknown>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase
+    .from("projetos")
+    .insert({ ...projeto, empresa_id: empresaId, criado_por: session?.user.id })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function getProjetos(empresaId: string) {
   const { data, error } = await supabase
     .from("projetos")
