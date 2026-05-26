@@ -7,7 +7,7 @@ export async function getEmpresaAtual() {
 
   const { data } = await supabase
     .from("empresa_membros")
-    .select("empresa_id, role, empresas(id,nome,cnpj,cidade,estado,endereco,logo_url,cor_primaria,email,telefone)")
+    .select("empresa_id, role, empresas(id,nome,cnpj,cidade,estado,endereco,logo_url,cor_primaria,email,telefone,parametros)")
     .eq("user_id", session.user.id)
     .single();
 
@@ -55,7 +55,7 @@ export async function getFornecedores(empresaId: string) {
 export async function getMateriais(_empresaId?: string) {
   const { data, error } = await supabase
     .from("materiais")
-    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,fornecedor_id,fornecedores(nome),categoria_id,categorias_material(nome)")
+    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,largura_mm,comprimento_mm,fornecedor_id,fornecedores(nome),categoria_id")
     .eq("ativo", true)
     .order("nome");
   if (error) throw error;

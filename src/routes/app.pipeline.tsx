@@ -13,7 +13,7 @@ export const Route = createFileRoute("/app/pipeline")({
 
 type Estagio = { id: string; nome: string; ordem: number; cor: string | null };
 type Oportunidade = {
-  id: string; nome: string; valor: number | null; status: string;
+  id: string; titulo: string; valor_estimado: number | null; status: string;
   estagio_id: string | null; empresa_id: string; notas: string | null;
   created_at: string;
   clientes: { nome: string } | null;
@@ -30,7 +30,7 @@ const DEFAULT_ESTAGIOS: Estagio[] = [
 function NovaOpModal({ empresaId, estagios, onClose, onSaved }: {
   empresaId: string; estagios: Estagio[]; onClose: () => void; onSaved: () => void;
 }) {
-  const [form, setForm] = useState({ nome: "", valor: "", estagio_id: estagios[0]?.id ?? "", notas: "" });
+  const [form, setForm] = useState({ titulo: "", valor_estimado: "", estagio_id: estagios[0]?.id ?? "", notas: "" });
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [clienteId, setClienteId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,13 +41,13 @@ function NovaOpModal({ empresaId, estagios, onClose, onSaved }: {
   }, [empresaId]);
 
   const handleSave = async () => {
-    if (!form.nome.trim()) { toast.error("Nome obrigatório"); return; }
+    if (!form.titulo.trim()) { toast.error("Título obrigatório"); return; }
     setSaving(true);
     const { error } = await supabase.from("oportunidades").insert({
-      nome: form.nome,
-      valor: parseFloat(form.valor) || null,
+      titulo: form.titulo,
+      valor_estimado: parseFloat(form.valor_estimado) || null,
       estagio_id: form.estagio_id || null,
-      status: form.estagio_id || "prospecao",
+      status: "aberto",
       notas: form.notas || null,
       empresa_id: empresaId,
       cliente_id: clienteId || null,
@@ -70,15 +70,15 @@ function NovaOpModal({ empresaId, estagios, onClose, onSaved }: {
         <h2 className="text-[15px] font-semibold">Nova oportunidade</h2>
 
         <label className="block">
-          <div className="text-[11.5px] text-muted-foreground mb-1">Nome *</div>
-          <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+          <div className="text-[11.5px] text-muted-foreground mb-1">Título *</div>
+          <input value={form.titulo} onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
             placeholder="Ex: Cozinha planejada — João Silva" className="input" />
         </label>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <div className="text-[11.5px] text-muted-foreground mb-1">Valor estimado (R$)</div>
-            <input type="number" value={form.valor} onChange={(e) => setForm((f) => ({ ...f, valor: e.target.value }))}
+            <input type="number" value={form.valor_estimado} onChange={(e) => setForm((f) => ({ ...f, valor_estimado: e.target.value }))}
               className="input" min={0} step={100} />
           </label>
           <label className="block">
@@ -136,17 +136,17 @@ function KanbanCard({ op, onMoved, estagios }: { op: Oportunidade; onMoved: () =
   return (
     <div className="rounded-md border border-border bg-background p-3 hover:border-border-strong transition-colors cursor-pointer group">
       <div className="flex items-start justify-between gap-2">
-        <div className="font-medium text-[12.5px] truncate">{op.nome}</div>
+        <div className="font-medium text-[12.5px] truncate">{op.titulo}</div>
         <GripVertical className="size-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100" />
       </div>
       {op.clientes && (
         <div className="text-[11.5px] text-muted-foreground mt-0.5 truncate">{op.clientes.nome}</div>
       )}
       <div className="flex items-center justify-between mt-2 gap-2">
-        {op.valor ? (
+        {op.valor_estimado ? (
           <span className="text-[11.5px] font-medium flex items-center gap-0.5 text-emerald-600">
             <DollarSign className="size-3" />
-            {Number(op.valor).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            {Number(op.valor_estimado).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </span>
         ) : <span />}
         {moving ? (
@@ -199,7 +199,7 @@ function Pipeline() {
 
   useEffect(() => { load(); }, []);
 
-  const totalPipeline = ops.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+  const totalPipeline = ops.reduce((s, o) => s + (Number(o.valor_estimado) || 0), 0);
 
   return (
     <>

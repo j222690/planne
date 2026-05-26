@@ -17,10 +17,10 @@ export const Route = createFileRoute("/app/materiais")({
 type Material = {
   id: string; codigo: string | null; nome: string;
   unidade: string; preco_custo: number; preco_venda: number;
-  ativo: boolean; fornecedor_id: string | null;
+  ativo: boolean; fornecedor_id: string | null; categoria_id: string | null;
   cor: string | null; espessura_mm: number | null; imagem_url: string | null;
+  largura_mm: number | null; comprimento_mm: number | null;
   fornecedores: { nome: string } | null;
-  categorias_material: { nome: string } | null;
 };
 
 function getCategoria(nome: string): string {

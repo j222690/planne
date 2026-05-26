@@ -52,6 +52,16 @@ type MatCatalog = {
 
 const AMBIENTES = ["Cozinha", "Quarto", "Sala", "Banheiro", "Escritório", "Lavanderia", "Área gourmet", "Closet", "Garagem", "Outro"];
 
+function getCatNome(nome: string): string {
+  const map: Record<string, string> = {
+    MDF: "MDF", Chapa: "Chapas", Puxador: "Puxadores", Corrediça: "Ferragens",
+    Dobradiça: "Ferragens", Corredi: "Ferragens", Parafuso: "Acessórios",
+    Cola: "Acessórios", Fita: "Acabamentos", Vidro: "Vidros", Espelho: "Vidros",
+  };
+  for (const [k, v] of Object.entries(map)) { if (nome.startsWith(k)) return v; }
+  return nome.split(" - ")[0].split(" ")[0] || "Outros";
+}
+
 function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; onSaved: () => void; editOrc?: Orc & { itens?: OrcItem[] } }) {
   const isEdit = !!editOrc;
   const [fase, setFase] = useState<"configurar" | "revisar">(isEdit ? "revisar" : "configurar");
@@ -90,11 +100,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: { onClose: () => void; on
       setEmpresaId(eid);
       const [c, m] = await Promise.all([getClientes(eid), getMateriais(eid)]);
       setClientes(c as { id: string; nome: string }[]);
-      const raw = m as unknown as { id: string; nome: string; unidade: string; preco_custo: number; preco_venda: number; categorias_material?: { nome: string } | null }[];
+      const raw = m as { id: string; nome: string; unidade: string; preco_custo: number; preco_venda: number }[];
       setCatalogo(raw.map((r) => ({
         id: r.id, nome: r.nome, unidade: r.unidade,
         preco_custo: r.preco_custo, preco_venda: r.preco_venda,
-        categoria: r.categorias_material?.nome ?? null,
+        categoria: getCatNome(r.nome),
       })));
 
       if (editOrc) {
@@ -789,10 +799,8 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: { orc: Orc; onClos
       const projeto = await upsertProjeto(empresaId, {
         nome: `Projeto — ${orc.clientes?.nome ?? "Cliente"} (${orc.numero ?? ""})`,
         descricao: `Gerado a partir do orçamento ${orc.numero ?? ""}`,
-        status: "planejamento",
+        status: "briefing",
         cliente_id: orcTyped.cliente_id ?? null,
-        orcamento_id: orc.id,
-        valor_contrato: orcTyped.total ?? 0,
       });
       toast.success("Projeto criado com sucesso!");
       onClose();
