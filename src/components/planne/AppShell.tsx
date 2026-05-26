@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   LayoutDashboard, FileText, Users, Boxes, Truck, Sparkles,
   Hammer, Wallet, Settings, Search, Bell, Command, ChevronsUpDown,
-  Folder, LogOut, Menu, X, Sun, Moon, UserSearch, Wand2,
+  Folder, LogOut, Menu, X, Sun, Moon, Wand2,
   CalendarDays, GitBranch, BarChart3, History,
   CheckCheck, FileText as FileText2, UserPlus, FolderPlus,
 } from "lucide-react";
@@ -21,7 +21,6 @@ const nav = [
   { group: "Comercial", items: [
     { to: "/app/orcamentos", label: "Orçamentos", icon: FileText },
     { to: "/app/clientes", label: "Clientes", icon: Users },
-    { to: "/app/busca-lead", label: "Busca Lead", icon: UserSearch },
     { to: "/app/projetos", label: "Projetos", icon: Folder },
     { to: "/app/pipeline", label: "Pipeline", icon: GitBranch },
     { to: "/app/calendario", label: "Calendário", icon: CalendarDays },

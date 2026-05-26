@@ -36,7 +36,6 @@ function getCategoria(nome: string): string {
     ["Vidro", "Vidros"], ["Espelho", "Vidros"],
     ["Acabamento", "Acabamentos"], ["Fita de Borda", "Acabamentos"],
     ["Fita LED", "Acessórios"],
-    ["Mão de obra", "Serviços"], ["Projeto", "Serviços"], ["Frete", "Serviços"],
   ];
   for (const [k, v] of rules) {
     if (nome.startsWith(k)) return v;
@@ -58,7 +57,7 @@ const matSchema = z.object({
 });
 type MatForm = z.infer<typeof matSchema>;
 
-const CATEGORIAS_OPCOES = ["MDF", "MDP", "Chapas", "Puxadores", "Ferragens", "Vidros", "Acabamentos", "Acessórios", "Serviços", "Outros"];
+const CATEGORIAS_OPCOES = ["MDF", "MDP", "Chapas", "Puxadores", "Ferragens", "Vidros", "Acabamentos", "Acessórios", "Outros"];
 const UNIDADES = ["un", "chapa", "m", "m2", "par", "peça", "kg", "l", "hr", "vb", "rolo", "kit"];
 
 function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
@@ -359,7 +358,7 @@ function Materiais() {
       <PageHeader
         eyebrow="Operação"
         title="Central de materiais"
-        description="Catálogo unificado de chapas, ferragens, fitas e acessórios."
+        description="Catálogo unificado de chapas, ferragens, fitas e acessórios. Mão de obra é gerenciada separadamente."
         actions={
           <>
             <button onClick={() => csvRef.current?.click()} disabled={csvImporting}
