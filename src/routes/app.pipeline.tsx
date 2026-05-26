@@ -235,7 +235,7 @@ function Pipeline() {
         <Surface padded={false} className="p-4">
           <div className="text-[11.5px] uppercase tracking-[0.08em] text-muted-foreground">Ticket médio</div>
           <div className="mt-1.5 text-[20px] font-semibold num">
-            {loading || ops.length === 0 ? "—" : "R$ " + (totalPipeline / ops.filter(o => o.valor).length || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+            {loading || ops.length === 0 ? "—" : "R$ " + (totalPipeline / (ops.filter(o => o.valor_estimado).length || 1)).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
           </div>
         </Surface>
       </div>
@@ -249,7 +249,7 @@ function Pipeline() {
           <div className="flex gap-3 min-w-max">
             {estagios.map((est) => {
               const estOps = ops.filter((o) => o.estagio_id === est.id || o.status === est.id);
-              const estTotal = estOps.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+              const estTotal = estOps.reduce((s, o) => s + (Number(o.valor_estimado) || 0), 0);
               return (
                 <div key={est.id} className="w-[240px] shrink-0">
                   <div className="flex items-center gap-2 mb-2 px-1">

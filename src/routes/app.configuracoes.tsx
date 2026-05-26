@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Trash2 } from "lucide-react";
+import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Mail, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +32,8 @@ function Configuracoes() {
   // Membros
   const [membros, setMembros] = useState<Membro[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "membro">("membro");
+  const [inviting, setInviting] = useState(false);
 
   const [form, setForm] = useState({
     nome: "", cnpj: "", cidade: "", estado: "", endereco: "",
@@ -128,6 +130,29 @@ function Configuracoes() {
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Configurações salvas!");
+  };
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) { toast.error("Informe o email"); return; }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("Sessão expirada"); return; }
+      const res = await fetch("/api/invite-membro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole, userToken: session.access_token }),
+      });
+      const json = await res.json() as { ok?: boolean; error?: string; message?: string };
+      if (!res.ok) { toast.error(json.error ?? "Erro ao convidar"); return; }
+      toast.success(json.message ?? `Convite enviado para ${inviteEmail}`);
+      setInviteEmail("");
+      if (empresa) loadMembros(empresa.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao convidar");
+    } finally {
+      setInviting(false);
+    }
   };
 
   const setParam = (key: keyof typeof params, val: string) =>
@@ -319,18 +344,34 @@ function Configuracoes() {
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="email@empresa.com" type="email"
-              className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none focus:border-border-strong" />
+          <div className="flex gap-2 mt-1">
+            <input
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleInvite()}
+              placeholder="email@empresa.com"
+              type="email"
+              className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none focus:border-border-strong"
+            />
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as "admin" | "membro")}
+              className="h-8 rounded-md border border-border bg-surface-2 px-2 text-[12.5px] outline-none"
+            >
+              <option value="membro">Membro</option>
+              <option value="admin">Admin</option>
+            </select>
             <button
-              onClick={() => toast.info("Convite por email em breve — use o painel Supabase por enquanto.")}
-              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary shrink-0">
+              onClick={handleInvite}
+              disabled={inviting}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary shrink-0 inline-flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {inviting ? <Loader2 className="size-3 animate-spin" /> : <Mail className="size-3" />}
               Convidar
             </button>
           </div>
           <div className="text-[11px] text-muted-foreground mt-1.5">
-            Por enquanto, adicione membros pelo painel do Supabase em <span className="font-mono">empresa_membros</span>.
+            O convidado receberá um link de acesso por email.
           </div>
         </Surface>
       </div>
