@@ -49,6 +49,13 @@ REGRAS:
 - Calcule orcamento realista baseado nas chapas de todos os móveis
 - Categoria: armario, mesa, sofa, cama, rack, estante, bancada, escritório, outro`;
 
+function detectMime(b64: string): string {
+  if (b64.startsWith("/9j")) return "image/jpeg";
+  if (b64.startsWith("iVBOR")) return "image/png";
+  if (b64.startsWith("UklGR")) return "image/webp";
+  return "image/jpeg";
+}
+
 interface MovelIA {
   chapas_mdf?: number;
 }
@@ -98,18 +105,16 @@ Gere um projeto completo de marcenaria planejada para este ambiente.`,
   ];
 
   if (planta_b64) {
-    const mimeType = planta_b64.startsWith("/9j") ? "image/jpeg" : "image/png";
     userContent.push({
       type: "image_url",
-      image_url: { url: `data:${mimeType};base64,${planta_b64}`, detail: "high" },
+      image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" },
     });
   }
 
   for (const b64 of (referencias_b64 ?? []).filter(Boolean).slice(0, 3)) {
-    const mimeType = b64.startsWith("/9j") ? "image/jpeg" : "image/png";
     userContent.push({
       type: "image_url",
-      image_url: { url: `data:${mimeType};base64,${b64}`, detail: "low" },
+      image_url: { url: `data:${detectMime(b64)};base64,${b64}`, detail: "low" },
     });
   }
 

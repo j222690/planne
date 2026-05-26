@@ -1,5 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+function detectMime(b64: string): string {
+  if (b64.startsWith("/9j")) return "image/jpeg";
+  if (b64.startsWith("iVBOR")) return "image/png";
+  if (b64.startsWith("UklGR")) return "image/webp";
+  return "image/jpeg";
+}
+
 const SYSTEM = `Você é especialista em marcenaria planejada brasileira.
 Dado um ambiente com medidas e uma lista de materiais disponíveis no estoque,
 calcule EXATAMENTE quais materiais e quantidades são necessários para o projeto.
@@ -81,7 +88,7 @@ Calcule os materiais e quantidades necessários para este projeto.`;
               role: "user",
               content: [
                 { type: "text", text: userPrompt },
-                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${planta_b64}`, detail: "high" } },
+                { type: "image_url", image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" } },
               ],
             },
           ],

@@ -269,9 +269,36 @@ export async function updateOrcamento(id: string, data: Record<string, unknown>)
 }
 
 export async function replaceOrcamentoItens(orcamentoId: string, itens: Record<string, unknown>[]) {
-  await supabase.from("orcamento_itens").delete().eq("orcamento_id", orcamentoId);
-  if (itens.length > 0) {
-    const { error } = await supabase.from("orcamento_itens").insert(itens);
-    if (error) throw error;
-  }
+  const { error } = await supabase.rpc("replace_orcamento_itens", {
+    p_orcamento_id: orcamentoId,
+    p_itens: itens,
+  });
+  if (error) throw error;
+}
+
+// ─── Calendário ───────────────────────────────────────────────────────────────
+export async function getCalendarioEventos(empresaId: string) {
+  const { data, error } = await supabase
+    .from("calendario_eventos")
+    .select("id,titulo,descricao,data_inicio,data_fim,tipo,cor,created_at")
+    .eq("empresa_id", empresaId)
+    .order("data_inicio");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createCalendarioEvento(empresaId: string, evento: Record<string, unknown>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase
+    .from("calendario_eventos")
+    .insert({ ...evento, empresa_id: empresaId, created_by: session?.user.id })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCalendarioEvento(id: string) {
+  const { error } = await supabase.from("calendario_eventos").delete().eq("id", id);
+  if (error) throw error;
 }

@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getEmpresaAtual, getClientes, upsertOrcamento } from "@/lib/db";
+import { checkAndConsumeCredito } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, type MovelCanvas } from "@/components/planne/RoomCanvas";
 
@@ -101,6 +102,16 @@ function DropZone({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (files?.length) {
+      const urls = files.map((f) => URL.createObjectURL(f));
+      setPreviews(urls);
+      return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+    }
+    setPreviews(preview ? [preview] : []);
+  }, [files, preview]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -109,8 +120,6 @@ function DropZone({
     if (!dropped.length) return;
     onFile(multiple ? dropped : dropped[0]);
   };
-
-  const previews = files?.map((f) => URL.createObjectURL(f)) ?? (preview ? [preview] : []);
 
   return (
     <div
@@ -292,21 +301,16 @@ function IAProjetoPage() {
   const gerarRender = useCallback(async () => {
     if (!wizard?.analise) return;
 
-    // Verifica créditos de render
+    // Verifica e consome crédito de render
     try {
       const empresa = await getEmpresaAtual();
       if (empresa) {
-        const params = (empresa as { parametros?: Record<string, number> }).parametros ?? {};
-        const creditos = params.creditos_render ?? 10;
-        if (creditos <= 0) {
-          toast.error("Sem créditos de render. Recarregue em Configurações.");
+        const result = await checkAndConsumeCredito((empresa as { id: string }).id, "render");
+        if (!result.ok) {
+          toast.error(result.mensagem ?? "Sem créditos de render.");
           return;
         }
-        // Deduz 1 crédito
-        await supabase.from("empresas").update({
-          parametros: { ...params, creditos_render: creditos - 1 },
-        }).eq("id", (empresa as { id: string }).id);
-        toast.info(`Crédito utilizado. Restam ${creditos - 1} créditos de render.`);
+        toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
       }
     } catch {
       // não bloqueia o render por falha de crédito
@@ -532,7 +536,7 @@ function Step2Upload({ wizard, update }: { wizard: WizardState; update: (p: Part
             label="Envie a planta baixa do ambiente"
             accept="image/*"
             onFile={(f) => update({ planta: f as File })}
-            preview={wizard.planta ? URL.createObjectURL(wizard.planta) : undefined}
+            files={wizard.planta ? [wizard.planta] : undefined}
           />
           {wizard.planta && (
             <div className="flex items-center gap-2 mt-1.5 text-[12px] text-muted-foreground">

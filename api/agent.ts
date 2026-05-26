@@ -122,8 +122,8 @@ async function executeTool(
         .gte("created_at", inicioMes);
       if (error) return { erro: error.message };
       const rows = data ?? [];
-      const receitas = rows.filter((l) => l.tipo === "receita").reduce((s, l) => s + Number(l.valor), 0);
-      const despesas = rows.filter((l) => l.tipo === "despesa").reduce((s, l) => s + Number(l.valor), 0);
+      const receitas = rows.filter((l) => l.tipo === "entrada").reduce((s, l) => s + Number(l.valor), 0);
+      const despesas = rows.filter((l) => l.tipo === "saida").reduce((s, l) => s + Number(l.valor), 0);
       return {
         mes: hoje.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
         receitas,
