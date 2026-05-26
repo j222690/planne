@@ -25,13 +25,20 @@ type Material = {
 
 function getCategoria(nome: string): string {
   const prefix = nome.split(" - ")[0].split(" ")[0];
-  const map: Record<string, string> = {
-    MDF: "MDF", Chapa: "Chapas", Puxador: "Puxadores", Corrediça: "Ferragens",
-    Dobradiça: "Ferragens", Dobradica: "Ferragens", Corredi: "Ferragens",
-    Parafuso: "Acessórios", Cola: "Acessórios", Furador: "Acessórios", Pino: "Acessórios",
-    Vidro: "Vidros", Espelho: "Vidros", Acabamento: "Acabamentos", Fita: "Acabamentos",
-  };
-  for (const [k, v] of Object.entries(map)) {
+  const rules: [string, string][] = [
+    ["MDF", "MDF"], ["MDP", "MDP"],
+    ["Chapa", "Chapas"],
+    ["Puxador", "Puxadores"],
+    ["Corrediça", "Ferragens"], ["Dobradiça", "Ferragens"], ["Dobradica", "Ferragens"],
+    ["Parafuso", "Acessórios"], ["Minifix", "Acessórios"], ["Cavilha", "Acessórios"],
+    ["Cola", "Acessórios"], ["Fundo", "Acessórios"], ["Perfil de", "Acessórios"],
+    ["Furador", "Acessórios"], ["Pino", "Acessórios"],
+    ["Vidro", "Vidros"], ["Espelho", "Vidros"],
+    ["Acabamento", "Acabamentos"], ["Fita de Borda", "Acabamentos"],
+    ["Fita LED", "Acessórios"],
+    ["Mão de obra", "Serviços"], ["Projeto", "Serviços"], ["Frete", "Serviços"],
+  ];
+  for (const [k, v] of rules) {
     if (nome.startsWith(k)) return v;
   }
   return prefix || "Outros";
@@ -45,13 +52,14 @@ const matSchema = z.object({
   preco_venda: z.coerce.number().min(0).default(0),
   categoria: z.string().optional(),
   cor: z.string().optional(),
+  imagem_url: z.string().optional(),
   espessura_mm: z.coerce.number().optional(),
   fornecedor_id: z.string().optional(),
 });
 type MatForm = z.infer<typeof matSchema>;
 
-const CATEGORIAS_OPCOES = ["MDF", "Chapas", "Puxadores", "Ferragens", "Vidros", "Acabamentos", "Acessórios", "Outros"];
-const UNIDADES = ["un", "chapa", "metro", "par", "caixa", "kg", "m²"];
+const CATEGORIAS_OPCOES = ["MDF", "MDP", "Chapas", "Puxadores", "Ferragens", "Vidros", "Acabamentos", "Acessórios", "Serviços", "Outros"];
+const UNIDADES = ["un", "chapa", "m", "m2", "par", "peça", "kg", "l", "hr", "vb", "rolo", "kit"];
 
 function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
   onClose: () => void; onSaved: () => void; empresaId: string | null; initialData?: Material;
@@ -69,10 +77,13 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
       unidade: initialData.unidade, preco_custo: initialData.preco_custo,
       preco_venda: initialData.preco_venda,
       categoria: getCategoria(initialData.nome),
-      cor: initialData.cor ?? "", espessura_mm: initialData.espessura_mm ?? undefined,
+      cor: initialData.cor ?? "", imagem_url: initialData.imagem_url ?? "",
+      espessura_mm: initialData.espessura_mm ?? undefined,
       fornecedor_id: initialData.fornecedor_id ?? "",
     } : { unidade: "un", preco_custo: 0, preco_venda: 0 },
   });
+
+  const corValue = watch("cor");
 
   const custo = watch("preco_custo");
   const applyMargem = (pct: number) => {
@@ -88,6 +99,7 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
         preco_custo: data.preco_custo, preco_venda: data.preco_venda,
         cor: data.cor || null, espessura_mm: data.espessura_mm || null,
         fornecedor_id: data.fornecedor_id || null,
+        imagem_url: data.imagem_url || null,
       };
       if (initialData) {
         await updateMaterial(initialData.id, payload);
@@ -165,9 +177,17 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
               </select>
             </div>
             <div>
-              <div className="text-[11.5px] text-muted-foreground mb-1">Cor</div>
-              <input {...register("cor")} placeholder="Branco TX"
-                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
+              <div className="text-[11.5px] text-muted-foreground mb-1">Cor (hex)</div>
+              <div className="flex gap-1.5">
+                <input
+                  type="color"
+                  value={corValue?.match(/^#[0-9A-Fa-f]{6}$/) ? corValue : "#cccccc"}
+                  onChange={(e) => setValue("cor", e.target.value)}
+                  className="h-9 w-10 rounded-md border border-border bg-surface-2 p-0.5 cursor-pointer shrink-0"
+                />
+                <input {...register("cor")} placeholder="#F2EDE8"
+                  className="flex-1 h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[12px] font-mono outline-none focus:border-border-strong min-w-0" />
+              </div>
             </div>
             <div>
               <div className="text-[11.5px] text-muted-foreground mb-1">Esp. (mm)</div>
@@ -175,13 +195,20 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
             </div>
           </div>
-          <div>
-            <div className="text-[11.5px] text-muted-foreground mb-1">Fornecedor</div>
-            <select {...register("fornecedor_id")}
-              className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground">
-              <option value="">Sem fornecedor</option>
-              {fornecedores.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Fornecedor</div>
+              <select {...register("fornecedor_id")}
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground">
+                <option value="">Sem fornecedor</option>
+                {fornecedores.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">URL da imagem</div>
+              <input {...register("imagem_url")} placeholder="https://..."
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
+            </div>
           </div>
           <div className="flex gap-2 justify-end pt-2 border-t border-border">
             <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary">Cancelar</button>
@@ -401,22 +428,23 @@ function Materiais() {
                 className="group relative bg-surface-2 border border-border rounded-lg overflow-hidden hover:border-border-strong hover:shadow-sm transition-all cursor-pointer"
                 onClick={() => setEditando(m)}
               >
-                <div className="aspect-square bg-secondary relative overflow-hidden">
+                <div className="aspect-square relative overflow-hidden"
+                  style={{ background: !m.imagem_url && m.cor?.startsWith("#") ? m.cor : undefined }}>
                   {m.imagem_url ? (
                     <img src={m.imagem_url} alt={m.nome}
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
+                  ) : m.cor?.startsWith("#") ? null : (
+                    <div className="flex items-center justify-center h-full bg-secondary">
                       <ImageOff className="size-6 text-muted-foreground/40" />
                     </div>
                   )}
                   <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition">
                     <MatRowMenu material={m} onEdit={() => setEditando(m)} onDeleted={load} />
                   </div>
-                  {m.cor && (
+                  {m.espessura_mm && (
                     <div className="absolute bottom-1.5 left-1.5">
-                      <span className="text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded-full">{m.cor}</span>
+                      <span className="text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded-full">{m.espessura_mm}mm</span>
                     </div>
                   )}
                 </div>
@@ -454,6 +482,8 @@ function Materiais() {
                       {m.imagem_url ? (
                         <img src={m.imagem_url} alt="" className="size-8 rounded object-cover bg-secondary"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      ) : m.cor?.startsWith("#") ? (
+                        <div className="size-8 rounded border border-border/40" style={{ background: m.cor }} />
                       ) : (
                         <div className="size-8 rounded bg-secondary flex items-center justify-center">
                           <ImageOff className="size-3.5 text-muted-foreground/40" />
@@ -468,7 +498,12 @@ function Materiais() {
                       <Pill tone="neutral">{getCategoria(m.nome)}</Pill>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground text-[12.5px]">
-                      {[m.cor, m.espessura_mm ? `${m.espessura_mm}mm` : null].filter(Boolean).join(" · ") || "—"}
+                      <div className="flex items-center gap-1.5">
+                        {m.cor?.startsWith("#") && (
+                          <div className="size-3 rounded-full shrink-0 border border-border/30" style={{ background: m.cor }} />
+                        )}
+                        <span>{m.espessura_mm ? `${m.espessura_mm}mm` : m.cor && !m.cor.startsWith("#") ? m.cor : "—"}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground text-[12.5px]">{m.fornecedores?.nome ?? "—"}</td>
                     <td className="px-4 py-2 text-right num text-muted-foreground">R$ {Number(m.preco_custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
