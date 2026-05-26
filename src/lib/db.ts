@@ -56,7 +56,6 @@ export async function getMateriais(empresaId: string) {
   const { data, error } = await supabase
     .from("materiais")
     .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,fornecedor_id,fornecedores(nome),categoria_id,categorias_material(nome)")
-    .eq("empresa_id", empresaId)
     .eq("ativo", true)
     .order("nome");
   if (error) throw error;
