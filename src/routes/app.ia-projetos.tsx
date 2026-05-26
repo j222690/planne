@@ -3,7 +3,7 @@ import { PageHeader, Surface } from "@/components/planne/primitives";
 import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
-  CheckCircle2, Zap, AlertCircle, DollarSign, Package,
+  CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,7 @@ export const Route = createFileRoute("/app/ia-projetos")({
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Movel extends MovelCanvas {
+  altura_cm: number;
   preco_estimado: number;
   chapas_mdf: number;
   nota: string;
@@ -45,6 +46,25 @@ interface AnaliseIA {
   observacoes_tecnicas: string[];
 }
 
+interface PecaCorte {
+  movel: string;
+  peca: string;
+  material: string;
+  largura_mm: number;
+  comprimento_mm: number;
+  quantidade: number;
+  fita_l: boolean;
+  fita_r: boolean;
+  fita_t: boolean;
+  fita_b: boolean;
+  observacao?: string;
+}
+
+interface ListaCorteResult {
+  pecas: PecaCorte[];
+  resumo: { total_pecas: number; chapas_estimadas: number; metros_fita: number };
+}
+
 interface WizardState {
   step: 1 | 2 | 3 | 4 | 5;
   projetoId: string | null;
@@ -65,6 +85,8 @@ interface WizardState {
   renderUrl: string | null;
   renderLoading: boolean;
   renderJobId: string | null;
+  listaCorte: ListaCorteResult | null;
+  listaCorteLoading: boolean;
   error: string | null;
 }
 
@@ -228,6 +250,8 @@ function IAProjetoPage() {
       renderUrl: null,
       renderLoading: false,
       renderJobId: null,
+      listaCorte: null,
+      listaCorteLoading: false,
       error: null,
     });
 
@@ -281,7 +305,9 @@ function IAProjetoPage() {
             ambiente: wizard.form.ambiente,
             estilo: wizard.form.estilo,
             medidas: { largura: parseFloat(wizard.form.largura) || 4, profundidade: parseFloat(wizard.form.profundidade) || 3, altura: parseFloat(wizard.form.altura) || 2.7 },
-            analise_json: analise,
+            analise_ia: analise,
+            moveis_layout: analise.moveis ?? [],
+            orcamento_ia: analise.orcamento,
             orcamento_base_texto: analise.descricao_comercial,
           }).select("id").single();
           projetoId = proj?.id ?? null;
@@ -325,8 +351,17 @@ function IAProjetoPage() {
         body: JSON.stringify({
           ambiente: wizard.form.ambiente,
           estilo: wizard.form.estilo,
-          moveis_nomes: wizard.analise.moveis.map((m) => m.nome),
+          estilo_detectado: wizard.analise.estilo_detectado,
+          moveis: wizard.analise.moveis.map((m) => ({
+            nome: m.nome,
+            categoria: m.categoria,
+            cor_hex: m.cor_hex,
+            largura_cm: m.largura_cm,
+            profundidade_cm: m.profundidade_cm,
+            altura_cm: m.altura_cm,
+          })),
           descricao: wizard.analise.resumo,
+          descricao_comercial: wizard.analise.descricao_comercial,
         }),
       });
 
@@ -366,6 +401,37 @@ function IAProjetoPage() {
       }
     } catch (e) {
       update({ renderLoading: false, error: e instanceof Error ? e.message : "Erro" });
+    }
+  }, [wizard]);
+
+  const gerarListaCorte = useCallback(async () => {
+    if (!wizard?.analise?.moveis?.length) return;
+    update({ listaCorteLoading: true });
+    try {
+      const res = await fetch("/api/lista-corte", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          moveis: wizard.analise.moveis.map((m) => ({
+            nome: m.nome,
+            categoria: m.categoria,
+            largura_cm: m.largura_cm,
+            profundidade_cm: m.profundidade_cm,
+            altura_cm: m.altura_cm,
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao gerar lista de corte");
+      const data = await res.json() as ListaCorteResult;
+      update({ listaCorte: data, listaCorteLoading: false });
+      if (wizard.projetoId) {
+        await supabase.from("room_projects").update({
+          analise_ia: { ...wizard.analise, lista_corte: data },
+        }).eq("id", wizard.projetoId);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar lista de corte");
+      update({ listaCorteLoading: false });
     }
   }, [wizard]);
 
@@ -438,7 +504,7 @@ function IAProjetoPage() {
           {wizard.step === 1 && <Step1Form wizard={wizard} update={update} />}
           {wizard.step === 2 && <Step2Upload wizard={wizard} update={update} />}
           {wizard.step === 3 && <Step3Analyzing wizard={wizard} analisar={analisar} />}
-          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} />}
+          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} />}
           {wizard.step === 5 && <Step5Render wizard={wizard} update={update} />}
         </motion.div>
       </AnimatePresence>
@@ -649,11 +715,12 @@ function Step3Analyzing({ wizard, analisar }: { wizard: WizardState; analisar: (
 
 // ─── Step 4: Layout + Orçamento ───────────────────────────────────────────────
 
-function Step4Layout({ wizard, update, gerarRender, criarOrcamento }: {
+function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   gerarRender: () => void;
   criarOrcamento: () => void;
+  gerarListaCorte: () => void;
 }) {
   const { analise, moveis } = wizard;
   if (!analise) return null;
@@ -738,6 +805,77 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento }: {
           </div>
         </Surface>
       </div>
+
+      {/* Lista de corte */}
+      <Surface>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Scissors className="size-4 text-accent" />
+            <span className="text-[14px] font-semibold">Lista de corte</span>
+            {wizard.listaCorte && (
+              <span className="text-[11.5px] text-muted-foreground">
+                {wizard.listaCorte.resumo.total_pecas} peças · {wizard.listaCorte.resumo.chapas_estimadas} chapas · {wizard.listaCorte.resumo.metros_fita}m fita
+              </span>
+            )}
+          </div>
+          {!wizard.listaCorte && (
+            <button
+              onClick={gerarListaCorte}
+              disabled={wizard.listaCorteLoading}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] font-medium hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5"
+            >
+              {wizard.listaCorteLoading
+                ? <><Loader2 className="size-3.5 animate-spin" /> Gerando…</>
+                : <><Scissors className="size-3.5" /> Gerar lista</>}
+            </button>
+          )}
+        </div>
+
+        {wizard.listaCorteLoading && (
+          <div className="flex items-center gap-2 py-6 justify-center text-[13px] text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Calculando peças com GPT-4o mini…
+          </div>
+        )}
+
+        {wizard.listaCorte && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px] min-w-[680px]">
+              <thead className="text-[10.5px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                <tr>
+                  <th className="text-left font-medium px-2 py-1.5">Móvel</th>
+                  <th className="text-left font-medium px-2 py-1.5">Peça</th>
+                  <th className="text-left font-medium px-2 py-1.5">Material</th>
+                  <th className="text-right font-medium px-2 py-1.5">L (mm)</th>
+                  <th className="text-right font-medium px-2 py-1.5">C (mm)</th>
+                  <th className="text-center font-medium px-2 py-1.5">Qtd</th>
+                  <th className="text-center font-medium px-2 py-1.5">Fita</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wizard.listaCorte.pecas.map((p, i) => (
+                  <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-secondary/30">
+                    <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[120px]">{p.movel}</td>
+                    <td className="px-2 py-1.5 font-medium">{p.peca}</td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{p.material}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{p.largura_mm}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{p.comprimento_mm}</td>
+                    <td className="px-2 py-1.5 text-center tabular-nums">{p.quantidade}</td>
+                    <td className="px-2 py-1.5 text-center text-[10px] font-mono text-muted-foreground">
+                      {[p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"].filter(Boolean).join("·") || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!wizard.listaCorte && !wizard.listaCorteLoading && (
+          <div className="py-6 text-center text-[12.5px] text-muted-foreground">
+            Clique em "Gerar lista" para calcular peças, chapas e fita de borda automaticamente.
+          </div>
+        )}
+      </Surface>
 
       {/* Texto comercial */}
       <Surface>
