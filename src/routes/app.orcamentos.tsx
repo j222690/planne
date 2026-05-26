@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp, Info, Search,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -803,7 +804,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 <div className="text-[12.5px] space-y-1 pt-5">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Materiais</span>
-                    <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   {(() => {
                     const custo = itens.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 0), 0);
@@ -812,13 +813,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     return (
                       <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                         <span>Lucro (~{margemReal.toFixed(0)}%)</span>
-                        <span className="num">R$ {lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                        <span className="num">R$ {lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     );
                   })()}
                   <div className="flex justify-between font-semibold border-t border-border pt-1">
                     <span>Total</span>
-                    <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    <span className="num">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
@@ -936,7 +937,7 @@ function ItemTable({ fields, itens, register, remove }: {
                         className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[11.5px] outline-none text-right" />
                     </td>
                     <td className="px-2 py-1.5 text-right num text-muted-foreground text-[11.5px]">
-                      {tot.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {tot.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-2 py-1.5">
                       <button type="button" onClick={() => remove(idx)} className="text-muted-foreground hover:text-destructive">
@@ -1082,7 +1083,7 @@ function Orcamentos() {
                     className="border-b border-border last:border-0 hover:bg-secondary/40 cursor-pointer group">
                     <td className="px-5 py-3 font-mono text-[12px] text-muted-foreground">{o.numero ?? "—"}</td>
                     <td className="px-5 py-3 font-medium">{o.clientes?.nome ?? "—"}</td>
-                    <td className="px-5 py-3 text-right num">{(o.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    <td className="px-5 py-3 text-right num">{(o.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="px-5 py-3"><Pill tone={STATUS_TONE[o.status] ?? "neutral"}>{STATUS_LABEL[o.status] ?? o.status}</Pill></td>
                     <td className="px-5 py-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</td>
                     <td className="px-5 py-3 text-right">
@@ -1263,8 +1264,8 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                               )}
                             </td>
                             <td className="py-1.5 pr-2 text-right num text-muted-foreground">{it.quantidade} {it.unidade}</td>
-                            <td className="py-1.5 text-right num">{Number(it.preco_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                            <td className="py-1.5 text-right num font-medium">{(Number(it.preco_unitario) * Number(it.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                            <td className="py-1.5 text-right num">{Number(it.preco_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="py-1.5 text-right num font-medium">{(Number(it.preco_unitario) * Number(it.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1274,7 +1275,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                 <div className="flex justify-end pt-1">
                   <div className="text-[13px]">
                     <span className="text-muted-foreground mr-3">Total</span>
-                    <span className="font-semibold num">R$ {totalItens.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    <span className="font-semibold num">R$ {totalItens.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
@@ -1327,8 +1328,8 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                     <tr>
                       <td>${it.descricao}${it.justificativa ? `<br><span style="font-size:10px;color:#999">${it.justificativa}</span>` : ""}</td>
                       <td style="text-align:center">${it.quantidade} ${it.unidade}</td>
-                      <td style="text-align:right">R$ ${Number(it.preco_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                      <td style="text-align:right">R$ ${(Number(it.preco_unitario) * Number(it.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td style="text-align:right">R$ ${Number(it.preco_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td style="text-align:right">R$ ${(Number(it.preco_unitario) * Number(it.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>`).join("");
                   return groupHeader + itemRows;
                 }).join("");
@@ -1354,7 +1355,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                   <table>
                     <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Preço unit.</th><th style="text-align:right">Total</th></tr></thead>
                     <tbody>${rows}</tbody>
-                    <tfoot><tr><td colspan="3" style="text-align:right">Total</td><td style="text-align:right">R$ ${totalItens.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td></tr></tfoot>
+                    <tfoot><tr><td colspan="3" style="text-align:right">Total</td><td style="text-align:right">R$ ${totalItens.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr></tfoot>
                   </table>
                   <div class="footer">Documento gerado pelo Planne ERP · ${new Date().toLocaleDateString("pt-BR")}</div>
                   <script>window.onload=()=>window.print()</script></body></html>`);
@@ -1385,12 +1386,17 @@ function MatSelect({ label, value, options, onChange }: {
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        dropRef.current && !dropRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
         setQuery("");
       }
@@ -1406,14 +1412,27 @@ function MatSelect({ label, value, options, onChange }: {
     ? options.filter((o) => o.nome.toLowerCase().includes(query.toLowerCase()))
     : options;
 
-  const fmt = (v: number) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+  const fmt = (v: number) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleOpen = () => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const dropH = Math.min(filtered.length * 32 + 56, 260);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow >= dropH
+      ? rect.bottom + 4
+      : rect.top - dropH - 4;
+    setDropStyle({ position: "fixed", top, left: rect.left, width: rect.width, zIndex: 9999 });
+    setOpen((v) => !v);
+  };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <div className="text-[10.5px] text-muted-foreground mb-0.5">{label}</div>
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpen}
         className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[11.5px] outline-none text-foreground flex items-center justify-between gap-1"
       >
         <span className="truncate text-left">
@@ -1422,8 +1441,8 @@ function MatSelect({ label, value, options, onChange }: {
         <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-[220px] rounded border border-border bg-popover shadow-lg overflow-hidden">
+      {open && createPortal(
+        <div ref={dropRef} style={dropStyle} className="rounded border border-border bg-popover shadow-xl overflow-hidden">
           <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border">
             <Search className="size-3 text-muted-foreground shrink-0" />
             <input
@@ -1461,7 +1480,8 @@ function MatSelect({ label, value, options, onChange }: {
               <div className="px-2.5 py-2 text-[11px] text-muted-foreground">Nenhum resultado</div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
