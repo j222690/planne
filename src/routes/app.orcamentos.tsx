@@ -1245,9 +1245,19 @@ type PecaCorte = {
   fita_l: boolean; fita_r: boolean; fita_t: boolean; fita_b: boolean;
   observacao?: string;
 };
+type ChapaMaterial = {
+  material: string;
+  chapas_otimizadas: number;
+  chapas_com_folga: number;
+};
 type ListaCorteResult = {
   pecas: PecaCorte[];
-  resumo: { total_pecas: number; chapas_estimadas: number; metros_fita: number };
+  resumo: {
+    total_pecas: number;
+    chapas_estimadas: number;
+    metros_fita: number;
+    chapas_por_material?: ChapaMaterial[];
+  };
 };
 
 function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
@@ -1461,9 +1471,25 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                 </div>
               ) : listaCorte ? (
                 <div>
-                  <div className="text-[11px] text-muted-foreground mb-2">
-                    {listaCorte.resumo.total_pecas} peças · {listaCorte.resumo.chapas_estimadas} chapas · {listaCorte.resumo.metros_fita}m fita de borda
+                  {/* Resumo geral */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground mb-2">
+                    <span>{listaCorte.resumo.total_pecas} peças</span>
+                    <span>{listaCorte.resumo.chapas_estimadas} chapas (c/ folga)</span>
+                    <span>{listaCorte.resumo.metros_fita}m fita de borda</span>
                   </div>
+                  {/* Breakdown por material */}
+                  {listaCorte.resumo.chapas_por_material && listaCorte.resumo.chapas_por_material.length > 0 && (
+                    <div className="mb-3 grid gap-1">
+                      {listaCorte.resumo.chapas_por_material.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between text-[11px] bg-secondary/40 rounded px-2 py-1">
+                          <span className="text-foreground truncate mr-2">{c.material}</span>
+                          <span className="shrink-0 tabular-nums text-muted-foreground">
+                            {c.chapas_otimizadas} otimizadas → <strong className="text-foreground">{c.chapas_com_folga} c/ folga</strong>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11.5px] min-w-[600px]">
                       <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
