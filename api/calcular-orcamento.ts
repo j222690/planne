@@ -141,8 +141,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!materiais?.length) return res.status(400).json({ error: "Nenhum material fornecido" });
   if (!moveis?.length && !planta_b64 && !descricao) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
 
-  const catalogoTexto = materiais.map((m) =>
-    `- ID: ${m.id} | ${m.nome} | unidade: ${m.unidade} | custo: R$${m.preco_custo} | venda: R$${m.preco_venda}`
+  // Filtrar catálogo apenas aos materiais relevantes para os móveis configurados
+  const temPortasAbrir = moveis?.some((m) => m.portas > 0 && m.tipo_porta === "abrir");
+  const temPortasCorrer = moveis?.some((m) => m.portas > 0 && m.tipo_porta === "correr");
+  const temGavetas = moveis?.some((m) => m.gavetas > 0);
+  const temPuxadores = moveis?.some((m) => m.portas > 0 || m.gavetas > 0);
+  const temFundo = moveis?.some((m) => m.tem_fundo ?? true);
+
+  const catalogoFiltrado = materiais.filter((m) => {
+    const n = m.nome.toLowerCase();
+    if (/^mdf|^mdp/i.test(m.nome)) return true;
+    if (/fita.*(borda|bord)/i.test(n) || /borda.*fita/i.test(n)) return true;
+    if (/minifix|cavilha|parafuso|conector/i.test(n)) return true;
+    if (/6mm|fundo/i.test(n) && temFundo) return true;
+    if (/dobrad/i.test(n) && temPortasAbrir) return true;
+    if (/corredi/i.test(n) && !/gaveta|telesc/i.test(n) && temPortasCorrer) return true;
+    if (/corredi/i.test(n) && /gaveta|telesc/i.test(n) && temGavetas) return true;
+    if (/^puxador/i.test(m.nome) && temPuxadores) return true;
+    if (/^p[eé]s?\s|regulav/i.test(n)) return true;
+    // IDs selecionados diretamente pelo usuário — sempre incluir
+    const idsUsados = new Set([
+      ...(moveis?.map((mv) => mv.mdf_id).filter(Boolean) ?? []),
+      ...(moveis?.map((mv) => mv.fundo_id).filter(Boolean) ?? []),
+      ...(moveis?.map((mv) => mv.dobradica_id).filter(Boolean) ?? []),
+      ...(moveis?.map((mv) => mv.corrediça_porta_id).filter(Boolean) ?? []),
+      ...(moveis?.map((mv) => mv.corrediça_gaveta_id).filter(Boolean) ?? []),
+      ...(moveis?.map((mv) => mv.puxador_id).filter(Boolean) ?? []),
+    ]);
+    if (idsUsados.has(m.id)) return true;
+    return false;
+  });
+
+  const catalogoTexto = catalogoFiltrado.map((m) =>
+    `- ID: ${m.id} | ${m.nome} | ${m.unidade} | custo:R$${m.preco_custo} | venda:R$${m.preco_venda}`
   ).join("\n");
 
   const moveisParagraph = moveis?.length ? moveisToParagraph(moveis, materiais) : "";
@@ -201,7 +232,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             { role: "system", content: SYSTEM },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: 4000,
+          max_tokens: 3000,
           temperature: 0.1,
           response_format: { type: "json_object" },
         }),
