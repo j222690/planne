@@ -4,6 +4,9 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const SHEET_W = 2750; // mm
 const SHEET_H = 1830; // mm
 
+// Materiais que NÃO são chapas MDF/MDP — excluir do bin packing
+const NAO_CHAPA = /madeira\s*maci/i;
+
 // ── Bin packing 2D (Guillotine — Best Area Fit) ──────────────────────────────
 
 interface FreeRect { x: number; y: number; w: number; h: number; }
@@ -32,10 +35,11 @@ interface ChapaMaterial {
 }
 
 function calcularChapas(pecas: PecaCorte[]): ChapaMaterial[] {
-  // Agrupa instâncias individuais de peça por material
+  // Agrupa instâncias individuais de peça por material (ignora madeira maciça)
   const byMat = new Map<string, { w: number; h: number }[]>();
   for (const p of pecas) {
     if (!p.largura_mm || !p.comprimento_mm || !p.quantidade) continue;
+    if (NAO_CHAPA.test(p.material)) continue; // madeira maciça não é chapa
     const list = byMat.get(p.material) ?? [];
     for (let i = 0; i < p.quantidade; i++) {
       list.push({ w: p.largura_mm, h: p.comprimento_mm });
@@ -130,6 +134,29 @@ FITA DE BORDA (fita_l/r/t/b = esquerdo/direito/topo/base da peça):
 - Portas e gavetas: todos os 4 lados
 - Prateleiras: frontal (fita_t ou fita_b conforme orientação)
 
+MÓVEL EM L (formato = "L"):
+- Composto por 2 corpos independentes que se encontram na quina interna
+- Corpo A (braço principal): largura_cm × profundidade_cm × altura_cm
+- Corpo B (braço secundário): arm2_largura_cm × arm2_profundidade_cm × altura_cm
+- Na quina: apenas 1 lateral compartilhada — NÃO duplicar a lateral do encontro entre os corpos
+- Gerar caixa, envelope, engrossos e fundo para CADA corpo separadamente
+- Nomear peças com sufixo " — Braço A" e " — Braço B"
+
+PEÇAS LONGAS (dimensão > 2690mm):
+- NUNCA gerar peça com largura_mm ou comprimento_mm > 2690 (chapa 2750mm - 60mm de serras e alinhamento)
+- Se um painel precisar ser maior: dividir em segmentos de no máximo 2690mm cada
+- Cada segmento é uma peça separada: "Teto — Módulo 1/3", "Teto — Módulo 2/3", etc.
+- Na observação do segmento: "junção com 2 cavilhas 8×30mm + parafuso M8 — furar antes da montagem"
+- Calcular fita de borda apenas nas bordas externas de cada segmento (não na borda de junção)
+
+PÉS DE MADEIRA MACIÇA (pe_madeira = true):
+- Incluir como peças independentes no plano de corte (material = "Madeira maciça (pinus/eucalipto)")
+- Seção padrão: 7×7cm para armários, 10×10cm para bancadas e balcões pesados
+- Quantidade: 4 pés por módulo até 150cm + 2 pés centrais extras se módulo > 150cm de largura
+- Comprimento de cada pé = pe_altura_cm
+- Largura_mm e comprimento_mm no JSON = seção do pé (ex: 70×70) e comprimento_mm = pe_altura_cm × 10
+- Fita de borda: false (madeira maciça não recebe fita de borda MDF)
+
 RESPONDA APENAS com JSON válido:
 {
   "pecas": [
@@ -167,6 +194,11 @@ interface MovelInput {
   gavetas?: number;
   prateleiras?: number;
   tem_fundo?: boolean;
+  formato?: "retangular" | "L";
+  arm2_largura_cm?: number;
+  arm2_profundidade_cm?: number;
+  pe_madeira?: boolean;
+  pe_altura_cm?: number;
   mdf_caixa_id?: string;
   mdf_externo_id?: string;
   mdf_id?: string; // legacy
@@ -184,11 +216,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const moveisList = moveis.map((m) => {
     const linhas = [
       `- ${m.nome} — ${m.largura_cm}×${m.profundidade_cm}×${m.altura_cm}cm`,
+      `  Formato: ${m.formato ?? "retangular"}${m.formato === "L" ? ` | Braço B: ${m.arm2_largura_cm ?? "?"}×${m.arm2_profundidade_cm ?? "?"}cm` : ""}`,
       `  Portas: ${m.portas ?? 0}${m.portas ? ` (${m.tipo_porta})` : ""} | Gavetas: ${m.gavetas ?? 0} | Prateleiras: ${m.prateleiras ?? 0}`,
       `  Fundo traseiro: ${(m.tem_fundo ?? true) ? "SIM" : "NÃO"}`,
+      m.pe_madeira ? `  Pés de madeira maciça: SIM — altura ${m.pe_altura_cm ?? 70}cm` : "",
       `  MDF caixa (interior): ${m.mdf_caixa_id ? `ID ${m.mdf_caixa_id}` : "Branco TX padrão"}`,
       `  MDF envelope (faces externas/portas): ${m.mdf_externo_id ? `ID ${m.mdf_externo_id}` : "mesmo da caixa"}`,
-    ];
+    ].filter(Boolean);
     return linhas.join("\n");
   }).join("\n\n");
 

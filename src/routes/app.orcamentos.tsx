@@ -71,6 +71,14 @@ type MovelConfig = {
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
   parede_id?: string;
+  // Formato
+  formato?: "retangular" | "L";
+  arm2_largura_cm?: number;
+  arm2_profundidade_cm?: number;
+  // Pés de madeira maciça
+  pe_madeira?: boolean;
+  pe_altura_cm?: number;
+  // Materiais
   mdf_caixa_id?: string;
   mdf_externo_id?: string;
   fundo_id?: string;
@@ -708,9 +716,43 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           </div>
                         )}
 
+                        {/* Formato */}
+                        <div>
+                          <div className="text-[11px] text-muted-foreground mb-1">Formato</div>
+                          <div className="flex gap-2">
+                            {(["retangular", "L"] as const).map((fmt) => (
+                              <button key={fmt} type="button"
+                                onClick={() => updateMovel(m.id, { formato: fmt, arm2_largura_cm: fmt === "L" ? (m.arm2_largura_cm ?? 80) : undefined, arm2_profundidade_cm: fmt === "L" ? (m.arm2_profundidade_cm ?? m.profundidade_cm) : undefined })}
+                                className={`h-7 px-3 rounded text-[12px] border transition-colors ${(m.formato ?? "retangular") === fmt ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}>
+                                {fmt === "retangular" ? "Retangular" : "Em L"}
+                              </button>
+                            ))}
+                          </div>
+                          {(m.formato ?? "retangular") === "L" && (
+                            <div className="mt-2 p-2.5 rounded border border-border bg-secondary/30 space-y-2">
+                              <div className="text-[10.5px] text-muted-foreground">Braço principal: {m.largura_cm}cm L × {m.profundidade_cm}cm P — configure acima</div>
+                              <div className="text-[10.5px] text-muted-foreground font-medium">Braço secundário (2º corpo):</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-muted-foreground mb-0.5">Largura (cm)</div>
+                                  <input type="number" min={10} value={m.arm2_largura_cm ?? 80}
+                                    onChange={(e) => updateMovel(m.id, { arm2_largura_cm: Number(e.target.value) })}
+                                    className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-muted-foreground mb-0.5">Profundidade (cm)</div>
+                                  <input type="number" min={10} value={m.arm2_profundidade_cm ?? m.profundidade_cm}
+                                    onChange={(e) => updateMovel(m.id, { arm2_profundidade_cm: Number(e.target.value) })}
+                                    className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Dimensões */}
                         <div>
-                          <div className="text-[11px] text-muted-foreground mb-1">Dimensões (cm)</div>
+                          <div className="text-[11px] text-muted-foreground mb-1">Dimensões — {(m.formato ?? "retangular") === "L" ? "Braço principal (cm)" : "cm"}</div>
                           <div className="grid grid-cols-3 gap-2">
                             {(["largura_cm", "profundidade_cm", "altura_cm"] as const).map((dim) => {
                               const lim = dim === "largura_cm" ? limLargura : dim === "altura_cm" ? limAltura : limProfundidade;
@@ -786,7 +828,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             <input type="checkbox" checked={m.tem_pes ?? false}
                               onChange={(e) => updateMovel(m.id, { tem_pes: e.target.checked })}
                               className="rounded" />
-                            <span className="text-[12px]">Pés reguláveis</span>
+                            <span className="text-[12px]">Pés reguláveis (MDF)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked={m.pe_madeira ?? false}
+                              onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 70 })}
+                              className="rounded" />
+                            <span className="text-[12px]">Pés de madeira maciça</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox" checked={m.tem_roda_teto ?? false}
@@ -795,6 +843,14 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             <span className="text-[12px]">Roda-teto</span>
                           </label>
                         </div>
+                        {m.pe_madeira && (
+                          <div className="w-44">
+                            <div className="text-[11px] text-muted-foreground mb-1">Altura dos pés de madeira (cm)</div>
+                            <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 70}
+                              onChange={(e) => updateMovel(m.id, { pe_altura_cm: Number(e.target.value) })}
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                          </div>
+                        )}
                         {m.tem_roda_teto && (
                           <div className="w-44">
                             <div className="text-[11px] text-muted-foreground mb-1">Altura do teto (cm)</div>
