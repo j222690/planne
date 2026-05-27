@@ -127,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const {
-    ambiente, moveis, medidas, descricao, materiais, planta_b64, margem_pct = 35,
+    ambiente, moveis, medidas, descricao, materiais, planta_b64, margem_pct = 35, restricoes_espaciais,
   } = req.body as {
     ambiente: string;
     moveis?: MovelConfig[];
@@ -136,6 +136,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     materiais: { id: string; nome: string; unidade: string; preco_custo: number; preco_venda: number; categoria: string | null }[];
     planta_b64?: string;
     margem_pct?: number;
+    restricoes_espaciais?: {
+      paredes: { id: string; descricao: string; largura_cm: number; espaco_util_cm: number; obstaculos?: string | null }[];
+      largura_cm: number; profundidade_cm: number; altura_cm: number;
+    };
   };
 
   if (!materiais?.length) return res.status(400).json({ error: "Nenhum material fornecido" });
@@ -178,10 +182,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const moveisParagraph = moveis?.length ? moveisToParagraph(moveis, materiais) : "";
 
+  const restricoesTexto = restricoes_espaciais
+    ? [
+        `RESTRIÇÕES ESPACIAIS DO AMBIENTE (extraídas da planta):`,
+        `  Pé-direito (altura máxima): ${restricoes_espaciais.altura_cm}cm`,
+        `  Largura total: ${restricoes_espaciais.largura_cm}cm | Profundidade total: ${restricoes_espaciais.profundidade_cm}cm`,
+        ...restricoes_espaciais.paredes.map((p) =>
+          `  Parede ${p.id} — ${p.descricao}: ${p.espaco_util_cm}cm úteis de ${p.largura_cm}cm total${p.obstaculos ? ` (${p.obstaculos})` : ""}`
+        ),
+        `ATENÇÃO: As dimensões dos móveis abaixo são ABSOLUTAS. Use-as exatamente. As restrições acima são apenas para contexto — se algum móvel exceder o espaço, mencione no "resumo" mas calcule os materiais com as dimensões fornecidas.`,
+      ].join("\n")
+    : "";
+
   const userPrompt = [
     `AMBIENTE: ${ambiente}`,
     medidas?.largura ? `MEDIDAS DO AMBIENTE: ${medidas.largura}m L × ${medidas.profundidade}m P × ${medidas.altura}m H` : "",
     planta_b64 ? "MEDIDAS: extrair da planta baixa fornecida" : "",
+    restricoesTexto || "",
     moveisParagraph ? `\nMÓVEIS CONFIGURADOS:\n${moveisParagraph}` : "",
     descricao ? `\nOBSERVAÇÕES: ${descricao}` : "",
     `\nMARGEM: ${margem_pct}%`,

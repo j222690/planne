@@ -38,6 +38,22 @@ type OrcItem = {
   preco_custo: number; preco_unitario: number;
 };
 
+type Parede = {
+  id: string;
+  descricao: string;
+  largura_cm: number;
+  espaco_util_cm: number;
+  obstaculos?: string | null;
+};
+
+type PlantaInfo = {
+  paredes: Parede[];
+  largura_cm: number;
+  profundidade_cm: number;
+  altura_cm: number;
+  observacoes?: string;
+};
+
 type MovelConfig = {
   id: string;
   tipo: string;
@@ -54,6 +70,7 @@ type MovelConfig = {
   tem_pes?: boolean;
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
+  parede_id?: string;
   mdf_id?: string;
   fundo_id?: string;
   dobradica_id?: string;
@@ -180,6 +197,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [medidas, setMedidas] = useState({ largura: 0, profundidade: 0, altura: 2.7 });
   const [descricao, setDescricao] = useState("");
 
+  // Planta analisada
+  const [plantaInfo, setPlantaInfo] = useState<PlantaInfo | null>(null);
+  const [analisandoPlanta, setAnalisandoPlanta] = useState(false);
+
   // Móveis
   const [moveis, setMoveis] = useState<MovelConfig[]>([]);
   const [expandedMovel, setExpandedMovel] = useState<string | null>(null);
@@ -273,7 +294,29 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     });
     setPlantaB64(b64);
     setPlantaNome(file.name);
+    setPlantaInfo(null);
     if (plantaRef.current) plantaRef.current.value = "";
+
+    setAnalisandoPlanta(true);
+    try {
+      const res = await fetch("/api/analisar-planta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planta_b64: b64, ambiente }),
+      });
+      if (res.ok) {
+        const info = await res.json() as PlantaInfo;
+        setPlantaInfo(info);
+        const dims = `${(info.largura_cm / 100).toFixed(1)}m × ${(info.profundidade_cm / 100).toFixed(1)}m × ${(info.altura_cm / 100).toFixed(1)}m`;
+        toast.success(`Planta analisada: ${dims} — ${info.paredes.length} paredes detectadas`);
+      } else {
+        toast.error("Não foi possível analisar a planta automaticamente");
+      }
+    } catch {
+      toast.error("Erro ao analisar planta");
+    } finally {
+      setAnalisandoPlanta(false);
+    }
   };
 
   const handlePdfImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,6 +363,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         materiais: catalogo,
         ...(plantaB64 ? { planta_b64: plantaB64 } : {}),
         ...(!plantaB64 && (medidas.largura || medidas.profundidade) ? { medidas } : {}),
+        ...(plantaInfo ? { restricoes_espaciais: plantaInfo } : {}),
       };
       const res = await fetch("/api/calcular-orcamento", {
         method: "POST",
@@ -462,14 +506,26 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               <div className="flex items-center justify-between mb-1">
                 <Label>Planta baixa (opcional)</Label>
                 {plantaNome && (
-                  <button type="button" onClick={() => { setPlantaB64(null); setPlantaNome(null); }}
+                  <button type="button" onClick={() => { setPlantaB64(null); setPlantaNome(null); setPlantaInfo(null); }}
                     className="text-[11px] text-destructive hover:opacity-70">remover</button>
                 )}
               </div>
               {plantaNome ? (
-                <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[13px] text-emerald-700 dark:text-emerald-400">
-                  <ImageUp className="size-3.5" /> {plantaNome}
-                  <span className="text-[11px] ml-auto text-emerald-600/70">Medidas extraídas automaticamente</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[13px] text-emerald-700 dark:text-emerald-400">
+                    <ImageUp className="size-3.5" /> {plantaNome}
+                    {analisandoPlanta
+                      ? <span className="text-[11px] ml-auto text-emerald-600/70 flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> Analisando...</span>
+                      : plantaInfo
+                        ? <span className="text-[11px] ml-auto text-emerald-600/70">✓ {plantaInfo.paredes.length} paredes · {(plantaInfo.largura_cm / 100).toFixed(1)}m × {(plantaInfo.profundidade_cm / 100).toFixed(1)}m × {(plantaInfo.altura_cm / 100).toFixed(1)}m</span>
+                        : <span className="text-[11px] ml-auto text-emerald-600/70">Medidas extraídas automaticamente</span>
+                    }
+                  </div>
+                  {plantaInfo?.observacoes && (
+                    <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground px-1">
+                      <Info className="size-3 shrink-0 mt-0.5" /><span>{plantaInfo.observacoes}</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button type="button" onClick={() => plantaRef.current?.click()}
@@ -578,7 +634,30 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       </div>
                     </button>
 
-                    {expandedMovel === m.id && (
+                    {expandedMovel === m.id && (() => {
+                      // Limites espaciais para validação
+                      const paredeAtual = plantaInfo?.paredes.find((p) => p.id === m.parede_id);
+                      const limLargura = paredeAtual
+                        ? paredeAtual.espaco_util_cm
+                        : plantaInfo
+                          ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm))
+                          : medidas.largura > 0 ? Math.round(medidas.largura * 100) : null;
+                      const limAltura = plantaInfo
+                        ? plantaInfo.altura_cm
+                        : medidas.altura > 0 ? Math.round(medidas.altura * 100) : null;
+                      const limProfundidade = plantaInfo
+                        ? plantaInfo.profundidade_cm
+                        : medidas.profundidade > 0 ? Math.round(medidas.profundidade * 100) : null;
+
+                      const avisos: string[] = [];
+                      if (limLargura && m.largura_cm > limLargura)
+                        avisos.push(`Largura ${m.largura_cm}cm excede o espaço disponível (${limLargura}cm)`);
+                      if (limAltura && m.altura_cm > limAltura)
+                        avisos.push(`Altura ${m.altura_cm}cm excede o pé-direito do ambiente (${limAltura}cm)`);
+                      if (limProfundidade && m.profundidade_cm > limProfundidade)
+                        avisos.push(`Profundidade ${m.profundidade_cm}cm excede a profundidade do ambiente (${limProfundidade}cm)`);
+
+                      return (
                       <div className="px-3 py-3 space-y-3 bg-surface">
                         {/* Nome */}
                         <div>
@@ -587,20 +666,63 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                         </div>
 
+                        {/* Seletor de parede (quando planta analisada) */}
+                        {plantaInfo && plantaInfo.paredes.length > 0 && (
+                          <div>
+                            <div className="text-[11px] text-muted-foreground mb-1">Parede de instalação</div>
+                            <select
+                              value={m.parede_id ?? ""}
+                              onChange={(e) => {
+                                const pid = e.target.value;
+                                const parede = plantaInfo.paredes.find((p) => p.id === pid);
+                                updateMovel(m.id, {
+                                  parede_id: pid || undefined,
+                                  ...(parede ? { largura_cm: parede.espaco_util_cm } : {}),
+                                });
+                              }}
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground"
+                            >
+                              <option value="">— Escolher parede —</option>
+                              {plantaInfo.paredes.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  Parede {p.id}: {p.descricao} — {p.espaco_util_cm}cm úteis
+                                  {p.obstaculos ? ` (${p.obstaculos})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Avisos de limite */}
+                        {avisos.length > 0 && (
+                          <div className="space-y-1">
+                            {avisos.map((av, i) => (
+                              <div key={i} className="flex items-start gap-1.5 text-[11.5px] text-destructive bg-destructive/10 rounded px-2.5 py-1.5">
+                                <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+                                <span>{av}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Dimensões */}
                         <div>
                           <div className="text-[11px] text-muted-foreground mb-1">Dimensões (cm)</div>
                           <div className="grid grid-cols-3 gap-2">
-                            {(["largura_cm", "profundidade_cm", "altura_cm"] as const).map((dim) => (
+                            {(["largura_cm", "profundidade_cm", "altura_cm"] as const).map((dim) => {
+                              const lim = dim === "largura_cm" ? limLargura : dim === "altura_cm" ? limAltura : limProfundidade;
+                              const excede = lim !== null && m[dim] > lim;
+                              return (
                               <div key={dim}>
                                 <div className="text-[10px] text-muted-foreground mb-0.5">
                                   {dim === "largura_cm" ? "Largura" : dim === "profundidade_cm" ? "Profund." : "Altura"}
+                                  {lim && <span className="ml-1 text-muted-foreground/70">máx {lim}cm</span>}
                                 </div>
                                 <input type="number" min={0} value={m[dim]}
                                   onChange={(e) => updateMovel(m.id, { [dim]: Number(e.target.value) })}
-                                  className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                                  className={`w-full h-8 rounded border px-2 text-[12.5px] outline-none bg-surface-2 ${excede ? "border-destructive text-destructive" : "border-border"}`} />
                               </div>
-                            ))}
+                            )})}
                           </div>
                         </div>
 
@@ -727,7 +849,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           <Trash2 className="size-3" /> Remover este móvel
                         </button>
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
