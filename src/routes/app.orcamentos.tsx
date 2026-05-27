@@ -71,7 +71,8 @@ type MovelConfig = {
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
   parede_id?: string;
-  mdf_id?: string;
+  mdf_caixa_id?: string;
+  mdf_externo_id?: string;
   fundo_id?: string;
   dobradica_id?: string;
   corrediça_porta_id?: string;
@@ -405,6 +406,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         await updateOrcamento(editOrc.id, {
           cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
           observacoes: data.observacoes, subtotal, total: subtotal,
+          ...(moveis.length ? { moveis_config: moveis } : {}),
         });
         await replaceOrcamentoItens(editOrc.id, itensPayload(editOrc.id));
         toast.success("Orçamento atualizado!");
@@ -412,6 +414,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         const orc = await upsertOrcamento(empresaId, {
           cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
           observacoes: data.observacoes, subtotal, total: subtotal,
+          ...(moveis.length ? { moveis_config: moveis } : {}),
         });
         const { error: insErr } = await supabase.from("orcamento_itens").insert(itensPayload(orc.id));
         if (insErr) throw new Error(insErr.message);
@@ -805,9 +808,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         <div className="border-t border-border pt-3 space-y-2">
                           <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Materiais</div>
 
-                          {/* MDF estrutura */}
-                          <MatSelect label="Chapa MDF / estrutura" value={m.mdf_id}
-                            options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_id: v })} />
+                          {/* MDF caixa (interior) */}
+                          <MatSelect label="MDF caixa — interior (Branco TX)" value={m.mdf_caixa_id}
+                            options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_caixa_id: v })} />
+
+                          {/* MDF envelope (faces externas) */}
+                          <MatSelect label="MDF envelope — faces externas (cor do cliente)" value={m.mdf_externo_id}
+                            options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_externo_id: v })} />
 
                           {/* Fundo 6mm */}
                           {(m.tem_fundo ?? true) && (
@@ -1232,6 +1239,17 @@ const STATUS_NEXT: Record<string, string[]> = {
   recusado: ["rascunho"],
 };
 
+type PecaCorte = {
+  movel: string; peca: string; material: string;
+  largura_mm: number; comprimento_mm: number; quantidade: number;
+  fita_l: boolean; fita_r: boolean; fita_t: boolean; fita_b: boolean;
+  observacao?: string;
+};
+type ListaCorteResult = {
+  pecas: PecaCorte[];
+  resumo: { total_pecas: number; chapas_estimadas: number; metros_fita: number };
+};
+
 function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   orc: Orc; onClose: () => void; onChanged: () => void; onEdit: () => void;
 }) {
@@ -1243,6 +1261,9 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [empresaNome, setEmpresaNome] = useState("");
   const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [listaCorte, setListaCorte] = useState<ListaCorteResult | null>(null);
+  const [listaCorteLoading, setListaCorteLoading] = useState(false);
+  const [showCorte, setShowCorte] = useState(false);
 
   useEffect(() => {
     getOrcamentoItens(orc.id)
@@ -1318,6 +1339,31 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
       },
       cancel: { label: "Cancelar", onClick: () => {} },
     });
+  };
+
+  const handleGerarCorte = async () => {
+    const orcTyped = orc as unknown as { moveis_config?: MovelConfig[] };
+    const moveisCfg = orcTyped.moveis_config;
+    if (!moveisCfg?.length) {
+      toast.error("Este orçamento não tem configuração de móveis salva. Edite e salve novamente para gerar o plano de corte.");
+      return;
+    }
+    setListaCorteLoading(true);
+    setShowCorte(true);
+    try {
+      const res = await fetch("/api/lista-corte", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moveis: moveisCfg }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setListaCorte(await res.json() as ListaCorteResult);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar plano de corte");
+      setShowCorte(false);
+    } finally {
+      setListaCorteLoading(false);
+    }
   };
 
   const nextStatuses = STATUS_NEXT[orc.status] ?? [];
@@ -1405,6 +1451,54 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
             )}
           </div>
 
+          {/* Plano de corte */}
+          {showCorte && (
+            <div>
+              <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Plano de corte</div>
+              {listaCorteLoading ? (
+                <div className="flex items-center gap-2 py-4 text-[12.5px] text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Calculando peças com IA...
+                </div>
+              ) : listaCorte ? (
+                <div>
+                  <div className="text-[11px] text-muted-foreground mb-2">
+                    {listaCorte.resumo.total_pecas} peças · {listaCorte.resumo.chapas_estimadas} chapas · {listaCorte.resumo.metros_fita}m fita de borda
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[11.5px] min-w-[600px]">
+                      <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                        <tr>
+                          <th className="text-left py-1.5 px-1">Móvel</th>
+                          <th className="text-left py-1.5 px-1">Peça</th>
+                          <th className="text-left py-1.5 px-1">Material</th>
+                          <th className="text-right py-1.5 px-1">L mm</th>
+                          <th className="text-right py-1.5 px-1">C mm</th>
+                          <th className="text-center py-1.5 px-1">Qtd</th>
+                          <th className="text-center py-1.5 px-1">Fita</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {listaCorte.pecas.map((p, i) => (
+                          <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-secondary/20">
+                            <td className="py-1 px-1 text-muted-foreground truncate max-w-[90px]">{p.movel}</td>
+                            <td className="py-1 px-1 font-medium">{p.peca}</td>
+                            <td className="py-1 px-1 text-muted-foreground text-[10.5px]">{p.material}</td>
+                            <td className="py-1 px-1 text-right tabular-nums">{p.largura_mm}</td>
+                            <td className="py-1 px-1 text-right tabular-nums">{p.comprimento_mm}</td>
+                            <td className="py-1 px-1 text-center">{p.quantidade}</td>
+                            <td className="py-1 px-1 text-center text-[10px] font-mono text-muted-foreground">
+                              {[p.fita_t && "T", p.fita_b && "B", p.fita_l && "L", p.fita_r && "R"].filter(Boolean).join("") || "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           {nextStatuses.length > 0 && (
             <div>
               <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Alterar status</div>
@@ -1435,6 +1529,11 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                 Criar Projeto
               </button>
             )}
+            <button onClick={handleGerarCorte} disabled={listaCorteLoading}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5">
+              {listaCorteLoading ? <Loader2 className="size-3.5 animate-spin" /> : <ChevronRight className="size-3.5" />}
+              Plano de Corte
+            </button>
             <button onClick={onEdit}
               className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5">
               <Pencil className="size-3.5" /> Editar
