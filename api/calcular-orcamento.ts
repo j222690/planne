@@ -89,6 +89,8 @@ DIMENSÕES DOS MÓVEIS:
 - A planta baixa (quando fornecida) serve APENAS para contexto espacial: verificar se uma porta de abrir tem folga, identificar obstáculos, posição de janelas/tomadas. Nunca use a planta para redimensionar os móveis.
 
 REGRAS DE CÁLCULO:
+- Espessura padrão da caixa (estrutura): MDF 15mm — use sempre como padrão salvo especificação contrária.
+- Fundo traseiro padrão: MDF 6mm Branco TX — sempre incluir quando "Fundo traseiro: SIM".
 - Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.04m² (chapa padrão 2750×1830mm). Arredonde para cima.
 - Dobradiças: 2 por porta altura ≤150cm, 3 por porta altura >150cm. USE OBRIGATORIAMENTE se tipo_porta = "abrir".
 - Corrediça de porta de correr: 1 par de corrediça + 1 trilho por par de folhas. USE OBRIGATORIAMENTE se tipo_porta = "correr".
@@ -96,7 +98,7 @@ REGRAS DE CÁLCULO:
 - Puxadores: 1 por porta + 1 por gaveta.
 - Fita de borda: perímetro dos painéis expostos × 1.15 (desperdício), em metros lineares.
 - Parafusos/conectores: estimativa por corpo de armário (Minifix, cavilhas).
-- Fundo em MDF 6mm: incluir SE e SOMENTE SE "Fundo traseiro: SIM" estiver indicado no móvel.
+- Fundo em MDF 6mm Branco TX: incluir SE e SOMENTE SE "Fundo traseiro: SIM" estiver indicado no móvel.
 - Rodapé: se indicado, calcular faixa MDF 15cm × largura do móvel (frente + laterais expostas).
 - Pés reguláveis: 4 unidades por corpo de armário, se indicado.
 - Roda-teto: se indicado, painel MDF para fechar a folga entre topo do móvel e o teto (largura × diferença de altura).
@@ -112,7 +114,7 @@ RESPONDA APENAS com JSON válido (sem markdown):
     {
       "movel": "Roupeiro",
       "material_id": "uuid-exato",
-      "descricao": "MDF 18mm Branco — estrutura do roupeiro",
+      "descricao": "MDF 15mm Branco TX — estrutura do roupeiro",
       "justificativa": "2 lat. 60×230cm + teto + base + divisória = 8,6m² → 2 chapas",
       "quantidade": 2,
       "unidade": "chapa",

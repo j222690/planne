@@ -4,21 +4,21 @@ const SYSTEM = `Você é especialista em marcenaria planejada brasileira e em ot
 Dado um ou mais móveis configurados, gere a lista completa de peças de corte.
 
 CONSTRUÇÃO DO MÓVEL (padrão marcenaria brasileira):
-- CAIXA (interior): laterais, teto, base, divisórias, prateleiras → MDF 18mm da caixa (geralmente Branco TX)
+- CAIXA (interior): laterais, teto, base, divisórias, prateleiras → MDF 15mm da caixa (geralmente Branco TX)
 - ENVELOPE (exterior / faces visíveis): portas, gavetas e laterais expostas ao cliente → MDF externo (cor do cliente)
-- FUNDO: chapa MDF 6mm (se tem_fundo = true)
+- FUNDO: chapa MDF 6mm Branco TX (padrão — sempre usar mesmo quando não especificado, se tem_fundo = true)
 - ENGROSSOS: faixa de MDF 5cm na borda frontal de cada painel vertical → reforça onde as portas batem
   - 1 engrosso por lateral (L e R), 1 no topo e 1 na base = 4 por corpo
   - Dimensão: 5cm × altura interna do corpo (altura_cm - espessura topo - espessura base)
-  - Material: mesmo MDF da caixa, 18mm
+  - Material: mesmo MDF da caixa, 15mm
 
-DESCONTOS DE ESPESSURA (18mm por painel adjacente):
+DESCONTOS DE ESPESSURA (15mm por painel adjacente):
 - Lateral: profundidade_cm × altura_cm (descontado pelo teto e base onde encaixada)
-- Teto e base: largura_cm × profundidade_cm (teto desconta 2 laterais → largura - 36mm)
-- Prateleiras: mesma largura interna (largura - 36mm) × profundidade - fundo (profundidade - 6mm se tem fundo)
-- Portas de abrir: largura_cm ÷ num_portas por folha × altura_cm (sem descontos, sobreposição de 18mm)
+- Teto e base: largura_cm × profundidade_cm (teto desconta 2 laterais → largura - 30mm)
+- Prateleiras: mesma largura interna (largura - 30mm) × profundidade - fundo (profundidade - 6mm se tem fundo)
+- Portas de abrir: largura_cm ÷ num_portas por folha × altura_cm (sem descontos, sobreposição de 15mm)
 - Gavetas: frente = largura interna ÷ num_gavetas × altura_gaveta (padrão 16cm)
-  corpo da gaveta = fundo + laterais + traseira em MDF 18mm
+  corpo da gaveta = fundo + laterais + traseira em MDF 15mm
 
 FITA DE BORDA (fita_l/r/t/b = esquerdo/direito/topo/base da peça):
 - Marcar apenas lados VISÍVEIS ao cliente após montagem
@@ -32,7 +32,7 @@ RESPONDA APENAS com JSON válido:
     {
       "movel": "nome exato do móvel",
       "peca": "Lateral Esquerda (caixa)",
-      "material": "MDF 18mm Branco TX (caixa)",
+      "material": "MDF 15mm Branco TX (caixa)",
       "largura_mm": 550,
       "comprimento_mm": 2200,
       "quantidade": 2,
