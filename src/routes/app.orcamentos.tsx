@@ -62,7 +62,7 @@ type MovelConfig = {
   profundidade_cm: number;
   altura_cm: number;
   portas: number;
-  tipo_porta: "abrir" | "correr" | "sem";
+  tipo_porta: "abrir" | "abrir_vidro" | "abrir_espelho" | "correr" | "correr_vidro" | "correr_espelho" | "sem";
   gavetas: number;
   prateleiras: number;
   tem_fundo?: boolean;
@@ -78,6 +78,7 @@ type MovelConfig = {
   // Pés de madeira maciça
   pe_madeira?: boolean;
   pe_altura_cm?: number;
+  detalhes?: string; // extras livres: vidro, espelho interno, ripado, nicho LED, etc.
   // Materiais
   mdf_caixa_id?: string;
   mdf_externo_id?: string;
@@ -185,6 +186,194 @@ const schema = z.object({
   itens: z.array(itemSchema).min(1, "Adicione ao menos um item"),
 });
 type FormData = z.infer<typeof schema>;
+
+// ─── Wall Visualization ─────────────────────────────────────────────────────
+
+const MOVEL_COLORS: Record<string, [string, string, string, string]> = {
+  // [frontFill, stroke, topFill, sideFill]
+  roupeiro:     ["#818cf8","#4338ca","#c7d2fe","#6366f1"],
+  "arm-sup":    ["#93c5fd","#1d4ed8","#bfdbfe","#60a5fa"],
+  "arm-inf":    ["#818cf8","#4338ca","#c7d2fe","#6366f1"],
+  bancada:      ["#94a3b8","#334155","#e2e8f0","#64748b"],
+  rack:         ["#67e8f9","#0891b2","#a5f3fc","#22d3ee"],
+  gabinete:     ["#6ee7b7","#059669","#a7f3d0","#34d399"],
+  buffet:       ["#fcd34d","#b45309","#fef9c3","#fbbf24"],
+  comoda:       ["#fcd34d","#b45309","#fef9c3","#fbbf24"],
+  estante:      ["#6ee7b7","#059669","#a7f3d0","#34d399"],
+  torre:        ["#818cf8","#4338ca","#c7d2fe","#6366f1"],
+  despenseiro:  ["#818cf8","#4338ca","#c7d2fe","#6366f1"],
+  espelheira:   ["#bae6fd","#0284c7","#e0f2fe","#7dd3fc"],
+  gaveteiro:    ["#fcd34d","#b45309","#fef9c3","#fbbf24"],
+} as Record<string, [string,string,string,string]>;
+const WALL_CLRS: [string,string,string,string] = ["#e2e8f0","#64748b","#f1f5f9","#cbd5e1"];
+const getMC = (tipo: string) => MOVEL_COLORS[tipo] ?? WALL_CLRS;
+
+const WALL_MOUNTED_Y: Record<string, number> = {
+  "arm-sup": 85, espelheira: 90, "nicho-ban": 80, "painel-tv": 100,
+};
+
+function WallVisualization({
+  moveis, plantaInfo, medW, medH,
+}: {
+  moveis: MovelConfig[];
+  plantaInfo: PlantaInfo | null;
+  medW: number; medH: number;
+}) {
+  const [view, setView] = useState<"2d" | "3d">("2d");
+  const [selWall, setSelWall] = useState<string | null>(null);
+
+  const walls = plantaInfo?.paredes ?? [];
+  const activeWall = selWall ?? walls[0]?.id ?? null;
+
+  const visible = activeWall
+    ? moveis.filter((m) => !m.parede_id || m.parede_id === activeWall)
+    : moveis;
+
+  const parede = walls.find((w) => w.id === activeWall);
+  const wallW = parede?.espaco_util_cm ?? (medW > 0 ? Math.round(medW * 100) : Math.max(200, visible.reduce((s, m) => s + m.largura_cm + 2, 0)));
+  const wallH = plantaInfo?.altura_cm ?? (medH > 0 ? Math.round(medH * 100) : 270);
+
+  const SVG_W = 680, SVG_H = 360;
+  const ML = 28, MT = 28, MR = 12, MB = 28;
+  const availW = SVG_W - ML - MR, availH = SVG_H - MT - MB;
+  const scale = Math.min(availW / wallW, availH / wallH);
+  const wallPxW = wallW * scale, wallPxH = wallH * scale;
+  const ox = ML + (availW - wallPxW) / 2;
+  const oy = MT + (availH - wallPxH);
+
+  // auto-layout left to right
+  let xAcc = 0;
+  const laid = visible.map((m) => {
+    const x = xAcc;
+    xAcc += m.largura_cm + 2;
+    return { m, x, yFloor: WALL_MOUNTED_Y[m.tipo] ?? 0 };
+  });
+
+  // 3D oblique helpers
+  const ANG = 28 * Math.PI / 180, DR = 0.38;
+  const ddx = (d: number) => d * DR * Math.cos(ANG) * scale;
+  const ddy = (d: number) => -d * DR * Math.sin(ANG) * scale;
+
+  const LABEL_PORTA: Record<string, string> = {
+    abrir:"◁", abrir_vidro:"◁⬜", abrir_espelho:"◁▣",
+    correr:"↔", correr_vidro:"↔⬜", correr_espelho:"↔▣", sem:"",
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {(["2d","3d"] as const).map((v) => (
+          <button key={v} type="button" onClick={() => setView(v)}
+            className={`h-6 px-2.5 rounded text-[11px] border transition-colors ${view===v?"bg-foreground text-background border-foreground":"border-border text-muted-foreground hover:bg-secondary"}`}>
+            {v.toUpperCase()}
+          </button>
+        ))}
+        {walls.length > 1 && walls.map((w) => (
+          <button key={w.id} type="button" onClick={() => setSelWall(w.id)}
+            className={`h-6 px-2 rounded text-[11px] border transition-colors ${activeWall===w.id?"bg-accent/20 border-accent text-accent":"border-border text-muted-foreground hover:bg-secondary"}`}>
+            Parede {w.id} — {w.espaco_util_cm}cm
+          </button>
+        ))}
+        <span className="ml-auto text-[10.5px] text-muted-foreground">{wallW}cm L × {wallH}cm H</span>
+      </div>
+
+      <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
+        <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 320, display:"block" }}>
+          {/* Wall bg */}
+          <rect x={ox} y={oy} width={wallPxW} height={wallPxH} fill="#f1f5f9" stroke="#94a3b8" strokeWidth={1.5} />
+          {/* Grid 50cm */}
+          {Array.from({length: Math.floor(wallH/50)}).map((_,i) => (
+            <line key={i} x1={ox} y1={oy + wallPxH - (i+1)*50*scale} x2={ox+wallPxW} y2={oy+wallPxH-(i+1)*50*scale}
+              stroke="#e2e8f0" strokeWidth={0.5} strokeDasharray="3,2" />
+          ))}
+          {/* Floor */}
+          <line x1={ox-8} y1={oy+wallPxH} x2={ox+wallPxW+8} y2={oy+wallPxH} stroke="#475569" strokeWidth={2.5} />
+
+          {view==="2d" ? laid.map(({ m, x, yFloor }) => {
+            const fw = m.largura_cm * scale;
+            const fh = m.altura_cm * scale;
+            const fx = ox + x * scale;
+            const fy = oy + wallPxH - (yFloor + m.altura_cm) * scale;
+            const [fill, stroke] = getMC(m.tipo);
+            const portas = m.portas || 0;
+            const isGlass = m.tipo_porta?.includes("vidro");
+            const isMirror = m.tipo_porta?.includes("espelho");
+            return (
+              <g key={m.id}>
+                <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={stroke} strokeWidth={1} rx={1} />
+                {/* Door splits */}
+                {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
+                  <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={fy+fh}
+                    stroke={stroke} strokeWidth={0.7} strokeDasharray="3,1.5" />
+                ))}
+                {/* Glass/mirror overlay */}
+                {isGlass && <rect x={fx+2} y={fy+2} width={fw-4} height={fh-4} fill="rgba(186,230,253,0.35)" stroke="#0284c7" strokeWidth={0.8} rx={1} />}
+                {isMirror && <rect x={fx+2} y={fy+2} width={fw-4} height={fh-4} fill="rgba(203,213,225,0.5)" stroke="#64748b" strokeWidth={0.8} rx={1} />}
+                {/* Label */}
+                {fw>16 && fh>10 && (
+                  <text x={fx+fw/2} y={fy+fh/2} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={Math.max(6.5,Math.min(9.5,fw/8))} fill="#1e293b" fontWeight="500">
+                    {m.nome.length>13 ? m.nome.slice(0,12)+"…" : m.nome}
+                  </text>
+                )}
+                {/* Width below */}
+                <text x={fx+fw/2} y={oy+wallPxH+15} textAnchor="middle" fontSize={6.5} fill="#64748b">{m.largura_cm}</text>
+              </g>
+            );
+          }) : laid.map(({ m, x, yFloor }) => {
+            const fw = m.largura_cm * scale;
+            const fh = m.altura_cm * scale;
+            const fx = ox + x * scale;
+            const fy = oy + wallPxH - (yFloor + m.altura_cm) * scale;
+            const dx = ddx(m.profundidade_cm), dy2 = ddy(m.profundidade_cm);
+            const [fill, stroke, topFill, sideFill] = getMC(m.tipo);
+            const portas = m.portas || 0;
+            return (
+              <g key={m.id}>
+                {/* Top */}
+                <path d={`M${fx},${fy} L${fx+fw},${fy} L${fx+fw+dx},${fy+dy2} L${fx+dx},${fy+dy2} Z`}
+                  fill={topFill} stroke={stroke} strokeWidth={0.6} />
+                {/* Side */}
+                <path d={`M${fx+fw},${fy} L${fx+fw+dx},${fy+dy2} L${fx+fw+dx},${fy+fh+dy2} L${fx+fw},${fy+fh} Z`}
+                  fill={sideFill} stroke={stroke} strokeWidth={0.6} />
+                {/* Front */}
+                <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={stroke} strokeWidth={0.6} />
+                {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
+                  <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={fy+fh}
+                    stroke={stroke} strokeWidth={0.5} strokeDasharray="2,1" />
+                ))}
+                {fw>18 && fh>12 && (
+                  <text x={fx+fw/2} y={fy+fh/2} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={Math.max(6,Math.min(9,fw/9))} fill="#1e293b" fontWeight="500">
+                    {m.nome.length>11 ? m.nome.slice(0,10)+"…" : m.nome}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Dimensions */}
+          <text x={ox+wallPxW/2} y={oy-8} textAnchor="middle" fontSize={8.5} fill="#64748b">{wallW}cm</text>
+          <text x={ox-14} y={oy+wallPxH/2} textAnchor="middle" fontSize={8.5} fill="#64748b"
+            transform={`rotate(-90 ${ox-14} ${oy+wallPxH/2})`}>{wallH}cm</text>
+        </svg>
+      </div>
+
+      {/* Legend */}
+      {visible.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {visible.map((m) => (
+            <div key={m.id} className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+              <div className="size-2.5 rounded-sm border" style={{ background: getMC(m.tipo)[0], borderColor: getMC(m.tipo)[1] }} />
+              {m.nome} {m.largura_cm}×{m.altura_cm}cm
+              {m.tipo_porta && m.tipo_porta !== "sem" && <span className="opacity-60">{LABEL_PORTA[m.tipo_porta]}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
 
@@ -781,16 +970,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           </div>
                           <div>
                             <div className="text-[11px] text-muted-foreground mb-1">Tipo de abertura</div>
-                            <div className="flex gap-1.5 h-8 items-center">
-                              {(["abrir", "correr", "sem"] as const).map((tipo) => (
-                                <button key={tipo} type="button"
-                                  onClick={() => updateMovel(m.id, { tipo_porta: tipo })}
-                                  disabled={m.portas === 0}
-                                  className={`text-[11px] px-2.5 py-1 rounded border transition-colors disabled:opacity-40 ${m.tipo_porta === tipo && m.portas > 0 ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-                                  {tipo === "abrir" ? "Abrir" : tipo === "correr" ? "Correr" : "Sem"}
-                                </button>
-                              ))}
-                            </div>
+                            <select value={m.tipo_porta} disabled={m.portas === 0}
+                              onChange={(e) => updateMovel(m.id, { tipo_porta: e.target.value as MovelConfig["tipo_porta"] })}
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground disabled:opacity-40">
+                              <option value="sem">Sem abertura</option>
+                              <option value="abrir">Abrir — MDF</option>
+                              <option value="abrir_vidro">Abrir — Vidro</option>
+                              <option value="abrir_espelho">Abrir — Espelho</option>
+                              <option value="correr">Correr — MDF</option>
+                              <option value="correr_vidro">Correr — Vidro</option>
+                              <option value="correr_espelho">Correr — Espelho</option>
+                            </select>
                           </div>
                         </div>
 
@@ -907,6 +1097,15 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           )}
                         </div>
 
+                        {/* Detalhes livres */}
+                        <div>
+                          <div className="text-[11px] text-muted-foreground mb-1">Detalhes / Extras <span className="text-muted-foreground/60">(opcional)</span></div>
+                          <textarea rows={2} value={m.detalhes ?? ""}
+                            onChange={(e) => updateMovel(m.id, { detalhes: e.target.value || undefined })}
+                            placeholder="Ex: painel ripado na lateral, espelho interno 190×55cm, nicho com LED, prateleira de vidro..."
+                            className="w-full rounded border border-border bg-surface-2 px-2.5 py-1.5 text-[12px] outline-none resize-none focus:border-border-strong placeholder:text-muted-foreground/50" />
+                        </div>
+
                         <button type="button" onClick={() => setMoveis((prev) => prev.filter((x) => x.id !== m.id))}
                           className="text-[11.5px] text-destructive hover:opacity-70 inline-flex items-center gap-1">
                           <Trash2 className="size-3" /> Remover este móvel
@@ -916,6 +1115,19 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     })()}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Visualização da parede */}
+            {moveis.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Visualização</div>
+                <WallVisualization
+                  moveis={moveis}
+                  plantaInfo={plantaInfo}
+                  medW={medidas.largura}
+                  medH={medidas.altura}
+                />
               </div>
             )}
 

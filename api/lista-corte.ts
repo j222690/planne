@@ -5,7 +5,7 @@ const SHEET_W = 2750; // mm
 const SHEET_H = 1830; // mm
 
 // Materiais que NÃO são chapas MDF/MDP — excluir do bin packing
-const NAO_CHAPA = /madeira\s*maci/i;
+const NAO_CHAPA = /madeira\s*maci|vidro|espelho/i;
 
 // ── Bin packing 2D (Guillotine — Best Area Fit) ──────────────────────────────
 
@@ -134,6 +134,17 @@ FITA DE BORDA (fita_l/r/t/b = esquerdo/direito/topo/base da peça):
 - Portas e gavetas: todos os 4 lados
 - Prateleiras: frontal (fita_t ou fita_b conforme orientação)
 
+PORTAS DE VIDRO E ESPELHO (tipo_porta contém "vidro" ou "espelho"):
+- Portas de vidro temperado: NÃO são cortadas de chapa MDF — são peças de vidro temperado
+  - Material no JSON: "Vidro temperado Xmm" (padrão: 6mm para portas de abrir, 8mm para correr)
+  - Largura e comprimento = dimensão da folha de vidro
+  - Observação: "Fornecedor de vidro — temperado, bordas lapidadas"
+  - Fita de borda: false (vidro não leva fita)
+- Portas com espelho: mesma lógica, material = "Espelho 4mm"
+  - Observação: "Espelho colado em estrutura MDF de suporte"
+- A ESTRUTURA (caixa, engrossos) continua sendo MDF 15mm normalmente
+- Detalhes livres (campo "detalhes"): incluir como peças adicionais ou observações nas peças relevantes
+
 MÓVEL EM L (formato = "L"):
 - Composto por 2 corpos independentes que se encontram na quina interna
 - Corpo A (braço principal): largura_cm × profundidade_cm × altura_cm
@@ -190,7 +201,7 @@ interface MovelInput {
   profundidade_cm: number;
   altura_cm: number;
   portas?: number;
-  tipo_porta?: string;
+  tipo_porta?: string; // abrir | abrir_vidro | abrir_espelho | correr | correr_vidro | correr_espelho | sem
   gavetas?: number;
   prateleiras?: number;
   tem_fundo?: boolean;
@@ -199,6 +210,7 @@ interface MovelInput {
   arm2_profundidade_cm?: number;
   pe_madeira?: boolean;
   pe_altura_cm?: number;
+  detalhes?: string;
   mdf_caixa_id?: string;
   mdf_externo_id?: string;
   mdf_id?: string; // legacy
@@ -222,6 +234,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       m.pe_madeira ? `  Pés de madeira maciça: SIM — altura ${m.pe_altura_cm ?? 70}cm` : "",
       `  MDF caixa (interior): ${m.mdf_caixa_id ? `ID ${m.mdf_caixa_id}` : "Branco TX padrão"}`,
       `  MDF envelope (faces externas/portas): ${m.mdf_externo_id ? `ID ${m.mdf_externo_id}` : "mesmo da caixa"}`,
+      m.detalhes ? `  Extras / detalhes: ${m.detalhes}` : "",
     ].filter(Boolean);
     return linhas.join("\n");
   }).join("\n\n");
