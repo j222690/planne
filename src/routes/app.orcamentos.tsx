@@ -389,7 +389,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   // Configurar
   const [clienteId, setClienteId] = useState("");
   const [margemPct, setMargemPct] = useState(35);
-  const [ambiente, setAmbiente] = useState("Quarto");
+  const [openAmbientes, setOpenAmbientes] = useState<Set<string>>(new Set(["Cozinha", "Sala", "Quarto"]));
+  const [searchMoveis, setSearchMoveis] = useState("");
   const [plantaB64, setPlantaB64] = useState<string | null>(null);
   const [plantaNome, setPlantaNome] = useState<string | null>(null);
   const [medidas, setMedidas] = useState({ largura: 0, profundidade: 0, altura: 2.7 });
@@ -500,7 +501,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       const res = await fetch("/api/analisar-planta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planta_b64: b64, ambiente }),
+        body: JSON.stringify({ planta_b64: b64 }),
       });
       if (res.ok) {
         const info = await res.json() as PlantaInfo;
@@ -555,8 +556,16 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
     setAiLoading(true);
     try {
+      const ambienteContexto = (() => {
+        const rooms = new Set<string>();
+        for (const m of moveis) {
+          const room = AMBIENTES.find((a) => MOVEIS_POR_AMBIENTE[a].some((t) => t.tipo === m.tipo));
+          if (room) rooms.add(room);
+        }
+        return rooms.size > 0 ? [...rooms].join(" e ") : "Residencial";
+      })();
       const body = {
-        ambiente, descricao, margem_pct: margemPct,
+        ambiente: ambienteContexto, descricao, margem_pct: margemPct,
         moveis,
         materiais: catalogo,
         ...(plantaB64 ? { planta_b64: plantaB64 } : {}),
@@ -624,7 +633,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     }
   };
 
-  const moveisDaFase = MOVEIS_POR_AMBIENTE[ambiente] ?? [];
+  const toggleAmbiente = (amb: string) => setOpenAmbientes((prev) => {
+    const next = new Set(prev);
+    if (next.has(amb)) next.delete(amb); else next.add(amb);
+    return next;
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-auto">
@@ -642,7 +655,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
             <h2 className="text-[15px] font-semibold">
               {isEdit ? `Editar orçamento ${editOrc?.numero ?? ""}` :
                 fase === "configurar" ? "Novo orçamento" :
-                fase === "moveis" ? `Móveis — ${ambiente}` : "Revisar itens"}
+                fase === "moveis" ? "Selecionar Móveis" : "Revisar itens"}
             </h2>
             <p className="text-[12px] text-muted-foreground mt-0.5">
               {isEdit ? "Edite os itens e salve" :
@@ -685,19 +698,6 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 <input type="number" min={0} max={100} value={margemPct}
                   onChange={(e) => setMargemPct(Number(e.target.value))}
                   className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
-              </div>
-            </div>
-
-            {/* Ambiente */}
-            <div>
-              <Label>Ambiente</Label>
-              <div className="flex gap-1.5 flex-wrap">
-                {AMBIENTES.map((a) => (
-                  <button key={a} type="button" onClick={() => setAmbiente(a)}
-                    className={`text-[12px] px-3 py-1.5 rounded-full border transition-colors ${ambiente === a ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-                    {a}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -794,17 +794,59 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               ← Voltar
             </button>
 
-            {/* Chips de seleção */}
-            <div>
-              <Label>Selecione os móveis de {ambiente}:</Label>
-              <div className="flex gap-2 flex-wrap">
-                {moveisDaFase.map((template) => {
-                  const sel = moveis.find((m) => m.tipo === template.tipo);
+            {/* Seleção de móveis — todos os ambientes */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Móveis do projeto:</Label>
+                {moveis.length > 0 && (
+                  <span className="text-[11px] text-accent font-medium">{moveis.length} selecionado(s)</span>
+                )}
+              </div>
+
+              {/* Busca */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                <input type="text" placeholder="Buscar móvel em qualquer ambiente..."
+                  value={searchMoveis} onChange={(e) => setSearchMoveis(e.target.value)}
+                  className="w-full h-8 rounded border border-border bg-surface-2 pl-8 pr-3 text-[12.5px] outline-none focus:border-border-strong" />
+              </div>
+
+              {/* Seções por ambiente */}
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
+                {AMBIENTES.map((amb) => {
+                  const templates = MOVEIS_POR_AMBIENTE[amb];
+                  const filtered = searchMoveis.trim()
+                    ? templates.filter((t) => t.nome.toLowerCase().includes(searchMoveis.toLowerCase()))
+                    : templates;
+                  if (filtered.length === 0) return null;
+                  const selCount = templates.filter((t) => moveis.some((m) => m.tipo === t.tipo)).length;
+                  const isOpen = openAmbientes.has(amb) || selCount > 0 || searchMoveis.trim().length > 0;
                   return (
-                    <button key={template.tipo} type="button" onClick={() => toggleMovel(template)}
-                      className={`text-[12px] px-3 py-1.5 rounded-full border transition-colors ${sel ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-                      {template.nome}
-                    </button>
+                    <div key={amb} className="rounded-lg border border-border overflow-hidden">
+                      <button type="button" onClick={() => toggleAmbiente(amb)}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-secondary/30 hover:bg-secondary/50 transition-colors text-left">
+                        <span className="text-[12.5px] font-medium">{amb}</span>
+                        <div className="flex items-center gap-2">
+                          {selCount > 0 && (
+                            <span className="text-[10.5px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-medium">{selCount} sel.</span>
+                          )}
+                          {isOpen ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <div className="px-2.5 py-2 flex flex-wrap gap-1.5">
+                          {filtered.map((template) => {
+                            const sel = moveis.find((m) => m.tipo === template.tipo);
+                            return (
+                              <button key={template.tipo} type="button" onClick={() => toggleMovel(template)}
+                                className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${sel ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                                {template.nome}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
