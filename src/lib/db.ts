@@ -100,7 +100,7 @@ export async function getProjetos(empresaId: string) {
 export async function getOrcamentos(empresaId: string) {
   const { data, error } = await supabase
     .from("orcamentos")
-    .select("id,numero,status,total,margem_pct,subtotal,created_at,cliente_id,projeto_id,clientes(nome),projetos(nome)")
+    .select("id,numero,status,total,margem_pct,subtotal,created_at,cliente_id,projeto_id,moveis_config,clientes(nome),projetos(nome)")
     .eq("empresa_id", empresaId)
     .order("created_at", { ascending: false });
   if (error) throw error;
