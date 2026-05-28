@@ -36,7 +36,18 @@ BEGIN
   END IF;
 END $$;
 
--- 2. Atualizar RPC replace_orcamento_itens para incluir movel e justificativa
+-- 2. Adicionar moveis_config em orcamentos se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'orcamentos' AND column_name = 'moveis_config'
+  ) THEN
+    ALTER TABLE public.orcamentos ADD COLUMN moveis_config jsonb;
+  END IF;
+END $$;
+
+-- 3. Atualizar RPC replace_orcamento_itens para incluir movel e justificativa
 CREATE OR REPLACE FUNCTION public.replace_orcamento_itens(p_orcamento_id uuid, p_itens jsonb)
 RETURNS void
 LANGUAGE plpgsql
