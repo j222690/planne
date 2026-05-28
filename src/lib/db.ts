@@ -257,7 +257,7 @@ export async function getOrcamentoItens(orcamentoId: string) {
     .from("orcamento_itens")
     .select("*")
     .eq("orcamento_id", orcamentoId)
-    .order("created_at");
+    .order("id");
   if (error) throw error;
   return data ?? [];
 }
