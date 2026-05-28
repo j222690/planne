@@ -1048,14 +1048,14 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             {/* Pés de madeira */}
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input type="checkbox" checked={m.pe_madeira ?? false}
-                                onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 70 })}
+                                onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 15 })}
                                 className="rounded" />
                               <span className="text-[11.5px]">Pés de madeira maciça</span>
                             </label>
                             {m.pe_madeira && (
                               <div className="w-40 pl-5">
-                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura dos pés (cm)</div>
-                                <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 70}
+                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura dos pés (cm) · rodapé = +5cm</div>
+                                <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 15}
                                   onChange={(e) => updateMovel(m.id, { pe_altura_cm: Number(e.target.value) })}
                                   className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
                               </div>
@@ -1063,15 +1063,25 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             {/* Roda-teto */}
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input type="checkbox" checked={m.tem_roda_teto ?? false}
-                                onChange={(e) => updateMovel(m.id, { tem_roda_teto: e.target.checked })}
+                                onChange={(e) => {
+                                  const teto = m.altura_teto_cm ?? 270;
+                                  updateMovel(m.id, {
+                                    tem_roda_teto: e.target.checked,
+                                    altura_teto_cm: teto,
+                                    ...(e.target.checked ? { altura_cm: teto - 10 } : {}),
+                                  });
+                                }}
                                 className="rounded" />
                               <span className="text-[11.5px]">Roda-teto</span>
                             </label>
                             {m.tem_roda_teto && (
                               <div className="w-40 pl-5">
-                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura do teto (cm)</div>
+                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura do teto (cm) · móvel = teto−10cm</div>
                                 <input type="number" min={200} max={400} value={m.altura_teto_cm ?? 270}
-                                  onChange={(e) => updateMovel(m.id, { altura_teto_cm: Number(e.target.value) })}
+                                  onChange={(e) => updateMovel(m.id, {
+                                    altura_teto_cm: Number(e.target.value),
+                                    altura_cm: Number(e.target.value) - 10,
+                                  })}
                                   className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
                               </div>
                             )}

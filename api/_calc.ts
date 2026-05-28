@@ -77,7 +77,7 @@ const SHEET_AREA = 2.750 * 1.830; // m²
 function cm2mm(v: number) { return Math.round(v * 10); }
 
 function findCat(catalogo: CatItem[], matcher: (n: CatItem) => boolean): CatItem | undefined {
-  return catalogo.find(matcher);
+  return catalogo.find((c) => { try { return matcher(c); } catch { return false; } });
 }
 
 function splitPecas(base: Omit<PecaCorte, "peca"> & { peca: string }, largura: number, comprimento: number): PecaCorte[] {
@@ -163,23 +163,26 @@ function pecasCorpo(
     result.push({ movel: nom, peca: "Fundo de gaveta", material: "MDF 6mm Branco TX (fundo)", largura_mm: gavLarg - 2 * ESP, comprimento_mm: Math.max(gavProfInt, 10), quantidade: m.gavetas, fita_l: false, fita_r: false, fita_t: false, fita_b: false, observacao: "" });
   }
 
-  // Rodapé
+  // Rodapé — altura = pe_altura_cm + 5 (mesmo recuo que os pés)
   if (m.tem_rodape) {
-    result.push({ movel: nom, peca: "Rodapé", material: mdfCaixa, largura_mm: larg, comprimento_mm: 150, quantidade: 1, fita_l: false, fita_r: false, fita_t: true, fita_b: false, observacao: "" });
+    const altRodape = cm2mm((m.pe_altura_cm ?? 15) + 5);
+    result.push({ movel: nom, peca: "Rodapé", material: mdfCaixa, largura_mm: larg, comprimento_mm: altRodape, quantidade: 1, fita_l: false, fita_r: false, fita_t: true, fita_b: false, observacao: `Altura = pés ${m.pe_altura_cm ?? 15}cm + 5cm` });
   }
 
-  // Roda-teto
+  // Roda-teto — folga entre topo do móvel e o teto (móvel já deve ter altura = teto−10cm)
   if (m.tem_roda_teto && m.altura_teto_cm) {
-    const folga = cm2mm(m.altura_teto_cm - (sufixo ? 0 : m.altura_cm));
+    const altMovel = sufixo ? alt : cm2mm(m.altura_cm);
+    const folga = cm2mm(m.altura_teto_cm) - altMovel;
     if (folga > 0) {
       result.push(...splitPecas({ movel: nom, peca: "Roda-teto", material: mdfCaixa, largura_mm: larg, comprimento_mm: folga, quantidade: 1, fita_l: false, fita_r: false, fita_t: false, fita_b: false, observacao: `Fechar folga de ${(folga / 10).toFixed(0)}cm até o teto` }, larg, folga));
     }
   }
 
-  // Pés de madeira maciça
-  if (m.pe_madeira && m.pe_altura_cm) {
-    const qtdPes = m.largura_cm > 150 ? 6 : 4;
-    result.push({ movel: nom, peca: "Pé de madeira", material: "Madeira maciça (pinus/eucalipto)", largura_mm: 70, comprimento_mm: cm2mm(m.pe_altura_cm), quantidade: qtdPes, fita_l: false, fita_r: false, fita_t: false, fita_b: false, observacao: "Seção 7×7cm" });
+  // Pés de madeira maciça — 2 ripas horizontais (frente + fundo), 9cm menor que o móvel
+  if (m.pe_madeira) {
+    const altPe = cm2mm(m.pe_altura_cm ?? 15);
+    const largRipa = Math.max(10, larg - cm2mm(9)); // 9cm menor = recuo de 4,5cm c/ lado
+    result.push({ movel: nom, peca: "Pé maciço (frente/fundo)", material: "Madeira maciça (pinus/eucalipto)", largura_mm: largRipa, comprimento_mm: altPe, quantidade: 2, fita_l: false, fita_r: false, fita_t: false, fita_b: false, observacao: `Ripa ${(largRipa / 10).toFixed(0)}cm × ${(m.pe_altura_cm ?? 15)}cm — recuo 4,5cm c/ lado` });
   }
 
   return result;
@@ -384,6 +387,16 @@ export function calcularOrcamento(moveis: MovelInput[], catalogo: CatItem[], mar
       if (pes) {
         const qtdPes = larg > 150 ? 6 : 4;
         addItem({ movel: m.nome, material_id: pes.id, descricao: `${pes.nome} — ${m.nome}`, justificativa: `${qtdPes} pés reguláveis por corpo`, quantidade: qtdPes, unidade: pes.unidade, preco_custo: pes.preco_custo });
+      }
+    }
+
+    // ── Rodapé (painel MDF) ───────────────────────────────────────────────────
+    if (m.tem_rodape) {
+      const altRodape = (m.pe_altura_cm ?? 15) + 5;
+      const areaRodape_m2 = (larg * altRodape) / 10000;
+      const chapasRodape = Math.ceil(areaRodape_m2 / SHEET_AREA);
+      if (mdfCaixa && chapasRodape > 0) {
+        addItem({ movel: m.nome, material_id: mdfCaixa.id, descricao: `${mdfCaixa.nome} — rodapé de ${m.nome}`, justificativa: `Rodapé ${larg}×${altRodape}cm (pés ${m.pe_altura_cm ?? 15}cm+5) = ${areaRodape_m2.toFixed(2)}m²`, quantidade: chapasRodape, unidade: "chapa", preco_custo: mdfCaixa.preco_custo });
       }
     }
   }

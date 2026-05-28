@@ -170,6 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const temFundo = moveis?.some((m) => m.tem_fundo ?? true);
 
   const catalogoFiltrado = materiais.filter((m) => {
+    if (!m.nome) return false;
     const n = m.nome.toLowerCase();
     if (/^mdf|^mdp/i.test(m.nome)) return true;
     if (/fita.*(borda|bord)/i.test(n) || /borda.*fita/i.test(n)) return true;
