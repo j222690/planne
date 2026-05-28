@@ -415,7 +415,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       itens: [{ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 }],
     },
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "itens" });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: "itens" });
   const itens = watch("itens");
   const subtotal = itens.reduce((s, i) => s + (Number(i.preco_unitario) || 0) * (Number(i.quantidade) || 0), 0);
 
@@ -440,7 +440,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         setValue("margem_pct", (editOrc as unknown as { margem_pct?: number }).margem_pct ?? 35);
         const itensExistentes = editOrc.itens ?? await getOrcamentoItens(editOrc.id) as OrcItem[];
         if (itensExistentes.length > 0) {
-          setValue("itens", itensExistentes.map((it) => ({
+          replace(itensExistentes.map((it) => ({
             movel: (it as OrcItem).movel ?? "",
             justificativa: (it as OrcItem).justificativa ?? "",
             descricao: it.descricao, quantidade: Number(it.quantidade),
@@ -536,7 +536,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       if (data.itens?.length) {
-        setValue("itens", data.itens);
+        replace(data.itens);
         if (data.margem_detectada) setValue("margem_pct", data.margem_detectada);
         setFase("revisar");
         toast.success(`${data.itens.length} itens importados do PDF!`);
@@ -580,7 +580,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       if (!data.itens?.length) throw new Error("A IA não retornou itens.");
-      setValue("itens", data.itens);
+      replace(data.itens);
       setValue("cliente_id", clienteId);
       setValue("margem_pct", margemPct);
       if (data.resumo) setValue("observacoes", data.resumo);
