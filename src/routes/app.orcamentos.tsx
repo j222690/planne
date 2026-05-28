@@ -877,284 +877,259 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     </button>
 
                     {expandedMovel === m.id && (() => {
-                      // Limites espaciais para validação
                       const paredeAtual = plantaInfo?.paredes.find((p) => p.id === m.parede_id);
-                      const limLargura = paredeAtual
-                        ? paredeAtual.espaco_util_cm
-                        : plantaInfo
-                          ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm))
-                          : medidas.largura > 0 ? Math.round(medidas.largura * 100) : null;
-                      const limAltura = plantaInfo
-                        ? plantaInfo.altura_cm
-                        : medidas.altura > 0 ? Math.round(medidas.altura * 100) : null;
-                      const limProfundidade = plantaInfo
-                        ? plantaInfo.profundidade_cm
-                        : medidas.profundidade > 0 ? Math.round(medidas.profundidade * 100) : null;
+                      const limLargura = paredeAtual ? paredeAtual.espaco_util_cm
+                        : plantaInfo ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm))
+                        : medidas.largura > 0 ? Math.round(medidas.largura * 100) : null;
+                      const limAltura = plantaInfo ? plantaInfo.altura_cm : medidas.altura > 0 ? Math.round(medidas.altura * 100) : null;
+                      const limProfundidade = plantaInfo ? plantaInfo.profundidade_cm : medidas.profundidade > 0 ? Math.round(medidas.profundidade * 100) : null;
 
                       const avisos: string[] = [];
-                      if (limLargura && m.largura_cm > limLargura)
-                        avisos.push(`Largura ${m.largura_cm}cm excede o espaço disponível (${limLargura}cm)`);
-                      if (limAltura && m.altura_cm > limAltura)
-                        avisos.push(`Altura ${m.altura_cm}cm excede o pé-direito do ambiente (${limAltura}cm)`);
-                      if (limProfundidade && m.profundidade_cm > limProfundidade)
-                        avisos.push(`Profundidade ${m.profundidade_cm}cm excede a profundidade do ambiente (${limProfundidade}cm)`);
-                      if (m.largura_cm > 269)
-                        avisos.push(`Largura ${m.largura_cm}cm excede o limite da chapa (269cm) — painéis serão divididos em módulos`);
-                      if (m.altura_cm > 269)
-                        avisos.push(`Altura ${m.altura_cm}cm excede o limite da chapa (269cm) — laterais serão divididas em módulos`);
+                      if (limLargura && m.largura_cm > limLargura) avisos.push(`Largura excede o espaço disponível (${limLargura}cm)`);
+                      if (limAltura && m.altura_cm > limAltura) avisos.push(`Altura excede o pé-direito (${limAltura}cm)`);
+                      if (limProfundidade && m.profundidade_cm > limProfundidade) avisos.push(`Profundidade excede o ambiente (${limProfundidade}cm)`);
+                      if (m.largura_cm > 269) avisos.push(`Largura > 269cm — painéis serão divididos em módulos`);
+                      if (m.altura_cm > 269) avisos.push(`Altura > 269cm — laterais serão divididas em módulos`);
+
+                      const temMatsEscolhidos = m.mdf_caixa_id || m.mdf_externo_id || m.fundo_id || m.dobradica_id || m.corrediça_porta_id || m.corrediça_gaveta_id || m.puxador_id;
+                      const temAvancado = m.formato === "L" || m.pe_madeira || m.tem_roda_teto;
 
                       return (
                       <div className="px-3 py-3 space-y-3 bg-surface">
-                        {/* Nome */}
-                        <div>
-                          <div className="text-[11px] text-muted-foreground mb-1">Nome no orçamento</div>
-                          <input value={m.nome} onChange={(e) => updateMovel(m.id, { nome: e.target.value })}
-                            className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
-                        </div>
-
-                        {/* Seletor de parede (quando planta analisada) */}
-                        {plantaInfo && plantaInfo.paredes.length > 0 && (
+                        {/* Nome + parede numa linha */}
+                        <div className={`grid gap-2 ${plantaInfo?.paredes.length ? "grid-cols-2" : "grid-cols-1"}`}>
                           <div>
-                            <div className="text-[11px] text-muted-foreground mb-1">Parede de instalação</div>
-                            <select
-                              value={m.parede_id ?? ""}
-                              onChange={(e) => {
+                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Nome no orçamento</div>
+                            <input value={m.nome} onChange={(e) => updateMovel(m.id, { nome: e.target.value })}
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                          </div>
+                          {plantaInfo && plantaInfo.paredes.length > 0 && (
+                            <div>
+                              <div className="text-[10.5px] text-muted-foreground mb-0.5">Parede</div>
+                              <select value={m.parede_id ?? ""} onChange={(e) => {
                                 const pid = e.target.value;
                                 const parede = plantaInfo.paredes.find((p) => p.id === pid);
-                                updateMovel(m.id, {
-                                  parede_id: pid || undefined,
-                                  ...(parede ? { largura_cm: parede.espaco_util_cm } : {}),
-                                });
-                              }}
-                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground"
-                            >
-                              <option value="">— Escolher parede —</option>
-                              {plantaInfo.paredes.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  Parede {p.id}: {p.descricao} — {p.espaco_util_cm}cm úteis
-                                  {p.obstaculos ? ` (${p.obstaculos})` : ""}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {/* Avisos de limite */}
-                        {avisos.length > 0 && (
-                          <div className="space-y-1">
-                            {avisos.map((av, i) => (
-                              <div key={i} className="flex items-start gap-1.5 text-[11.5px] text-destructive bg-destructive/10 rounded px-2.5 py-1.5">
-                                <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-                                <span>{av}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Formato */}
-                        <div>
-                          <div className="text-[11px] text-muted-foreground mb-1">Formato</div>
-                          <div className="flex gap-2">
-                            {(["retangular", "L"] as const).map((fmt) => (
-                              <button key={fmt} type="button"
-                                onClick={() => updateMovel(m.id, { formato: fmt, arm2_largura_cm: fmt === "L" ? (m.arm2_largura_cm ?? 80) : undefined, arm2_profundidade_cm: fmt === "L" ? (m.arm2_profundidade_cm ?? m.profundidade_cm) : undefined })}
-                                className={`h-7 px-3 rounded text-[12px] border transition-colors ${(m.formato ?? "retangular") === fmt ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}>
-                                {fmt === "retangular" ? "Retangular" : "Em L"}
-                              </button>
-                            ))}
-                          </div>
-                          {(m.formato ?? "retangular") === "L" && (
-                            <div className="mt-2 p-2.5 rounded border border-border bg-secondary/30 space-y-2">
-                              <div className="text-[10.5px] text-muted-foreground">Braço principal: {m.largura_cm}cm L × {m.profundidade_cm}cm P — configure acima</div>
-                              <div className="text-[10.5px] text-muted-foreground font-medium">Braço secundário (2º corpo):</div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <div className="text-[10px] text-muted-foreground mb-0.5">Largura (cm)</div>
-                                  <input type="number" min={10} value={m.arm2_largura_cm ?? 80}
-                                    onChange={(e) => updateMovel(m.id, { arm2_largura_cm: Number(e.target.value) })}
-                                    className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
-                                </div>
-                                <div>
-                                  <div className="text-[10px] text-muted-foreground mb-0.5">Profundidade (cm)</div>
-                                  <input type="number" min={10} value={m.arm2_profundidade_cm ?? m.profundidade_cm}
-                                    onChange={(e) => updateMovel(m.id, { arm2_profundidade_cm: Number(e.target.value) })}
-                                    className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
-                                </div>
-                              </div>
+                                updateMovel(m.id, { parede_id: pid || undefined, ...(parede ? { largura_cm: parede.espaco_util_cm } : {}) });
+                              }} className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground">
+                                <option value="">— Parede —</option>
+                                {plantaInfo.paredes.map((p) => (
+                                  <option key={p.id} value={p.id}>Parede {p.id} — {p.espaco_util_cm}cm{p.obstaculos ? ` (${p.obstaculos})` : ""}</option>
+                                ))}
+                              </select>
                             </div>
                           )}
                         </div>
 
+                        {/* Avisos */}
+                        {avisos.length > 0 && (
+                          <div className="space-y-1">
+                            {avisos.map((av, i) => (
+                              <div key={i} className="flex items-start gap-1.5 text-[11px] text-destructive bg-destructive/10 rounded px-2 py-1">
+                                <AlertCircle className="size-3 shrink-0 mt-0.5" /><span>{av}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Dimensões */}
                         <div>
-                          <div className="text-[11px] text-muted-foreground mb-1">Dimensões — {(m.formato ?? "retangular") === "L" ? "Braço principal (cm)" : "cm"}</div>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="text-[10.5px] text-muted-foreground mb-0.5">Dimensões (cm)</div>
+                          <div className="grid grid-cols-3 gap-1.5">
                             {(["largura_cm", "profundidade_cm", "altura_cm"] as const).map((dim) => {
                               const lim = dim === "largura_cm" ? limLargura : dim === "altura_cm" ? limAltura : limProfundidade;
                               const excede = lim !== null && m[dim] > lim;
                               return (
-                              <div key={dim}>
-                                <div className="text-[10px] text-muted-foreground mb-0.5">
-                                  {dim === "largura_cm" ? "Largura" : dim === "profundidade_cm" ? "Profund." : "Altura"}
-                                  {lim && <span className="ml-1 text-muted-foreground/70">máx {lim}cm</span>}
+                                <div key={dim}>
+                                  <div className="text-[9.5px] text-muted-foreground mb-0.5 truncate">
+                                    {dim === "largura_cm" ? "Largura" : dim === "profundidade_cm" ? "Profund." : "Altura"}
+                                    {lim ? <span className="opacity-60"> ≤{lim}</span> : ""}
+                                  </div>
+                                  <input type="number" min={0} value={m[dim]}
+                                    onChange={(e) => updateMovel(m.id, { [dim]: Number(e.target.value) })}
+                                    className={`w-full h-8 rounded border px-2 text-[12.5px] outline-none bg-surface-2 ${excede ? "border-destructive" : "border-border"}`} />
                                 </div>
-                                <input type="number" min={0} value={m[dim]}
-                                  onChange={(e) => updateMovel(m.id, { [dim]: Number(e.target.value) })}
-                                  className={`w-full h-8 rounded border px-2 text-[12.5px] outline-none bg-surface-2 ${excede ? "border-destructive text-destructive" : "border-border"}`} />
-                              </div>
-                            )})}
+                              );
+                            })}
                           </div>
                         </div>
 
-                        {/* Portas + tipo */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Portas + Gavetas + Prateleiras numa linha */}
+                        <div className="grid grid-cols-4 gap-1.5">
                           <div>
-                            <div className="text-[11px] text-muted-foreground mb-1">Número de portas</div>
+                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Portas</div>
                             <input type="number" min={0} max={20} value={m.portas}
                               onChange={(e) => updateMovel(m.id, { portas: Number(e.target.value) })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
-                          <div>
-                            <div className="text-[11px] text-muted-foreground mb-1">Tipo de abertura</div>
+                          <div className="col-span-1">
+                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Tipo</div>
                             <select value={m.tipo_porta} disabled={m.portas === 0}
                               onChange={(e) => updateMovel(m.id, { tipo_porta: e.target.value as MovelConfig["tipo_porta"] })}
-                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground disabled:opacity-40">
-                              <option value="sem">Sem abertura</option>
-                              <option value="abrir">Abrir — MDF</option>
-                              <option value="abrir_vidro">Abrir — Vidro</option>
-                              <option value="abrir_espelho">Abrir — Espelho</option>
-                              <option value="correr">Correr — MDF</option>
-                              <option value="correr_vidro">Correr — Vidro</option>
-                              <option value="correr_espelho">Correr — Espelho</option>
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none text-foreground disabled:opacity-40">
+                              <option value="sem">Sem</option>
+                              <option value="abrir">Abrir MDF</option>
+                              <option value="abrir_vidro">Abrir Vidro</option>
+                              <option value="abrir_espelho">Abrir Esp.</option>
+                              <option value="correr">Correr MDF</option>
+                              <option value="correr_vidro">Correr Vid.</option>
+                              <option value="correr_espelho">Correr Esp.</option>
                             </select>
                           </div>
-                        </div>
-
-                        {/* Gavetas + Prateleiras */}
-                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <div className="text-[11px] text-muted-foreground mb-1">Gavetas</div>
+                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Gavetas</div>
                             <input type="number" min={0} max={20} value={m.gavetas}
                               onChange={(e) => updateMovel(m.id, { gavetas: Number(e.target.value) })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                           <div>
-                            <div className="text-[11px] text-muted-foreground mb-1">Prateleiras</div>
+                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Prat.</div>
                             <input type="number" min={0} max={20} value={m.prateleiras}
                               onChange={(e) => updateMovel(m.id, { prateleiras: Number(e.target.value) })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                         </div>
 
-                        {/* Extras */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" checked={m.tem_fundo ?? true}
-                              onChange={(e) => updateMovel(m.id, { tem_fundo: e.target.checked })}
-                              className="rounded" />
-                            <span className="text-[12px]">Tem fundo (chapa 6mm)</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" checked={m.tem_rodape ?? false}
-                              onChange={(e) => updateMovel(m.id, { tem_rodape: e.target.checked })}
-                              className="rounded" />
-                            <span className="text-[12px]">Rodapé (faixa 15cm)</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" checked={m.tem_pes ?? false}
-                              onChange={(e) => updateMovel(m.id, { tem_pes: e.target.checked })}
-                              className="rounded" />
-                            <span className="text-[12px]">Pés reguláveis (MDF)</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" checked={m.pe_madeira ?? false}
-                              onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 70 })}
-                              className="rounded" />
-                            <span className="text-[12px]">Pés de madeira maciça</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" checked={m.tem_roda_teto ?? false}
-                              onChange={(e) => updateMovel(m.id, { tem_roda_teto: e.target.checked })}
-                              className="rounded" />
-                            <span className="text-[12px]">Roda-teto</span>
-                          </label>
+                        {/* Opções básicas — checkboxes compactos */}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                          {[
+                            { key: "tem_fundo", label: "Fundo 6mm", default: true },
+                            { key: "tem_rodape", label: "Rodapé", default: false },
+                            { key: "tem_pes", label: "Pés reguláveis", default: false },
+                          ].map(({ key, label, default: def }) => (
+                            <label key={key} className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <input type="checkbox" checked={(m as Record<string, unknown>)[key] as boolean ?? def}
+                                onChange={(e) => updateMovel(m.id, { [key]: e.target.checked })}
+                                className="rounded" />
+                              <span className="text-[11.5px]">{label}</span>
+                            </label>
+                          ))}
                         </div>
-                        {m.pe_madeira && (
-                          <div className="w-44">
-                            <div className="text-[11px] text-muted-foreground mb-1">Altura dos pés de madeira (cm)</div>
-                            <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 70}
-                              onChange={(e) => updateMovel(m.id, { pe_altura_cm: Number(e.target.value) })}
-                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+
+                        {/* Avançado (formato L, pés madeira, roda-teto) — colapsável */}
+                        <details open={temAvancado}>
+                          <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground list-none flex items-center gap-1">
+                            <ChevronDown className="size-3" /> Opções avançadas
+                            {temAvancado && <span className="text-accent text-[10px]"> • ativo</span>}
+                          </summary>
+                          <div className="mt-2 space-y-2.5 pl-1">
+                            {/* Formato */}
+                            <div>
+                              <div className="text-[10.5px] text-muted-foreground mb-1">Formato</div>
+                              <div className="flex gap-1.5">
+                                {(["retangular", "L"] as const).map((fmt) => (
+                                  <button key={fmt} type="button"
+                                    onClick={() => updateMovel(m.id, { formato: fmt, arm2_largura_cm: fmt === "L" ? (m.arm2_largura_cm ?? 80) : undefined, arm2_profundidade_cm: fmt === "L" ? (m.arm2_profundidade_cm ?? m.profundidade_cm) : undefined })}
+                                    className={`h-7 px-3 rounded text-[11.5px] border transition-colors ${(m.formato ?? "retangular") === fmt ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}>
+                                    {fmt === "retangular" ? "Retangular" : "Em L"}
+                                  </button>
+                                ))}
+                              </div>
+                              {(m.formato ?? "retangular") === "L" && (
+                                <div className="mt-2 p-2 rounded border border-border bg-secondary/30 space-y-2">
+                                  <div className="text-[10px] text-muted-foreground">Braço A (principal): {m.largura_cm}×{m.profundidade_cm}cm — configurado acima</div>
+                                  <div className="text-[10px] font-medium text-muted-foreground">Braço B:</div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <div className="text-[9.5px] text-muted-foreground mb-0.5">Largura (cm)</div>
+                                      <input type="number" min={10} value={m.arm2_largura_cm ?? 80}
+                                        onChange={(e) => updateMovel(m.id, { arm2_largura_cm: Number(e.target.value) })}
+                                        className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
+                                    </div>
+                                    <div>
+                                      <div className="text-[9.5px] text-muted-foreground mb-0.5">Profundidade (cm)</div>
+                                      <input type="number" min={10} value={m.arm2_profundidade_cm ?? m.profundidade_cm}
+                                        onChange={(e) => updateMovel(m.id, { arm2_profundidade_cm: Number(e.target.value) })}
+                                        className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {/* Pés de madeira */}
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <input type="checkbox" checked={m.pe_madeira ?? false}
+                                onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 70 })}
+                                className="rounded" />
+                              <span className="text-[11.5px]">Pés de madeira maciça</span>
+                            </label>
+                            {m.pe_madeira && (
+                              <div className="w-40 pl-5">
+                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura dos pés (cm)</div>
+                                <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 70}
+                                  onChange={(e) => updateMovel(m.id, { pe_altura_cm: Number(e.target.value) })}
+                                  className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
+                              </div>
+                            )}
+                            {/* Roda-teto */}
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <input type="checkbox" checked={m.tem_roda_teto ?? false}
+                                onChange={(e) => updateMovel(m.id, { tem_roda_teto: e.target.checked })}
+                                className="rounded" />
+                              <span className="text-[11.5px]">Roda-teto</span>
+                            </label>
+                            {m.tem_roda_teto && (
+                              <div className="w-40 pl-5">
+                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura do teto (cm)</div>
+                                <input type="number" min={200} max={400} value={m.altura_teto_cm ?? 270}
+                                  onChange={(e) => updateMovel(m.id, { altura_teto_cm: Number(e.target.value) })}
+                                  className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {m.tem_roda_teto && (
-                          <div className="w-44">
-                            <div className="text-[11px] text-muted-foreground mb-1">Altura do teto (cm)</div>
-                            <input type="number" min={200} max={400} value={m.altura_teto_cm ?? 270}
-                              onChange={(e) => updateMovel(m.id, { altura_teto_cm: Number(e.target.value) })}
-                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                        </details>
+
+                        {/* Materiais — colapsável, IA escolhe por padrão */}
+                        <details open={!!temMatsEscolhidos}>
+                          <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground list-none flex items-center gap-1">
+                            <ChevronDown className="size-3" /> Materiais específicos
+                            {temMatsEscolhidos
+                              ? <span className="text-accent text-[10px]"> • personalizados</span>
+                              : <span className="text-[10px] opacity-60"> — IA escolhe automaticamente</span>}
+                          </summary>
+                          <div className="mt-2 space-y-1.5 pl-1">
+                            <MatSelect label="MDF caixa (interior)" value={m.mdf_caixa_id}
+                              options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_caixa_id: v })} />
+                            <MatSelect label="MDF envelope (faces externas)" value={m.mdf_externo_id}
+                              options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_externo_id: v })} />
+                            {(m.tem_fundo ?? true) && (
+                              <MatSelect label="Chapa fundo (6mm)" value={m.fundo_id}
+                                options={fundoCatalog} onChange={(v) => updateMovel(m.id, { fundo_id: v })} />
+                            )}
+                            {m.portas > 0 && m.tipo_porta === "abrir" && (
+                              <MatSelect label={`Dobradiça (${m.portas * (m.altura_cm > 150 ? 3 : 2)} un.)`}
+                                value={m.dobradica_id} options={dobCatalog}
+                                onChange={(v) => updateMovel(m.id, { dobradica_id: v })} />
+                            )}
+                            {m.portas > 0 && m.tipo_porta === "correr" && (
+                              <MatSelect label={`Corrediça porta (${Math.ceil(m.portas / 2)} par)`}
+                                value={m.corrediça_porta_id} options={corrPortaCatalog}
+                                onChange={(v) => updateMovel(m.id, { corrediça_porta_id: v })} />
+                            )}
+                            {m.gavetas > 0 && (
+                              <MatSelect label={`Corrediça gaveta (${m.gavetas} par)`}
+                                value={m.corrediça_gaveta_id} options={corrGavCatalog}
+                                onChange={(v) => updateMovel(m.id, { corrediça_gaveta_id: v })} />
+                            )}
+                            {(m.portas > 0 || m.gavetas > 0) && (
+                              <MatSelect label={`Puxador (${m.portas + m.gavetas} un.)`}
+                                value={m.puxador_id} options={puxadorCatalog}
+                                onChange={(v) => updateMovel(m.id, { puxador_id: v })} />
+                            )}
                           </div>
-                        )}
-
-                        {/* Seleção de materiais */}
-                        <div className="border-t border-border pt-3 space-y-2">
-                          <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Materiais</div>
-
-                          {/* MDF caixa (interior) */}
-                          <MatSelect label="MDF caixa — interior (Branco TX)" value={m.mdf_caixa_id}
-                            options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_caixa_id: v })} />
-
-                          {/* MDF envelope (faces externas) */}
-                          <MatSelect label="MDF envelope — faces externas (cor do cliente)" value={m.mdf_externo_id}
-                            options={mdfCatalog} onChange={(v) => updateMovel(m.id, { mdf_externo_id: v })} />
-
-                          {/* Fundo 6mm */}
-                          {(m.tem_fundo ?? true) && (
-                            <MatSelect label="Chapa fundo (6mm)" value={m.fundo_id}
-                              options={fundoCatalog} onChange={(v) => updateMovel(m.id, { fundo_id: v })} />
-                          )}
-
-                          {/* Dobradiças */}
-                          {m.portas > 0 && m.tipo_porta === "abrir" && (
-                            <MatSelect label={`Dobradiça (${m.portas * (m.altura_cm > 150 ? 3 : 2)} unid. auto)`}
-                              value={m.dobradica_id} options={dobCatalog}
-                              onChange={(v) => updateMovel(m.id, { dobradica_id: v })} />
-                          )}
-
-                          {/* Corrediça de porta */}
-                          {m.portas > 0 && m.tipo_porta === "correr" && (
-                            <MatSelect label={`Corrediça de porta (${Math.ceil(m.portas / 2)} par(es) + trilho)`}
-                              value={m.corrediça_porta_id} options={corrPortaCatalog}
-                              onChange={(v) => updateMovel(m.id, { corrediça_porta_id: v })} />
-                          )}
-
-                          {/* Corrediça de gaveta */}
-                          {m.gavetas > 0 && (
-                            <MatSelect label={`Corrediça de gaveta (${m.gavetas} par(es))`}
-                              value={m.corrediça_gaveta_id} options={corrGavCatalog}
-                              onChange={(v) => updateMovel(m.id, { corrediça_gaveta_id: v })} />
-                          )}
-
-                          {/* Puxador */}
-                          {(m.portas > 0 || m.gavetas > 0) && (
-                            <MatSelect label={`Puxador (${m.portas + m.gavetas} unid.)`}
-                              value={m.puxador_id} options={puxadorCatalog}
-                              onChange={(v) => updateMovel(m.id, { puxador_id: v })} />
-                          )}
-                        </div>
+                        </details>
 
                         {/* Detalhes livres */}
                         <div>
-                          <div className="text-[11px] text-muted-foreground mb-1">Detalhes / Extras <span className="text-muted-foreground/60">(opcional)</span></div>
+                          <div className="text-[10.5px] text-muted-foreground mb-0.5">Detalhes / Extras <span className="opacity-60">(opcional)</span></div>
                           <textarea rows={2} value={m.detalhes ?? ""}
                             onChange={(e) => updateMovel(m.id, { detalhes: e.target.value || undefined })}
-                            placeholder="Ex: painel ripado na lateral, espelho interno 190×55cm, nicho com LED, prateleira de vidro..."
-                            className="w-full rounded border border-border bg-surface-2 px-2.5 py-1.5 text-[12px] outline-none resize-none focus:border-border-strong placeholder:text-muted-foreground/50" />
+                            placeholder="Ex: painel ripado, espelho interno, nicho com LED..."
+                            className="w-full rounded border border-border bg-surface-2 px-2 py-1.5 text-[12px] outline-none resize-none focus:border-border-strong placeholder:text-muted-foreground/50" />
                         </div>
 
                         <button type="button" onClick={() => setMoveis((prev) => prev.filter((x) => x.id !== m.id))}
-                          className="text-[11.5px] text-destructive hover:opacity-70 inline-flex items-center gap-1">
-                          <Trash2 className="size-3" /> Remover este móvel
+                          className="text-[11px] text-destructive hover:opacity-70 inline-flex items-center gap-1">
+                          <Trash2 className="size-3" /> Remover
                         </button>
                       </div>
                       );
