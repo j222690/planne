@@ -107,6 +107,16 @@ export async function getOrcamentos(empresaId: string) {
   return data ?? [];
 }
 
+export async function getOrcamentoMoveis(orcamentoId: string) {
+  const { data, error } = await supabase
+    .from("orcamentos")
+    .select("moveis_config")
+    .eq("id", orcamentoId)
+    .single();
+  if (error) throw error;
+  return (data as Record<string, unknown>)?.moveis_config ?? null;
+}
+
 export async function upsertOrcamento(empresaId: string, orc: Record<string, unknown>) {
   const { data: { session } } = await supabase.auth.getSession();
   const { data, error } = await supabase

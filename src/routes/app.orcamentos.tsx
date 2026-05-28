@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   getOrcamentos, getClientes, getMateriais, getEmpresaAtual,
-  upsertOrcamento, getOrcamentoItens, updateOrcamentoStatus,
+  upsertOrcamento, getOrcamentoItens, getOrcamentoMoveis, updateOrcamentoStatus,
   deleteOrcamento, updateOrcamento, replaceOrcamentoItens, upsertProjeto,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -1563,6 +1563,9 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   const [listaCorte, setListaCorte] = useState<ListaCorteResult | null>(null);
   const [listaCorteLoading, setListaCorteLoading] = useState(false);
   const [showCorte, setShowCorte] = useState(false);
+  const [moveisCfg, setMoveisCfg] = useState<MovelConfig[] | null>(
+    (orc as unknown as { moveis_config?: MovelConfig[] }).moveis_config ?? null
+  );
 
   useEffect(() => {
     getOrcamentoItens(orc.id)
@@ -1575,6 +1578,12 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
         setEmpresaId((e as { id: string }).id);
       }
     });
+    // Busca moveis_config diretamente se não veio na prop
+    if (!(orc as unknown as { moveis_config?: unknown }).moveis_config) {
+      getOrcamentoMoveis(orc.id)
+        .then((cfg) => { if (cfg) setMoveisCfg(cfg as MovelConfig[]); })
+        .catch(() => {});
+    }
   }, [orc.id]);
 
   // Agrupa itens por móvel
@@ -1641,8 +1650,6 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   };
 
   const handleGerarCorte = async () => {
-    const orcTyped = orc as unknown as { moveis_config?: MovelConfig[] };
-    const moveisCfg = orcTyped.moveis_config;
     if (!moveisCfg?.length) {
       toast.error("Este orçamento não tem configuração de móveis salva. Edite e salve novamente para gerar o plano de corte.");
       return;
