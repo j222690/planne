@@ -898,6 +898,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         avisos.push(`Altura ${m.altura_cm}cm excede o pé-direito do ambiente (${limAltura}cm)`);
                       if (limProfundidade && m.profundidade_cm > limProfundidade)
                         avisos.push(`Profundidade ${m.profundidade_cm}cm excede a profundidade do ambiente (${limProfundidade}cm)`);
+                      if (m.largura_cm > 269)
+                        avisos.push(`Largura ${m.largura_cm}cm excede o limite da chapa (269cm) — painéis serão divididos em módulos`);
+                      if (m.altura_cm > 269)
+                        avisos.push(`Altura ${m.altura_cm}cm excede o limite da chapa (269cm) — laterais serão divididas em módulos`);
 
                       return (
                       <div className="px-3 py-3 space-y-3 bg-surface">

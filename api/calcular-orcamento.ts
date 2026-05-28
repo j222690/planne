@@ -65,9 +65,14 @@ function moveisToParagraph(moveis: MovelConfig[], catalogo: CatItem[]): string {
       !puxador && (m.portas + m.gavetas) > 0 ? `  Puxadores: ${m.portas + m.gavetas} unidades — escolher do catálogo` : "",
     ].filter(Boolean).join("\n");
 
+    const pecasLongas: string[] = [];
+    if (m.largura_cm > 269) pecasLongas.push(`largura ${m.largura_cm}cm > 269cm → teto, base e prateleiras DIVIDIDOS EM SEGMENTOS`);
+    if (m.altura_cm > 269) pecasLongas.push(`altura ${m.altura_cm}cm > 269cm → laterais DIVIDIDAS EM SEGMENTOS`);
+
     return [
       `${i + 1}. ${m.nome}`,
       `   Dimensões: ${m.largura_cm}cm L × ${m.profundidade_cm}cm P × ${m.altura_cm}cm H`,
+      pecasLongas.length > 0 ? `   ⚠ PEÇAS LONGAS: ${pecasLongas.join("; ")}` : "",
       `   Portas: ${m.portas}${m.portas > 0 ? ` (${m.tipo_porta})` : ""}  Gavetas: ${m.gavetas}  Prateleiras: ${m.prateleiras}`,
       `   Fundo traseiro: ${(m.tem_fundo ?? true) ? "SIM" : "NÃO"}`,
       m.tem_rodape ? "   Rodapé (faixa 15cm): SIM — incluir painel MDF 15cm × largura do móvel" : "",
@@ -88,10 +93,18 @@ DIMENSÕES DOS MÓVEIS:
 - Use-as exatamente como especificadas para calcular todos os materiais — NÃO ajuste com base na planta baixa.
 - A planta baixa (quando fornecida) serve APENAS para contexto espacial: verificar se uma porta de abrir tem folga, identificar obstáculos, posição de janelas/tomadas. Nunca use a planta para redimensionar os móveis.
 
+LIMITE FÍSICO DA CHAPA — REGRA MAIS IMPORTANTE:
+- Chapa padrão MDF/MDP: 2750mm × 1830mm (275cm × 183cm). NENHUMA peça pode ter dimensão > 269cm.
+- Se largura_cm ou profundidade_cm do móvel for > 269cm, os painéis DEVEM ser divididos em módulos/segmentos:
+  Exemplo: topo de 300cm → 2 segmentos (ex.: 160cm + 140cm). Cada segmento consome parte de uma chapa separada.
+- Ao calcular chapas, trate CADA SEGMENTO como peça independente. NÃO some toda a área e divida por 5,04m² quando há peças longas — isso subestima o consumo porque ignora o desperdício de folha ao fatiar segmentos.
+- Método correto para peças longas: calcule a área de cada segmento individualmente + sobra perdida da chapa ao lado. Adicione ≥10% extra de perda por corte em móveis com peças > 269cm.
+- Na justificativa: sempre mencione "peça dividida em X segmentos pois excede 269cm (limite da chapa)".
+
 REGRAS DE CÁLCULO:
 - Espessura padrão da caixa (estrutura): MDF 15mm — use sempre como padrão salvo especificação contrária.
 - Fundo traseiro padrão: MDF 6mm Branco TX — sempre incluir quando "Fundo traseiro: SIM".
-- Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.04m² (chapa padrão 2750×1830mm). Arredonde para cima.
+- Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.04m² (chapa padrão 2750×1830mm). Arredonde para cima. Para peças longas (> 269cm), aplique o método de segmentos acima.
 - Dobradiças: 2 por porta altura ≤150cm, 3 por porta altura >150cm. USE OBRIGATORIAMENTE se tipo_porta = "abrir".
 - Corrediça de porta de correr: 1 par de corrediça + 1 trilho por par de folhas. USE OBRIGATORIAMENTE se tipo_porta = "correr".
 - Corrediça de gaveta: 1 par por gaveta. OBRIGATÓRIO se gavetas > 0.
