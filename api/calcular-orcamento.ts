@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { calcularOrcamento } from "./_calc";
+import type { MovelInput as CalcMovelInput } from "./_calc";
 
 function detectMime(b64: string): string {
   if (b64.startsWith("/9j")) return "image/jpeg";
@@ -158,7 +160,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
 
   if (!materiais?.length) return res.status(400).json({ error: "Nenhum material fornecido" });
-  if (!moveis?.length && !planta_b64 && !descricao) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
+  if (!moveis?.length && !planta_b64) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
 
   // Filtrar catálogo apenas aos materiais relevantes para os móveis configurados
   const temPortasAbrir = moveis?.some((m) => m.portas > 0 && m.tipo_porta === "abrir");
@@ -221,60 +223,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     "\nCalcule todos os materiais necessários para cada móvel listado acima. Inclua chapas, ferragens, fitas de borda e conectores. Retorne o campo 'movel' com o nome exato de cada móvel e 'justificativa' explicando o cálculo de quantidade.",
   ].filter(Boolean).join("\n");
 
-  try {
-    let responseText: string;
-
-    if (planta_b64) {
-      const openaiKey = process.env.OPENAI_API_KEY;
-      if (!openaiKey) return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
-
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: SYSTEM },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: userPrompt },
-                { type: "image_url", image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" } },
-              ],
-            },
-          ],
-          max_tokens: 4000,
-          temperature: 0.1,
-          response_format: { type: "json_object" },
-        }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const d = await r.json() as { choices: { message: { content: string } }[] };
-      responseText = d.choices[0].message.content;
-    } else {
-      const groqKey = process.env.GROQ_API_KEY;
-      if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY não configurada" });
-
-      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            { role: "system", content: SYSTEM },
-            { role: "user", content: userPrompt },
-          ],
-          max_tokens: 3000,
-          temperature: 0.1,
-          response_format: { type: "json_object" },
-        }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const d = await r.json() as { choices: { message: { content: string } }[] };
-      responseText = d.choices[0].message.content;
+  // Caminho determinístico: móveis configurados sem planta baixa
+  if (moveis?.length && !planta_b64) {
+    try {
+      const moveisMapped = moveis.map((m) => ({
+        ...m,
+        mdf_caixa_id: m.mdf_id,
+      })) as unknown as CalcMovelInput[];
+      const itens = calcularOrcamento(moveisMapped, catalogoFiltrado, margem_pct);
+      return res.json({ itens, resumo: `Orçamento calculado para ${moveis.length} móvel(is).`, total_estimado: 0 });
+    } catch (e) {
+      return res.status(500).json({ error: e instanceof Error ? e.message : "Erro ao calcular" });
     }
+  }
 
-    const parsed = JSON.parse(responseText);
+  // Caminho com IA: planta baixa (visão GPT-4o)
+  try {
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
+
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: SYSTEM },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userPrompt },
+              { type: "image_url", image_url: { url: `data:${detectMime(planta_b64!)};base64,${planta_b64}`, detail: "high" } },
+            ],
+          },
+        ],
+        max_tokens: 4000,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json() as { choices: { message: { content: string } }[] };
+    const parsed = JSON.parse(d.choices[0].message.content);
 
     const itens = (parsed.itens ?? []).map((it: {
       movel?: string; justificativa?: string; material_id: string; descricao: string;

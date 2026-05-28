@@ -1534,10 +1534,12 @@ type PecaCorte = {
   fita_l: boolean; fita_r: boolean; fita_t: boolean; fita_b: boolean;
   observacao?: string;
 };
+type PlacedPiece = { x: number; y: number; w: number; h: number; label: string };
 type ChapaMaterial = {
   material: string;
   chapas_otimizadas: number;
   chapas_com_folga: number;
+  layouts?: { sheet_index: number; placed: PlacedPiece[] }[];
 };
 type ListaCorteResult = {
   pecas: PecaCorte[];
@@ -1548,6 +1550,78 @@ type ListaCorteResult = {
     chapas_por_material?: ChapaMaterial[];
   };
 };
+
+const SHEET_COLORS = ["#93c5fd","#86efac","#fca5a5","#fcd34d","#c4b5fd","#f9a8d4","#6ee7b7","#a5b4fc","#fdba74","#67e8f9"];
+
+function SheetVisualization({ chapas }: { chapas: ChapaMaterial[] }) {
+  // Collect unique furniture names across all materials for consistent coloring
+  const allMoveis: string[] = [];
+  for (const c of chapas) {
+    for (const layout of c.layouts ?? []) {
+      for (const p of layout.placed) {
+        const m = p.label.match(/\(([^)]+)\)$/)?.[1] ?? p.label;
+        if (!allMoveis.includes(m)) allMoveis.push(m);
+      }
+    }
+  }
+  const colorMap = new Map(allMoveis.map((n, i) => [n, SHEET_COLORS[i % SHEET_COLORS.length]]));
+
+  const W = 2750, H = 1830;
+
+  return (
+    <div className="mt-3 space-y-4">
+      {/* Legenda */}
+      {allMoveis.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {allMoveis.map((n) => (
+            <div key={n} className="flex items-center gap-1 text-[10px] text-foreground">
+              <div className="size-2.5 rounded-sm shrink-0" style={{ backgroundColor: colorMap.get(n) }} />
+              {n}
+            </div>
+          ))}
+        </div>
+      )}
+      {chapas.filter(c => c.layouts?.length).map((c) => (
+        <div key={c.material}>
+          <div className="text-[10.5px] text-muted-foreground mb-1.5 font-medium">{c.material}</div>
+          <div className="flex flex-wrap gap-3">
+            {(c.layouts ?? []).map(({ sheet_index, placed }) => (
+              <div key={sheet_index} className="border border-border rounded overflow-hidden shrink-0">
+                <div className="text-[9px] text-muted-foreground px-1.5 py-0.5 bg-secondary/40 border-b border-border">
+                  Chapa {sheet_index + 1} — 2750×1830mm
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} width={220} height={Math.round(220 * H / W)} className="block">
+                  <rect x={0} y={0} width={W} height={H} fill="#f8f9fa" />
+                  {placed.map((p, pi) => {
+                    const movelNome = p.label.match(/\(([^)]+)\)$/)?.[1] ?? "";
+                    const pecaNome = p.label.replace(/\s*\([^)]*\)$/, "").trim();
+                    const fillColor = colorMap.get(movelNome) ?? "#e5e7eb";
+                    const minDim = Math.min(p.w, p.h);
+                    const fs = Math.max(60, Math.min(130, minDim * 0.12));
+                    return (
+                      <g key={pi}>
+                        <rect x={p.x + 4} y={p.y + 4} width={p.w - 8} height={p.h - 8}
+                          fill={fillColor} fillOpacity={0.85} stroke="#ffffff" strokeWidth={8} rx={6} />
+                        {p.w > 200 && p.h > 150 && (
+                          <text x={p.x + p.w / 2} y={p.y + p.h / 2}
+                            textAnchor="middle" dominantBaseline="middle"
+                            fontSize={fs} fill="#1e293b" fontWeight="600" fontFamily="system-ui">
+                            {pecaNome.length > 10 ? pecaNome.slice(0, 10) + "…" : pecaNome}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                  <rect x={0} y={0} width={W} height={H} fill="none" stroke="#94a3b8" strokeWidth={16} />
+                </svg>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   orc: Orc; onClose: () => void; onChanged: () => void; onEdit: () => void;
@@ -1757,13 +1831,32 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
             )}
           </div>
 
+          {/* Móveis planejados */}
+          {moveisCfg?.length ? (
+            <div>
+              <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Móveis planejados</div>
+              <div className="space-y-1">
+                {moveisCfg.map((m) => (
+                  <div key={m.id} className="flex items-baseline justify-between text-[12.5px] py-0.5 border-b border-border/50 last:border-0">
+                    <span className="font-medium">{m.nome}</span>
+                    <span className="text-muted-foreground num text-[11px]">
+                      {m.largura_cm} × {m.profundidade_cm} × {m.altura_cm} cm
+                      {m.portas > 0 && <span className="ml-2">{m.portas}p {m.tipo_porta}</span>}
+                      {m.gavetas > 0 && <span className="ml-1">{m.gavetas}g</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {/* Plano de corte */}
           {showCorte && (
             <div>
               <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Plano de corte</div>
               {listaCorteLoading ? (
                 <div className="flex items-center gap-2 py-4 text-[12.5px] text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" /> Calculando peças com IA...
+                  <Loader2 className="size-4 animate-spin" /> Calculando plano de corte...
                 </div>
               ) : listaCorte ? (
                 <div>
@@ -1785,6 +1878,10 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                         </div>
                       ))}
                     </div>
+                  )}
+                  {/* Visualização 2D das chapas */}
+                  {listaCorte.resumo.chapas_por_material?.some(c => c.layouts?.length) && (
+                    <SheetVisualization chapas={listaCorte.resumo.chapas_por_material} />
                   )}
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11.5px] min-w-[600px]">
