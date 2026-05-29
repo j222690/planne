@@ -17,20 +17,27 @@ interface MovelConfig {
   profundidade_cm: number;
   altura_cm: number;
   portas: number;
-  tipo_porta: "abrir" | "correr" | "sem";
+  tipo_porta: "abrir" | "correr" | "sem" | "abrir_vidro" | "abrir_espelho" | "correr_vidro" | "correr_espelho";
   gavetas: number;
   prateleiras: number;
   tem_fundo?: boolean;
   tem_rodape?: boolean;
   tem_pes?: boolean;
+  pe_madeira?: boolean;
+  pe_altura_cm?: number;
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
-  mdf_id?: string;
+  formato?: "retangular" | "L";
+  arm2_largura_cm?: number;
+  arm2_profundidade_cm?: number;
+  mdf_caixa_id?: string;
+  mdf_externo_id?: string;
   fundo_id?: string;
   dobradica_id?: string;
   corrediça_porta_id?: string;
   corrediça_gaveta_id?: string;
   puxador_id?: string;
+  comodo_nome?: string;
 }
 
 type CatItem = { id: string; nome: string; preco_custo: number; preco_venda: number; unidade: string; categoria: string | null };
@@ -39,7 +46,7 @@ function moveisToParagraph(moveis: MovelConfig[], catalogo: CatItem[]): string {
   const findMat = (id?: string) => id ? catalogo.find((m) => m.id === id) : null;
 
   return moveis.map((m, i) => {
-    const mdf = findMat(m.mdf_id);
+    const mdf = findMat(m.mdf_caixa_id);
     const fundo = findMat(m.fundo_id);
     const dobradica = findMat(m.dobradica_id);
     const corrPt = findMat(m.corrediça_porta_id);
@@ -143,9 +150,10 @@ RESPONDA APENAS com JSON válido (sem markdown):
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  try {
   const {
     ambiente, moveis, medidas, descricao, materiais, planta_b64, margem_pct = 35, restricoes_espaciais,
-  } = req.body as {
+  } = (req.body ?? {}) as {
     ambiente: string;
     moveis?: MovelConfig[];
     medidas?: { largura: number; profundidade: number; altura: number };
@@ -163,11 +171,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!moveis?.length && !planta_b64) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
 
   // Filtrar catálogo apenas aos materiais relevantes para os móveis configurados
-  const temPortasAbrir = moveis?.some((m) => m.portas > 0 && m.tipo_porta === "abrir");
-  const temPortasCorrer = moveis?.some((m) => m.portas > 0 && m.tipo_porta === "correr");
+  const temPortasAbrir = moveis?.some((m) => m.portas > 0 && (m.tipo_porta === "abrir" || m.tipo_porta === "abrir_vidro" || m.tipo_porta === "abrir_espelho"));
+  const temPortasCorrer = moveis?.some((m) => m.portas > 0 && (m.tipo_porta === "correr" || m.tipo_porta === "correr_vidro" || m.tipo_porta === "correr_espelho"));
   const temGavetas = moveis?.some((m) => m.gavetas > 0);
   const temPuxadores = moveis?.some((m) => m.portas > 0 || m.gavetas > 0);
   const temFundo = moveis?.some((m) => m.tem_fundo ?? true);
+
+  // Pré-computar IDs selecionados pelo usuário (fora do filter para performance)
+  const idsUsados = new Set([
+    ...(moveis?.flatMap((mv) => [
+      mv.mdf_caixa_id, mv.mdf_externo_id, mv.fundo_id,
+      mv.dobradica_id, mv.corrediça_porta_id, mv.corrediça_gaveta_id, mv.puxador_id,
+    ]).filter(Boolean) ?? []),
+  ]);
 
   const catalogoFiltrado = materiais.filter((m) => {
     if (!m.nome) return false;
@@ -181,18 +197,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (/corredi/i.test(n) && /gaveta|telesc/i.test(n) && temGavetas) return true;
     if (/^puxador/i.test(m.nome) && temPuxadores) return true;
     if (/^p[eé]s?\s|regulav/i.test(n)) return true;
-    // IDs selecionados diretamente pelo usuário — sempre incluir
-    const idsUsados = new Set([
-      ...(moveis?.map((mv) => mv.mdf_id).filter(Boolean) ?? []),
-      ...(moveis?.map((mv) => mv.fundo_id).filter(Boolean) ?? []),
-      ...(moveis?.map((mv) => mv.dobradica_id).filter(Boolean) ?? []),
-      ...(moveis?.map((mv) => mv.corrediça_porta_id).filter(Boolean) ?? []),
-      ...(moveis?.map((mv) => mv.corrediça_gaveta_id).filter(Boolean) ?? []),
-      ...(moveis?.map((mv) => mv.puxador_id).filter(Boolean) ?? []),
-    ]);
     if (idsUsados.has(m.id)) return true;
     return false;
   });
+
+  // Caminho determinístico: móveis configurados sem planta baixa
+  if (moveis?.length && !planta_b64) {
+    const itens = calcularOrcamento(moveis as unknown as CalcMovelInput[], catalogoFiltrado, margem_pct);
+    return res.json({ itens, resumo: `Orçamento calculado para ${moveis.length} móvel(is).`, total_estimado: 0 });
+  }
+
+  // Caminho com IA: planta baixa (visão GPT-4o)
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
 
   const catalogoTexto = catalogoFiltrado.map((m) =>
     `- ID: ${m.id} | ${m.nome} | ${m.unidade} | custo:R$${m.preco_custo} | venda:R$${m.preco_venda}`
@@ -208,7 +225,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...restricoes_espaciais.paredes.map((p) =>
           `  Parede ${p.id} — ${p.descricao}: ${p.espaco_util_cm}cm úteis de ${p.largura_cm}cm total${p.obstaculos ? ` (${p.obstaculos})` : ""}`
         ),
-        `ATENÇÃO: As dimensões dos móveis abaixo são ABSOLUTAS. Use-as exatamente. As restrições acima são apenas para contexto — se algum móvel exceder o espaço, mencione no "resumo" mas calcule os materiais com as dimensões fornecidas.`,
+        `ATENÇÃO: As dimensões dos móveis abaixo são ABSOLUTAS. Use-as exatamente. As restrições acima são apenas para contexto.`,
       ].join("\n")
     : "";
 
@@ -221,71 +238,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     descricao ? `\nOBSERVAÇÕES: ${descricao}` : "",
     `\nMARGEM: ${margem_pct}%`,
     `\nMATERIAIS DISPONÍVEIS NO ESTOQUE:\n${catalogoTexto}`,
-    "\nCalcule todos os materiais necessários para cada móvel listado acima. Inclua chapas, ferragens, fitas de borda e conectores. Retorne o campo 'movel' com o nome exato de cada móvel e 'justificativa' explicando o cálculo de quantidade.",
+    "\nCalcule todos os materiais necessários. Retorne 'movel' e 'justificativa' para cada item.",
   ].filter(Boolean).join("\n");
 
-  // Caminho determinístico: móveis configurados sem planta baixa
-  if (moveis?.length && !planta_b64) {
-    try {
-      const moveisMapped = moveis.map((m) => ({
-        ...m,
-        mdf_caixa_id: m.mdf_id,
-      })) as unknown as CalcMovelInput[];
-      const itens = calcularOrcamento(moveisMapped, catalogoFiltrado, margem_pct);
-      return res.json({ itens, resumo: `Orçamento calculado para ${moveis.length} móvel(is).`, total_estimado: 0 });
-    } catch (e) {
-      return res.status(500).json({ error: e instanceof Error ? e.message : "Erro ao calcular" });
-    }
-  }
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: SYSTEM },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userPrompt },
+            { type: "image_url", image_url: { url: `data:${detectMime(planta_b64!)};base64,${planta_b64}`, detail: "high" } },
+          ],
+        },
+      ],
+      max_tokens: 4000,
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!r.ok) throw new Error(`OpenAI: ${(await r.text()).slice(0, 300)}`);
+  const d = await r.json() as { choices: { message: { content: string } }[] };
+  const parsed = JSON.parse(d.choices[0].message.content);
 
-  // Caminho com IA: planta baixa (visão GPT-4o)
-  try {
-    const openaiKey = process.env.OPENAI_API_KEY;
-    if (!openaiKey) return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
+  const itens = (parsed.itens ?? []).map((it: {
+    movel?: string; justificativa?: string; material_id: string; descricao: string;
+    quantidade: number; unidade: string; preco_custo: number; preco_unitario: number;
+  }) => {
+    const custo = Number(it.preco_custo) || 0;
+    const unitario = Number(it.preco_unitario) > 0
+      ? it.preco_unitario
+      : parseFloat((custo / (1 - margem_pct / 100)).toFixed(2));
+    return { ...it, movel: it.movel ?? "Geral", justificativa: it.justificativa ?? "", preco_custo: custo, preco_unitario: unitario };
+  });
 
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: SYSTEM },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt },
-              { type: "image_url", image_url: { url: `data:${detectMime(planta_b64!)};base64,${planta_b64}`, detail: "high" } },
-            ],
-          },
-        ],
-        max_tokens: 4000,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (!r.ok) throw new Error(await r.text());
-    const d = await r.json() as { choices: { message: { content: string } }[] };
-    const parsed = JSON.parse(d.choices[0].message.content);
+  return res.json({ itens, resumo: parsed.resumo ?? "", total_estimado: parsed.total_estimado ?? 0 });
 
-    const itens = (parsed.itens ?? []).map((it: {
-      movel?: string; justificativa?: string; material_id: string; descricao: string;
-      quantidade: number; unidade: string; preco_custo: number; preco_unitario: number;
-    }) => {
-      const custo = Number(it.preco_custo) || 0;
-      const unitario = Number(it.preco_unitario) > 0
-        ? it.preco_unitario
-        : parseFloat((custo / (1 - margem_pct / 100)).toFixed(2));
-      return {
-        ...it,
-        movel: it.movel ?? "Geral",
-        justificativa: it.justificativa ?? "",
-        preco_custo: custo,
-        preco_unitario: unitario,
-      };
-    });
-
-    return res.json({ itens, resumo: parsed.resumo ?? "", total_estimado: parsed.total_estimado ?? 0 });
   } catch (e) {
-    return res.status(500).json({ error: e instanceof Error ? e.message : "Erro ao calcular" });
+    return res.status(500).json({ error: e instanceof Error ? e.message : "Erro interno no servidor" });
   }
 }

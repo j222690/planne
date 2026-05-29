@@ -87,22 +87,22 @@ const AMBIENTE_MAP: Record<string, string> = {
 function buildRenderPrompt(input: RenderInput): string {
   const roomEn = AMBIENTE_MAP[input.ambiente] ?? input.ambiente;
   const styleEn = ESTILO_MAP[input.estilo] ?? input.estilo;
-  const moveisList = input.moveis.slice(0, 8).map(generateVisualContext).filter(Boolean).join(", ");
-  const dominantColor = hexToVisual(input.moveis[0]?.cor_hex) || "neutral warm";
+  const moveisList = input.moveis.slice(0, 10).map(generateVisualContext).filter(Boolean).join(", ");
+  const dominantColor = hexToVisual(input.moveis[0]?.cor_hex) || "neutral warm wood tone";
 
   return [
-    "professional architectural visualization photograph",
+    "professional interior architecture visualization, photorealistic render, finished completed room",
     `${styleEn} ${roomEn}`,
-    moveisList ? `featuring ${moveisList}` : "",
-    `dominant color palette: ${dominantColor}`,
-    "Brazilian luxury planned furniture (marcenaria planejada)",
-    "photorealistic render 8K ultra-detailed",
-    "cinematic lighting, warm natural sunlight through large windows",
-    "premium MDF cabinet finishing, perfect edges",
-    "clean sophisticated composition, architectural magazine quality",
-    "24mm wide angle lens, shallow depth of field, golden hour",
-    "no people, no text",
-    input.descricao ? input.descricao.slice(0, 180) : "",
+    "fully furnished and decorated, ready to live in",
+    moveisList ? `custom planned furniture: ${moveisList}` : "",
+    `color palette: ${dominantColor}, harmonious complementary tones`,
+    "Brazilian luxury marcenaria planejada, premium MDF finishing, perfect edges and details",
+    "styled with decorative objects, plants, artwork, throw pillows and rugs",
+    "8K photorealistic, cinematic lighting, warm natural light from windows",
+    "wide angle interior shot showing full room composition",
+    "architectural magazine quality, 24mm lens, clean sophisticated atmosphere",
+    "no people, no text, no watermarks",
+    input.descricao ? input.descricao.slice(0, 200) : "",
   ].filter(Boolean).join(", ");
 }
 

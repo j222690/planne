@@ -71,6 +71,7 @@ type MovelConfig = {
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
   parede_id?: string;
+  comodo_nome?: string;
   // Formato
   formato?: "retangular" | "L";
   arm2_largura_cm?: number;
@@ -394,6 +395,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [plantaB64, setPlantaB64] = useState<string | null>(null);
   const [plantaNome, setPlantaNome] = useState<string | null>(null);
   const [medidas, setMedidas] = useState({ largura: 0, profundidade: 0, altura: 2.7 });
+  const [comodosMedidas, setComodosMedidas] = useState<Record<string, { largura: number; profundidade: number; altura: number }>>({});
   const [descricao, setDescricao] = useState("");
 
   // Planta analisada
@@ -464,14 +466,15 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const TIPOS_SEM_FUNDO = new Set(["cabeceira", "ripado", "bancada", "painel-tv", "bancada-gourmet", "bancada-lav", "bancada-gar", "bancada-gen"]);
 
   // Móveis helpers
-  const toggleMovel = (template: Omit<MovelConfig, "id">) => {
+  const toggleMovel = (template: Omit<MovelConfig, "id">, comodo_nome?: string) => {
     setMoveis((prev) => {
-      const exists = prev.find((m) => m.tipo === template.tipo);
-      if (exists) return prev.filter((m) => m.tipo !== template.tipo);
+      const exists = prev.find((m) => m.tipo === template.tipo && m.comodo_nome === comodo_nome);
+      if (exists) return prev.filter((m) => !(m.tipo === template.tipo && m.comodo_nome === comodo_nome));
       const novo: MovelConfig = {
         ...template,
         id: Math.random().toString(36).slice(2),
         tem_fundo: !TIPOS_SEM_FUNDO.has(template.tipo),
+        comodo_nome,
       };
       setExpandedMovel(novo.id);
       return [...prev, novo];
@@ -553,6 +556,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const handleGerarIA = async () => {
     if (!clienteId) { toast.error("Selecione um cliente."); return; }
     if (moveis.length === 0) { toast.error("Selecione ao menos um móvel."); return; }
+    const semMedidas = moveis.filter((m) => !m.largura_cm || !m.profundidade_cm || !m.altura_cm);
+    if (semMedidas.length > 0) {
+      toast.error(`${semMedidas.length} móvel(is) sem medidas completas: ${semMedidas.map((m) => m.nome).join(", ")}`);
+      return;
+    }
 
     setAiLoading(true);
     try {
@@ -612,7 +620,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         await updateOrcamento(editOrc.id, {
           cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
           observacoes: data.observacoes, subtotal, total: subtotal,
-          ...(moveis.length ? { moveis_config: moveis } : {}),
+          ...(moveis.length ? { moveis_config: Object.keys(comodosMedidas).length ? { moveis, comodos: comodosMedidas } : moveis } : {}),
         });
         await replaceOrcamentoItens(editOrc.id, itensPayload(editOrc.id));
         toast.success("Orçamento atualizado!");
@@ -620,7 +628,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         const orc = await upsertOrcamento(empresaId, {
           cliente_id: data.cliente_id, status: data.status, margem_pct: data.margem_pct,
           observacoes: data.observacoes, subtotal, total: subtotal,
-          ...(moveis.length ? { moveis_config: moveis } : {}),
+          ...(moveis.length ? { moveis_config: Object.keys(comodosMedidas).length ? { moveis, comodos: comodosMedidas } : moveis } : {}),
         });
         const { error: insErr } = await supabase.from("orcamento_itens").insert(itensPayload(orc.id));
         if (insErr) throw new Error(insErr.message);
@@ -739,17 +747,21 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
             {/* Medidas manuais — só mostra se não tiver planta */}
             {!plantaB64 && (
               <div>
-                <Label>Medidas do ambiente (opcional)</Label>
+                <Label>Medidas do ambiente *</Label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(["largura", "profundidade", "altura"] as const).map((dim) => (
-                    <div key={dim} className="relative">
-                      <input type="number" step="0.01" min="0"
-                        placeholder={dim === "largura" ? "Larg m" : dim === "profundidade" ? "Prof m" : "Alt m"}
-                        value={medidas[dim] || ""}
-                        onChange={(e) => setMedidas((prev) => ({ ...prev, [dim]: Number(e.target.value) }))}
-                        className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
-                    </div>
-                  ))}
+                  {(["largura", "profundidade", "altura"] as const).map((dim) => {
+                    const obrigatorio = dim !== "altura";
+                    const faltando = obrigatorio && !medidas[dim];
+                    return (
+                      <div key={dim} className="relative">
+                        <input type="number" step="0.01" min="0.1"
+                          placeholder={dim === "largura" ? "Larg m *" : dim === "profundidade" ? "Prof m *" : "Alt m"}
+                          value={medidas[dim] || ""}
+                          onChange={(e) => setMedidas((prev) => ({ ...prev, [dim]: Number(e.target.value) }))}
+                          className={`w-full h-9 rounded-md border bg-surface-2 px-2.5 text-[13px] outline-none ${faltando ? "border-destructive/60 placeholder:text-destructive/60" : "border-border"}`} />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -777,6 +789,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               </div>
               <button type="button" onClick={() => {
                 if (!clienteId) { toast.error("Selecione um cliente."); return; }
+                if (!plantaB64 && (!medidas.largura || !medidas.profundidade)) {
+                  toast.error("Informe a largura e profundidade do ambiente, ou faça upload da planta baixa.");
+                  return;
+                }
                 setFase("moveis");
               }}
                 className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5">
@@ -812,15 +828,16 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               </div>
 
               {/* Seções por ambiente */}
-              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
+              <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
                 {AMBIENTES.map((amb) => {
                   const templates = MOVEIS_POR_AMBIENTE[amb];
                   const filtered = searchMoveis.trim()
                     ? templates.filter((t) => t.nome.toLowerCase().includes(searchMoveis.toLowerCase()))
                     : templates;
                   if (filtered.length === 0) return null;
-                  const selCount = templates.filter((t) => moveis.some((m) => m.tipo === t.tipo)).length;
+                  const selCount = templates.filter((t) => moveis.some((m) => m.tipo === t.tipo && m.comodo_nome === amb)).length;
                   const isOpen = openAmbientes.has(amb) || selCount > 0 || searchMoveis.trim().length > 0;
+                  const dimAmb = comodosMedidas[amb] ?? { largura: 0, profundidade: 0, altura: 0 };
                   return (
                     <div key={amb} className="rounded-lg border border-border overflow-hidden">
                       <button type="button" onClick={() => toggleAmbiente(amb)}
@@ -834,16 +851,30 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         </div>
                       </button>
                       {isOpen && (
-                        <div className="px-2.5 py-2 flex flex-wrap gap-1.5">
-                          {filtered.map((template) => {
-                            const sel = moveis.find((m) => m.tipo === template.tipo);
-                            return (
-                              <button key={template.tipo} type="button" onClick={() => toggleMovel(template)}
-                                className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${sel ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-                                {template.nome}
-                              </button>
-                            );
-                          })}
+                        <div className="px-2.5 py-2 space-y-2">
+                          {/* Medidas do cômodo */}
+                          <div className="flex gap-1.5 items-center">
+                            <span className="text-[10.5px] text-muted-foreground shrink-0">Medidas (m):</span>
+                            {(["largura", "profundidade", "altura"] as const).map((dim) => (
+                              <div key={dim} className="flex-1 min-w-0">
+                                <input type="number" step="0.1" min="0" placeholder={dim === "largura" ? "L" : dim === "profundidade" ? "P" : "Alt"}
+                                  value={dimAmb[dim] || ""}
+                                  onChange={(e) => setComodosMedidas((prev) => ({ ...prev, [amb]: { ...dimAmb, [dim]: Number(e.target.value) } }))}
+                                  className="w-full h-6 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none focus:border-border-strong" />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {filtered.map((template) => {
+                              const sel = moveis.find((m) => m.tipo === template.tipo && m.comodo_nome === amb);
+                              return (
+                                <button key={template.tipo} type="button" onClick={() => toggleMovel(template, amb)}
+                                  className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${sel ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                                  {template.nome}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -867,7 +898,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       onClick={() => setExpandedMovel(expandedMovel === m.id ? null : m.id)}
                       className="w-full flex items-center justify-between px-3 py-2.5 bg-surface-2 hover:bg-secondary text-[13px] font-medium text-left"
                     >
-                      <span>{m.nome}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span>{m.nome}</span>
+                        {m.comodo_nome && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-normal shrink-0">{m.comodo_nome}</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 text-[11.5px] text-muted-foreground font-normal">
                         <span>{m.largura_cm}×{m.profundidade_cm}×{m.altura_cm}cm</span>
                         {m.portas > 0 && <span>{m.portas} porta{m.portas > 1 ? "s" : ""} ({m.tipo_porta})</span>}
@@ -878,11 +914,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
                     {expandedMovel === m.id && (() => {
                       const paredeAtual = plantaInfo?.paredes.find((p) => p.id === m.parede_id);
-                      const limLargura = paredeAtual ? paredeAtual.espaco_util_cm
-                        : plantaInfo ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm))
-                        : medidas.largura > 0 ? Math.round(medidas.largura * 100) : null;
-                      const limAltura = plantaInfo ? plantaInfo.altura_cm : medidas.altura > 0 ? Math.round(medidas.altura * 100) : null;
-                      const limProfundidade = plantaInfo ? plantaInfo.profundidade_cm : medidas.profundidade > 0 ? Math.round(medidas.profundidade * 100) : null;
+                      const dimSrc = (m.comodo_nome && comodosMedidas[m.comodo_nome]) ? comodosMedidas[m.comodo_nome] : medidas;
+                      const limLargura = paredeAtual ? paredeAtual.espaco_util_cm - 15
+                        : plantaInfo ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm)) - 15
+                        : dimSrc.largura > 0 ? Math.round(dimSrc.largura * 100) - 15 : null;
+                      const limAltura = plantaInfo ? plantaInfo.altura_cm : dimSrc.altura > 0 ? Math.round(dimSrc.altura * 100) : null;
+                      const limProfundidade = plantaInfo ? plantaInfo.profundidade_cm : dimSrc.profundidade > 0 ? Math.round(dimSrc.profundidade * 100) : null;
 
                       const avisos: string[] = [];
                       if (limLargura && m.largura_cm > limLargura) avisos.push(`Largura excede o espaço disponível (${limLargura}cm)`);
@@ -909,7 +946,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                               <select value={m.parede_id ?? ""} onChange={(e) => {
                                 const pid = e.target.value;
                                 const parede = plantaInfo.paredes.find((p) => p.id === pid);
-                                updateMovel(m.id, { parede_id: pid || undefined, ...(parede ? { largura_cm: parede.espaco_util_cm } : {}) });
+                                updateMovel(m.id, { parede_id: pid || undefined, ...(parede ? { largura_cm: Math.max(10, parede.espaco_util_cm - 15) } : {}) });
                               }} className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground">
                                 <option value="">— Parede —</option>
                                 {plantaInfo.paredes.map((p) => (
@@ -938,15 +975,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             {(["largura_cm", "profundidade_cm", "altura_cm"] as const).map((dim) => {
                               const lim = dim === "largura_cm" ? limLargura : dim === "altura_cm" ? limAltura : limProfundidade;
                               const excede = lim !== null && m[dim] > lim;
+                              const vazio = !m[dim] || m[dim] === 0;
                               return (
                                 <div key={dim}>
-                                  <div className="text-[9.5px] text-muted-foreground mb-0.5 truncate">
+                                  <div className={`text-[9.5px] mb-0.5 truncate ${vazio ? "text-destructive" : "text-muted-foreground"}`}>
                                     {dim === "largura_cm" ? "Largura" : dim === "profundidade_cm" ? "Profund." : "Altura"}
                                     {lim ? <span className="opacity-60"> ≤{lim}</span> : ""}
+                                    {vazio && " *"}
                                   </div>
-                                  <input type="number" min={0} value={m[dim]}
+                                  <input type="number" min={1} value={m[dim] || ""}
                                     onChange={(e) => updateMovel(m.id, { [dim]: Number(e.target.value) })}
-                                    className={`w-full h-8 rounded border px-2 text-[12.5px] outline-none bg-surface-2 ${excede ? "border-destructive" : "border-border"}`} />
+                                    placeholder="0"
+                                    className={`w-full h-8 rounded border px-2 text-[12.5px] outline-none bg-surface-2 ${excede || vazio ? "border-destructive" : "border-border"}`} />
                                 </div>
                               );
                             })}
@@ -1647,8 +1687,14 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   const [listaCorte, setListaCorte] = useState<ListaCorteResult | null>(null);
   const [listaCorteLoading, setListaCorteLoading] = useState(false);
   const [showCorte, setShowCorte] = useState(false);
+  const parseMoveisCfg = (raw: unknown): MovelConfig[] | null => {
+    if (!raw) return null;
+    if (Array.isArray(raw)) return raw as MovelConfig[];
+    const obj = raw as { moveis?: MovelConfig[] };
+    return obj.moveis ?? null;
+  };
   const [moveisCfg, setMoveisCfg] = useState<MovelConfig[] | null>(
-    (orc as unknown as { moveis_config?: MovelConfig[] }).moveis_config ?? null
+    parseMoveisCfg((orc as unknown as { moveis_config?: unknown }).moveis_config)
   );
 
   useEffect(() => {
@@ -1665,7 +1711,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     // Busca moveis_config diretamente se não veio na prop
     if (!(orc as unknown as { moveis_config?: unknown }).moveis_config) {
       getOrcamentoMoveis(orc.id)
-        .then((cfg) => { if (cfg) setMoveisCfg(cfg as MovelConfig[]); })
+        .then((cfg) => { if (cfg) setMoveisCfg(parseMoveisCfg(cfg)); })
         .catch(() => {});
     }
   }, [orc.id]);
@@ -1845,18 +1891,31 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
           {moveisCfg?.length ? (
             <div>
               <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Móveis planejados</div>
-              <div className="space-y-1">
-                {moveisCfg.map((m) => (
-                  <div key={m.id} className="flex items-baseline justify-between text-[12.5px] py-0.5 border-b border-border/50 last:border-0">
-                    <span className="font-medium">{m.nome}</span>
-                    <span className="text-muted-foreground num text-[11px]">
-                      {m.largura_cm} × {m.profundidade_cm} × {m.altura_cm} cm
-                      {m.portas > 0 && <span className="ml-2">{m.portas}p {m.tipo_porta}</span>}
-                      {m.gavetas > 0 && <span className="ml-1">{m.gavetas}g</span>}
-                    </span>
+              {(() => {
+                const byRoom: Record<string, MovelConfig[]> = {};
+                for (const m of moveisCfg) {
+                  const key = m.comodo_nome ?? "";
+                  if (!byRoom[key]) byRoom[key] = [];
+                  byRoom[key].push(m);
+                }
+                return Object.entries(byRoom).map(([room, items]) => (
+                  <div key={room} className="mb-2 last:mb-0">
+                    {room && <div className="text-[10.5px] text-accent font-medium mb-0.5">{room}</div>}
+                    <div className="space-y-0.5">
+                      {items.map((m) => (
+                        <div key={m.id} className="flex items-baseline justify-between text-[12.5px] py-0.5 border-b border-border/50 last:border-0">
+                          <span className="font-medium">{m.nome}</span>
+                          <span className="text-muted-foreground num text-[11px]">
+                            {m.largura_cm} × {m.profundidade_cm} × {m.altura_cm} cm
+                            {m.portas > 0 && <span className="ml-2">{m.portas}p {m.tipo_porta}</span>}
+                            {m.gavetas > 0 && <span className="ml-1">{m.gavetas}g</span>}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                ));
+              })()}
             </div>
           ) : null}
 

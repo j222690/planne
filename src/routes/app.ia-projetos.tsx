@@ -65,6 +65,21 @@ interface ListaCorteResult {
   resumo: { total_pecas: number; chapas_estimadas: number; metros_fita: number };
 }
 
+const MDF_CORES = [
+  { nome: "Branco TX", hex: "#f5f3f0" },
+  { nome: "Off White", hex: "#f0ebe0" },
+  { nome: "Cinza Claro", hex: "#d4d0cc" },
+  { nome: "Cinza Grafite", hex: "#5a5a5a" },
+  { nome: "Preto Fosco", hex: "#2c2c2c" },
+  { nome: "Carvalho Natural", hex: "#c8a87a" },
+  { nome: "Freijó", hex: "#b8824a" },
+  { nome: "Nogueira", hex: "#8b6340" },
+  { nome: "Imbuia", hex: "#7a5530" },
+  { nome: "Verde Musgo", hex: "#5a6a4a" },
+  { nome: "Azul Petróleo", hex: "#2a4a5a" },
+  { nome: "Terracota", hex: "#b56a4a" },
+];
+
 interface WizardState {
   step: 1 | 2 | 3 | 4 | 5;
   projetoId: string | null;
@@ -76,6 +91,7 @@ interface WizardState {
     profundidade: string;
     altura: string;
     descricao: string;
+    cor_mdf: string;
   };
   planta: File | null;
   referencias: File[];
@@ -243,7 +259,7 @@ function IAProjetoPage() {
     setWizard({
       step: 1,
       projetoId: null,
-      form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "" },
+      form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "", cor_mdf: "#f5f3f0" },
       planta: null,
       referencias: [],
       analisando: false,
@@ -286,6 +302,7 @@ function IAProjetoPage() {
           },
           estilo: wizard.form.estilo,
           descricao: wizard.form.descricao,
+          cor_mdf: wizard.form.cor_mdf,
           planta_b64,
           referencias_b64: referencias_b64.length ? referencias_b64 : undefined,
         }),
@@ -393,21 +410,38 @@ function IAProjetoPage() {
 
       if (data.job_id) {
         update({ renderJobId: data.job_id });
+        let attempts = 0;
         const poll = setInterval(async () => {
-          const r = await fetch(`/api/render-status?job_id=${data.job_id}`);
-          const s = await r.json() as { status: string; url?: string };
-          if (s.status === "completed" && s.url) {
-            clearInterval(poll);
-            await saveRenderUrl(s.url, data.job_id);
-            if (mode === "schnell") {
-              update({ previewUrl: s.url, renderLoading: false });
-              toast.success("Preview rápido gerado!");
-            } else {
-              update({ renderUrl: s.url, renderLoading: false, step: 5 });
+          attempts++;
+          try {
+            const r = await fetch(`/api/render-status?job_id=${data.job_id}`);
+            if (!r.ok) {
+              const errText = await r.text();
+              clearInterval(poll);
+              update({ renderLoading: false, error: `Erro ao consultar render: ${errText.slice(0, 200)}` });
+              return;
             }
-          } else if (s.status === "error") {
+            const s = await r.json() as { status: string; url?: string; error?: string };
+            if (s.status === "completed" && s.url) {
+              clearInterval(poll);
+              await saveRenderUrl(s.url, data.job_id);
+              if (mode === "schnell") {
+                update({ previewUrl: s.url, renderLoading: false });
+                toast.success("Preview rápido gerado!");
+              } else {
+                update({ renderUrl: s.url, renderLoading: false, step: 5 });
+                toast.success("Render premium gerado!");
+              }
+            } else if (s.status === "error" || s.error) {
+              clearInterval(poll);
+              update({ renderLoading: false, error: s.error ?? "Erro no render. Tente novamente." });
+            } else if (attempts > 40) {
+              clearInterval(poll);
+              update({ renderLoading: false, error: "Tempo limite excedido (120s). Tente novamente." });
+            }
+          } catch (pollErr) {
             clearInterval(poll);
-            update({ renderLoading: false, error: "Erro no render. Tente novamente." });
+            update({ renderLoading: false, error: pollErr instanceof Error ? pollErr.message : "Erro ao verificar render" });
           }
         }, 3000);
       }
@@ -578,12 +612,30 @@ function Step1Form({ wizard, update }: { wizard: WizardState; update: (p: Partia
         </div>
 
         <div>
-          <Label>Descrição adicional</Label>
+          <Label>Cor / acabamento do MDF</Label>
+          <div className="flex flex-wrap gap-2">
+            {MDF_CORES.map((c) => (
+              <button
+                key={c.hex}
+                type="button"
+                title={c.nome}
+                onClick={() => set("cor_mdf", c.hex)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-[12px] transition-all ${f.cor_mdf === c.hex ? "border-accent ring-1 ring-accent font-medium" : "border-border hover:border-border-strong"}`}
+              >
+                <span className="size-3.5 rounded-sm shrink-0 border border-black/10" style={{ background: c.hex }} />
+                {c.nome}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label>O que o cliente quer — descreva em detalhes</Label>
           <textarea
             value={f.descricao}
             onChange={(e) => set("descricao", e.target.value)}
-            rows={3}
-            placeholder="Ex: Quero um armário com espelho de corpo inteiro, gaveteiro duplo, iluminação LED e acabamento em laca branca..."
+            rows={4}
+            placeholder="Descreva tudo que o cliente quer: móveis específicos, iluminação LED, espelhos, detalhes de nicho, ripado, tipo de porta, estilo da decoração, materiais especiais, etc. Quanto mais detalhes, melhor o projeto gerado."
             className="w-full rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] outline-none focus:border-border-strong resize-none"
           />
         </div>
@@ -748,6 +800,23 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
   return (
     <div className="space-y-5">
+      {/* Error banner */}
+      {wizard.error && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-[12.5px] text-destructive">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <span>{wizard.error}</span>
+          <button onClick={() => update({ error: null })} className="ml-auto shrink-0 hover:opacity-70"><X className="size-3.5" /></button>
+        </div>
+      )}
+
+      {/* Render loading indicator */}
+      {wizard.renderLoading && (
+        <div className="flex items-center gap-3 rounded-md border border-violet-400/30 bg-violet-50 dark:bg-violet-950/20 px-4 py-3 text-[12.5px] text-violet-700 dark:text-violet-300">
+          <Loader2 className="size-4 animate-spin shrink-0" />
+          <span>{wizard.renderMode === "schnell" ? "Gerando preview rápido (Flux Schnell)…" : "Gerando render premium (Flux Pro)… pode levar até 60s"}</span>
+        </div>
+      )}
+
       {/* Canvas 2D */}
       <Surface padded={false}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">
@@ -759,7 +828,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           </div>
           <div className="text-[11.5px] text-muted-foreground">Arraste para reposicionar</div>
         </div>
-        <div className="p-4">
+        <div className="p-2">
           <RoomCanvas
             moveis={moveis}
             medidas={{

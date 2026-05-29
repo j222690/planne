@@ -46,8 +46,8 @@ export function exportSvgToPng(svgEl: SVGSVGElement, filename = "planta.png"): P
   });
 }
 
-const CANVAS_W = 760;
-const CANVAS_H = 520;
+const CANVAS_W = 900;
+const CANVAS_H = 640;
 const WALL_THICKNESS = 16;
 const INNER_W = CANVAS_W - WALL_THICKNESS * 2;
 const INNER_H = CANVAS_H - WALL_THICKNESS * 2;

@@ -1,28 +1,43 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const SYSTEM = `Você é designer de interiores sênior especialista em móveis planejados brasileiros (MDF, lacas, madeira).
-Analise o ambiente descrito e as imagens fornecidas (planta baixa e referências visuais).
+const SYSTEM = `Você é arquiteto de interiores sênior especialista em marcenaria planejada brasileira (MDF, lacas, madeira). Sua tarefa é criar um projeto completo e realista de marcenaria para o ambiente especificado.
 
-RESPONDA APENAS com JSON válido (sem markdown, sem explicações fora do JSON):
+RESPONDA APENAS com JSON válido (sem markdown, sem blocos de código, sem texto fora do JSON).
 
+REGRAS OBRIGATÓRIAS:
+1. INCLUA TODOS os móveis essenciais para o tipo de ambiente — NÃO omita nenhum item principal:
+   - Quarto casal: cama de casal (L≥180cm), 2 criados-mudos, roupeiro ou closet, painel/cabeceira. Se tiver espaço: cômoda ou penteadeira.
+   - Quarto solteiro: cama solteiro (L≥100cm), criado-mudo, roupeiro ou guarda-roupa, escrivaninha ou estante.
+   - Cozinha: armários superiores, armários inferiores, bancada/tampo, torre forno/micro (se coube), despenseiro.
+   - Sala de estar: rack/painel TV, estante ou buffet/aparador.
+   - Home office: mesa de trabalho, estante/prateleiras, armário de arquivos.
+   - Closet: prateleiras de sapatos, cabideiros, gaveteiros, prateleiras de acessórios.
+   - Banheiro: gabinete, espelheira/nicho.
+2. DIMENSIONE os móveis para aproveitar o máximo do espaço, usando as medidas reais do ambiente.
+3. POSICIONE os móveis de forma funcional (vista superior), respeitando circulação mínima de 80cm entre móveis.
+4. SIGA o estilo das imagens de referência ao escolher cores, acabamentos e detalhes.
+5. Use a cor/acabamento mais próximo das imagens de referência para cor_hex.
+6. NUNCA retorne menos de 3 móveis para qualquer ambiente.
+
+Formato exato do JSON de resposta:
 {
-  "resumo": "análise técnica do ambiente em 2-3 frases",
-  "descricao_comercial": "texto de venda elegante e persuasivo, 3-4 parágrafos, foca em benefícios, qualidade e exclusividade",
-  "estilo_detectado": "Moderno Minimalista",
+  "resumo": "análise técnica do ambiente em 2-3 frases descrevendo o projeto",
+  "descricao_comercial": "texto comercial elegante, 3 parágrafos, destacando exclusividade e qualidade do projeto",
+  "estilo_detectado": "nome do estilo identificado nas referências",
   "moveis": [
     {
       "id": "mov_1",
-      "nome": "Armário Planejado 2 Portas",
-      "categoria": "armario",
-      "largura_cm": 120,
-      "profundidade_cm": 55,
-      "altura_cm": 220,
-      "x_pct": 0.05,
-      "y_pct": 0.05,
-      "cor_hex": "#d4c5b0",
-      "preco_estimado": 4500,
-      "chapas_mdf": 5.5,
-      "nota": "Com iluminação LED interna e espelho bronze"
+      "nome": "Cama Casal com Cabeceira Ripado",
+      "categoria": "cama",
+      "largura_cm": 193,
+      "profundidade_cm": 213,
+      "altura_cm": 35,
+      "x_pct": 0.35,
+      "y_pct": 0.15,
+      "cor_hex": "#c8b49a",
+      "preco_estimado": 3800,
+      "chapas_mdf": 3,
+      "nota": "Cama box queen, cabeceira ripado freijó 240cm"
     }
   ],
   "orcamento": {
@@ -37,17 +52,21 @@ RESPONDA APENAS com JSON válido (sem markdown, sem explicações fora do JSON):
     "total": 0
   },
   "observacoes_tecnicas": [
-    "Verificar instalação elétrica para iluminação embutida",
-    "Piso nivelado obrigatório antes da instalação"
+    "observação técnica relevante"
   ]
 }
 
-REGRAS:
-- x_pct e y_pct são posições relativas no canvas (0.0 a 0.9), vista superior do ambiente
-- Use preços de mercado Chapecó/SC 2025. MDF 18mm: R$ 85/chapa. MDF BP: R$ 70/chapa.
-- chapas_mdf é a quantidade de chapas 2750×1830mm necessárias para o móvel
-- Calcule orcamento realista baseado nas chapas de todos os móveis
-- Categoria: armario, mesa, sofa, cama, rack, estante, bancada, escritório, outro`;
+POSICIONAMENTO (x_pct, y_pct = posição do canto superior esquerdo, 0.0 a 0.85, vista de cima):
+- Roupeiro/guarda-roupa: encostar na parede de fundo (y_pct próximo de 0.0)
+- Cama de casal: centralizada na largura, próxima à parede de cabeceira
+- Criados-mudos: flanqueando a cama (um de cada lado)
+- Bancadas de cozinha: ao longo das paredes
+- Rack/painel TV: parede de frente (y_pct próximo de 0.0)
+- Evite sobreposição de móveis. Deixe circulação mínima 80cm.
+
+PREÇOS MERCADO CHAPECÓ/SC 2025: MDF 18mm branco: R$ 85/chapa. MDF BP: R$ 70/chapa. Ferragens: 28% do MDF. Mão de obra: 40% do MDF.
+chapas_mdf = área total de peças / 5.0325 m² (chapa 2750×1830mm).
+Calcule o orçamento realista somando todos os móveis.`;
 
 function detectMime(b64: string): string {
   if (b64.startsWith("/9j")) return "image/jpeg";
@@ -80,11 +99,12 @@ interface AnaliseIA {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { ambiente, medidas, estilo, descricao, planta_b64, referencias_b64 } = req.body as {
+  const { ambiente, medidas, estilo, descricao, cor_mdf, planta_b64, referencias_b64 } = req.body as {
     ambiente: string;
     medidas: { largura: number; profundidade: number; altura: number };
     estilo: string;
     descricao: string;
+    cor_mdf?: string;
     planta_b64?: string;
     referencias_b64?: string[];
   };
@@ -95,12 +115,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userContent: unknown[] = [
     {
       type: "text",
-      text: `Ambiente: ${ambiente}
-Medidas: ${medidas?.largura ?? 4}m × ${medidas?.profundidade ?? 3}m | Pé-direito: ${medidas?.altura ?? 2.7}m
-Estilo desejado: ${estilo ?? "Moderno"}
-Descrição adicional: ${descricao || "Não informada"}
+      text: `AMBIENTE: ${ambiente}
+MEDIDAS DO AMBIENTE: largura=${medidas?.largura ?? 4}m, profundidade=${medidas?.profundidade ?? 3}m, pé-direito=${medidas?.altura ?? 2.7}m
+ESTILO: ${estilo ?? "Moderno"}
+COR/ACABAMENTO MDF preferido do cliente: ${cor_mdf || "#f5f3f0"} — use esta cor como base para cor_hex de todos os móveis de MDF
+DESCRIÇÃO DO CLIENTE: ${descricao || "Não informada"}
 
-Gere um projeto completo de marcenaria planejada para este ambiente.`,
+Crie um projeto COMPLETO de marcenaria planejada para este ambiente. Inclua TODOS os móveis essenciais para o tipo de ambiente. Use as medidas reais para dimensionar os móveis corretamente aproveitando o máximo do espaço. Posicione funcionalmente na vista superior.`,
     },
   ];
 
@@ -131,7 +152,7 @@ Gere um projeto completo de marcenaria planejada para este ambiente.`,
           { role: "system", content: SYSTEM },
           { role: "user", content: userContent },
         ],
-        max_tokens: 4000,
+        max_tokens: 6000,
         temperature: 0.3,
         response_format: { type: "json_object" },
       }),
