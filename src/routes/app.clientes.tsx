@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2, CheckCircle2, Circle, CalendarClock, ChevronRight, FileText, Folder, Clock } from "lucide-react";
+import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2, CheckCircle2, Circle, CalendarClock, ChevronRight, FileText, Folder, Clock, MessageCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -504,9 +504,26 @@ function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
               </a>
             )}
             {cliente.telefone && (
-              <a href={`tel:${cliente.telefone}`} className="flex items-center gap-2 text-[12.5px] text-muted-foreground hover:text-foreground">
-                <Phone className="size-3.5" /> {cliente.telefone}
-              </a>
+              <div className="flex items-center gap-2">
+                <a href={`tel:${cliente.telefone}`} className="flex items-center gap-2 text-[12.5px] text-muted-foreground hover:text-foreground flex-1">
+                  <Phone className="size-3.5" /> {cliente.telefone}
+                </a>
+                <button
+                  onClick={() => {
+                    const digits = cliente.telefone!.replace(/\D/g, "");
+                    if (digits.length < 10) {
+                      toast.error("Número de telefone inválido para WhatsApp");
+                      return;
+                    }
+                    const num = digits.startsWith("55") ? digits : `55${digits}`;
+                    window.open(`https://wa.me/${num}`, "_blank");
+                  }}
+                  title="Abrir WhatsApp"
+                  className="shrink-0 size-7 rounded-md border border-border text-emerald-600 hover:bg-emerald-500/10 grid place-items-center transition-colors"
+                >
+                  <MessageCircle className="size-3.5" />
+                </button>
+              </div>
             )}
             {cliente.observacoes && (
               <div className="text-[12px] text-muted-foreground mt-2 p-2 rounded bg-secondary">{cliente.observacoes}</div>

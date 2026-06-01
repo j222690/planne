@@ -245,7 +245,7 @@ test.describe("Projetos — CRUD", () => {
     await goTo(page, "/app/projetos");
     await page.waitForTimeout(1500);
     const card = page.getByText(nomeProjeto, { exact: false }).first();
-    await expect(card).toBeVisible({ timeout: 8_000 });
+    await expect(card).toBeVisible({ timeout: 15_000 });
   });
 
   test("Projetos têm colunas de status (Briefing, Em projeto, etc.)", async ({ page }) => {

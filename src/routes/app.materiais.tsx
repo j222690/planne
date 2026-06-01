@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
 import { Upload, Sparkles, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff, PackageX } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getMateriais, getEmpresaAtual, getFornecedores, upsertMaterial, updateMaterial, deleteMaterial } from "@/lib/db";
 import { toast } from "sonner";
@@ -56,16 +56,73 @@ const matSchema = z.object({
   imagem_url: z.string().optional(),
   espessura_mm: z.coerce.number().optional(),
   fornecedor_id: z.string().optional(),
+  estoque_atual: z.coerce.number().optional(),
+  estoque_minimo: z.coerce.number().optional(),
 });
 type MatForm = z.infer<typeof matSchema>;
 
 const CATEGORIAS_OPCOES = ["MDF", "MDP", "Chapas", "Puxadores", "Ferragens", "Vidros", "Acabamentos", "Acessórios", "Outros"];
 const UNIDADES = ["un", "chapa", "m", "m2", "par", "peça", "kg", "l", "hr", "vb", "rolo", "kit"];
 
-function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
-  onClose: () => void; onSaved: () => void; empresaId: string | null; initialData?: Material;
+// Palavras de cor/acabamento que variam entre variantes do mesmo material
+const COR_PALAVRAS = [
+  "branco", "preto", "cinza", "grafite", "bege", "off white", "offwhite", "creme",
+  "carvalho", "freijo", "freijó", "nogueira", "imbuia", "amendoa", "amêndoa", "mogno",
+  "wenge", "teca", "pinheiro", "eucalipto", "madeira", "rústico", "natural",
+  "verde", "azul", "vermelho", "amarelo", "marrom", "laranja", "roxo", "rosa",
+  "tx", "fosco", "brilhante", "acetinado", "laca", "melamínico", "bp",
+  "claro", "escuro", "médio", "light", "dark",
+];
+
+function extrairBase(nome: string): string {
+  let base = nome.toLowerCase();
+  for (const palavra of COR_PALAVRAS) {
+    base = base.replace(new RegExp(`\\b${palavra}\\b`, "gi"), "");
+  }
+  return base.replace(/\s+/g, " ").trim();
+}
+
+interface PrecoSugestao {
+  custo: number;
+  venda: number;
+  fonte: string;
+  total: number;
+}
+
+function buscarPrecoSimilar(nome: string, espessura: number | undefined, unidade: string, todos: Material[], editandoId?: string): PrecoSugestao | null {
+  if (!nome || nome.length < 3) return null;
+  const base = extrairBase(nome);
+  if (!base) return null;
+
+  const candidatos = todos.filter((m) => {
+    if (m.id === editandoId) return false;
+    if (m.preco_custo === 0 && m.preco_venda === 0) return false;
+    const mBase = extrairBase(m.nome);
+    // Mesmo tipo base E (mesma espessura OU mesma unidade+base próxima)
+    const mesmaTipoBase = base.length > 3 && (mBase.includes(base.slice(0, Math.min(6, base.length))) || base.includes(mBase.slice(0, Math.min(6, mBase.length))));
+    const mesmaEsp = espessura && m.espessura_mm === espessura;
+    const mesmaUnidade = m.unidade === unidade;
+    return (mesmaTipoBase || mesmaEsp) && mesmaUnidade;
+  });
+
+  if (!candidatos.length) return null;
+
+  const avgCusto = Math.round(candidatos.reduce((s, m) => s + m.preco_custo, 0) / candidatos.length * 100) / 100;
+  const avgVenda = Math.round(candidatos.reduce((s, m) => s + m.preco_venda, 0) / candidatos.length * 100) / 100;
+
+  return {
+    custo: avgCusto,
+    venda: avgVenda,
+    fonte: candidatos.length === 1 ? candidatos[0].nome : `${candidatos.length} similares`,
+    total: candidatos.length,
+  };
+}
+
+function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateriais }: {
+  onClose: () => void; onSaved: () => void; empresaId: string | null; initialData?: Material; todosOsMateriais: Material[];
 }) {
   const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([]);
+  const [sugestao, setSugestao] = useState<PrecoSugestao | null>(null);
 
   useEffect(() => {
     if (empresaId) getFornecedores(empresaId).then((f) => setFornecedores(f as { id: string; nome: string }[]));
@@ -81,16 +138,40 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
       cor: initialData.cor ?? "", imagem_url: initialData.imagem_url ?? "",
       espessura_mm: initialData.espessura_mm ?? undefined,
       fornecedor_id: initialData.fornecedor_id ?? "",
+      estoque_atual: initialData.estoque ?? undefined,
+      estoque_minimo: initialData.estoque_minimo ?? undefined,
     } : { unidade: "un", preco_custo: 0, preco_venda: 0 },
   });
 
   const corValue = watch("cor");
+  const nomeValue = watch("nome");
+  const espessuraValue = watch("espessura_mm");
+  const unidadeValue = watch("unidade");
+
+  // Sugestão de preço baseada em similares (só para novos materiais)
+  const editandoId = initialData?.id;
+  useEffect(() => {
+    if (editandoId) { setSugestao(null); return; }
+    const t = setTimeout(() => {
+      const s = buscarPrecoSimilar(nomeValue ?? "", espessuraValue ? Number(espessuraValue) : undefined, unidadeValue ?? "un", todosOsMateriais, editandoId);
+      setSugestao(s);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [nomeValue, espessuraValue, unidadeValue, todosOsMateriais, editandoId]);
+
+  const aplicarSugestao = useCallback(() => {
+    if (!sugestao) return;
+    setValue("preco_custo", sugestao.custo);
+    setValue("preco_venda", sugestao.venda);
+    setSugestao(null);
+  }, [sugestao, setValue]);
 
   const custo = watch("preco_custo");
+  // multiplicador: 300 = 3× o custo (padrão), 200 = 2×, 250 = 2.5×, 350 = 3.5×
   const applyMargem = (pct: number) => {
     const c = Number(custo) || 0;
     if (!c) return;
-    setValue("preco_venda", parseFloat((c / (1 - pct / 100)).toFixed(2)));
+    setValue("preco_venda", parseFloat((c * (pct / 100)).toFixed(2)));
   };
 
   const onSubmit = async (data: MatForm) => {
@@ -101,6 +182,8 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
         cor: data.cor || null, espessura_mm: data.espessura_mm || null,
         fornecedor_id: data.fornecedor_id || null,
         imagem_url: data.imagem_url || null,
+        estoque_atual: data.estoque_atual ?? null,
+        estoque_minimo: data.estoque_minimo ?? null,
       };
       if (initialData) {
         await updateMaterial(initialData.id, payload);
@@ -161,11 +244,31 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
             </div>
           </div>
+          {/* Sugestão de preço baseada em similares */}
+          {sugestao && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-[11.5px] font-semibold text-emerald-700 dark:text-emerald-400">
+                  Preço encontrado em {sugestao.fonte}
+                </div>
+                <div className="text-[11px] text-emerald-600 dark:text-emerald-500">
+                  Custo: R$ {sugestao.custo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · Venda: R$ {sugestao.venda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={aplicarSugestao}
+                className="h-7 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11.5px] font-semibold shrink-0"
+              >
+                Aplicar
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground">
-            Aplicar margem:
-            {[30, 35, 40, 50].map((pct) => (
-              <button key={pct} type="button" onClick={() => applyMargem(pct)}
-                className="px-2 py-0.5 rounded border border-border hover:bg-secondary text-[11px]">{pct}%</button>
+            Aplicar multiplicador:
+            {[{ label: "2×", val: 200 }, { label: "2.5×", val: 250 }, { label: "3×", val: 300 }, { label: "3.5×", val: 350 }].map(({ label, val }) => (
+              <button key={val} type="button" onClick={() => applyMargem(val)}
+                className="px-2 py-0.5 rounded border border-border hover:bg-secondary text-[11px]">{label}</button>
             ))}
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -208,6 +311,18 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData }: {
             <div>
               <div className="text-[11.5px] text-muted-foreground mb-1">URL da imagem</div>
               <input {...register("imagem_url")} placeholder="https://..."
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Estoque atual</div>
+              <input {...register("estoque_atual")} type="number" step="0.1" min="0" placeholder="Ex: 10"
+                className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
+            </div>
+            <div>
+              <div className="text-[11.5px] text-muted-foreground mb-1">Estoque mínimo (alerta)</div>
+              <input {...register("estoque_minimo")} type="number" step="0.1" min="0" placeholder="Ex: 3"
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
             </div>
           </div>
@@ -353,6 +468,7 @@ function Materiais() {
             onSaved={load}
             empresaId={empresaId}
             initialData={editando ?? undefined}
+            todosOsMateriais={materiais}
           />
         )}
       </AnimatePresence>

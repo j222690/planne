@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { CheckCircle2, Circle, Loader2, AlertCircle, Plus, X, Scissors, Check, Printer, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, AlertCircle, Plus, X, Scissors, Check, Printer, ChevronDown, ChevronUp, AlertTriangle, QrCode } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getEmpresaAtual, getProjetos, upsertOrdemProducao } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -75,26 +75,41 @@ function addBusinessDays(date: Date, days: number): Date {
   return d;
 }
 
+type EstoqueAlerta = { nome: string; atual: number; minimo: number };
+
 function NovaOrdemModal({ onClose, onSaved, empresaId }: { onClose: () => void; onSaved: () => void; empresaId: string }) {
   const [projetos, setProjetos] = useState<{ id: string; nome: string }[]>([]);
   const [numPecas, setNumPecas] = useState<number | null>(null);
+  const [estoqueAlertas, setEstoqueAlertas] = useState<EstoqueAlerta[]>([]);
   useEffect(() => { getProjetos(empresaId).then((p) => setProjetos(p as { id: string; nome: string }[])); }, [empresaId]);
   const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<OrdemForm>({ resolver: zodResolver(ordemSchema) });
   const projetoId = watch("projeto_id");
 
   useEffect(() => {
-    if (!projetoId) { setNumPecas(null); return; }
-    // Feature 13: count pieces from lista_corte for this project's latest orçamento
+    if (!projetoId) { setNumPecas(null); setEstoqueAlertas([]); return; }
     supabase.from("orcamentos").select("id").eq("projeto_id", projetoId).eq("status", "aprovado").order("created_at", { ascending: false }).limit(1)
       .then(({ data }) => {
         if (!data?.length) { setNumPecas(null); return; }
         supabase.from("orcamento_itens").select("quantidade").eq("orcamento_id", data[0].id)
           .then(({ data: itens }) => {
             const total = (itens ?? []).reduce((s, i) => s + Number(i.quantidade), 0);
-            setNumPecas(Math.round(total * 3)); // estimate ~3 pieces per item
+            setNumPecas(Math.round(total * 3));
           });
       });
-  }, [projetoId]);
+
+    // Item 7: check material stock levels
+    supabase.from("materiais")
+      .select("nome,estoque_atual,estoque_minimo")
+      .or(`empresa_id.is.null,empresa_id.eq.${empresaId}`)
+      .not("estoque_atual", "is", null)
+      .not("estoque_minimo", "is", null)
+      .then(({ data }) => {
+        const alertas = (data ?? [])
+          .filter((m) => Number(m.estoque_atual) <= Number(m.estoque_minimo))
+          .map((m) => ({ nome: m.nome, atual: Number(m.estoque_atual), minimo: Number(m.estoque_minimo) }));
+        setEstoqueAlertas(alertas);
+      });
+  }, [projetoId, empresaId]);
 
   const diasEstimados = numPecas ? Math.max(1, Math.ceil(numPecas / 20)) : null;
   const dataEstimada = diasEstimados ? addBusinessDays(new Date(), diasEstimados) : null;
@@ -125,7 +140,6 @@ function NovaOrdemModal({ onClose, onSaved, empresaId }: { onClose: () => void; 
               {projetos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
-          {/* Feature 13: production time estimate */}
           {diasEstimados && dataEstimada && (
             <div className="flex items-center gap-2 text-[12px] p-2.5 rounded-md bg-accent/10 border border-accent/20 text-accent">
               <Scissors className="size-3.5 shrink-0" />
@@ -134,6 +148,18 @@ function NovaOrdemModal({ onClose, onSaved, empresaId }: { onClose: () => void; 
                 {" "}(~{dataEstimada.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })})
                 {" · "}{numPecas} peças · 20/dia
               </span>
+            </div>
+          )}
+          {estoqueAlertas.length > 0 && (
+            <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 space-y-1">
+              <div className="flex items-center gap-1.5 text-[12px] font-medium text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="size-3.5 shrink-0" /> Estoque baixo — verifique antes de produzir:
+              </div>
+              {estoqueAlertas.map((a) => (
+                <div key={a.nome} className="text-[11.5px] text-amber-700 dark:text-amber-400 pl-5">
+                  {a.nome}: <strong>{a.atual}</strong> em estoque (mín. {a.minimo})
+                </div>
+              ))}
             </div>
           )}
           <div>
@@ -253,6 +279,7 @@ function ListaCortePanel({ ordem, empresaId }: { ordem: Ordem; empresaId: string
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNovaPeca, setShowNovaPeca] = useState(false);
+  const [qrPeca, setQrPeca] = useState<Peca | null>(null);
 
   const loadPecas = async () => {
     setLoading(true);
@@ -306,6 +333,7 @@ function ListaCortePanel({ ordem, empresaId }: { ordem: Ordem; empresaId: string
           <NovaPecaModal ordemId={ordem.id} empresaId={empresaId}
             onClose={() => setShowNovaPeca(false)} onSaved={loadPecas} />
         )}
+        {qrPeca && <QRModal peca={qrPeca} onClose={() => setQrPeca(null)} />}
       </AnimatePresence>
 
       <div className="mt-4 border-t border-border pt-4">
@@ -351,6 +379,7 @@ function ListaCortePanel({ ordem, empresaId }: { ordem: Ordem; empresaId: string
                   <th className="text-center px-2 py-2">Qtd</th>
                   <th className="text-center px-2 py-2">Fitas</th>
                   <th className="text-center px-2 py-2 w-12">Cortado</th>
+                  <th className="px-2 py-2 w-8"></th>
                 </tr>
               </thead>
               <tbody>
@@ -374,6 +403,12 @@ function ListaCortePanel({ ordem, empresaId }: { ordem: Ordem; empresaId: string
                         {p.cortado && <Check className="size-3 text-white" />}
                       </button>
                     </td>
+                    <td className="px-2 py-2 text-center">
+                      <button onClick={() => setQrPeca(p)} title="Ver QR Code"
+                        className="text-muted-foreground hover:text-foreground transition-colors">
+                        <QrCode className="size-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -389,6 +424,30 @@ function ListaCortePanel({ ordem, empresaId }: { ordem: Ordem; empresaId: string
         )}
       </div>
     </>
+  );
+}
+
+function QRModal({ peca, onClose }: { peca: Peca; onClose: () => void }) {
+  const text = `${peca.descricao_peca}\n${peca.largura_mm}×${peca.comprimento_mm}mm × ${peca.quantidade}un\n${[peca.ambiente, peca.movel].filter(Boolean).join(" / ")}\nID:${peca.id.slice(0, 8)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}&margin=10`;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}
+        className="relative bg-surface border border-border rounded-lg shadow-xl p-5 max-w-xs w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[14px] font-semibold">QR Code — Peça</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <img src={qrUrl} alt="QR Code" className="rounded-md border border-border" width={200} height={200} />
+          <div className="text-center">
+            <div className="text-[13px] font-medium">{peca.descricao_peca}</div>
+            <div className="text-[11.5px] text-muted-foreground mt-0.5">{peca.largura_mm}×{peca.comprimento_mm}mm · Qtd {peca.quantidade}</div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 

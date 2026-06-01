@@ -122,7 +122,7 @@ Formato exato do JSON:
     "mao_de_obra": 0,
     "desperdicio_pct": 15,
     "subtotal": 0,
-    "margem_pct": 35,
+    "margem_pct": 300,
     "total": 0
   },
   "observacoes_tecnicas": ["observação técnica relevante"]
@@ -282,7 +282,7 @@ LEMBRETE FINAL: As dimensões do ambiente são ${medidas?.largura ?? 4}m × ${me
     if (!o.fita_borda_custo || o.fita_borda_custo === 0) o.fita_borda_custo = Math.round(totalChapas * 15);
     if (!o.mao_de_obra || o.mao_de_obra === 0) o.mao_de_obra = Math.round(o.mdf_custo * 0.4);
     o.subtotal = o.mdf_custo + o.ferragens_custo + o.puxadores_custo + o.fita_borda_custo + o.mao_de_obra;
-    o.total = Math.round(o.subtotal / (1 - (o.margem_pct ?? 35) / 100));
+    o.total = Math.round(o.subtotal * ((o.margem_pct ?? 300) / 100));
     analise.orcamento = o;
 
     return res.json({ analise, usage: data.usage });

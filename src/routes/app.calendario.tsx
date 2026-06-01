@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { ChevronLeft, ChevronRight, Loader2, Calendar, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Calendar, Plus, X, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getEmpresaAtual, getOrcamentos, getProjetos, getCalendarioEventos, createCalendarioEvento, deleteCalendarioEvento } from "@/lib/db";
+import { getEmpresaAtual, getOrcamentos, getProjetos, getCalendarioEventos, createCalendarioEvento, updateCalendarioEvento, deleteCalendarioEvento } from "@/lib/db";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -41,8 +41,10 @@ const TIPO_COR: Record<string, string> = {
   prazo: "#ef4444",
 };
 
-function NovoEventoModal({ empresaId, diaInicial, onClose, onSaved }: {
-  empresaId: string; diaInicial: Date; onClose: () => void; onSaved: () => void;
+type CalEventoEdit = { id?: string; titulo: string; descricao: string; data_inicio: string; data_fim: string; tipo: string };
+
+function EventoModal({ empresaId, diaInicial, editando, onClose, onSaved }: {
+  empresaId: string; diaInicial: Date; editando?: CalEvento | null; onClose: () => void; onSaved: () => void;
 }) {
   const toLocal = (d: Date) => {
     const y = d.getFullYear();
@@ -51,32 +53,44 @@ function NovoEventoModal({ empresaId, diaInicial, onClose, onSaved }: {
     return `${y}-${m}-${day}T09:00`;
   };
 
-  const [form, setForm] = useState({
-    titulo: "",
-    descricao: "",
-    data_inicio: toLocal(diaInicial),
-    data_fim: "",
-    tipo: "evento",
+  const toLocalFromISO = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  };
+
+  const [form, setForm] = useState<CalEventoEdit>({
+    titulo: editando?.titulo ?? "",
+    descricao: editando?.descricao ?? "",
+    data_inicio: editando ? toLocalFromISO(editando.data_inicio) : toLocal(diaInicial),
+    data_fim: editando?.data_fim ? toLocalFromISO(editando.data_fim) : "",
+    tipo: editando?.tipo ?? "evento",
   });
   const [saving, setSaving] = useState(false);
+  const isEdit = !!editando?.id;
 
   const handleSave = async () => {
     if (!form.titulo.trim()) { toast.error("Título obrigatório"); return; }
     setSaving(true);
     try {
-      await createCalendarioEvento(empresaId, {
+      const payload = {
         titulo: form.titulo,
         descricao: form.descricao || null,
         data_inicio: new Date(form.data_inicio).toISOString(),
         data_fim: form.data_fim ? new Date(form.data_fim).toISOString() : null,
         tipo: form.tipo,
         cor: TIPO_COR[form.tipo] ?? "#3b82f6",
-      });
-      toast.success("Evento criado!");
+      };
+      if (isEdit) {
+        await updateCalendarioEvento(editando!.id, payload);
+        toast.success("Evento atualizado!");
+      } else {
+        await createCalendarioEvento(empresaId, payload);
+        toast.success("Evento criado!");
+      }
       onSaved();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao criar evento");
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar evento");
     } finally {
       setSaving(false);
     }
@@ -91,7 +105,7 @@ function NovoEventoModal({ empresaId, diaInicial, onClose, onSaved }: {
         className="relative w-full max-w-md bg-surface border border-border rounded-lg shadow-xl p-5 space-y-3"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold">Novo evento</h2>
+          <h2 className="text-[15px] font-semibold">{isEdit ? "Editar evento" : "Novo evento"}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
         </div>
 
@@ -134,7 +148,7 @@ function NovoEventoModal({ empresaId, diaInicial, onClose, onSaved }: {
           <button onClick={onClose} className="h-8 px-4 rounded-md border border-border text-[12.5px] hover:bg-secondary">Cancelar</button>
           <button onClick={handleSave} disabled={saving}
             className="h-8 px-4 rounded-md bg-foreground text-background text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null} Criar
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null} {isEdit ? "Salvar" : "Criar"}
           </button>
         </div>
       </motion.div>
@@ -146,11 +160,13 @@ function Calendario() {
   const [today] = useState(new Date());
   const [current, setCurrent] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [events, setEvents] = useState<Event[]>([]);
+  const [rawEventos, setRawEventos] = useState<CalEvento[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Date | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalDia, setModalDia] = useState<Date>(new Date());
+  const [editandoEvento, setEditandoEvento] = useState<CalEvento | null>(null);
 
   const load = async () => {
     try {
@@ -192,6 +208,7 @@ function Calendario() {
         })),
       ];
       setEvents(evs);
+      setRawEventos(evts as CalEvento[]);
     } finally {
       setLoading(false);
     }
@@ -230,18 +247,25 @@ function Calendario() {
   };
 
   const openModal = (dia: Date) => {
+    setEditandoEvento(null);
     setModalDia(dia);
     setShowModal(true);
+  };
+
+  const openEdit = (ev: Event) => {
+    const raw = rawEventos.find((r) => r.id === ev.id);
+    if (raw) { setEditandoEvento(raw); setShowModal(true); }
   };
 
   return (
     <>
       <AnimatePresence>
         {showModal && empresaId && (
-          <NovoEventoModal
+          <EventoModal
             empresaId={empresaId}
             diaInicial={modalDia}
-            onClose={() => setShowModal(false)}
+            editando={editandoEvento}
+            onClose={() => { setShowModal(false); setEditandoEvento(null); }}
             onSaved={() => { load(); }}
           />
         )}
@@ -369,12 +393,20 @@ function Calendario() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="text-[12.5px] font-medium truncate">{ev.title}</div>
                       {ev.type === "evento" && (
-                        <button
-                          onClick={() => handleDeleteEvento(ev.id)}
-                          className="shrink-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="size-3" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => openEdit(ev)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil className="size-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEvento(ev.id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">

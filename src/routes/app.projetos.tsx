@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProjetos, getClientes, getEmpresaAtual, upsertProjeto } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -121,25 +122,25 @@ function NovoProjetoModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
 }
 
 function Projetos() {
-  const [projetos, setProjetos] = useState<Projeto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const queryClient = useQueryClient();
 
-  const load = async () => {
-    const empresa = await getEmpresaAtual();
-    if (!empresa) return;
-    const data = await getProjetos(empresa.id);
-    setProjetos(data as Projeto[]);
-    setLoading(false);
-  };
+  const { data: projetos = [], isLoading } = useQuery<Projeto[]>({
+    queryKey: ["projetos"],
+    queryFn: async () => {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) return [];
+      return (await getProjetos(empresa.id)) as unknown as Projeto[];
+    },
+  });
 
-  useEffect(() => { load(); }, []);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["projetos"] });
 
   const moveStatus = async (proj: Projeto, newStatus: string) => {
     const { error } = await supabase.from("projetos").update({ status: newStatus }).eq("id", proj.id);
     if (error) { toast.error("Erro ao mover projeto"); return; }
     toast.success("Projeto atualizado!");
-    setProjetos((ps) => ps.map((p) => p.id === proj.id ? { ...p, status: newStatus } : p));
+    invalidate();
   };
 
   const handleDelete = (proj: Projeto) => {
@@ -150,7 +151,7 @@ function Projetos() {
           const { error } = await supabase.from("projetos").delete().eq("id", proj.id);
           if (error) { toast.error(error.message); return; }
           toast.success("Projeto excluído");
-          setProjetos((ps) => ps.filter((p) => p.id !== proj.id));
+          invalidate();
         },
       },
       cancel: { label: "Cancelar", onClick: () => {} },
@@ -160,7 +161,7 @@ function Projetos() {
   return (
     <>
       <AnimatePresence>
-        {showModal && <NovoProjetoModal onClose={() => setShowModal(false)} onSaved={load} />}
+        {showModal && <NovoProjetoModal onClose={() => setShowModal(false)} onSaved={invalidate} />}
       </AnimatePresence>
 
       <PageHeader
@@ -175,7 +176,7 @@ function Projetos() {
         }
       />
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-20 gap-2 text-muted-foreground text-[13px]">
           <Loader2 className="size-4 animate-spin" /> Carregando...
         </div>

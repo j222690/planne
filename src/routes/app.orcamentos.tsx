@@ -201,7 +201,7 @@ const itemSchema = z.object({
 const schema = z.object({
   cliente_id: z.string().min(1, "Selecione um cliente"),
   status: z.string().default("rascunho"),
-  margem_pct: z.coerce.number().min(0).max(100).default(35),
+  margem_pct: z.coerce.number().min(0).default(300),
   mao_de_obra: z.coerce.number().min(0).default(0),
   observacoes: z.string().optional(),
   itens: z.array(itemSchema).min(1, "Adicione ao menos um item"),
@@ -409,7 +409,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
   // Configurar
   const [clienteId, setClienteId] = useState("");
-  const [margemPct, setMargemPct] = useState(35);
+  const [margemPct, setMargemPct] = useState(300);
   const [openAmbientes, setOpenAmbientes] = useState<Set<string>>(new Set(["Cozinha", "Sala", "Quarto"]));
   const [searchMoveis, setSearchMoveis] = useState("");
   const [plantaB64, setPlantaB64] = useState<string | null>(null);
@@ -433,7 +433,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      status: "rascunho", margem_pct: 35,
+      status: "rascunho", margem_pct: 300,
       itens: [{ descricao: "", quantidade: 1, unidade: "un", preco_custo: 0, preco_unitario: 0 }],
     },
   });
@@ -459,7 +459,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       if (editOrc) {
         setValue("cliente_id", (editOrc as unknown as { cliente_id?: string }).cliente_id ?? "");
         setValue("status", editOrc.status);
-        setValue("margem_pct", (editOrc as unknown as { margem_pct?: number }).margem_pct ?? 35);
+        setValue("margem_pct", (editOrc as unknown as { margem_pct?: number }).margem_pct ?? 300);
         const itensExistentes = editOrc.itens ?? await getOrcamentoItens(editOrc.id) as OrcItem[];
         if (itensExistentes.length > 0) {
           replace(itensExistentes.map((it) => ({
@@ -722,8 +722,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 </select>
               </div>
               <div>
-                <Label>Margem (%)</Label>
-                <input type="number" min={0} max={100} value={margemPct}
+                <Label>Multiplicador (300 = 3× custo)</Label>
+                <input type="number" min={100} step={50} value={margemPct}
                   onChange={(e) => setMargemPct(Number(e.target.value))}
                   className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
               </div>
@@ -1309,8 +1309,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   {errors.cliente_id && <div className="text-[11px] text-destructive mt-1">{errors.cliente_id.message}</div>}
                 </div>
                 <div>
-                  <Label>Margem (%)</Label>
-                  <input {...register("margem_pct")} type="number" min={0} max={100}
+                  <Label>Multiplicador (300 = 3×)</Label>
+                  <input {...register("margem_pct")} type="number" min={100} step={50}
                     className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
                 </div>
               </div>

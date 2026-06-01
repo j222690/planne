@@ -275,7 +275,8 @@ export function calcularOrcamento(moveis: MovelInput[], catalogo: CatItem[], mar
 
     const addItem = (it: Omit<ItemOrcamento, "preco_unitario"> & { preco_unitario?: number }) => {
       const custo = it.preco_custo;
-      const venda = it.preco_unitario ?? parseFloat((custo / (1 - margem_pct / 100)).toFixed(2));
+      // margem_pct é um multiplicador: 300 = venda 3× o custo
+      const venda = it.preco_unitario ?? parseFloat((custo * (margem_pct / 100)).toFixed(2));
       itens.push({ ...it, preco_unitario: venda });
     };
 

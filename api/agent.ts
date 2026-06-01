@@ -205,7 +205,7 @@ async function executeTool(
           status: "rascunho",
           total: 0,
           subtotal: 0,
-          margem_pct: 35,
+          margem_pct: 300,
           observacoes: args.descricao ? String(args.descricao) : `Projeto: ${(args.moveis_lista as string[]).join(", ")}`,
         })
         .select("id,numero")

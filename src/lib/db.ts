@@ -427,6 +427,11 @@ export async function createCalendarioEvento(empresaId: string, evento: Record<s
   return data;
 }
 
+export async function updateCalendarioEvento(id: string, evento: Record<string, unknown>) {
+  const { error } = await supabase.from("calendario_eventos").update(evento).eq("id", id);
+  if (error) throw error;
+}
+
 export async function deleteCalendarioEvento(id: string) {
   const { error } = await supabase.from("calendario_eventos").delete().eq("id", id);
   if (error) throw error;

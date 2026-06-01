@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Mail, X, Receipt, Eye, EyeOff } from "lucide-react";
+import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Mail, X, Receipt, Eye, EyeOff, ChevronDown, ChevronUp, ExternalLink, FileText, CreditCard, Info, Map, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +18,41 @@ type Empresa = {
 };
 
 type Membro = { user_id: string; role: string; perfis: { nome: string; email: string; cargo: string | null } | null };
+
+function TutorialBox({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-blue-200 dark:border-blue-900 rounded-lg overflow-hidden mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors text-left"
+      >
+        <span className="flex items-center gap-2 text-[12px] font-semibold text-blue-700 dark:text-blue-400">
+          <Info className="size-3.5 shrink-0" />
+          {titulo}
+        </span>
+        {open
+          ? <ChevronUp className="size-3.5 text-blue-500 shrink-0" />
+          : <ChevronDown className="size-3.5 text-blue-500 shrink-0" />}
+      </button>
+      {open && (
+        <div className="px-3 py-3 bg-blue-50/50 dark:bg-blue-950/20 text-[12px] text-foreground/80 space-y-2.5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Passo({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2.5 items-start">
+      <span className="size-5 rounded-full bg-blue-600 text-white text-[10px] font-bold grid place-items-center shrink-0 mt-0.5">{n}</span>
+      <span className="leading-relaxed">{children}</span>
+    </div>
+  );
+}
 
 function Configuracoes() {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
@@ -56,6 +91,12 @@ function Configuracoes() {
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
+  // Plantas baixas
+  type PlantaInfo = { nome: string; paredes: {id:string;lado:string;descricao:string;largura_cm:number;espaco_util_cm:number;obstaculos:string}[]; porta_principal?: {parede:string;x_pct:number;largura_cm:number}; janelas?: {parede:string;x_pct:number;largura_cm:number;descricao?:string}[]; largura_cm: number; profundidade_cm: number; altura_cm: number; observacoes?: string; analisado_em?: string };
+  const [plantas, setPlantas] = useState<Record<string, PlantaInfo>>({});
+  const [plantaAnalisando, setPlantaAnalisando] = useState<string | null>(null);
+  const [novoAmbiente, setNovoAmbiente] = useState("");
+
   const loadMembros = async (eid: string) => {
     const { data } = await supabase.from("empresa_membros")
       .select("user_id, role, perfis(nome, email, cargo)")
@@ -93,7 +134,7 @@ function Configuracoes() {
       setParams({
         mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
         mao_obra_hora: Number(p.mao_obra_hora ?? 45),
-        margem_padrao: Number(p.margem_padrao ?? 35),
+        margem_padrao: Number(p.margem_padrao ?? 300),
         meta_faturamento: Number(p.meta_faturamento ?? 0),
         meta_margem: Number(p.meta_margem ?? 0),
       });
@@ -105,6 +146,8 @@ function Configuracoes() {
         asaas_ambiente: (p.asaas_ambiente as "sandbox" | "producao") ?? "sandbox",
       });
       setLogoUrl(emp.logo_url ?? null);
+      const pb = (emp.parametros as Record<string, unknown> | null)?.plantas_baixas;
+      if (pb && typeof pb === "object") setPlantas(pb as Record<string, PlantaInfo>);
     });
   }, []);
 
@@ -143,11 +186,62 @@ function Configuracoes() {
       telefone: form.telefone || null,
       email: form.email || null,
       cor_primaria: form.cor_primaria || null,
-      parametros: { ...params, ...fiscal },
+      parametros: { ...params, ...fiscal, plantas_baixas: Object.keys(plantas).length > 0 ? plantas : undefined },
     }).eq("id", empresa.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Configurações salvas!");
+  };
+
+  const handleAnalisarPlanta = async (ambiente: string, file: File) => {
+    if (!empresa) return;
+    setPlantaAnalisando(ambiente);
+    try {
+      const b64 = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          res(result.split(",")[1] ?? "");
+        };
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+
+      const resp = await fetch("/api/analisar-planta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imagem_b64: b64, ambiente }),
+      });
+      if (!resp.ok) throw new Error(`API error: ${resp.statusText}`);
+      const json = await resp.json() as PlantaInfo;
+      json.nome = ambiente;
+      json.analisado_em = new Date().toISOString();
+
+      const novasPlantas = { ...plantas, [ambiente]: json };
+      setPlantas(novasPlantas);
+
+      // Salva imediatamente
+      await supabase.from("empresas").update({
+        parametros: { ...params, ...fiscal, plantas_baixas: novasPlantas },
+      }).eq("id", empresa.id);
+
+      toast.success(`Planta de ${ambiente} analisada e salva!`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao analisar planta");
+    } finally {
+      setPlantaAnalisando(null);
+    }
+  };
+
+  const handleRemoverPlanta = async (ambiente: string) => {
+    if (!empresa) return;
+    const novas = { ...plantas };
+    delete novas[ambiente];
+    setPlantas(novas);
+    await supabase.from("empresas").update({
+      parametros: { ...params, ...fiscal, plantas_baixas: Object.keys(novas).length > 0 ? novas : null },
+    }).eq("id", empresa.id);
+    toast.success("Planta removida");
   };
 
   const handleInvite = async () => {
@@ -279,7 +373,7 @@ function Configuracoes() {
               {[
                 { label: "MDF — custo por chapa (R$)", key: "mdf_custo_chapa", step: "1" },
                 { label: "Mão de obra — custo/hora (R$)", key: "mao_obra_hora", step: "1" },
-                { label: "Margem padrão (%)", key: "margem_padrao", step: "0.5" },
+                { label: "Multiplicador padrão (300 = 3× o custo)", key: "margem_padrao", step: "10" },
               ].map(({ label, key, step }) => (
                 <label key={key} className="block">
                   <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
@@ -365,7 +459,42 @@ function Configuracoes() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Focus NFe */}
           <div className="space-y-3">
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">NF-e — Focus NFe</div>
+            <div className="flex items-center gap-2">
+              <FileText className="size-3.5 text-muted-foreground" />
+              <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">NF-e — Focus NFe</div>
+            </div>
+
+            <TutorialBox titulo="O que é e como configurar a NF-e?">
+              <p className="text-muted-foreground leading-relaxed">
+                A <strong className="text-foreground">Focus NFe</strong> é uma plataforma que permite emitir Notas Fiscais Eletrônicas (NF-e) diretamente do Planne, sem precisar abrir outro sistema.
+                Após um orçamento ser aprovado, você pode gerar a nota fiscal com um clique.
+              </p>
+              <div className="font-semibold text-foreground pt-1">Como configurar:</div>
+              <Passo n={1}>
+                Acesse{" "}
+                <a href="https://focusnfe.com.br" target="_blank" rel="noopener" className="text-blue-600 underline inline-flex items-center gap-0.5">
+                  focusnfe.com.br <ExternalLink className="size-2.5" />
+                </a>{" "}
+                e crie uma conta (plano gratuito disponível para testes).
+              </Passo>
+              <Passo n={2}>
+                No painel Focus NFe, vá em <strong>Configurações → Empresa</strong> e cadastre o CNPJ da sua marcenaria.
+              </Passo>
+              <Passo n={3}>
+                Faça upload do <strong>Certificado Digital A1</strong> (arquivo .pfx) da sua empresa — ele é obrigatório para assinar as notas.
+              </Passo>
+              <Passo n={4}>
+                Em <strong>Configurações → Tokens de Acesso</strong>, copie o token gerado e cole no campo abaixo.
+              </Passo>
+              <Passo n={5}>
+                Escolha <strong>Homologação</strong> para fazer testes sem valor fiscal real.
+                Quando estiver pronto, troque para <strong>Produção</strong>.
+              </Passo>
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-2 text-[11.5px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                <strong>Dica:</strong> Em homologação as notas não têm validade jurídica — use para testar o processo antes de emitir de verdade.
+              </div>
+            </TutorialBox>
+
             <label className="block">
               <div className="text-[11.5px] text-muted-foreground mb-1">Token de acesso</div>
               <input
@@ -407,7 +536,43 @@ function Configuracoes() {
 
           {/* Asaas */}
           <div className="space-y-3">
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Boleto / PIX — Asaas</div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="size-3.5 text-muted-foreground" />
+              <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Boleto / PIX — Asaas</div>
+            </div>
+
+            <TutorialBox titulo="O que é e como configurar boleto e PIX?">
+              <p className="text-muted-foreground leading-relaxed">
+                O <strong className="text-foreground">Asaas</strong> é uma fintech brasileira que permite gerar cobranças (boleto, PIX, cartão) diretamente pelo Planne.
+                Quando um orçamento é aprovado, você pode enviar o link de pagamento ao cliente sem precisar acessar outro sistema.
+              </p>
+              <div className="font-semibold text-foreground pt-1">Como configurar:</div>
+              <Passo n={1}>
+                Acesse{" "}
+                <a href="https://asaas.com" target="_blank" rel="noopener" className="text-blue-600 underline inline-flex items-center gap-0.5">
+                  asaas.com <ExternalLink className="size-2.5" />
+                </a>{" "}
+                e crie uma conta gratuita (sem mensalidade — Asaas cobra apenas por transação).
+              </Passo>
+              <Passo n={2}>
+                Complete o cadastro com CNPJ ou CPF e aguarde a aprovação da conta (geralmente em minutos).
+              </Passo>
+              <Passo n={3}>
+                No painel Asaas, vá em <strong>Minha Conta → Integrações → API</strong> e copie o <code className="bg-secondary px-1 rounded">access_token</code>.
+              </Passo>
+              <Passo n={4}>
+                Cole o token no campo abaixo. Use <strong>Sandbox</strong> para testar sem movimentar dinheiro real.
+              </Passo>
+              <Passo n={5}>
+                Para receber confirmações de pagamento automáticas, configure o webhook no painel Asaas em{" "}
+                <strong>Configurações → Webhooks</strong>, apontando para a URL abaixo:
+                <code className="block mt-1 bg-secondary px-2 py-1 rounded text-[11px] break-all">https://seu-dominio.vercel.app/api/webhook-asaas</code>
+              </Passo>
+              <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md p-2 text-[11.5px] text-green-800 dark:text-green-300 leading-relaxed">
+                <strong>Gratuito para começar:</strong> Asaas não cobra mensalidade. A taxa por boleto pago é de cerca de R$ 1,99 e PIX é gratuito.
+              </div>
+            </TutorialBox>
+
             <label className="block">
               <div className="text-[11.5px] text-muted-foreground mb-1">API Key (access_token)</div>
               <input
@@ -434,6 +599,160 @@ function Configuracoes() {
               <span className="font-mono">https://seu-dominio.vercel.app/api/webhook-asaas</span>
             </div>
           </div>
+        </div>
+      </Surface>
+
+      {/* Plantas Baixas */}
+      <Surface className="mt-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Map className="size-3.5 text-muted-foreground" />
+          <div className="text-[12.5px] font-semibold">Plantas Baixas dos Ambientes</div>
+        </div>
+        <p className="text-[12px] text-muted-foreground mb-4">
+          Envie a planta baixa de cada ambiente (sala, cozinha, quarto…). A IA extrai paredes, dimensões, portas e janelas automaticamente para usar nos orçamentos.
+        </p>
+
+        {/* Adicionar ambiente */}
+        <div className="flex gap-2 mb-5">
+          <input
+            value={novoAmbiente}
+            onChange={(e) => setNovoAmbiente(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && novoAmbiente.trim() && !plantas[novoAmbiente.trim()]) {
+                setPlantas((p) => ({ ...p, [novoAmbiente.trim()]: { nome: novoAmbiente.trim(), paredes: [], largura_cm: 0, profundidade_cm: 0, altura_cm: 0 } }));
+                setNovoAmbiente("");
+              }
+            }}
+            placeholder="Nome do ambiente (ex: Cozinha, Sala de estar)"
+            className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none focus:border-border-strong"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const nome = novoAmbiente.trim();
+              if (!nome || plantas[nome]) return;
+              setPlantas((p) => ({ ...p, [nome]: { nome, paredes: [], largura_cm: 0, profundidade_cm: 0, altura_cm: 0 } }));
+              setNovoAmbiente("");
+            }}
+            className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary shrink-0 transition-colors"
+          >
+            Adicionar
+          </button>
+        </div>
+
+        {Object.keys(plantas).length === 0 && (
+          <div className="text-[12px] text-muted-foreground text-center py-6 border border-dashed border-border rounded-lg">
+            Nenhum ambiente cadastrado. Adicione um nome acima para começar.
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {Object.entries(plantas).map(([amb, planta]) => {
+            const analisando = plantaAnalisando === amb;
+            const temDados = planta.largura_cm > 0 || planta.profundidade_cm > 0;
+            return (
+              <div key={amb} className="border border-border rounded-lg overflow-hidden">
+                {/* Cabeçalho do ambiente */}
+                <div className="flex items-center justify-between px-4 py-3 bg-surface-2">
+                  <div className="flex items-center gap-2">
+                    <Map className="size-3.5 text-muted-foreground" />
+                    <span className="text-[13px] font-medium">{amb}</span>
+                    {temDados && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {planta.largura_cm}×{planta.profundidade_cm} cm · {planta.altura_cm > 0 ? `h: ${planta.altura_cm} cm` : ""}
+                      </span>
+                    )}
+                    {planta.analisado_em && (
+                      <span className="text-[10.5px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                        analisado
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const inp = document.getElementById(`planta-upload-${amb}`) as HTMLInputElement;
+                        inp?.click();
+                      }}
+                      disabled={analisando}
+                      className="h-7 px-2.5 rounded-md border border-border text-[12px] hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-60 transition-colors"
+                    >
+                      {analisando
+                        ? <><Loader2 className="size-3 animate-spin" /> Analisando…</>
+                        : <><Upload className="size-3" /> {temDados ? "Atualizar planta" : "Enviar planta"}</>}
+                    </button>
+                    <input
+                      id={`planta-upload-${amb}`}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAnalisarPlanta(amb, file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoverPlanta(amb)}
+                      className="size-7 rounded-md border border-border text-muted-foreground hover:text-red-500 hover:border-red-300 grid place-items-center transition-colors"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Dados analisados */}
+                {temDados && (
+                  <div className="px-4 py-3 space-y-3">
+                    {/* Paredes */}
+                    {planta.paredes?.length > 0 && (
+                      <div>
+                        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Paredes</div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                          {planta.paredes.map((p) => (
+                            <div key={p.id} className="bg-surface-2 rounded-md p-2 text-[11.5px]">
+                              <div className="font-medium">{p.descricao || p.lado}</div>
+                              <div className="text-muted-foreground">{p.largura_cm} cm útil</div>
+                              {p.obstaculos && <div className="text-[10.5px] text-amber-600 mt-0.5">{p.obstaculos}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Porta + Janelas */}
+                    <div className="flex flex-wrap gap-2">
+                      {planta.porta_principal && (
+                        <div className="bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-md px-2.5 py-1.5 text-[11.5px]">
+                          Porta principal · parede {planta.porta_principal.parede} · {planta.porta_principal.largura_cm} cm
+                        </div>
+                      )}
+                      {planta.janelas?.map((j, i) => (
+                        <div key={i} className="bg-sky-500/10 text-sky-700 dark:text-sky-400 rounded-md px-2.5 py-1.5 text-[11.5px]">
+                          Janela {i + 1} · parede {j.parede} · {j.largura_cm} cm{j.descricao ? ` · ${j.descricao}` : ""}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Observações */}
+                    {planta.observacoes && (
+                      <div className="text-[11.5px] text-muted-foreground bg-secondary rounded-md px-3 py-2">
+                        {planta.observacoes}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!temDados && (
+                  <div className="px-4 py-4 text-[12px] text-muted-foreground text-center">
+                    Envie uma foto ou imagem da planta baixa para analisar automaticamente.
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </Surface>
 

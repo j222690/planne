@@ -155,7 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
   const {
-    ambiente, moveis, medidas, descricao, materiais, planta_b64, margem_pct = 35, restricoes_espaciais,
+    ambiente, moveis, medidas, descricao, materiais, planta_b64, margem_pct = 300, restricoes_espaciais,
   } = (req.body ?? {}) as {
     ambiente: string;
     moveis?: MovelConfig[];
@@ -275,7 +275,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const custo = Number(it.preco_custo) || 0;
     const unitario = Number(it.preco_unitario) > 0
       ? it.preco_unitario
-      : parseFloat((custo / (1 - margem_pct / 100)).toFixed(2));
+      : parseFloat((custo * (margem_pct / 100)).toFixed(2));
     return { ...it, movel: it.movel ?? "Geral", justificativa: it.justificativa ?? "", preco_custo: custo, preco_unitario: unitario };
   });
 
