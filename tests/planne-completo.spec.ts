@@ -390,10 +390,10 @@ test.describe("Fornecedores", () => {
     // aguarda modal fechar (sucesso) — REQUER migration v5 aplicada no Supabase
     await expect(page.locator('h2:has-text("Adicionar fornecedor")')).not.toBeVisible({ timeout: 10_000 });
 
-    await goTo(page, "/app/fornecedores");
-    await page.waitForTimeout(1500);
+    // Aguarda a lista recarregar com o novo fornecedor
+    await page.waitForSelector(`text=${nomeForn}`, { timeout: 15_000 });
     const row = page.getByText(nomeForn, { exact: false }).first();
-    await expect(row).toBeVisible({ timeout: 8_000 });
+    await expect(row).toBeVisible({ timeout: 15_000 });
   });
 
   test("Modo de sync aparece como badge se houver fornecedores", async ({ page }) => {

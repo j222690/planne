@@ -1,5 +1,68 @@
 import { supabase } from "./supabase";
 
+// ─── Input types ──────────────────────────────────────────────────────────────
+
+export interface ClienteInput {
+  id?: string;
+  nome: string;
+  email?: string | null;
+  telefone?: string | null;
+  whatsapp?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  origem?: string | null;
+  observacoes?: string | null;
+  cpf_cnpj?: string | null;
+  tipo?: string | null;
+}
+
+export interface MaterialInput {
+  id?: string;
+  nome: string;
+  codigo?: string | null;
+  unidade?: string;
+  preco_custo?: number;
+  preco_venda?: number;
+  cor?: string | null;
+  espessura_mm?: number | null;
+  largura_mm?: number | null;
+  comprimento_mm?: number | null;
+  fornecedor_id?: string | null;
+  categoria_id?: string | null;
+  imagem_url?: string | null;
+}
+
+export interface ProjetoInput {
+  id?: string;
+  nome: string;
+  descricao?: string | null;
+  status?: string;
+  cliente_id?: string | null;
+}
+
+export interface OrcamentoInput {
+  id?: string;
+  status?: string;
+  margem_pct?: number;
+  subtotal?: number;
+  total?: number;
+  observacoes?: string | null;
+  cliente_id?: string | null;
+  projeto_id?: string | null;
+  moveis_config?: unknown;
+}
+
+export interface LancamentoInput {
+  id?: string;
+  tipo: "entrada" | "saida";
+  valor: number;
+  descricao?: string | null;
+  vencimento?: string | null;
+  pago_em?: string | null;
+  status?: string;
+  categoria?: string | null;
+}
+
 // ─── Empresa do usuário atual ─────────────────────────────────────────────────
 export async function getEmpresaAtual() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -9,14 +72,13 @@ export async function getEmpresaAtual() {
     .from("empresa_membros")
     .select("empresa_id, role, empresas(id,nome,cnpj,cidade,estado,endereco,logo_url,cor_primaria,email,telefone,parametros)")
     .eq("user_id", session.user.id)
-    .single();
+    .maybeSingle();
 
   if (!data) return null;
-  // PostgREST may return the nested join as object or array — handle both
   const emp = Array.isArray(data.empresas) ? (data.empresas as Record<string, unknown>[])[0] : data.empresas as Record<string, unknown>;
   return {
     ...(emp ?? {}),
-    id: data.empresa_id,   // always use empresa_id from empresa_membros directly
+    id: data.empresa_id,
     role: data.role,
   };
 }
@@ -32,8 +94,22 @@ export async function getClientes(empresaId: string) {
   return data ?? [];
 }
 
-export async function upsertCliente(empresaId: string, cliente: Record<string, unknown>) {
+export async function upsertCliente(empresaId: string, cliente: ClienteInput) {
   const { data: { session } } = await supabase.auth.getSession();
+
+  if (cliente.id) {
+    const { id, ...fields } = cliente;
+    const { data, error } = await supabase
+      .from("clientes")
+      .update(fields)
+      .eq("id", id)
+      .eq("empresa_id", empresaId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabase
     .from("clientes")
     .insert({ ...cliente, empresa_id: empresaId, created_by: session?.user.id })
@@ -65,7 +141,19 @@ export async function getMateriais(_empresaId?: string) {
   return data ?? [];
 }
 
-export async function upsertMaterial(empresaId: string, material: Record<string, unknown>) {
+export async function upsertMaterial(empresaId: string, material: MaterialInput) {
+  if (material.id) {
+    const { id, ...fields } = material;
+    const { data, error } = await supabase
+      .from("materiais")
+      .update(fields)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabase
     .from("materiais")
     .insert({ ...material, empresa_id: empresaId, ativo: true })
@@ -76,7 +164,20 @@ export async function upsertMaterial(empresaId: string, material: Record<string,
 }
 
 // ─── Projetos ─────────────────────────────────────────────────────────────────
-export async function upsertProjeto(empresaId: string, projeto: Record<string, unknown>) {
+export async function upsertProjeto(empresaId: string, projeto: ProjetoInput) {
+  if (projeto.id) {
+    const { id, ...fields } = projeto;
+    const { data, error } = await supabase
+      .from("projetos")
+      .update(fields)
+      .eq("id", id)
+      .eq("empresa_id", empresaId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabase
     .from("projetos")
     .insert({ ...projeto, empresa_id: empresaId })
@@ -117,7 +218,7 @@ export async function getOrcamentoMoveis(orcamentoId: string) {
   return (data as Record<string, unknown>)?.moveis_config ?? null;
 }
 
-export async function upsertOrcamento(empresaId: string, orc: Record<string, unknown>) {
+export async function upsertOrcamento(empresaId: string, orc: OrcamentoInput) {
   const { data: { session } } = await supabase.auth.getSession();
   const { data, error } = await supabase
     .from("orcamentos")
@@ -194,7 +295,20 @@ export async function getFinanceiroMeses(empresaId: string) {
   return data ?? [];
 }
 
-export async function upsertLancamento(empresaId: string, lancamento: Record<string, unknown>) {
+export async function upsertLancamento(empresaId: string, lancamento: LancamentoInput) {
+  if (lancamento.id) {
+    const { id, ...fields } = lancamento;
+    const { data, error } = await supabase
+      .from("financeiro")
+      .update(fields)
+      .eq("id", id)
+      .eq("empresa_id", empresaId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabase
     .from("financeiro")
     .insert({ ...lancamento, empresa_id: empresaId })
@@ -216,7 +330,7 @@ export async function upsertOrdemProducao(empresaId: string, ordem: Record<strin
 }
 
 // ─── Updates e deletes ────────────────────────────────────────────────────────
-export async function updateCliente(id: string, data: Record<string, unknown>) {
+export async function updateCliente(id: string, data: Partial<ClienteInput>) {
   const { error } = await supabase.from("clientes").update(data).eq("id", id);
   if (error) throw error;
 }
@@ -234,7 +348,7 @@ export async function deleteFornecedor(id: string) {
   if (error) throw error;
 }
 
-export async function updateMaterial(id: string, data: Record<string, unknown>) {
+export async function updateMaterial(id: string, data: Partial<MaterialInput>) {
   const { error } = await supabase.from("materiais").update(data).eq("id", id);
   if (error) throw error;
 }
@@ -243,7 +357,7 @@ export async function deleteMaterial(id: string) {
   if (error) throw error;
 }
 
-export async function updateLancamento(id: string, data: Record<string, unknown>) {
+export async function updateLancamento(id: string, data: Partial<LancamentoInput>) {
   const { error } = await supabase.from("financeiro").update(data).eq("id", id);
   if (error) throw error;
 }
@@ -256,12 +370,18 @@ export async function updateOrcamentoStatus(id: string, status: string) {
   const { error } = await supabase.from("orcamentos").update({ status }).eq("id", id);
   if (error) throw error;
 }
+
 export async function deleteOrcamento(id: string) {
-  await supabase.from("orcamento_moveis").delete().eq("orcamento_id", id);
-  await supabase.from("orcamento_itens").delete().eq("orcamento_id", id);
+  const { error: errMoveis } = await supabase.from("orcamento_moveis").delete().eq("orcamento_id", id);
+  if (errMoveis) throw new Error(`Erro ao limpar orcamento_moveis: ${errMoveis.message}`);
+
+  const { error: errItens } = await supabase.from("orcamento_itens").delete().eq("orcamento_id", id);
+  if (errItens) throw new Error(`Erro ao limpar orcamento_itens: ${errItens.message}`);
+
   const { error } = await supabase.from("orcamentos").delete().eq("id", id);
   if (error) throw error;
 }
+
 export async function getOrcamentoItens(orcamentoId: string) {
   const { data, error } = await supabase
     .from("orcamento_itens")
@@ -272,7 +392,7 @@ export async function getOrcamentoItens(orcamentoId: string) {
   return data ?? [];
 }
 
-export async function updateOrcamento(id: string, data: Record<string, unknown>) {
+export async function updateOrcamento(id: string, data: Partial<OrcamentoInput>) {
   const { error } = await supabase.from("orcamentos").update(data).eq("id", id);
   if (error) throw error;
 }

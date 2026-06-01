@@ -226,12 +226,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     global: { headers: { Authorization: `Bearer ${userToken}` } },
   });
 
-  const { data: membroData } = await supabase
+  const { data: membroData, error: membroError } = await supabase
     .from("empresa_membros")
     .select("empresa_id")
-    .single();
+    .maybeSingle();
 
-  if (!membroData) return res.status(400).json({ error: "Empresa não encontrada" });
+  if (membroError) {
+    return res.status(500).json({ error: "Erro ao buscar empresa do usuário" });
+  }
+  if (!membroData?.empresa_id) {
+    return res.status(400).json({
+      error: "Usuário não vinculado a nenhuma empresa. Solicite um convite ao administrador.",
+    });
+  }
   const empresaId = membroData.empresa_id as string;
 
   const history: GroqMessage[] = [{ role: "system", content: SYSTEM }, ...messages];

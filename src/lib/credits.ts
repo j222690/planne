@@ -12,23 +12,25 @@ const DEFAULT_CREDITOS: Record<Modulo, number> = {
   render: 5,
 };
 
+// Usa RPC com FOR UPDATE para evitar race condition entre usuários simultâneos
 export async function checkAndConsumeCredito(
   empresaId: string,
   modulo: Modulo,
 ): Promise<{ ok: boolean; restantes: number; mensagem?: string }> {
-  const { data, error } = await supabase
-    .from("empresas")
-    .select("parametros")
-    .eq("id", empresaId)
-    .single();
+  const key = PARAM_KEY[modulo];
+  const defaultVal = DEFAULT_CREDITOS[modulo];
+
+  const { data, error } = await supabase.rpc("consume_credito", {
+    p_empresa_id: empresaId,
+    p_key: key,
+    p_default: defaultVal,
+  });
 
   if (error) return { ok: false, restantes: 0, mensagem: "Erro ao verificar créditos" };
 
-  const params = ((data?.parametros ?? {}) as Record<string, number>);
-  const key = PARAM_KEY[modulo];
-  const creditos = params[key] ?? DEFAULT_CREDITOS[modulo];
+  const result = data as { ok: boolean; restantes: number };
 
-  if (creditos <= 0) {
+  if (!result.ok) {
     return {
       ok: false,
       restantes: 0,
@@ -36,13 +38,7 @@ export async function checkAndConsumeCredito(
     };
   }
 
-  const novos = creditos - 1;
-  await supabase
-    .from("empresas")
-    .update({ parametros: { ...params, [key]: novos } })
-    .eq("id", empresaId);
-
-  return { ok: true, restantes: novos };
+  return { ok: true, restantes: result.restantes };
 }
 
 export async function getCreditosDisponiveis(
