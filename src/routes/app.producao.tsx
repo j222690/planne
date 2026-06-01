@@ -63,10 +63,42 @@ const pecaSchema = z.object({
 });
 type PecaForm = z.infer<typeof pecaSchema>;
 
+// Feature 13: business days estimate
+function addBusinessDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d;
+}
+
 function NovaOrdemModal({ onClose, onSaved, empresaId }: { onClose: () => void; onSaved: () => void; empresaId: string }) {
   const [projetos, setProjetos] = useState<{ id: string; nome: string }[]>([]);
+  const [numPecas, setNumPecas] = useState<number | null>(null);
   useEffect(() => { getProjetos(empresaId).then((p) => setProjetos(p as { id: string; nome: string }[])); }, [empresaId]);
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm<OrdemForm>({ resolver: zodResolver(ordemSchema) });
+  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<OrdemForm>({ resolver: zodResolver(ordemSchema) });
+  const projetoId = watch("projeto_id");
+
+  useEffect(() => {
+    if (!projetoId) { setNumPecas(null); return; }
+    // Feature 13: count pieces from lista_corte for this project's latest orçamento
+    supabase.from("orcamentos").select("id").eq("projeto_id", projetoId).eq("status", "aprovado").order("created_at", { ascending: false }).limit(1)
+      .then(({ data }) => {
+        if (!data?.length) { setNumPecas(null); return; }
+        supabase.from("orcamento_itens").select("quantidade").eq("orcamento_id", data[0].id)
+          .then(({ data: itens }) => {
+            const total = (itens ?? []).reduce((s, i) => s + Number(i.quantidade), 0);
+            setNumPecas(Math.round(total * 3)); // estimate ~3 pieces per item
+          });
+      });
+  }, [projetoId]);
+
+  const diasEstimados = numPecas ? Math.max(1, Math.ceil(numPecas / 20)) : null;
+  const dataEstimada = diasEstimados ? addBusinessDays(new Date(), diasEstimados) : null;
+
   const onSubmit = async (data: OrdemForm) => {
     try {
       await upsertOrdemProducao(empresaId, { projeto_id: data.projeto_id || null, observacoes: data.observacoes || null });
@@ -93,6 +125,17 @@ function NovaOrdemModal({ onClose, onSaved, empresaId }: { onClose: () => void; 
               {projetos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
+          {/* Feature 13: production time estimate */}
+          {diasEstimados && dataEstimada && (
+            <div className="flex items-center gap-2 text-[12px] p-2.5 rounded-md bg-accent/10 border border-accent/20 text-accent">
+              <Scissors className="size-3.5 shrink-0" />
+              <span>
+                Prazo estimado: <strong>{diasEstimados} dias úteis</strong>
+                {" "}(~{dataEstimada.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })})
+                {" · "}{numPecas} peças · 20/dia
+              </span>
+            </div>
+          )}
           <div>
             <div className="text-[11.5px] text-muted-foreground mb-1">Observações</div>
             <textarea {...register("observacoes")} rows={2} placeholder="Detalhes, prioridade, prazo..."

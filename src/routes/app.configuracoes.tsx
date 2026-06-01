@@ -42,6 +42,7 @@ function Configuracoes() {
 
   const [params, setParams] = useState({
     mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35,
+    meta_faturamento: 0, meta_margem: 0,
   });
 
   const [fiscal, setFiscal] = useState({
@@ -93,6 +94,8 @@ function Configuracoes() {
         mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
         mao_obra_hora: Number(p.mao_obra_hora ?? 45),
         margem_padrao: Number(p.margem_padrao ?? 35),
+        meta_faturamento: Number(p.meta_faturamento ?? 0),
+        meta_margem: Number(p.meta_margem ?? 0),
       });
       setFiscal({
         focus_nfe_token: String(p.focus_nfe_token ?? ""),
@@ -290,6 +293,38 @@ function Configuracoes() {
                   />
                 </label>
               ))}
+            </div>
+          </Surface>
+
+          {/* Feature 4: Metas mensais */}
+          <Surface>
+            <div className="text-[12.5px] font-semibold mb-4">Metas mensais</div>
+            <div className="space-y-3">
+              <label className="block">
+                <div className="text-[11.5px] text-muted-foreground mb-1">Meta de faturamento (R$)</div>
+                <input
+                  type="number"
+                  value={params.meta_faturamento}
+                  onChange={(e) => setParam("meta_faturamento", e.target.value)}
+                  className="input"
+                  min={0}
+                  step={1000}
+                  placeholder="0"
+                />
+              </label>
+              <label className="block">
+                <div className="text-[11.5px] text-muted-foreground mb-1">Meta de margem (%)</div>
+                <input
+                  type="number"
+                  value={params.meta_margem}
+                  onChange={(e) => setParam("meta_margem", e.target.value)}
+                  className="input"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  placeholder="0"
+                />
+              </label>
             </div>
           </Surface>
 

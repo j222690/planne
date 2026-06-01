@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Upload, Sparkles, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff } from "lucide-react";
+import { Upload, Sparkles, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff, PackageX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { getMateriais, getEmpresaAtual, getFornecedores, upsertMaterial, updateMaterial, deleteMaterial } from "@/lib/db";
@@ -21,6 +21,8 @@ type Material = {
   cor: string | null; espessura_mm: number | null; imagem_url: string | null;
   largura_mm: number | null; comprimento_mm: number | null;
   fornecedores: { nome: string } | null;
+  estoque?: number | null;
+  estoque_minimo?: number | null;
 };
 
 function getCategoria(nome: string): string {
@@ -354,6 +356,29 @@ function Materiais() {
           />
         )}
       </AnimatePresence>
+
+      {/* Feature 12: Stock alerts */}
+      {(() => {
+        const baixos = materiais.filter((m) => m.estoque != null && m.estoque_minimo != null && m.estoque <= m.estoque_minimo);
+        if (baixos.length === 0) return null;
+        return (
+          <div className="mb-4 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 flex items-start gap-2.5">
+            <PackageX className="size-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[12.5px] font-semibold text-amber-700 dark:text-amber-400">
+                {baixos.length} material(is) abaixo do estoque mínimo
+              </div>
+              <div className="text-[11.5px] text-amber-600 mt-0.5">
+                {baixos.map((m) => m.nome).join(", ")}
+              </div>
+            </div>
+            <button onClick={() => setShowModal(true)}
+              className="h-7 px-2.5 rounded border border-amber-500 text-amber-700 text-[11.5px] font-medium hover:bg-amber-500/10 shrink-0">
+              Repor
+            </button>
+          </div>
+        );
+      })()}
 
       <PageHeader
         eyebrow="Operação"

@@ -23,6 +23,7 @@ function Dashboard() {
   const [orcs, setOrcs] = useState<{id:string;status:string;total:number;created_at:string;clientes:{nome:string}|null;projetos:{nome:string}|null}[]>([]);
   const [marginData, setMarginData] = useState<{m:string;real:number;est:number}[]>([]);
   const [loading, setLoading] = useState(true);
+  const [metas, setMetas] = useState<{meta_faturamento:number;meta_margem:number}|null>(null);
 
   useEffect(() => {
     async function load() {
@@ -38,6 +39,11 @@ function Dashboard() {
         setStats(s);
         setOrcs(allOrcs as typeof orcs);
         setMarginData(margem);
+        // Feature 4: load goals
+        const p = (empresa as {parametros?: Record<string,unknown>}).parametros ?? {};
+        const mf = Number(p.meta_faturamento ?? 0);
+        const mm = Number(p.meta_margem ?? 0);
+        if (mf > 0 || mm > 0) setMetas({ meta_faturamento: mf, meta_margem: mm });
       } finally {
         setLoading(false);
       }
@@ -120,6 +126,44 @@ function Dashboard() {
             <StatCard label="Conversão" value={`${conversaoPct}%`} hint={`${aprovados.length} de ${elegíveis.length} fechados`} />
             <StatCard label="Ticket médio" value={fmt(ticketMedio)} hint="orçamentos aprovados" />
           </div>
+
+          {/* Feature 4: Monthly goals */}
+          {metas && (metas.meta_faturamento > 0 || metas.meta_margem > 0) && (
+            <div className="mt-4 grid sm:grid-cols-2 gap-3">
+              {metas.meta_faturamento > 0 && (() => {
+                const cur = stats?.faturamentoMes ?? 0;
+                const pct = Math.min(100, Math.round(cur / metas.meta_faturamento * 100));
+                return (
+                  <div className="bg-surface border border-border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[12px] font-medium">Meta de faturamento</div>
+                      <div className="text-[11.5px] text-muted-foreground">{pct}%</div>
+                    </div>
+                    <div className="text-[11.5px] text-muted-foreground mb-2">{fmt(cur)} de {fmt(metas.meta_faturamento)}</div>
+                    <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })()}
+              {metas.meta_margem > 0 && (() => {
+                const cur = stats?.margemMedia ?? 0;
+                const pct = Math.min(100, Math.round(cur / metas.meta_margem * 100));
+                return (
+                  <div className="bg-surface border border-border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[12px] font-medium">Meta de margem</div>
+                      <div className="text-[11.5px] text-muted-foreground">{pct}%</div>
+                    </div>
+                    <div className="text-[11.5px] text-muted-foreground mb-2">{cur.toFixed(1)}% de {metas.meta_margem}%</div>
+                    <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Surface className="lg:col-span-2">

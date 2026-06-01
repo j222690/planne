@@ -3,7 +3,7 @@ import { PageHeader, Surface, StatCard } from "@/components/planne/primitives";
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual, upsertLancamento, updateLancamento, deleteLancamento } from "@/lib/db";
-import { Loader2, Plus, X, MoreHorizontal, Pencil, Trash2, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, X, MoreHorizontal, Pencil, Trash2, CheckCircle2, Download } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
@@ -235,6 +235,8 @@ function LancRowMenu({ lanc, onEdit, onDeleted }: { lanc: Lancamento; onEdit: ()
   );
 }
 
+type FluxoProjetado = { label: string; entradas: number; saidas: number; };
+
 function Financeiro() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [chartData, setChartData] = useState<{m:string;entrada:number;saida:number}[]>([]);
@@ -243,6 +245,7 @@ function Financeiro() {
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Lancamento | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [fluxoProjetado, setFluxoProjetado] = useState<FluxoProjetado[]>([]);
 
   const load = async () => {
     try {
@@ -282,6 +285,38 @@ function Financeiro() {
         months.push({ m: label, entrada: Math.round(entrada/1000*10)/10, saida: Math.round(saida/1000*10)/10 });
       }
       setChartData(months);
+
+      // Feature 11: Projected cash flow (90 days)
+      const hoje = new Date();
+      const em90 = new Date(hoje); em90.setDate(hoje.getDate() + 90);
+      const { data: futuros } = await supabase.from("financeiro").select("tipo,valor,vencimento")
+        .eq("empresa_id", eid).gte("vencimento", hoje.toISOString().slice(0,10))
+        .lte("vencimento", em90.toISOString().slice(0,10)).neq("status", "pago");
+      const { data: orcAprovados } = await supabase.from("orcamentos").select("total,created_at")
+        .eq("empresa_id", eid).eq("status", "aprovado").gte("created_at", subMonths(hoje, 1).toISOString());
+
+      const projetadoPorMes: Record<string, { entradas: number; saidas: number }> = {};
+      for (let i = 0; i < 3; i++) {
+        const ref = new Date(hoje);
+        ref.setMonth(hoje.getMonth() + i);
+        const label = format(ref, "MMM/yy", { locale: ptBR });
+        projetadoPorMes[label] = { entradas: 0, saidas: 0 };
+      }
+      (futuros ?? []).forEach((l) => {
+        if (!l.vencimento) return;
+        const d = new Date(l.vencimento);
+        const label = format(d, "MMM/yy", { locale: ptBR });
+        if (projetadoPorMes[label]) {
+          if (l.tipo === "entrada") projetadoPorMes[label].entradas += Number(l.valor);
+          else projetadoPorMes[label].saidas += Number(l.valor);
+        }
+      });
+      // add approved orçamentos as projected income in month 1
+      const nextMonth = format(subMonths(hoje, -1), "MMM/yy", { locale: ptBR });
+      if (projetadoPorMes[nextMonth]) {
+        (orcAprovados ?? []).forEach((o) => { projetadoPorMes[nextMonth].entradas += Number(o.total ?? 0) * 0.5; });
+      }
+      setFluxoProjetado(Object.entries(projetadoPorMes).map(([label, v]) => ({ label, ...v })));
     } finally {
       setLoading(false);
     }
@@ -313,12 +348,36 @@ function Financeiro() {
         title="Financeiro"
         description="Entradas, saídas e fluxo de caixa da operação."
         actions={
-          <button
-            onClick={() => setShowModal(true)}
-            className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5"
-          >
-            <Plus className="size-3.5" /> Lançamento
-          </button>
+          <>
+            <button
+              onClick={() => {
+                const rows = [["Tipo", "Descrição", "Valor", "Status", "Vencimento", "Criado em"]].concat(
+                  lancamentos.map((l) => [
+                    l.tipo === "entrada" ? "Entrada" : "Saída",
+                    l.descricao,
+                    String(l.valor),
+                    l.status,
+                    l.vencimento ? new Date(l.vencimento).toLocaleDateString("pt-BR") : "",
+                    new Date(l.created_at).toLocaleDateString("pt-BR"),
+                  ])
+                );
+                const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+                a.download = `financeiro_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+              }}
+              className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5"
+            >
+              <Download className="size-3.5" /> Exportar CSV
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5"
+            >
+              <Plus className="size-3.5" /> Lançamento
+            </button>
+          </>
         }
       />
 
@@ -390,6 +449,44 @@ function Financeiro() {
               </div>
             </Surface>
           </div>
+
+          {/* Feature 11: Projected cash flow */}
+          {fluxoProjetado.length > 0 && (
+            <Surface className="mt-4">
+              <div className="text-[12.5px] font-medium mb-1">Fluxo de Caixa Projetado</div>
+              <div className="text-[11.5px] text-muted-foreground mb-4">Próximos 90 dias — lançamentos com vencimento futuro</div>
+              <div className="grid grid-cols-3 gap-3">
+                {fluxoProjetado.map((m) => {
+                  const saldo = m.entradas - m.saidas;
+                  return (
+                    <div key={m.label} className="border border-border rounded-lg p-3 space-y-2">
+                      <div className="text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11.5px]">
+                          <span className="text-muted-foreground">Entradas</span>
+                          <span className="text-emerald-600 font-medium">R$ {Math.round(m.entradas).toLocaleString("pt-BR")}</span>
+                        </div>
+                        <div className="flex justify-between text-[11.5px]">
+                          <span className="text-muted-foreground">Saídas</span>
+                          <span className="text-destructive font-medium">R$ {Math.round(m.saidas).toLocaleString("pt-BR")}</span>
+                        </div>
+                        <div className="flex justify-between text-[11.5px] border-t border-border pt-1">
+                          <span className="font-medium">Saldo</span>
+                          <span className={`font-semibold ${saldo >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                            R$ {Math.round(saldo).toLocaleString("pt-BR")}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Mini bar */}
+                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                        <div className="h-full rounded-full bg-accent" style={{ width: m.entradas > 0 ? `${Math.min(100, (m.entradas / (m.entradas + m.saidas)) * 100)}%` : "0%" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Surface>
+          )}
 
           <Surface padded={false}>
             <div className="p-4 border-b border-border text-[12.5px] font-medium">Todos os lançamentos</div>
