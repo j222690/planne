@@ -1854,10 +1854,10 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     if (!session) { toast.error("Sessão expirada"); return; }
     setNfeLoading(true);
     try {
-      const res = await fetch("/api/emitir-nfe", {
+      const res = await fetch("/api/fiscal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orcamento_id: orc.id, user_token: session.access_token }),
+        body: JSON.stringify({ action: "emitir-nfe", orcamento_id: orc.id, user_token: session.access_token }),
       });
       const data = await res.json() as { ok?: boolean; error?: string; ref?: string; status?: string; chave?: string; ambiente?: string };
       if (!res.ok) { toast.error(data.error ?? "Erro ao emitir NF-e"); return; }
@@ -1883,10 +1883,10 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     if (tipo === "BOLETO") setBoletoLoading(true);
     else setPixLoading(true);
     try {
-      const res = await fetch("/api/gerar-boleto", {
+      const res = await fetch("/api/fiscal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orcamento_id: orc.id, user_token: session.access_token, tipo }),
+        body: JSON.stringify({ action: "gerar-boleto", orcamento_id: orc.id, user_token: session.access_token, tipo }),
       });
       const data = await res.json() as {
         ok?: boolean; error?: string;
