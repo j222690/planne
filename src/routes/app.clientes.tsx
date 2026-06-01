@@ -368,7 +368,8 @@ type Atividade = {
 
 const TIPO_ATIV: Record<string, string> = {
   ligacao: "Ligação", visita: "Visita", email: "E-mail",
-  whatsapp: "WhatsApp", reuniao: "Reunião", outro: "Outro",
+  whatsapp: "WhatsApp", reuniao: "Reunião",
+  manutencao: "Manutenção / Pós-venda", outro: "Outro",
 };
 
 function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {

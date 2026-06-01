@@ -27,6 +27,9 @@ interface MovelConfig {
   pe_altura_cm?: number;
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
+  tem_ripado?: boolean;
+  ripa_espessura_mm?: number;
+  ripa_largura_mm?: number;
   formato?: "retangular" | "L";
   arm2_largura_cm?: number;
   arm2_profundidade_cm?: number;

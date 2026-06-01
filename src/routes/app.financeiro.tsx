@@ -3,7 +3,7 @@ import { PageHeader, Surface, StatCard } from "@/components/planne/primitives";
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual, upsertLancamento, updateLancamento, deleteLancamento } from "@/lib/db";
-import { Loader2, Plus, X, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, X, MoreHorizontal, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
@@ -394,40 +394,63 @@ function Financeiro() {
           <Surface padded={false}>
             <div className="p-4 border-b border-border text-[12.5px] font-medium">Todos os lançamentos</div>
             <div className="overflow-x-auto">
-              <table className="w-full text-[13px] min-w-[600px]">
+              <table className="w-full text-[13px] min-w-[680px]">
                 <thead className="text-[11.5px] uppercase tracking-wider text-muted-foreground">
                   <tr className="border-b border-border">
                     <th className="text-left font-medium px-5 py-2.5">Descrição</th>
-                    <th className="text-left font-medium px-5 py-2.5">Categoria</th>
-                    <th className="text-left font-medium px-5 py-2.5">Tipo</th>
-                    <th className="text-right font-medium px-5 py-2.5">Valor</th>
-                    <th className="text-left font-medium px-5 py-2.5">Status</th>
+                    <th className="text-left font-medium px-3 py-2.5">Categoria</th>
+                    <th className="text-left font-medium px-3 py-2.5">Tipo</th>
+                    <th className="text-left font-medium px-3 py-2.5">Vencimento</th>
+                    <th className="text-right font-medium px-3 py-2.5">Valor</th>
+                    <th className="text-left font-medium px-3 py-2.5">Status</th>
                     <th className="px-3 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {lancamentos.length === 0 ? (
-                    <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground text-[13px]">
+                    <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground text-[13px]">
                       Nenhum lançamento. <button onClick={() => setShowModal(true)} className="text-foreground underline">Adicionar primeiro →</button>
                     </td></tr>
-                  ) : lancamentos.map((l) => (
-                    <tr key={l.id} className="border-b border-border last:border-0 hover:bg-secondary/40 group">
+                  ) : lancamentos.map((l) => {
+                    const atrasado = l.status !== "pago" && l.vencimento && new Date(l.vencimento) < new Date();
+                    const vencFmt = l.vencimento ? new Date(l.vencimento).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
+                    return (
+                    <tr key={l.id} className={`border-b border-border last:border-0 hover:bg-secondary/40 group ${atrasado ? "bg-destructive/5" : ""}`}>
                       <td className="px-5 py-3 font-medium">{l.descricao}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{l.categoria ?? "—"}</td>
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 text-muted-foreground text-[12px]">{l.categoria ?? "—"}</td>
+                      <td className="px-3 py-3">
                         <span className={`text-[12px] font-medium ${l.tipo === "entrada" ? "text-emerald-600" : "text-destructive"}`}>
                           {l.tipo === "entrada" ? "Entrada" : "Saída"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-right num">R$ {Number(l.valor).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
-                      <td className="px-5 py-3">
+                      <td className={`px-3 py-3 text-[12px] ${atrasado ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        {vencFmt}{atrasado && " ⚠"}
+                      </td>
+                      <td className="px-3 py-3 text-right num">R$ {Number(l.valor).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
+                      <td className="px-3 py-3">
                         <span className={`text-[12px] ${STATUS_COLOR[l.status] ?? "text-muted-foreground"}`}>{l.status}</span>
                       </td>
-                      <td className="px-3 py-3 text-right">
+                      <td className="px-3 py-3 text-right flex items-center justify-end gap-1">
+                        {l.status !== "pago" && (
+                          <button
+                            title="Marcar como pago"
+                            onClick={async () => {
+                              try {
+                                await updateLancamento(l.id, { status: "pago", pago_em: new Date().toISOString() });
+                                toast.success("Marcado como pago!");
+                                load();
+                              } catch { toast.error("Erro ao atualizar"); }
+                            }}
+                            className="text-emerald-600 hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition p-1 rounded"
+                          >
+                            <CheckCircle2 className="size-4" />
+                          </button>
+                        )}
                         <LancRowMenu lanc={l} onEdit={() => setEditando(l)} onDeleted={load} />
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

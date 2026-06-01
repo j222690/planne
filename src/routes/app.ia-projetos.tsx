@@ -80,6 +80,8 @@ const MDF_CORES = [
   { nome: "Terracota", hex: "#b56a4a" },
 ];
 
+type PardeType = "top" | "bottom" | "left" | "right";
+
 interface WizardState {
   step: 1 | 2 | 3 | 4 | 5;
   projetoId: string | null;
@@ -92,6 +94,8 @@ interface WizardState {
     altura: string;
     descricao: string;
     cor_mdf: string;
+    porta_parede: PardeType;
+    janelas: PardeType[];
   };
   planta: File | null;
   referencias: File[];
@@ -259,7 +263,7 @@ function IAProjetoPage() {
     setWizard({
       step: 1,
       projetoId: null,
-      form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "", cor_mdf: "#f5f3f0" },
+      form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "", cor_mdf: "#f5f3f0", porta_parede: "bottom", janelas: [] },
       planta: null,
       referencias: [],
       analisando: false,
@@ -303,6 +307,8 @@ function IAProjetoPage() {
           estilo: wizard.form.estilo,
           descricao: wizard.form.descricao,
           cor_mdf: wizard.form.cor_mdf,
+          porta_parede: wizard.form.porta_parede,
+          janelas: wizard.form.janelas,
           planta_b64,
           referencias_b64: referencias_b64.length ? referencias_b64 : undefined,
         }),
@@ -384,7 +390,10 @@ function IAProjetoPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Erro ao iniciar render");
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}) as Record<string, unknown>) as { error?: string };
+        throw new Error(errBody.error ?? `Erro ao iniciar render (HTTP ${res.status})`);
+      }
 
       const data = await res.json() as { provider: string; url?: string; job_id?: string; status: string };
 
@@ -499,14 +508,16 @@ function IAProjetoPage() {
         cliente_id: clienteId,
       });
 
-      const itensData = (wizard.analise.moveis ?? []).map((m) => ({
-        orcamento_id: orc.id,
-        descricao: m.nome,
-        quantidade: 1,
-        unidade: "un",
-        preco_custo: Math.round(m.preco_estimado * (1 - wizard.analise!.orcamento.margem_pct / 100)),
-        preco_unitario: m.preco_estimado,
-      }));
+      const itensData = (wizard.analise.moveis ?? [])
+        .filter((m) => m.customizado !== false && m.tipo_elemento !== "porta" && m.tipo_elemento !== "janela" && m.preco_estimado > 0)
+        .map((m) => ({
+          orcamento_id: orc.id,
+          descricao: m.nome,
+          quantidade: 1,
+          unidade: "un",
+          preco_custo: Math.round(m.preco_estimado * (1 - wizard.analise!.orcamento.margem_pct / 100)),
+          preco_unitario: m.preco_estimado,
+        }));
 
       if (itensData.length > 0) {
         await supabase.from("orcamento_itens").insert(itensData);
@@ -560,9 +571,19 @@ function IAProjetoPage() {
 
 // ─── Step 1: Ambiente & Medidas ───────────────────────────────────────────────
 
+const WALL_LABELS: Record<string, string> = {
+  top: "Parede de cima", bottom: "Parede de baixo", left: "Parede esquerda", right: "Parede direita",
+};
+const WALL_ICON: Record<string, string> = { top: "↑", bottom: "↓", left: "←", right: "→" };
+
 function Step1Form({ wizard, update }: { wizard: WizardState; update: (p: Partial<WizardState>) => void }) {
   const f = wizard.form;
   const set = (k: keyof typeof f, v: string) => update({ form: { ...f, [k]: v } });
+
+  const toggleJanela = (wall: PardeType) => {
+    const has = f.janelas.includes(wall);
+    update({ form: { ...f, janelas: has ? f.janelas.filter((w) => w !== wall) : [...f.janelas, wall] } });
+  };
   const valid = f.nome.trim().length > 0;
 
   return (
@@ -626,6 +647,53 @@ function Step1Form({ wizard, update }: { wizard: WizardState; update: (p: Partia
                 {c.nome}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Porta + Janelas — layout do cômodo */}
+        <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40 border border-border">
+          {/* Porta */}
+          <div>
+            <Label>Porta principal</Label>
+            <div className="text-[11px] text-muted-foreground mb-2">Em qual parede fica?</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(["top", "bottom", "left", "right"] as PardeType[]).map((wall) => (
+                <button
+                  key={wall}
+                  type="button"
+                  onClick={() => update({ form: { ...f, porta_parede: wall } })}
+                  className={`h-8 text-[12px] rounded-md border transition-colors ${
+                    f.porta_parede === wall
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border hover:bg-secondary"
+                  }`}
+                >
+                  {WALL_ICON[wall]} {WALL_LABELS[wall].split(" ")[1]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Janelas */}
+          <div>
+            <Label>Janelas</Label>
+            <div className="text-[11px] text-muted-foreground mb-2">Em quais paredes?</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(["top", "bottom", "left", "right"] as PardeType[]).map((wall) => (
+                <button
+                  key={wall}
+                  type="button"
+                  onClick={() => toggleJanela(wall)}
+                  className={`h-8 text-[12px] rounded-md border transition-colors ${
+                    f.janelas.includes(wall)
+                      ? "bg-sky-500/15 text-sky-700 border-sky-400"
+                      : "border-border hover:bg-secondary"
+                  }`}
+                >
+                  {WALL_ICON[wall]} {WALL_LABELS[wall].split(" ")[1]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -813,7 +881,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       {wizard.renderLoading && (
         <div className="flex items-center gap-3 rounded-md border border-violet-400/30 bg-violet-50 dark:bg-violet-950/20 px-4 py-3 text-[12.5px] text-violet-700 dark:text-violet-300">
           <Loader2 className="size-4 animate-spin shrink-0" />
-          <span>{wizard.renderMode === "schnell" ? "Gerando preview rápido (Flux Schnell)…" : "Gerando render premium (Flux Pro)… pode levar até 60s"}</span>
+          <span>{wizard.renderMode === "schnell" ? "Gerando preview rápido… aguarde ~10s" : "Gerando render premium… pode levar até 60s"}</span>
         </div>
       )}
 
@@ -1018,7 +1086,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             onClick={() => gerarRender("schnell")}
             disabled={wizard.renderLoading}
             className="h-10 px-4 rounded-md border border-violet-400 text-violet-700 dark:text-violet-300 text-[13px] font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 disabled:opacity-60 inline-flex items-center gap-2"
-            title="Flux Schnell — preview rápido ~10s, sem consumir crédito premium"
+            title="Preview rápido — gerado em ~10s, sem consumir crédito premium"
           >
             {wizard.renderLoading && wizard.renderMode === "schnell"
               ? <><Loader2 className="size-4 animate-spin" /> Gerando preview…</>
@@ -1029,7 +1097,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             onClick={() => gerarRender("pro")}
             disabled={wizard.renderLoading}
             className="h-10 px-5 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2 shadow-lg shadow-violet-500/20"
-            title="Flux Pro 1.1 — render premium 1440×960px, consome 1 crédito"
+            title="Render premium — alta qualidade 1792×1024px, consome 1 crédito"
           >
             {wizard.renderLoading && wizard.renderMode === "pro"
               ? <><Loader2 className="size-4 animate-spin" /> Renderizando…</>

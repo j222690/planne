@@ -3,7 +3,7 @@ import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
 import {
   Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles,
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
-  ChevronDown, ChevronUp, Info, Search,
+  ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -14,6 +14,7 @@ import {
   getOrcamentos, getClientes, getMateriais, getEmpresaAtual,
   upsertOrcamento, getOrcamentoItens, getOrcamentoMoveis, updateOrcamentoStatus,
   deleteOrcamento, updateOrcamento, replaceOrcamentoItens, upsertProjeto,
+  upsertOrdemProducao, upsertLancamento,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -25,9 +26,22 @@ export const Route = createFileRoute("/app/orcamentos")({
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
+type FiscalDados = {
+  nfe_ref?: string;
+  nfe_status?: string;
+  nfe_chave?: string;
+  nfe_ambiente?: string;
+  nfe_emitido_em?: string;
+  boleto?: { asaas_id: string; url: string | null; copia_cola: string | null; vencimento: string; status: string };
+  pix?: { asaas_id: string; qr_code: string | null; copia_cola: string | null; vencimento: string; status: string };
+};
+
 type Orc = {
   id: string; numero: string | null; status: string;
   total: number; created_at: string;
+  cliente_id?: string;
+  projeto_id?: string;
+  fiscal_dados?: FiscalDados | null;
   clientes: { nome: string } | null;
   projetos: { nome: string } | null;
 };
@@ -70,6 +84,9 @@ type MovelConfig = {
   tem_pes?: boolean;
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
+  tem_ripado?: boolean;
+  ripa_espessura_mm?: number;
+  ripa_largura_mm?: number;
   parede_id?: string;
   comodo_nome?: string;
   // Formato
@@ -105,7 +122,7 @@ const MOVEIS_POR_AMBIENTE: Record<string, Omit<MovelConfig, "id">[]> = {
     { tipo: "criado-mudo", nome: "Criado-mudo", largura_cm: 45, profundidade_cm: 40, altura_cm: 60, portas: 1, tipo_porta: "abrir", gavetas: 1, prateleiras: 0 },
     { tipo: "escrivaninha", nome: "Escrivaninha", largura_cm: 140, profundidade_cm: 65, altura_cm: 75, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 1 },
     { tipo: "estante", nome: "Estante", largura_cm: 100, profundidade_cm: 35, altura_cm: 200, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
-    { tipo: "ripado", nome: "Ripado / Painel", largura_cm: 160, profundidade_cm: 5, altura_cm: 240, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0 },
+    { tipo: "ripado", nome: "Painel Ripado", largura_cm: 160, profundidade_cm: 5, altura_cm: 240, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0, tem_ripado: true, ripa_espessura_mm: 15, ripa_largura_mm: 30 },
   ],
   "Cozinha": [
     { tipo: "arm-sup", nome: "Armários Superiores", largura_cm: 300, profundidade_cm: 35, altura_cm: 70, portas: 6, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
@@ -115,10 +132,10 @@ const MOVEIS_POR_AMBIENTE: Record<string, Omit<MovelConfig, "id">[]> = {
     { tipo: "despenseiro", nome: "Despenseiro", largura_cm: 40, profundidade_cm: 60, altura_cm: 230, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 5 },
   ],
   "Sala": [
-    { tipo: "rack", nome: "Rack / Painel TV", largura_cm: 200, profundidade_cm: 45, altura_cm: 50, portas: 2, tipo_porta: "correr", gavetas: 0, prateleiras: 2 },
+    { tipo: "rack", nome: "Rack", largura_cm: 200, profundidade_cm: 45, altura_cm: 50, portas: 2, tipo_porta: "correr", gavetas: 0, prateleiras: 2 },
     { tipo: "estante-sala", nome: "Estante", largura_cm: 150, profundidade_cm: 35, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
     { tipo: "buffet", nome: "Buffet / Aparador", largura_cm: 150, profundidade_cm: 45, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 2, prateleiras: 1 },
-    { tipo: "painel-tv", nome: "Painel TV (ripado)", largura_cm: 200, profundidade_cm: 5, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0 },
+    { tipo: "painel-tv", nome: "Painel TV", largura_cm: 200, profundidade_cm: 5, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0, tem_ripado: true, ripa_espessura_mm: 15, ripa_largura_mm: 30 },
   ],
   "Escritório": [
     { tipo: "mesa-trab", nome: "Mesa de Trabalho", largura_cm: 160, profundidade_cm: 75, altura_cm: 75, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 0 },
@@ -1043,7 +1060,55 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                               <span className="text-[11.5px]">{label}</span>
                             </label>
                           ))}
+                          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                            <input type="checkbox" checked={m.tem_ripado ?? false}
+                              onChange={(e) => updateMovel(m.id, {
+                                tem_ripado: e.target.checked,
+                                ripa_espessura_mm: m.ripa_espessura_mm ?? 15,
+                                ripa_largura_mm: m.ripa_largura_mm ?? 30,
+                              })}
+                              className="rounded" />
+                            <span className="text-[11.5px]">Ripado</span>
+                          </label>
                         </div>
+
+                        {/* Configuração do ripado */}
+                        {m.tem_ripado && (() => {
+                          const ripaLarg = m.ripa_largura_mm ?? 30;
+                          const numRipas = Math.floor((m.largura_cm * 10) / (ripaLarg * 2));
+                          return (
+                            <div className="pl-1 p-2 rounded-md border border-border bg-secondary/20 space-y-2">
+                              <div className="text-[10.5px] text-muted-foreground font-medium">Configuração do ripado</div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <div className="text-[9.5px] text-muted-foreground mb-0.5">Espessura</div>
+                                  <div className="flex gap-1">
+                                    {([6, 15] as const).map((esp) => (
+                                      <button key={esp} type="button"
+                                        onClick={() => updateMovel(m.id, { ripa_espessura_mm: esp })}
+                                        className={`h-7 flex-1 rounded text-[11px] border transition-colors ${(m.ripa_espessura_mm ?? 15) === esp ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}>
+                                        {esp}mm
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-[9.5px] text-muted-foreground mb-0.5">Largura da ripa (mm)</div>
+                                  <input type="number" min={10} max={200} value={m.ripa_largura_mm ?? 30}
+                                    onChange={(e) => updateMovel(m.id, { ripa_largura_mm: Number(e.target.value) })}
+                                    className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
+                                </div>
+                                <div className="flex flex-col justify-end">
+                                  <div className="text-[9.5px] text-muted-foreground mb-0.5">Quantidade</div>
+                                  <div className="h-7 flex items-center text-[12px] font-medium text-accent">{numRipas} ripas</div>
+                                </div>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                Espaçamento = largura da ripa · começa na lateral
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Avançado (formato L, pés madeira, roda-teto) — colapsável */}
                         <details open={temAvancado}>
@@ -1687,6 +1752,11 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   const [listaCorte, setListaCorte] = useState<ListaCorteResult | null>(null);
   const [listaCorteLoading, setListaCorteLoading] = useState(false);
   const [showCorte, setShowCorte] = useState(false);
+  const [nfeLoading, setNfeLoading] = useState(false);
+  const [boletoLoading, setBoletoLoading] = useState(false);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [fiscalDados, setFiscalDados] = useState<FiscalDados | null>((orc.fiscal_dados as FiscalDados) ?? null);
+  const [copiedPix, setCopiedPix] = useState(false);
   const parseMoveisCfg = (raw: unknown): MovelConfig[] | null => {
     if (!raw) return null;
     if (Array.isArray(raw)) return raw as MovelConfig[];
@@ -1752,13 +1822,149 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     setChangingStatus(true);
     try {
       await updateOrcamentoStatus(orc.id, newStatus);
-      toast.success(`Status atualizado para ${STATUS_LABEL[newStatus]}`);
+
+      if (newStatus === "aprovado" && empresaId) {
+        await Promise.all([
+          upsertOrdemProducao(empresaId, {
+            projeto_id: orc.projeto_id ?? null,
+            observacoes: `Gerado do orçamento ${orc.numero ?? ""}`,
+          }).catch(() => {}),
+          upsertLancamento(empresaId, {
+            tipo: "entrada",
+            descricao: `Orçamento ${orc.numero ?? ""} — ${orc.clientes?.nome ?? "Cliente"}`,
+            valor: orc.total ?? 0,
+            categoria: "Orçamento aprovado",
+            status: "pendente",
+          }).catch(() => {}),
+        ]);
+        toast.success("Aprovado! Ordem de produção e entrada financeira criadas automaticamente.");
+      } else {
+        toast.success(`Status atualizado para ${STATUS_LABEL[newStatus]}`);
+      }
       onChanged(); onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao atualizar status");
     } finally {
       setChangingStatus(false);
     }
+  };
+
+  const handleEmitirNfe = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { toast.error("Sessão expirada"); return; }
+    setNfeLoading(true);
+    try {
+      const res = await fetch("/api/emitir-nfe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orcamento_id: orc.id, user_token: session.access_token }),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string; ref?: string; status?: string; chave?: string; ambiente?: string };
+      if (!res.ok) { toast.error(data.error ?? "Erro ao emitir NF-e"); return; }
+      const novoDados: FiscalDados = {
+        ...fiscalDados,
+        nfe_ref: data.ref,
+        nfe_status: data.status ?? "processando",
+        nfe_chave: data.chave ?? undefined,
+        nfe_ambiente: data.ambiente,
+        nfe_emitido_em: new Date().toISOString(),
+      };
+      setFiscalDados(novoDados);
+      const label = data.ambiente === "producao" ? "NF-e emitida!" : "NF-e enviada (homologação)";
+      toast.success(label);
+    } finally {
+      setNfeLoading(false);
+    }
+  };
+
+  const handleGerarCobranca = async (tipo: "BOLETO" | "PIX") => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { toast.error("Sessão expirada"); return; }
+    if (tipo === "BOLETO") setBoletoLoading(true);
+    else setPixLoading(true);
+    try {
+      const res = await fetch("/api/gerar-boleto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orcamento_id: orc.id, user_token: session.access_token, tipo }),
+      });
+      const data = await res.json() as {
+        ok?: boolean; error?: string;
+        id?: string; url?: string | null; qr_code?: string | null;
+        copia_cola?: string | null; vencimento?: string; status?: string;
+      };
+      if (!res.ok) { toast.error(data.error ?? "Erro ao gerar cobrança"); return; }
+      const novoDados: FiscalDados = {
+        ...fiscalDados,
+        ...(tipo === "BOLETO"
+          ? { boleto: { asaas_id: data.id!, url: data.url ?? null, copia_cola: data.copia_cola ?? null, vencimento: data.vencimento!, status: data.status! } }
+          : { pix: { asaas_id: data.id!, qr_code: data.qr_code ?? null, copia_cola: data.copia_cola ?? null, vencimento: data.vencimento!, status: data.status! } }),
+      };
+      setFiscalDados(novoDados);
+      toast.success(`${tipo === "BOLETO" ? "Boleto" : "PIX"} gerado com sucesso!`);
+    } finally {
+      setBoletoLoading(false);
+      setPixLoading(false);
+    }
+  };
+
+  const handleGerarContrato = () => {
+    const clienteNome = orc.clientes?.nome ?? "Cliente";
+    const numero = orc.numero ?? "";
+    const total = (orc.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    const metade = ((orc.total ?? 0) / 2).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+    const listaMoveis = (moveisCfg ?? []).map((m) =>
+      `<li>${m.nome} — ${m.largura_cm}×${m.profundidade_cm}×${m.altura_cm} cm${m.portas > 0 ? `, ${m.portas} porta(s) ${m.tipo_porta}` : ""}${m.gavetas > 0 ? `, ${m.gavetas} gaveta(s)` : ""}${m.prateleiras > 0 ? `, ${m.prateleiras} prateleira(s)` : ""}</li>`
+    ).join("");
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Contrato — Orçamento ${numero}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:24px;line-height:1.75;color:#1a1a1a;font-size:13.5px}
+  h1{font-size:18px;text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+  .sub{text-align:center;font-size:12px;color:#666;margin-bottom:32px}
+  h2{font-size:12.5px;font-weight:bold;text-transform:uppercase;letter-spacing:.8px;margin:24px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px}
+  ul{margin:6px 0 6px 20px}li{margin:3px 0}
+  .total{font-size:16px;font-weight:bold;color:#145a32}
+  .assinaturas{margin-top:64px;display:flex;justify-content:space-between;gap:40px}
+  .assinatura{flex:1;text-align:center}
+  .linha{border-top:1px solid #333;padding-top:6px;font-size:12px}
+  @media print{.no-print{display:none}}
+</style></head><body>
+${logoUrl ? `<div style="text-align:center;margin-bottom:16px"><img src="${logoUrl}" style="max-height:60px;max-width:200px;object-fit:contain"></div>` : ""}
+<h1>Contrato de Fornecimento de Móveis Sob Medida</h1>
+<div class="sub">Orçamento Nº ${numero} · ${dataHoje}</div>
+<h2>1. Partes Contratantes</h2>
+<p><strong>Contratada:</strong> ${empresaNome}</p>
+<p><strong>Contratante:</strong> ${clienteNome}</p>
+<h2>2. Objeto do Contrato</h2>
+<p>A Contratada se compromete a fabricar e instalar os seguintes móveis sob medida conforme especificações aprovadas:</p>
+${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçamento Nº ${numero}.</p>`}
+<h2>3. Valor e Forma de Pagamento</h2>
+<p>Valor total: <span class="total">R$ ${total}</span></p>
+<p>• 50% de entrada na aprovação do projeto: <strong>R$ ${metade}</strong></p>
+<p>• 50% na entrega e instalação: <strong>R$ ${metade}</strong></p>
+<p>Formas aceitas: Pix, transferência bancária ou dinheiro.</p>
+<h2>4. Prazo de Execução</h2>
+<p>O prazo estimado para fabricação e instalação é de <strong>____________ dias úteis</strong> após a aprovação do projeto e pagamento da entrada.</p>
+<h2>5. Garantia</h2>
+<p>Os móveis possuem garantia de <strong>12 (doze) meses</strong> contra defeitos de fabricação, contados a partir da data de instalação.</p>
+<h2>6. Disposições Gerais</h2>
+<p>Alterações no projeto após assinatura deste contrato poderão implicar em reajuste de prazo e valor, mediante acordo escrito entre as partes. Materiais especificados no projeto são de responsabilidade da Contratada. Instalação elétrica e hidráulica não estão incluídas neste contrato.</p>
+<div class="assinaturas">
+  <div class="assinatura"><div class="linha">${empresaNome}<br><span style="font-size:11px;color:#666">Contratada</span></div></div>
+  <div class="assinatura"><div class="linha">${clienteNome}<br><span style="font-size:11px;color:#666">Contratante</span></div></div>
+</div>
+<p style="text-align:center;font-size:11px;color:#999;margin-top:40px">Local: ________________________________ · Data: ${dataHoje}</p>
+<div class="no-print" style="text-align:center;margin-top:24px">
+  <button onclick="window.print()" style="padding:10px 28px;background:#1a1a1a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">Imprimir / Salvar como PDF</button>
+</div>
+</body></html>`;
+
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
   };
 
   const handleDelete = () => {
@@ -2003,6 +2209,74 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
               </div>
             </div>
           )}
+
+          {/* Painel fiscal */}
+          {orc.status === "aprovado" && fiscalDados && (fiscalDados.nfe_ref || fiscalDados.boleto || fiscalDados.pix) && (
+            <div className="border border-border rounded-lg p-3 space-y-2.5">
+              <div className="text-[11.5px] font-medium uppercase tracking-wider text-muted-foreground">Fiscal</div>
+
+              {fiscalDados.nfe_ref && (
+                <div className="flex items-start gap-2 text-[12px]">
+                  <Receipt className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">NF-e</span>
+                    <span className="text-muted-foreground ml-2">
+                      {fiscalDados.nfe_status === "autorizado" ? "Autorizada ✓" : fiscalDados.nfe_status ?? "Processando..."}
+                      {fiscalDados.nfe_ambiente === "homologacao" && <span className="ml-1 text-amber-600">(homologação)</span>}
+                    </span>
+                    {fiscalDados.nfe_chave && (
+                      <div className="font-mono text-[10px] text-muted-foreground mt-0.5 truncate">{fiscalDados.nfe_chave}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {fiscalDados.boleto && (
+                <div className="flex items-start gap-2 text-[12px]">
+                  <Receipt className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">Boleto</span>
+                    <span className="text-muted-foreground ml-2">Venc. {new Date(fiscalDados.boleto.vencimento + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                    <div className="flex gap-2 mt-1">
+                      {fiscalDados.boleto.url && (
+                        <a href={fiscalDados.boleto.url} target="_blank" rel="noopener noreferrer"
+                          className="text-[11.5px] underline text-muted-foreground hover:text-foreground">Abrir PDF</a>
+                      )}
+                      {fiscalDados.boleto.copia_cola && (
+                        <button onClick={() => { navigator.clipboard.writeText(fiscalDados!.boleto!.copia_cola!); toast.success("Linha digitável copiada!"); }}
+                          className="text-[11.5px] text-muted-foreground hover:text-foreground flex items-center gap-1">
+                          <Copy className="size-3" /> Linha digitável
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {fiscalDados.pix && (
+                <div className="flex items-start gap-2 text-[12px]">
+                  <QrCode className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">PIX</span>
+                    <span className="text-muted-foreground ml-2">Venc. {new Date(fiscalDados.pix.vencimento + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                    {fiscalDados.pix.qr_code && (
+                      <img src={`data:image/png;base64,${fiscalDados.pix.qr_code}`} alt="QR PIX"
+                        className="mt-1.5 w-28 h-28 rounded border border-border" />
+                    )}
+                    {fiscalDados.pix.copia_cola && (
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(fiscalDados!.pix!.copia_cola!);
+                        setCopiedPix(true);
+                        setTimeout(() => setCopiedPix(false), 2000);
+                      }} className="mt-1 text-[11.5px] text-muted-foreground hover:text-foreground flex items-center gap-1">
+                        {copiedPix ? <><CheckCheck className="size-3 text-emerald-600" /> Copiado!</> : <><Copy className="size-3" /> Copia e cola</>}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-3 border-t border-border flex items-center justify-between shrink-0 flex-wrap gap-2">
@@ -2017,6 +2291,31 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
                 Criar Projeto
               </button>
             )}
+            {orc.status === "aprovado" && (
+              <button onClick={handleEmitirNfe} disabled={nfeLoading}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5">
+                {nfeLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Receipt className="size-3.5" />}
+                NF-e
+              </button>
+            )}
+            {orc.status === "aprovado" && (
+              <button onClick={() => handleGerarCobranca("BOLETO")} disabled={boletoLoading}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5">
+                {boletoLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Receipt className="size-3.5" />}
+                Boleto
+              </button>
+            )}
+            {orc.status === "aprovado" && (
+              <button onClick={() => handleGerarCobranca("PIX")} disabled={pixLoading}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5">
+                {pixLoading ? <Loader2 className="size-3.5 animate-spin" /> : <QrCode className="size-3.5" />}
+                PIX
+              </button>
+            )}
+            <button onClick={handleGerarContrato}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5">
+              <FileText className="size-3.5" /> Contrato
+            </button>
             <button onClick={handleGerarCorte} disabled={listaCorteLoading}
               className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5">
               {listaCorteLoading ? <Loader2 className="size-3.5 animate-spin" /> : <ChevronRight className="size-3.5" />}

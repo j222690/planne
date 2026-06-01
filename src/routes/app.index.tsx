@@ -50,6 +50,28 @@ function Dashboard() {
       ? "R$ " + (n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "k"
       : "R$ " + n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 
+  const aprovados = orcs.filter((o) => o.status === "aprovado");
+  const elegíveis = orcs.filter((o) => ["aprovado", "recusado", "analise"].includes(o.status));
+  const conversaoPct = elegíveis.length > 0 ? Math.round(aprovados.length / elegíveis.length * 100) : 0;
+  const ticketMedio = aprovados.length > 0 ? aprovados.reduce((s, o) => s + (o.total ?? 0), 0) / aprovados.length : 0;
+
+  const topClientes = (() => {
+    const map: Record<string, { nome: string; total: number; qtd: number }> = {};
+    for (const o of aprovados) {
+      const nome = o.clientes?.nome ?? "—";
+      if (!map[nome]) map[nome] = { nome, total: 0, qtd: 0 };
+      map[nome].total += o.total ?? 0;
+      map[nome].qtd++;
+    }
+    return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 5);
+  })();
+
+  const alertas = orcs.filter((o) => {
+    if (o.status !== "analise") return false;
+    const dias = (Date.now() - new Date(o.created_at).getTime()) / 86400000;
+    return dias >= 5;
+  });
+
   return (
     <>
       <PageHeader
@@ -95,8 +117,8 @@ function Dashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="Faturamento (mês)" value={fmt(stats?.faturamentoMes ?? 0)} hint="orçamentos aprovados" />
             <StatCard label="Margem média" value={`${(stats?.margemMedia ?? 0).toFixed(1)}%`} hint="todos os orçamentos" />
-            <StatCard label="Projetos ativos" value={String(stats?.projetosAtivos ?? 0)} hint="em andamento" />
-            <StatCard label="Em análise" value={String(stats?.emAnalise ?? 0)} hint="aguardando aprovação" />
+            <StatCard label="Conversão" value={`${conversaoPct}%`} hint={`${aprovados.length} de ${elegíveis.length} fechados`} />
+            <StatCard label="Ticket médio" value={fmt(ticketMedio)} hint="orçamentos aprovados" />
           </div>
 
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -128,17 +150,35 @@ function Dashboard() {
             </Surface>
 
             <Surface>
-              <div className="text-[12.5px] font-medium mb-1">Status dos orçamentos</div>
-              <div className="text-[11.5px] text-muted-foreground mb-4">Distribuição total</div>
-              {["rascunho","analise","aprovado","recusado"].map((s) => {
-                const count = orcs.filter((o) => o.status === s).length;
-                return (
-                  <div key={s} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-[13px]">
-                    <Pill tone={STATUS_TONE[s]}>{STATUS_LABEL[s]}</Pill>
-                    <span className="num text-muted-foreground">{count}</span>
+              <div className="text-[12.5px] font-medium mb-1">Top clientes</div>
+              <div className="text-[11.5px] text-muted-foreground mb-3">Por receita aprovada</div>
+              {topClientes.length === 0 ? (
+                <div className="text-[12.5px] text-muted-foreground text-center py-4">Nenhum orçamento aprovado ainda.</div>
+              ) : topClientes.map((c, i) => (
+                <div key={c.nome} className="flex items-center gap-2 py-2 border-b border-border last:border-0">
+                  <span className="text-[10px] text-muted-foreground w-4 text-right">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] font-medium truncate">{c.nome}</div>
+                    <div className="text-[10.5px] text-muted-foreground">{c.qtd} orç.</div>
                   </div>
-                );
-              })}
+                  <span className="text-[12px] num font-medium text-emerald-600 shrink-0">{fmt(c.total)}</span>
+                </div>
+              ))}
+
+              {alertas.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-border">
+                  <div className="text-[11px] font-medium text-amber-600 mb-2">⚠ Em análise há +5 dias</div>
+                  {alertas.map((o) => {
+                    const dias = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 86400000);
+                    return (
+                      <div key={o.id} className="flex justify-between text-[11.5px] py-1 border-b border-border/50 last:border-0">
+                        <span className="truncate text-muted-foreground">{o.clientes?.nome ?? "—"}</span>
+                        <span className="shrink-0 text-amber-600 ml-2">{dias}d</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Surface>
           </div>
 

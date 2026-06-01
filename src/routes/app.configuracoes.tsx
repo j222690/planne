@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Mail, X } from "lucide-react";
+import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users, User, Mail, X, Receipt, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +14,7 @@ type Empresa = {
   id: string; nome: string; cnpj: string | null; cidade: string | null;
   estado: string | null; endereco: string | null; telefone: string | null;
   email: string | null; cor_primaria: string | null; logo_url: string | null;
-  parametros: Record<string, number> | null;
+  parametros: Record<string, unknown> | null;
 };
 
 type Membro = { user_id: string; role: string; perfis: { nome: string; email: string; cargo: string | null } | null };
@@ -43,6 +43,15 @@ function Configuracoes() {
   const [params, setParams] = useState({
     mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35,
   });
+
+  const [fiscal, setFiscal] = useState({
+    focus_nfe_token: "",
+    focus_nfe_ambiente: "homologacao" as "homologacao" | "producao",
+    regime_tributario: "1" as "1" | "2" | "3",
+    asaas_token: "",
+    asaas_ambiente: "sandbox" as "sandbox" | "producao",
+  });
+  const [showTokens, setShowTokens] = useState(false);
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -81,9 +90,16 @@ function Configuracoes() {
       });
       const p = emp.parametros ?? {};
       setParams({
-        mdf_custo_chapa: p.mdf_custo_chapa ?? 85,
-        mao_obra_hora: p.mao_obra_hora ?? 45,
-        margem_padrao: p.margem_padrao ?? 35,
+        mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
+        mao_obra_hora: Number(p.mao_obra_hora ?? 45),
+        margem_padrao: Number(p.margem_padrao ?? 35),
+      });
+      setFiscal({
+        focus_nfe_token: String(p.focus_nfe_token ?? ""),
+        focus_nfe_ambiente: (p.focus_nfe_ambiente as "homologacao" | "producao") ?? "homologacao",
+        regime_tributario: (p.regime_tributario as "1" | "2" | "3") ?? "1",
+        asaas_token: String(p.asaas_token ?? ""),
+        asaas_ambiente: (p.asaas_ambiente as "sandbox" | "producao") ?? "sandbox",
       });
       setLogoUrl(emp.logo_url ?? null);
     });
@@ -124,7 +140,7 @@ function Configuracoes() {
       telefone: form.telefone || null,
       email: form.email || null,
       cor_primaria: form.cor_primaria || null,
-      parametros: params,
+      parametros: { ...params, ...fiscal },
     }).eq("id", empresa.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -293,6 +309,98 @@ function Configuracoes() {
           </Surface>
         </div>
       </div>
+
+      {/* Fiscal & Pagamentos */}
+      <Surface className="mt-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Receipt className="size-3.5 text-muted-foreground" />
+            <div className="text-[12.5px] font-semibold">Fiscal & Pagamentos</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowTokens((v) => !v)}
+            className="flex items-center gap-1 text-[11.5px] text-muted-foreground hover:text-foreground"
+          >
+            {showTokens ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            {showTokens ? "Ocultar tokens" : "Mostrar tokens"}
+          </button>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Focus NFe */}
+          <div className="space-y-3">
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">NF-e — Focus NFe</div>
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">Token de acesso</div>
+              <input
+                type={showTokens ? "text" : "password"}
+                value={fiscal.focus_nfe_token}
+                onChange={(e) => setFiscal((f) => ({ ...f, focus_nfe_token: e.target.value }))}
+                placeholder="Token gerado em focusnfe.com.br"
+                className="input font-mono text-[12px]"
+              />
+            </label>
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">Ambiente</div>
+              <select
+                value={fiscal.focus_nfe_ambiente}
+                onChange={(e) => setFiscal((f) => ({ ...f, focus_nfe_ambiente: e.target.value as "homologacao" | "producao" }))}
+                className="input"
+              >
+                <option value="homologacao">Homologação (testes)</option>
+                <option value="producao">Produção</option>
+              </select>
+            </label>
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">Regime tributário</div>
+              <select
+                value={fiscal.regime_tributario}
+                onChange={(e) => setFiscal((f) => ({ ...f, regime_tributario: e.target.value as "1" | "2" | "3" }))}
+                className="input"
+              >
+                <option value="1">Simples Nacional</option>
+                <option value="2">Lucro Presumido</option>
+                <option value="3">Lucro Real</option>
+              </select>
+            </label>
+            <div className="text-[11px] text-muted-foreground bg-secondary rounded-md p-2.5 leading-relaxed">
+              NCM padrão: 94036000 (móveis de madeira) · CFOP 5102 (venda interna).<br/>
+              O CNPJ e o certificado digital devem estar configurados na conta Focus NFe.
+            </div>
+          </div>
+
+          {/* Asaas */}
+          <div className="space-y-3">
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Boleto / PIX — Asaas</div>
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">API Key (access_token)</div>
+              <input
+                type={showTokens ? "text" : "password"}
+                value={fiscal.asaas_token}
+                onChange={(e) => setFiscal((f) => ({ ...f, asaas_token: e.target.value }))}
+                placeholder="$aact_... (painel.asaas.com)"
+                className="input font-mono text-[12px]"
+              />
+            </label>
+            <label className="block">
+              <div className="text-[11.5px] text-muted-foreground mb-1">Ambiente</div>
+              <select
+                value={fiscal.asaas_ambiente}
+                onChange={(e) => setFiscal((f) => ({ ...f, asaas_ambiente: e.target.value as "sandbox" | "producao" }))}
+                className="input"
+              >
+                <option value="sandbox">Sandbox (testes)</option>
+                <option value="producao">Produção</option>
+              </select>
+            </label>
+            <div className="text-[11px] text-muted-foreground bg-secondary rounded-md p-2.5 leading-relaxed">
+              Para receber notificações de pagamento automáticas, configure o webhook no painel Asaas:<br/>
+              <span className="font-mono">https://seu-dominio.vercel.app/api/webhook-asaas</span>
+            </div>
+          </div>
+        </div>
+      </Surface>
 
       {/* Perfil + Membros */}
       <div className="grid lg:grid-cols-2 gap-4 mt-4">

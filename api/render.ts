@@ -192,35 +192,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ── DALL-E 3 fallback (síncrono — só para modo pro) ───────────────────────
+  // ── DALL-E fallback ────────────────────────────────────────────────────────
+  // schnell → DALL-E 2 (1024×1024, ~4–8s, without Pro plan 60s maxDuration)
+  // pro     → DALL-E 3 HD (1792×1024, ~20–40s, requires maxDuration: 60 in vercel.json)
   if (openaiKey) {
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: prompt.slice(0, 4000),
-        n: 1,
-        size: "1792x1024",
-        quality: mode === "pro" ? "hd" : "standard",
-        style: "natural",
-      }),
-    });
+    if (mode === "schnell") {
+      // DALL-E 2: fast, within Vercel 10s limit, good for previews
+      const response = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        body: JSON.stringify({
+          model: "dall-e-2",
+          prompt: prompt.slice(0, 1000),
+          n: 1,
+          size: "1024x1024",
+        }),
+      });
 
-    if (!response.ok) {
-      const err = await response.text();
-      return res.status(502).json({ error: `DALL-E: ${err.slice(0, 300)}` });
+      if (!response.ok) {
+        const err = await response.text();
+        return res.status(502).json({ error: `DALL-E 2: ${err.slice(0, 300)}` });
+      }
+
+      const data = (await response.json()) as { data: { url: string }[] };
+      return res.json({
+        provider: "dalle2",
+        status: "completed",
+        url: data.data[0].url,
+        mode,
+        prompt,
+      });
+    } else {
+      // DALL-E 3 HD: high quality, requires maxDuration: 60 in vercel.json (Vercel Pro plan)
+      const response = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: prompt.slice(0, 4000),
+          n: 1,
+          size: "1792x1024",
+          quality: "hd",
+          style: "natural",
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        return res.status(502).json({ error: `DALL-E 3: ${err.slice(0, 300)}` });
+      }
+
+      const data = (await response.json()) as { data: { url: string; revised_prompt: string }[] };
+      return res.json({
+        provider: "dalle3",
+        status: "completed",
+        url: data.data[0].url,
+        mode,
+        prompt,
+        revised_prompt: data.data[0].revised_prompt,
+      });
     }
-
-    const data = (await response.json()) as { data: { url: string; revised_prompt: string }[] };
-    return res.json({
-      provider: "dalle3",
-      status: "completed",
-      url: data.data[0].url,
-      mode,
-      prompt,
-      revised_prompt: data.data[0].revised_prompt,
-    });
   }
 
   return res.status(500).json({ error: "Nenhuma API disponível" });

@@ -19,6 +19,9 @@ export interface MovelInput {
   pe_altura_cm?: number;
   tem_roda_teto?: boolean;
   altura_teto_cm?: number;
+  tem_ripado?: boolean;
+  ripa_espessura_mm?: number;
+  ripa_largura_mm?: number;
   formato?: "retangular" | "L";
   arm2_largura_cm?: number;
   arm2_profundidade_cm?: number;
@@ -210,6 +213,28 @@ export function gerarListaCorte(moveis: MovelInput[]): { pecas: PecaCorte[]; res
     } else {
       pecas.push(...pecasCorpo(m, "", larg, prof, alt, mdfCaixa, mdfExt));
     }
+
+    // Ripas
+    if (m.tem_ripado) {
+      const ripaLarg = m.ripa_largura_mm ?? 30;
+      const ripaEsp = m.ripa_espessura_mm ?? 15;
+      const numRipas = Math.floor(larg / (ripaLarg * 2));
+      if (numRipas > 0) {
+        pecas.push({
+          movel: m.nome,
+          peca: "Ripa",
+          material: `MDF ${ripaEsp}mm — Ripas`,
+          largura_mm: ripaLarg,
+          comprimento_mm: alt,
+          quantidade: numRipas,
+          fita_l: false,
+          fita_r: false,
+          fita_t: true,
+          fita_b: true,
+          observacao: `${numRipas} ripas ${ripaLarg}mm larg., espaçamento ${ripaLarg}mm`,
+        });
+      }
+    }
   }
 
   // Calcular metros de fita
@@ -372,6 +397,30 @@ export function calcularOrcamento(moveis: MovelInput[], catalogo: CatItem[], mar
     const fitaBorda = find(c => /fita.*(borda|bord)/i.test(c.nome) || /borda.*fita/i.test(c.nome));
     if (fitaBorda && fita_m > 0) {
       addItem({ movel: m.nome, material_id: fitaBorda.id, descricao: `${fitaBorda.nome} — ${m.nome}`, justificativa: `Perímetro exposto × 1.15 = ${fita_m.toFixed(2)}m`, quantidade: parseFloat(fita_m.toFixed(2)), unidade: "m", preco_custo: fitaBorda.preco_custo });
+    }
+
+    // ── Ripado ────────────────────────────────────────────────────────────────
+    if (m.tem_ripado) {
+      const ripaLarg = m.ripa_largura_mm ?? 30;
+      const ripaEsp = m.ripa_espessura_mm ?? 15;
+      const numRipas = Math.floor((larg * 10) / (ripaLarg * 2));
+      const areaRipas_m2 = (numRipas * alt * 10 * ripaLarg) / 1_000_000;
+      const chapasRipas = Math.ceil(areaRipas_m2 / SHEET_AREA);
+
+      const mdfRipa = ripaEsp === 6
+        ? (find(c => /6mm/i.test(c.nome) && /branco.*tx/i.test(c.nome)) ?? find(c => /6mm/i.test(c.nome)))
+        : (find(c => c.id === m.mdf_caixa_id) ?? find(c => /15mm/i.test(c.nome) && /branco.*tx/i.test(c.nome)) ?? find(c => /15mm/i.test(c.nome)));
+
+      if (mdfRipa && chapasRipas > 0) {
+        addItem({ movel: m.nome, material_id: mdfRipa.id, descricao: `${mdfRipa.nome} — ripas de ${m.nome}`, justificativa: `${numRipas} ripas ${ripaLarg}mm larg. × ${alt}cm alt. (esp. ${ripaEsp}mm) = ${areaRipas_m2.toFixed(2)}m² → ${chapasRipas} chapa(s)`, quantidade: chapasRipas, unidade: "chapa", preco_custo: mdfRipa.preco_custo });
+      }
+
+      // Fita de borda nas ripas: topo + base de cada ripa
+      const fitaRipas_m = numRipas * 2 * (ripaLarg / 1000) * 1.15;
+      const fitaRipa = find(c => /fita.*(borda|bord)/i.test(c.nome) || /borda.*fita/i.test(c.nome));
+      if (fitaRipa && fitaRipas_m > 0) {
+        addItem({ movel: m.nome, material_id: fitaRipa.id, descricao: `${fitaRipa.nome} — fita das ripas de ${m.nome}`, justificativa: `${numRipas} ripas × 2 bordas (topo+base) × ${ripaLarg}mm × 1.15 = ${fitaRipas_m.toFixed(2)}m`, quantidade: parseFloat(fitaRipas_m.toFixed(2)), unidade: "m", preco_custo: fitaRipa.preco_custo });
+      }
     }
 
     // ── Conectores (minifix / cavilhas) ───────────────────────────────────────
