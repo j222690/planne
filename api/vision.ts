@@ -168,7 +168,7 @@ interface AnaliseIA {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { ambiente, medidas, estilo, descricao, cor_mdf, porta_parede, janelas, planta_b64, referencias_b64 } = req.body as {
+  const { ambiente, medidas, estilo, descricao, cor_mdf, porta_parede, janelas, planta_b64, referencias_b64, custo_chapa, mao_obra_hora, margem_padrao } = req.body as {
     ambiente: string;
     medidas: { largura: number; profundidade: number; altura: number };
     estilo: string;
@@ -178,6 +178,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     janelas?: string[];
     planta_b64?: string;
     referencias_b64?: string[];
+    custo_chapa?: number;
+    mao_obra_hora?: number;
+    margem_padrao?: number;
   };
 
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -275,14 +278,18 @@ LEMBRETE FINAL: As dimensões do ambiente são ${medidas?.largura ?? 4}m × ${me
     const totalChapas = customMoveis.reduce((s, m) => s + (Number(m.chapas_mdf) || 0), 0);
     const o = analise.orcamento ?? ({} as OrcamentoIA);
     const desperdicio = 1 + (o.desperdicio_pct ?? 15) / 100;
+    const custoChapa = custo_chapa ?? 85;
+    const maoObraFactor = mao_obra_hora ? (mao_obra_hora / 45) * 0.4 : 0.4;
+    const margemFinal = margem_padrao ?? o.margem_pct ?? 300;
 
-    if (!o.mdf_custo || o.mdf_custo === 0) o.mdf_custo = Math.round(totalChapas * 85 * desperdicio);
+    if (!o.mdf_custo || o.mdf_custo === 0) o.mdf_custo = Math.round(totalChapas * custoChapa * desperdicio);
     if (!o.ferragens_custo || o.ferragens_custo === 0) o.ferragens_custo = Math.round(o.mdf_custo * 0.28);
     if (!o.puxadores_custo || o.puxadores_custo === 0) o.puxadores_custo = Math.round(o.mdf_custo * 0.07);
     if (!o.fita_borda_custo || o.fita_borda_custo === 0) o.fita_borda_custo = Math.round(totalChapas * 15);
-    if (!o.mao_de_obra || o.mao_de_obra === 0) o.mao_de_obra = Math.round(o.mdf_custo * 0.4);
+    if (!o.mao_de_obra || o.mao_de_obra === 0) o.mao_de_obra = Math.round(o.mdf_custo * maoObraFactor);
     o.subtotal = o.mdf_custo + o.ferragens_custo + o.puxadores_custo + o.fita_borda_custo + o.mao_de_obra;
-    o.total = Math.round(o.subtotal * ((o.margem_pct ?? 300) / 100));
+    o.margem_pct = margemFinal;
+    o.total = Math.round(o.subtotal * (margemFinal / 100));
     analise.orcamento = o;
 
     return res.json({ analise, usage: data.usage });

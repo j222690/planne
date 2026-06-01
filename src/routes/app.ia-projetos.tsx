@@ -4,7 +4,7 @@ import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
   CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
-  Settings2, Palette,
+  Settings2, Palette, Map, Factory,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -83,6 +83,11 @@ const MDF_CORES = [
 
 type PardeType = "top" | "bottom" | "left" | "right";
 
+type PlantaSalva = {
+  nome: string; largura_cm: number; profundidade_cm: number; altura_cm: number;
+  porta_principal?: { parede: string }; janelas?: { parede: string }[];
+};
+
 interface WizardState {
   step: 1 | 2 | 3 | 4 | 5;
   projetoId: string | null;
@@ -111,6 +116,9 @@ interface WizardState {
   renderMode: "schnell" | "pro";
   previewUrl: string | null;
   error: string | null;
+  clienteId: string | null;
+  clienteNome: string | null;
+  criandoOrdem: boolean;
 }
 
 type SavedProject = {
@@ -242,20 +250,38 @@ function IAProjetoPage() {
   const [wizard, setWizard] = useState<WizardState | null>(null);
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [plantasSalvas, setPlantasSalvas] = useState<Record<string, PlantaSalva>>({});
+  const [empresaParams, setEmpresaParams] = useState({ mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 300 });
+  const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     async function loadProjects() {
       const empresa = await getEmpresaAtual();
       if (!empresa) return;
+      const eid = (empresa as { id: string }).id;
       const { data } = await supabase
         .from("room_projects")
         .select("id,nome,ambiente,estilo,created_at,render_url")
-        .eq("empresa_id", (empresa as { id: string }).id)
+        .eq("empresa_id", eid)
         .order("created_at", { ascending: false })
         .limit(6);
       setSavedProjects(data ?? []);
       setLoadingProjects(false);
+
+      // Load plantas, params and clientes
+      const emp = empresa as { parametros?: Record<string, unknown> };
+      const p = emp.parametros ?? {};
+      setEmpresaParams({
+        mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
+        mao_obra_hora: Number(p.mao_obra_hora ?? 45),
+        margem_padrao: Number(p.margem_padrao ?? 300),
+      });
+      if (p.plantas_baixas && typeof p.plantas_baixas === "object") {
+        setPlantasSalvas(p.plantas_baixas as Record<string, PlantaSalva>);
+      }
+      const cls = await getClientes(eid);
+      setClientes((cls as { id: string; nome: string }[]) ?? []);
     }
     loadProjects();
   }, []);
@@ -277,6 +303,9 @@ function IAProjetoPage() {
       listaCorteLoading: false,
       renderMode: "pro",
       previewUrl: null,
+      clienteId: null,
+      clienteNome: null,
+      criandoOrdem: false,
       error: null,
     });
 
@@ -312,6 +341,9 @@ function IAProjetoPage() {
           janelas: wizard.form.janelas,
           planta_b64,
           referencias_b64: referencias_b64.length ? referencias_b64 : undefined,
+          custo_chapa: empresaParams.mdf_custo_chapa,
+          mao_obra_hora: empresaParams.mao_obra_hora,
+          margem_padrao: empresaParams.margem_padrao,
         }),
       });
 
@@ -491,14 +523,13 @@ function IAProjetoPage() {
     }
   }, [wizard]);
 
-  const criarOrcamentoFormal = useCallback(async () => {
+  const criarOrcamentoFormal = useCallback(async (clienteIdOverride?: string) => {
     if (!wizard?.analise) return;
+    const cid = clienteIdOverride ?? wizard.clienteId;
     try {
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
       const eid = (empresa as { id: string }).id;
-      const clientes = await getClientes(eid);
-      const clienteId = clientes[0]?.id ?? null;
 
       const orc = await upsertOrcamento(eid, {
         status: "rascunho",
@@ -506,7 +537,7 @@ function IAProjetoPage() {
         subtotal: wizard.analise.orcamento.subtotal,
         total: wizard.analise.orcamento.total,
         observacoes: wizard.analise.descricao_comercial,
-        cliente_id: clienteId,
+        cliente_id: cid ?? null,
       });
 
       const itensData = (wizard.analise.moveis ?? [])
@@ -516,8 +547,9 @@ function IAProjetoPage() {
           descricao: m.nome,
           quantidade: 1,
           unidade: "un",
-          preco_custo: Math.round(m.preco_estimado * (1 - wizard.analise!.orcamento.margem_pct / 100)),
+          preco_custo: Math.round(m.preco_estimado / (wizard.analise!.orcamento.margem_pct / 100)),
           preco_unitario: m.preco_estimado,
+          total: m.preco_estimado,
         }));
 
       if (itensData.length > 0) {
@@ -530,6 +562,42 @@ function IAProjetoPage() {
       toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
     }
   }, [wizard, navigate]);
+
+  const criarOrdemProducao = useCallback(async () => {
+    if (!wizard?.listaCorte || !wizard.analise) return;
+    update({ criandoOrdem: true });
+    try {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) throw new Error("Empresa não encontrada");
+      const eid = (empresa as { id: string }).id;
+      const { data: ordem } = await supabase.from("ordens_producao").insert({
+        empresa_id: eid,
+        status: "aberta",
+        observacoes: `Gerado por IA Projetos — ${wizard.form.nome || wizard.form.ambiente}. ${wizard.listaCorte.resumo.total_pecas} peças · ${wizard.listaCorte.resumo.chapas_estimadas} chapas · ${wizard.listaCorte.resumo.metros_fita}m fita.`,
+      }).select("id,numero").single();
+      if (!ordem) throw new Error("Erro ao criar ordem");
+
+      // Salvar peças como cortes na ordem
+      const pecas = wizard.listaCorte.pecas.map((p) => ({
+        ordem_producao_id: ordem.id,
+        descricao_peca: `${p.peca} (${p.movel})`,
+        material: p.material,
+        largura_mm: p.largura_mm,
+        comprimento_mm: p.comprimento_mm,
+        quantidade: p.quantidade,
+        fita_borda: [p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"].filter(Boolean).join("|") || null,
+        observacao: p.observacao ?? null,
+      }));
+      if (pecas.length > 0) {
+        await supabase.from("pecas_corte").insert(pecas).throwOnError();
+      }
+      toast.success(`Ordem de produção #${ordem.numero ?? ""} criada com ${pecas.length} peças!`);
+      update({ criandoOrdem: false });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar ordem");
+      update({ criandoOrdem: false });
+    }
+  }, [wizard]);
 
   if (!wizard) return <LandingPage onStart={initWizard} savedProjects={savedProjects} loading={loadingProjects} />;
 
@@ -559,11 +627,11 @@ function IAProjetoPage() {
           exit={{ opacity: 0, x: -12 }}
           transition={{ duration: 0.2 }}
         >
-          {wizard.step === 1 && <Step1Form wizard={wizard} update={update} />}
+          {wizard.step === 1 && <Step1Form wizard={wizard} update={update} plantasSalvas={plantasSalvas} />}
           {wizard.step === 2 && <Step2Upload wizard={wizard} update={update} />}
           {wizard.step === 3 && <Step3Analyzing wizard={wizard} analisar={analisar} />}
-          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} />}
-          {wizard.step === 5 && <Step5Render wizard={wizard} update={update} />}
+          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} criarOrdem={criarOrdemProducao} clientes={clientes} />}
+          {wizard.step === 5 && <Step5Render wizard={wizard} update={update} criarOrcamento={() => criarOrcamentoFormal(wizard.clienteId ?? undefined)} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -577,7 +645,11 @@ const WALL_LABELS: Record<string, string> = {
 };
 const WALL_ICON: Record<string, string> = { top: "↑", bottom: "↓", left: "←", right: "→" };
 
-function Step1Form({ wizard, update }: { wizard: WizardState; update: (p: Partial<WizardState>) => void }) {
+function Step1Form({ wizard, update, plantasSalvas }: {
+  wizard: WizardState;
+  update: (p: Partial<WizardState>) => void;
+  plantasSalvas: Record<string, PlantaSalva>;
+}) {
   const f = wizard.form;
   const set = (k: keyof typeof f, v: string) => update({ form: { ...f, [k]: v } });
 
@@ -585,10 +657,51 @@ function Step1Form({ wizard, update }: { wizard: WizardState; update: (p: Partia
     const has = f.janelas.includes(wall);
     update({ form: { ...f, janelas: has ? f.janelas.filter((w) => w !== wall) : [...f.janelas, wall] } });
   };
+
+  const usarPlanta = (planta: PlantaSalva) => {
+    const toParede = (s?: string): PardeType => (["top", "bottom", "left", "right"].includes(s ?? "") ? (s as PardeType) : "bottom");
+    update({
+      form: {
+        ...f,
+        largura: String(planta.largura_cm / 100),
+        profundidade: String(planta.profundidade_cm / 100),
+        altura: planta.altura_cm ? String(planta.altura_cm / 100) : f.altura,
+        porta_parede: toParede(planta.porta_principal?.parede),
+        janelas: (planta.janelas ?? []).map((j) => toParede(j.parede)).filter((w, i, a) => a.indexOf(w) === i),
+      },
+    });
+    toast.success(`Medidas de "${planta.nome}" aplicadas`);
+  };
+
   const valid = f.nome.trim().length > 0;
+  const temPlantas = Object.keys(plantasSalvas).length > 0;
 
   return (
     <Surface className="space-y-5 max-w-2xl">
+      {temPlantas && (
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Map className="size-3.5 text-accent" />
+            <span className="text-[12.5px] font-medium text-accent">Usar planta salva nas Configurações</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Object.values(plantasSalvas).map((p) => (
+              <button
+                key={p.nome}
+                type="button"
+                onClick={() => usarPlanta(p)}
+                className="h-8 px-3 rounded-md border border-accent/40 text-[12px] font-medium hover:bg-accent/10 transition-colors inline-flex items-center gap-1.5"
+              >
+                <Map className="size-3" /> {p.nome}
+                <span className="text-muted-foreground font-normal">
+                  {p.largura_cm / 100}×{p.profundidade_cm / 100}m
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4">
         <div>
           <Label>Nome do projeto *</Label>
@@ -989,12 +1102,14 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
   );
 }
 
-function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte }: {
+function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte, criarOrdem, clientes }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   gerarRender: (mode?: "schnell" | "pro") => void;
-  criarOrcamento: () => void;
+  criarOrcamento: (clienteId?: string) => void;
   gerarListaCorte: () => void;
+  criarOrdem: () => void;
+  clientes: { id: string; nome: string }[];
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const { analise, moveis } = wizard;
@@ -1188,6 +1303,20 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             Clique em "Gerar lista" para calcular peças, chapas e fita de borda automaticamente.
           </div>
         )}
+
+        {wizard.listaCorte && (
+          <div className="flex justify-end pt-2 border-t border-border">
+            <button
+              onClick={criarOrdem}
+              disabled={wizard.criandoOrdem}
+              className="h-8 px-3 rounded-md bg-emerald-600 text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
+            >
+              {wizard.criandoOrdem
+                ? <><Loader2 className="size-3.5 animate-spin" /> Criando…</>
+                : <><Factory className="size-3.5" /> Criar ordem de produção</>}
+            </button>
+          </div>
+        )}
       </Surface>
 
       {/* Preview rápido (Schnell) */}
@@ -1230,19 +1359,40 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       </Surface>
 
       {/* Actions */}
-      <Surface className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[14px] font-semibold">Próximas ações</div>
-          <div className="text-[12px] text-muted-foreground mt-0.5">
-            Crie o orçamento formal ou gere o render cinematográfico
+      <Surface className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[14px] font-semibold">Próximas ações</div>
+            <div className="text-[12px] text-muted-foreground mt-0.5">
+              Crie o orçamento formal ou gere o render cinematográfico
+            </div>
           </div>
         </div>
+
+        {/* Client picker */}
+        {clientes.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-[11.5px] text-muted-foreground shrink-0">Cliente do orçamento:</label>
+            <select
+              value={wizard.clienteId ?? ""}
+              onChange={(e) => {
+                const found = clientes.find((c) => c.id === e.target.value);
+                update({ clienteId: e.target.value || null, clienteNome: found?.nome ?? null });
+              }}
+              className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none"
+            >
+              <option value="">Sem cliente (rascunho)</option>
+              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          </div>
+        )}
+
         <div className="flex gap-2 flex-wrap">
           <button
-            onClick={criarOrcamento}
+            onClick={() => criarOrcamento(wizard.clienteId ?? undefined)}
             className="h-10 px-4 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-2"
           >
-            <FileText className="size-4" /> Criar orçamento
+            <FileText className="size-4" /> {wizard.clienteNome ? `Criar orçamento — ${wizard.clienteNome}` : "Criar orçamento"}
           </button>
 
           <button
@@ -1274,9 +1424,10 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
 // ─── Step 5: Render ───────────────────────────────────────────────────────────
 
-function Step5Render({ wizard, update }: {
+function Step5Render({ wizard, update, criarOrcamento }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
+  criarOrcamento: () => void;
 }) {
   return (
     <div className="space-y-5">
@@ -1333,13 +1484,25 @@ function Step5Render({ wizard, update }: {
             </div>
           </Surface>
           <Surface padded={false} className="p-4">
-            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Próximos passos</div>
-            <div className="space-y-1.5">
-              {["Apresentar proposta ao cliente", "Gerar PDF com render + orçamento", "Criar orçamento formal no sistema"].map((s) => (
+            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-3">Próximos passos</div>
+            <div className="space-y-2">
+              {["Apresentar proposta ao cliente", "Gerar PDF com render + orçamento"].map((s) => (
                 <div key={s} className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
                   <ChevronRight className="size-3.5 shrink-0" /> {s}
                 </div>
               ))}
+              <button
+                onClick={criarOrcamento}
+                className="mt-2 w-full h-9 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center justify-center gap-1.5"
+              >
+                <FileText className="size-3.5" /> Criar orçamento formal
+              </button>
+              <button
+                onClick={() => update({ step: 4 })}
+                className="w-full h-8 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center justify-center gap-1.5"
+              >
+                <ChevronLeft className="size-3.5" /> Voltar ao layout
+              </button>
             </div>
           </Surface>
         </div>
