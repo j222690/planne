@@ -13,6 +13,9 @@ export interface MovelCanvas {
   nota?: string;
   customizado?: boolean; // false = comprado/existente/porta/janela
   parede?: "top" | "bottom" | "left" | "right"; // for porta/janela
+  rodape?: boolean;
+  pes_regulaveis?: boolean;
+  roda_teto?: boolean;
 }
 
 interface Props {
@@ -20,6 +23,7 @@ interface Props {
   medidas: { largura: number; profundidade: number };
   onChange?: (moveis: MovelCanvas[]) => void;
   onExport?: (dataUrl: string) => void;
+  onSelect?: (id: string | null) => void;
   readOnly?: boolean;
 }
 
@@ -69,7 +73,7 @@ const CATEGORIA_COLORS: Record<string, string> = {
   outro: "#d0d0d0",
 };
 
-export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = false }: Props) {
+export function RoomCanvas({ moveis, medidas, onChange, onExport, onSelect, readOnly = false }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [items, setItems] = useState<MovelCanvas[]>(moveis);
   const [selected, setSelected] = useState<string | null>(null);
@@ -87,11 +91,16 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
   const isWallElement = (m: MovelCanvas) =>
     m.tipo_elemento === "porta" || m.tipo_elemento === "janela";
 
+  const selectItem = (id: string | null) => {
+    setSelected(id);
+    onSelect?.(id);
+  };
+
   const onMouseDown = (e: React.MouseEvent, id: string) => {
     if (readOnly) return;
     e.preventDefault();
     const item = items.find((m) => m.id === id)!;
-    setSelected(id);
+    selectItem(id);
     setDragging({
       id,
       startX: e.clientX,
@@ -160,7 +169,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
       const hy = CANVAS_H - WT;
       return (
         <g key={m.id} style={{ cursor: readOnly ? "default" : "ew-resize" }}
-          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
           {/* Clear wall gap */}
           <rect x={hx} y={CANVAS_H - WT} width={dw} height={WT + 1} fill={FLOOR} />
           {/* Door panel line (open 90°) */}
@@ -180,7 +189,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
       const hy = WT;
       return (
         <g key={m.id} style={{ cursor: readOnly ? "default" : "ew-resize" }}
-          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
           <rect x={hx} y={0} width={dw} height={WT + 1} fill={FLOOR} />
           <line x1={hx} y1={hy} x2={hx} y2={hy + dw} stroke={strokeColor} strokeWidth="2.5" />
           <path d={`M ${hx} ${hy + dw} A ${dw} ${dw} 0 0 0 ${hx + dw} ${hy}`}
@@ -197,7 +206,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
       const hy = WT + m.x_pct * INNER_H;
       return (
         <g key={m.id} style={{ cursor: readOnly ? "default" : "ns-resize" }}
-          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
           <rect x={0} y={hy} width={WT + 1} height={dh} fill={FLOOR} />
           <line x1={hx} y1={hy} x2={hx + dh} y2={hy} stroke={strokeColor} strokeWidth="2.5" />
           <path d={`M ${hx + dh} ${hy} A ${dh} ${dh} 0 0 0 ${hx} ${hy + dh}`}
@@ -214,7 +223,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
     const hy = WT + m.x_pct * INNER_H;
     return (
       <g key={m.id} style={{ cursor: readOnly ? "default" : "ns-resize" }}
-        onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+        onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
         <rect x={CANVAS_W - WT} y={hy} width={WT + 1} height={dh} fill={FLOOR} />
         <line x1={hx} y1={hy} x2={hx - dh} y2={hy} stroke={strokeColor} strokeWidth="2.5" />
         <path d={`M ${hx - dh} ${hy} A ${dh} ${dh} 0 0 1 ${hx} ${hy + dh}`}
@@ -236,7 +245,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
       const wx = WT + m.x_pct * INNER_W;
       return (
         <g key={m.id} style={{ cursor: readOnly ? "default" : "ew-resize" }}
-          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
           <rect x={wx} y={CANVAS_H - WT} width={ww} height={WT} fill={glassColor} opacity={0.7} />
           <line x1={wx} y1={CANVAS_H - WT} x2={wx + ww} y2={CANVAS_H - WT} stroke={strokeColor} strokeWidth="1.5" />
           <line x1={wx} y1={CANVAS_H - WT / 2} x2={wx + ww} y2={CANVAS_H - WT / 2} stroke={strokeColor} strokeWidth="1" />
@@ -248,7 +257,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
       const wx = WT + m.x_pct * INNER_W;
       return (
         <g key={m.id} style={{ cursor: readOnly ? "default" : "ew-resize" }}
-          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
           <rect x={wx} y={0} width={ww} height={WT} fill={glassColor} opacity={0.7} />
           <line x1={wx} y1={0} x2={wx + ww} y2={0} stroke={strokeColor} strokeWidth="1.5" />
           <line x1={wx} y1={WT / 2} x2={wx + ww} y2={WT / 2} stroke={strokeColor} strokeWidth="1" />
@@ -260,7 +269,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
       const wy = WT + m.x_pct * INNER_H;
       return (
         <g key={m.id} style={{ cursor: readOnly ? "default" : "ns-resize" }}
-          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+          onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
           <rect x={0} y={wy} width={WT} height={ww} fill={glassColor} opacity={0.7} />
           <line x1={0} y1={wy} x2={0} y2={wy + ww} stroke={strokeColor} strokeWidth="1.5" />
           <line x1={WT / 2} y1={wy} x2={WT / 2} y2={wy + ww} stroke={strokeColor} strokeWidth="1" />
@@ -272,7 +281,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
     const wy = WT + m.x_pct * INNER_H;
     return (
       <g key={m.id} style={{ cursor: readOnly ? "default" : "ns-resize" }}
-        onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}>
+        onMouseDown={(e) => onMouseDown(e, m.id)} onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}>
         <rect x={CANVAS_W - WT} y={wy} width={WT} height={ww} fill={glassColor} opacity={0.7} />
         <line x1={CANVAS_W - WT} y1={wy} x2={CANVAS_W - WT} y2={wy + ww} stroke={strokeColor} strokeWidth="1.5" />
         <line x1={CANVAS_W - WT / 2} y1={wy} x2={CANVAS_W - WT / 2} y2={wy + ww} stroke={strokeColor} strokeWidth="1" />
@@ -337,7 +346,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, readOnly = fal
               key={m.id}
               style={{ cursor: readOnly ? "default" : "grab" }}
               onMouseDown={(e) => onMouseDown(e, m.id)}
-              onClick={() => !readOnly && setSelected(m.id === selected ? null : m.id)}
+              onClick={() => !readOnly && selectItem(m.id === selected ? null : m.id)}
             >
               {/* Shadow */}
               {!isExistente && <rect x={x + 3} y={y + 3} width={w} height={h} rx={2} fill="rgba(0,0,0,0.12)" />}

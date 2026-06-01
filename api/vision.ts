@@ -9,10 +9,11 @@ REGRAS OBRIGATÓRIAS:
 2. SEMPRE inclua janelas — com tipo_elemento: "janela".
 3. INCLUA móveis existentes que não fazem parte da marcenaria (cama box comprada, sofá, mesa de jantar, etc.) com tipo_elemento: "existente" e customizado: false.
 4. INCLUA todos os móveis de marcenaria planejada com tipo_elemento: "movel" e customizado: true.
-5. DIMENSIONE tudo usando as medidas reais do ambiente.
+5. DIMENSIONE tudo usando EXCLUSIVAMENTE as medidas numéricas fornecidas pelo usuário no texto (largura, profundidade, pé-direito). NUNCA tente inferir ou corrigir as dimensões com base na imagem da planta — a imagem serve apenas para entender a disposição espacial (onde ficam elementos no espaço). As medidas do usuário são as medidas reais medidas no local.
 6. POSICIONE todos os elementos de forma funcional (vista superior), respeitando circulação mínima de 80cm entre móveis.
 7. NUNCA retorne menos de 5 elementos para qualquer ambiente (incluindo porta + janela).
 8. O preço e chapas_mdf de porta, janela e existente devem ser ZERO (não fazem parte do orçamento de marcenaria).
+9. Os móveis de marcenaria NÃO devem ultrapassar as dimensões do ambiente. Cada móvel deve caber dentro da largura e profundidade declaradas pelo usuário, respeitando a escala real.
 
 TIPOS DE ELEMENTOS:
 - "movel" = marcenaria planejada (armário, roupeiro, cozinha, rack, prateleiras, nichos, gaveteiro, etc.) — customizado: true
@@ -194,7 +195,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     {
       type: "text",
       text: `AMBIENTE: ${ambiente}
-MEDIDAS DO AMBIENTE: largura=${medidas?.largura ?? 4}m, profundidade=${medidas?.profundidade ?? 3}m, pé-direito=${medidas?.altura ?? 2.7}m
+MEDIDAS ABSOLUTAS DO AMBIENTE (fornecidas pelo cliente — USE EXATAMENTE ESTAS, não tente inferir da imagem):
+  - largura: ${medidas?.largura ?? 4}m
+  - profundidade: ${medidas?.profundidade ?? 3}m
+  - pé-direito: ${medidas?.altura ?? 2.7}m
+
 ESTILO: ${estilo ?? "Moderno"}
 COR/ACABAMENTO MDF preferido: ${cor_mdf || "#f5f3f0"} — use como base para cor_hex dos móveis de MDF
 DESCRIÇÃO DO CLIENTE: ${descricao || "Não informada"}
@@ -209,11 +214,16 @@ INSTRUÇÃO CRÍTICA: Inclua TODOS os elementos do cômodo no array "moveis":
 3. Móveis existentes/comprados: cama, sofá, geladeira, fogão, etc. (tipo_elemento: "existente", customizado: false, preco_estimado: 0)
 4. Marcenaria planejada: armários, roupeiros, racks, bancadas, etc. (tipo_elemento: "movel", customizado: true)
 
-O orçamento e os itens devem considerar APENAS os elementos com customizado: true.`,
+O orçamento e os itens devem considerar APENAS os elementos com customizado: true.
+LEMBRETE FINAL: As dimensões do ambiente são ${medidas?.largura ?? 4}m × ${medidas?.profundidade ?? 3}m. Nenhum móvel pode ser maior que o ambiente.`,
     },
   ];
 
   if (planta_b64) {
+    userContent.push({
+      type: "text",
+      text: `PLANTA BAIXA PARA REFERÊNCIA DE LAYOUT APENAS — use para entender a disposição espacial (posição de elementos, circulação). NÃO use a imagem para inferir ou alterar as dimensões declaradas acima.`,
+    });
     userContent.push({
       type: "image_url",
       image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" },

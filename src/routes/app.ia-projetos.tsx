@@ -4,6 +4,7 @@ import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
   CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
+  Settings2, Palette,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -847,6 +848,147 @@ function Step3Analyzing({ wizard, analisar }: { wizard: WizardState; analisar: (
 
 // ─── Step 4: Layout + Orçamento ───────────────────────────────────────────────
 
+const MDF_CORES_COMPLETO = [
+  { nome: "Branco TX", hex: "#f5f3f0" },
+  { nome: "Off White", hex: "#f0ebe0" },
+  { nome: "Cinza Claro", hex: "#d4d0cc" },
+  { nome: "Cinza Grafite", hex: "#5a5a5a" },
+  { nome: "Preto Fosco", hex: "#2c2c2c" },
+  { nome: "Carvalho Natural", hex: "#c8a87a" },
+  { nome: "Freijó", hex: "#b8824a" },
+  { nome: "Nogueira", hex: "#8b6340" },
+  { nome: "Imbuia", hex: "#7a5530" },
+  { nome: "Verde Musgo", hex: "#5a6a4a" },
+  { nome: "Azul Petróleo", hex: "#2a4a5a" },
+  { nome: "Terracota", hex: "#b56a4a" },
+];
+
+function MovelConfigPanel({ movel, onChange, onClose }: {
+  movel: Movel;
+  onChange: (patch: Partial<Movel>) => void;
+  onClose: () => void;
+}) {
+  const isCustom = movel.customizado !== false && movel.tipo_elemento === "movel";
+
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Settings2 className="size-4 text-accent" />
+          <span className="text-[13px] font-semibold">{movel.nome}</span>
+          <span className="text-[11px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md">
+            {movel.largura_cm}×{movel.profundidade_cm}{movel.altura_cm ? `×${movel.altura_cm}` : ""}cm
+          </span>
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <X className="size-4" />
+        </button>
+      </div>
+
+      {isCustom && (
+        <>
+          {/* Cor do MDF */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Palette className="size-3.5 text-muted-foreground" />
+              <span className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide">Cor / acabamento</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {MDF_CORES_COMPLETO.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  title={c.nome}
+                  onClick={() => onChange({ cor_hex: c.hex })}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md border text-[11px] transition-all ${
+                    movel.cor_hex === c.hex
+                      ? "border-accent ring-1 ring-accent font-medium"
+                      : "border-border hover:border-border-strong"
+                  }`}
+                >
+                  <span className="size-3 rounded-sm shrink-0 border border-black/10" style={{ background: c.hex }} />
+                  {c.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Acabamentos */}
+          <div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Acabamentos</div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { key: "rodape", label: "Rodapé", desc: "Painel inferior de 10cm" },
+                { key: "pes_regulaveis", label: "Pés reguláveis", desc: "Pés de nível 15cm" },
+                { key: "roda_teto", label: "Roda-teto", desc: "Acabamento superior à laje" },
+              ].map(({ key, label, desc }) => {
+                const ativo = movel[key as keyof Movel] as boolean | undefined;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => onChange({ [key]: !ativo } as Partial<Movel>)}
+                    className={`text-left rounded-md border p-2.5 transition-all ${
+                      ativo
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-border hover:border-border-strong text-muted-foreground"
+                    }`}
+                  >
+                    <div className="text-[12px] font-medium">{label}</div>
+                    <div className="text-[10.5px] mt-0.5 opacity-70">{desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Dimensões editáveis */}
+          <div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Dimensões (cm)</div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { k: "largura_cm", label: "Largura" },
+                { k: "profundidade_cm", label: "Prof." },
+                { k: "altura_cm", label: "Altura" },
+              ].map(({ k, label }) => (
+                <div key={k}>
+                  <div className="text-[10.5px] text-muted-foreground mb-1">{label}</div>
+                  <input
+                    type="number"
+                    value={(movel as Record<string, unknown>)[k] as number || ""}
+                    onChange={(e) => onChange({ [k]: parseInt(e.target.value) || 0 } as Partial<Movel>)}
+                    className="w-full rounded-md border border-border bg-surface-2 px-2 py-1 text-[12px] text-center outline-none focus:border-accent"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Nota */}
+          <div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Observação</div>
+            <input
+              type="text"
+              value={movel.nota ?? ""}
+              onChange={(e) => onChange({ nota: e.target.value })}
+              placeholder="Ex: 6 portas de correr, perfil fosco..."
+              className="w-full rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[12px] outline-none focus:border-accent"
+            />
+          </div>
+        </>
+      )}
+
+      {!isCustom && (
+        <div className="text-[12.5px] text-muted-foreground">
+          {movel.tipo_elemento === "porta" && "Porta — arraste no canvas para reposicionar."}
+          {movel.tipo_elemento === "janela" && "Janela — arraste no canvas para reposicionar."}
+          {movel.tipo_elemento === "existente" && "Móvel existente (comprado) — não incluso no orçamento de marcenaria."}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
@@ -854,9 +996,16 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   criarOrcamento: () => void;
   gerarListaCorte: () => void;
 }) {
+  const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const { analise, moveis } = wizard;
   if (!analise) return null;
   const { orcamento, descricao_comercial, observacoes_tecnicas } = analise;
+
+  const selectedMovel = selectedMovelId ? moveis.find((m) => m.id === selectedMovelId) ?? null : null;
+
+  const updateMovel = (id: string, patch: Partial<Movel>) => {
+    update({ moveis: moveis.map((m) => m.id === id ? { ...m, ...patch } : m) });
+  };
 
   const linhasOrc = [
     { label: "MDF (chapas + desperdício)", value: orcamento.mdf_custo },
@@ -896,7 +1045,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           </div>
           <div className="text-[11.5px] text-muted-foreground">Arraste para reposicionar</div>
         </div>
-        <div className="p-2">
+        <div className="p-2 space-y-3">
           <RoomCanvas
             moveis={moveis}
             medidas={{
@@ -904,8 +1053,22 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               profundidade: parseFloat(wizard.form.profundidade) || 3,
             }}
             onChange={(updated) => update({ moveis: updated as Movel[] })}
+            onSelect={setSelectedMovelId}
             onExport={() => {}}
           />
+          {/* Painel de configuração do móvel selecionado */}
+          {selectedMovel && (
+            <MovelConfigPanel
+              movel={selectedMovel}
+              onChange={(patch) => updateMovel(selectedMovel.id, patch)}
+              onClose={() => setSelectedMovelId(null)}
+            />
+          )}
+          {!selectedMovel && (
+            <div className="text-center text-[11.5px] text-muted-foreground py-1">
+              Clique em um móvel para configurar cor, acabamentos e dimensões
+            </div>
+          )}
         </div>
       </Surface>
 
