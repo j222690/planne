@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/planne/AppShell";
+import { CommandSearch } from "@/components/planne/CommandSearch";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app")({
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/app")({
   },
   component: () => (
     <AppShell>
+      <CommandSearch />
       <Outlet />
     </AppShell>
   ),

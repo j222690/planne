@@ -76,6 +76,23 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "criar_orcamento",
+      description: "Cria um orçamento básico para um cliente com lista de móveis. Use quando o usuário pedir para criar um orçamento e fornecer os dados necessários.",
+      parameters: {
+        type: "object",
+        properties: {
+          cliente_nome: { type: "string", description: "Nome do cliente (será buscado pelo nome)" },
+          descricao: { type: "string", description: "Descrição do projeto" },
+          ambiente: { type: "string", description: "Ambiente principal: Cozinha, Sala, Quarto, Escritório, etc." },
+          moveis_lista: { type: "array", items: { type: "string" }, description: "Lista de móveis solicitados, ex: ['Roupeiro 2m', 'Guarda-roupa com espelho']" },
+        },
+        required: ["cliente_nome", "moveis_lista"],
+      },
+    },
+  },
 ];
 
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -163,6 +180,60 @@ async function executeTool(
       if (error) return { erro: error.message };
       return { sucesso: true, cliente: data };
     }
+    case "criar_orcamento": {
+      // Search for client
+      const { data: clientes } = await supabase
+        .from("clientes")
+        .select("id,nome")
+        .eq("empresa_id", empresaId)
+        .ilike("nome", `%${String(args.cliente_nome ?? "")}%`)
+        .limit(1);
+      const cliente = clientes?.[0];
+      if (!cliente) return { erro: `Cliente "${args.cliente_nome}" não encontrado. Crie o cliente primeiro com criar_cliente.` };
+
+      // Generate next orçamento number
+      const { count } = await supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("empresa_id", empresaId);
+      const numero = `ORC-${String((count ?? 0) + 1).padStart(4, "0")}`;
+
+      // Create orçamento
+      const { data: orc, error: orcErr } = await supabase
+        .from("orcamentos")
+        .insert({
+          empresa_id: empresaId,
+          cliente_id: cliente.id,
+          numero,
+          status: "rascunho",
+          total: 0,
+          subtotal: 0,
+          margem_pct: 35,
+          observacoes: args.descricao ? String(args.descricao) : `Projeto: ${(args.moveis_lista as string[]).join(", ")}`,
+        })
+        .select("id,numero")
+        .single();
+      if (orcErr) return { erro: orcErr.message };
+
+      // Create basic items from moveis_lista
+      const moveis = args.moveis_lista as string[];
+      const itens = moveis.map((m) => ({
+        orcamento_id: orc.id,
+        descricao: m,
+        quantidade: 1,
+        unidade: "un",
+        preco_custo: 0,
+        preco_unitario: 0,
+        total: 0,
+      }));
+      await supabase.from("orcamento_itens").insert(itens);
+
+      return {
+        sucesso: true,
+        numero: orc.numero,
+        cliente: cliente.nome,
+        ambiente: args.ambiente ?? "Não especificado",
+        moveis: moveis.length,
+        mensagem: `Orçamento ${orc.numero} criado como rascunho para ${cliente.nome} com ${moveis.length} item(ns). Acesse a seção Orçamentos para calcular os valores com IA.`,
+      };
+    }
     default:
       return { erro: `Ferramenta desconhecida: ${name}` };
   }
@@ -185,12 +256,12 @@ O QUE VOCÊ PODE FAZER:
 - Listar e consultar orçamentos existentes
 - Ver resumo financeiro
 - Listar projetos
+- CRIAR orçamentos básicos: use criar_orcamento quando o usuário fornecer nome do cliente e lista de móveis. Os valores serão R$0 — diga ao usuário que pode calcular automaticamente com IA dentro do orçamento criado.
 
 O QUE VOCÊ NÃO FAZ (redirecione para o sistema):
-- CRIAR orçamentos: diga "Para criar um orçamento, clique em **Orçamentos** no menu lateral e depois em **Novo orçamento**. Você pode usar IA ou importar PDF para preencher os itens automaticamente."
 - CRIAR projetos: diga "Para criar um projeto, acesse **Projetos** no menu lateral."
 - CRIAR ordens de produção: diga "Acesse **Produção** no menu lateral."
-- Qualquer criação que envolva itens, quantidades e valores detalhados — isso é feito pelos formulários do sistema, não pelo chat.`;
+- Calcular valores/quantidades detalhados de materiais — isso requer o módulo IA de orçamento dentro do formulário.`;
 
 interface ToolCall {
   id: string;

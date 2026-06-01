@@ -4,6 +4,7 @@ import {
   Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles,
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
   ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
+  MessageCircle, MessageSquare, Download, Bot,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -42,8 +43,10 @@ type Orc = {
   cliente_id?: string;
   projeto_id?: string;
   fiscal_dados?: FiscalDados | null;
-  clientes: { nome: string } | null;
+  clientes: { nome: string; telefone?: string | null } | null;
   projetos: { nome: string } | null;
+  assinatura_png?: string | null;
+  assinado_em?: string | null;
 };
 
 type OrcItem = {
@@ -1542,6 +1545,27 @@ function Orcamentos() {
         description="Gere, aprove e acompanhe propostas com cálculo automático de chapas, ferragens e margem."
         actions={
           <>
+            <button
+              onClick={() => {
+                const rows = [["Número", "Cliente", "Status", "Total", "Data"]].concat(
+                  filtered.map((o) => [
+                    o.numero ?? "",
+                    o.clientes?.nome ?? "",
+                    STATUS_LABEL[o.status] ?? o.status,
+                    String(o.total ?? 0),
+                    new Date(o.created_at).toLocaleDateString("pt-BR"),
+                  ])
+                );
+                const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+                a.download = `orcamentos_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+              }}
+              className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5"
+            >
+              <Download className="size-3.5" /> Exportar CSV
+            </button>
             <button className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5">
               <Filter className="size-3.5" /> Filtros
             </button>
@@ -1738,6 +1762,95 @@ function SheetVisualization({ chapas }: { chapas: ChapaMaterial[] }) {
   );
 }
 
+// ─── Feature 9: Assinatura Modal ────────────────────────────────────────────
+
+function AssinaturaModal({ orcId, onClose, onSigned }: {
+  orcId: string; onClose: () => void; onSigned: (png: string, em: string) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [drawing, setDrawing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    if ("touches" in e) {
+      const t = e.touches[0];
+      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+  };
+
+  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const pos = getPos(e, canvas);
+    ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+    setDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!drawing) return;
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const pos = getPos(e, canvas);
+    ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#1a1a1a";
+    ctx.lineTo(pos.x, pos.y); ctx.stroke();
+  };
+
+  const stopDraw = () => setDrawing(false);
+
+  const handleLimpar = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleConfirmar = async () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const png = canvas.toDataURL("image/png").split(",")[1];
+    const em = new Date().toISOString();
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("orcamentos").update({ assinatura_png: png, assinado_em: em }).eq("id", orcId);
+      if (error) throw error;
+      toast.success("Assinatura salva!");
+      onSigned(png, em);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar assinatura"); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.18 }}
+        className="relative w-full max-w-sm bg-surface border border-border rounded-lg shadow-xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-[15px] font-semibold">Assinar orçamento</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <p className="text-[12.5px] text-muted-foreground">Assine abaixo com o mouse ou dedo:</p>
+          <canvas ref={canvasRef} width={400} height={180}
+            className="w-full border-2 border-dashed border-border rounded-lg bg-white cursor-crosshair touch-none"
+            style={{ height: 180 }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw}
+          />
+          <div className="flex gap-2 justify-end pt-1">
+            <button onClick={handleLimpar} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary">Limpar</button>
+            <button onClick={handleConfirmar} disabled={saving}
+              className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              Confirmar assinatura
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   orc: Orc; onClose: () => void; onChanged: () => void; onEdit: () => void;
 }) {
@@ -1757,6 +1870,14 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   const [pixLoading, setPixLoading] = useState(false);
   const [fiscalDados, setFiscalDados] = useState<FiscalDados | null>((orc.fiscal_dados as FiscalDados) ?? null);
   const [copiedPix, setCopiedPix] = useState(false);
+  const [followUpMsg, setFollowUpMsg] = useState<string | null>(null);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [showAssinatura, setShowAssinatura] = useState(false);
+  const [orcAssinado, setOrcAssinado] = useState<{ png: string | null; em: string | null }>({
+    png: orc.assinatura_png ?? null, em: orc.assinado_em ?? null,
+  });
+  const [similarRange, setSimilarRange] = useState<{ min: number; max: number } | null>(null);
   const parseMoveisCfg = (raw: unknown): MovelConfig[] | null => {
     if (!raw) return null;
     if (Array.isArray(raw)) return raw as MovelConfig[];
@@ -1775,7 +1896,17 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
       if (e) {
         setEmpresaNome((e as { nome: string }).nome ?? "");
         setLogoUrl((e as { logo_url?: string | null }).logo_url ?? null);
-        setEmpresaId((e as { id: string }).id);
+        const eid = (e as { id: string }).id;
+        setEmpresaId(eid);
+        // Feature 8: load similar price range from last 10 approved orçamentos
+        supabase.from("orcamentos").select("total").eq("empresa_id", eid).eq("status", "aprovado")
+          .order("created_at", { ascending: false }).limit(10)
+          .then(({ data }) => {
+            if (data && data.length >= 2) {
+              const vals = data.map((r) => Number(r.total)).filter((v) => v > 0);
+              if (vals.length >= 2) setSimilarRange({ min: Math.min(...vals), max: Math.max(...vals) });
+            }
+          });
       }
     });
     // Busca moveis_config diretamente se não veio na prop
@@ -2008,11 +2139,70 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
     }
   };
 
+  // Feature 1: WhatsApp
+  const handleWhatsApp = () => {
+    const raw = orc.clientes?.telefone ?? "";
+    let phone = raw.replace(/\D/g, "");
+    if (phone.startsWith("0")) phone = phone.slice(1);
+    if (phone.length < 12) phone = "55" + phone;
+    const total = (orc.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const msg = `Olá ${orc.clientes?.nome ?? ""}! Seu orçamento ${orc.numero ?? ""} no valor de R$ ${total} está pronto. Veja o PDF em breve.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
+  // Feature 2: Follow-up AI
+  const handleGerarFollowUp = async () => {
+    setFollowUpLoading(true);
+    try {
+      const dias = Math.floor((Date.now() - new Date(orc.created_at).getTime()) / 86400000);
+      const total = (orc.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: "Você é um assistente de vendas para uma marcenaria. Gere mensagens de follow-up amigáveis e profissionais em português brasileiro para WhatsApp.",
+          messages: [{ role: "user", content: `Gere uma mensagem curta e amigável de follow-up para WhatsApp para o cliente "${orc.clientes?.nome ?? "Cliente"}" sobre o orçamento número ${orc.numero ?? ""} no valor de R$ ${total}, que está em análise há ${dias} dias. A mensagem deve ser natural, sem ser invasiva, e perguntar se o cliente tem dúvidas ou precisa de mais informações.` }],
+          max_tokens: 300,
+          temperature: 0.7,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) { setFollowUpMsg(data.text); setShowFollowUp(true); }
+    } catch { toast.error("Erro ao gerar mensagem"); }
+    finally { setFollowUpLoading(false); }
+  };
+
+  // Feature 6: QR codes
+  const handleBaixarQRCodes = () => {
+    if (!listaCorte?.pecas?.length) { toast.error("Gere o plano de corte primeiro."); return; }
+    const pecas = listaCorte.pecas;
+    const items = pecas.map((p) => {
+      const text = `${p.movel}|${p.peca}|${p.largura_mm}x${p.comprimento_mm}|${p.quantidade}`;
+      const url = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}`;
+      return { text, url, label: `${p.peca} — ${p.largura_mm}×${p.comprimento_mm}mm (${p.movel})`, qty: p.quantidade };
+    });
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>QR Codes — ${orc.numero ?? ""}</title>
+<style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.item{border:1px solid #ddd;border-radius:8px;padding:12px;text-align:center;break-inside:avoid}
+.item img{width:120px;height:120px}
+.label{font-size:11px;margin-top:6px;color:#333}
+.qty{font-size:10px;color:#666;margin-top:2px}
+@media print{.no-print{display:none}}</style></head><body>
+<h1>QR Codes — Orçamento ${orc.numero ?? ""} · ${orc.clientes?.nome ?? ""}</h1>
+<div class="no-print" style="margin-bottom:16px"><button onclick="window.print()" style="padding:8px 20px;background:#111;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir</button></div>
+<div class="grid">${items.map((i) => `<div class="item"><img src="${i.url}" alt="${i.label}" /><div class="label">${i.label}</div><div class="qty">Qtd: ${i.qty}</div></div>`).join("")}</div>
+</body></html>`;
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
   const nextStatuses = STATUS_NEXT[orc.status] ?? [];
   const totalItens = itens.reduce((s, i) => s + Number(i.preco_unitario) * Number(i.quantidade), 0);
   const multiGrupo = Object.keys(grupos).length > 1;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
       <motion.div
@@ -2128,7 +2318,15 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
           {/* Plano de corte */}
           {showCorte && (
             <div>
-              <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Plano de corte</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground">Plano de corte</div>
+                {listaCorte && (
+                  <button onClick={handleBaixarQRCodes}
+                    className="h-6 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1">
+                    <QrCode className="size-3" /> QR Codes
+                  </button>
+                )}
+              </div>
               {listaCorteLoading ? (
                 <div className="flex items-center gap-2 py-4 text-[12.5px] text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" /> Calculando plano de corte...
@@ -2279,11 +2477,64 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
           )}
         </div>
 
+        {/* Feature 8: Similar price range */}
+        {similarRange && (
+          <div className="mx-5 mb-2 flex items-center gap-1.5 text-[11.5px] text-muted-foreground bg-secondary/50 rounded px-2.5 py-1.5">
+            <Info className="size-3 shrink-0" />
+            Projetos similares da empresa: <span className="font-medium text-foreground ml-1">R$ {similarRange.min.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k – R$ {similarRange.max.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k</span>
+          </div>
+        )}
+
+        {/* Feature 9: signed badge */}
+        {orcAssinado.em && (
+          <div className="mx-5 mb-2 flex items-center gap-1.5 text-[11.5px] text-emerald-600 bg-emerald-500/10 rounded px-2.5 py-1.5">
+            <CheckCheck className="size-3.5" />
+            Assinado em {new Date(orcAssinado.em).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+          </div>
+        )}
+
+        {/* Feature 2: Follow-up message panel */}
+        {showFollowUp && followUpMsg && (
+          <div className="mx-5 mb-2 p-3 rounded-lg border border-border bg-surface-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-[11.5px] font-medium flex items-center gap-1.5"><Bot className="size-3.5" /> Mensagem de follow-up gerada</div>
+              <button onClick={() => setShowFollowUp(false)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5" /></button>
+            </div>
+            <p className="text-[12.5px] text-foreground whitespace-pre-wrap">{followUpMsg}</p>
+            <button onClick={() => { navigator.clipboard.writeText(followUpMsg); toast.success("Mensagem copiada!"); }}
+              className="h-7 px-2.5 rounded border border-border text-[11.5px] hover:bg-secondary inline-flex items-center gap-1.5">
+              <Copy className="size-3" /> Copiar
+            </button>
+          </div>
+        )}
+
         <div className="px-5 py-3 border-t border-border flex items-center justify-between shrink-0 flex-wrap gap-2">
           <button onClick={handleDelete} className="flex items-center gap-1.5 text-[12.5px] text-destructive hover:opacity-80">
             <Trash2 className="size-3.5" /> Excluir
           </button>
           <div className="flex gap-2 flex-wrap">
+            {/* Feature 1: WhatsApp */}
+            {["analise", "aprovado"].includes(orc.status) && orc.clientes?.telefone && (
+              <button onClick={handleWhatsApp}
+                className="h-8 px-3 rounded-md bg-emerald-600 text-white text-[12.5px] font-medium hover:opacity-90 inline-flex items-center gap-1.5">
+                <MessageCircle className="size-3.5" /> WhatsApp
+              </button>
+            )}
+            {/* Feature 2: Follow-up */}
+            {orc.status === "analise" && (
+              <button onClick={handleGerarFollowUp} disabled={followUpLoading}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5">
+                {followUpLoading ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquare className="size-3.5" />}
+                Follow-up IA
+              </button>
+            )}
+            {/* Feature 9: Sign */}
+            {orc.status === "aprovado" && !orcAssinado.em && (
+              <button onClick={() => setShowAssinatura(true)}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5">
+                <Pencil className="size-3.5" /> Assinar
+              </button>
+            )}
             {orc.status === "aprovado" && (
               <button onClick={handleCriarProjeto} disabled={criandoProjeto}
                 className="h-8 px-3 rounded-md bg-emerald-600 text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5">
@@ -2380,6 +2631,16 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
         </div>
       </motion.div>
     </div>
+    {/* Feature 9: Assinatura modal portal */}
+    {showAssinatura && createPortal(
+      <AssinaturaModal
+        orcId={orc.id}
+        onClose={() => setShowAssinatura(false)}
+        onSigned={(png, em) => { setOrcAssinado({ png, em }); setShowAssinatura(false); }}
+      />,
+      document.body
+    )}
+    </>
   );
 }
 

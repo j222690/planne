@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
-import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2, CheckCircle2, Circle, CalendarClock, ChevronRight } from "lucide-react";
+import { Plus, Mail, Phone, MoreHorizontal, Search, Loader2, AlertCircle, X, Pencil, Trash2, CheckCircle2, Circle, CalendarClock, ChevronRight, FileText, Folder, Clock } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,7 @@ type Cliente = {
   origem: string | null;
   cidade: string | null;
   observacoes: string | null;
+  created_at?: string | null;
 };
 
 const schema = z.object({
@@ -372,6 +373,23 @@ const TIPO_ATIV: Record<string, string> = {
   manutencao: "Manutenção / Pós-venda", outro: "Outro",
 };
 
+type TimelineItem = {
+  id: string; tipo: string; titulo: string; data: string; status?: string;
+};
+
+type ClienteRFV = { score: number; label: string; color: string; emoji: string };
+
+function calcRFV(recencia: number, frequencia: number, valor: number): ClienteRFV {
+  let score = 0;
+  if (recencia <= 30) score += 2; else if (recencia <= 90) score += 1;
+  if (frequencia >= 3) score += 2; else if (frequencia >= 1) score += 1;
+  if (valor >= 20000) score += 2; else if (valor >= 5000) score += 1;
+  const capped = Math.min(5, score + 1) as 1|2|3|4|5;
+  if (capped >= 4) return { score: capped, label: "VIP", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/30", emoji: "🟢" };
+  if (capped >= 2) return { score: capped, label: "Ocasional", color: "text-amber-600 bg-amber-500/10 border-amber-500/30", emoji: "🟡" };
+  return { score: capped, label: "Inativo", color: "text-muted-foreground bg-secondary border-border", emoji: "🔴" };
+}
+
 function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
   cliente: Cliente; empresaId: string | null; onClose: () => void; onEdit: () => void;
 }) {
@@ -382,6 +400,11 @@ function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
   const [novoTitulo, setNovoTitulo] = useState("");
   const [novaData, setNovaData] = useState("");
   const [saving, setSaving] = useState(false);
+  // Feature 7: timeline
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(true);
+  // Feature 15: RFV
+  const [rfv, setRfv] = useState<ClienteRFV | null>(null);
 
   const loadAtividades = async () => {
     setLoadingAtiv(true);
@@ -392,7 +415,33 @@ function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
     setLoadingAtiv(false);
   };
 
-  useEffect(() => { loadAtividades(); }, [cliente.id]);
+  useEffect(() => {
+    loadAtividades();
+    // Feature 7: load timeline
+    setLoadingTimeline(true);
+    Promise.all([
+      supabase.from("orcamentos").select("id,numero,status,created_at,total").eq("cliente_id", cliente.id).order("created_at"),
+      supabase.from("projetos").select("id,nome,status,created_at").eq("cliente_id", cliente.id).order("created_at"),
+    ]).then(([orcs, projs]) => {
+      // Feature 15: RFV
+      const allOrcs = orcs.data ?? [];
+      const lastOrc = allOrcs[allOrcs.length - 1];
+      const recencia = lastOrc ? Math.floor((Date.now() - new Date(lastOrc.created_at).getTime()) / 86400000) : 9999;
+      const frequencia = allOrcs.length;
+      const valor = allOrcs.filter((o) => o.status === "aprovado").reduce((s, o) => s + Number(o.total ?? 0), 0);
+      setRfv(calcRFV(recencia, frequencia, valor));
+      const items: TimelineItem[] = [
+        { id: "lead", tipo: "lead", titulo: "Lead criado", data: cliente.created_at ?? new Date().toISOString() },
+        ...(orcs.data ?? []).flatMap((o) => {
+          const r: TimelineItem[] = [{ id: `orc-${o.id}`, tipo: "orcamento", titulo: `Orçamento #${o.numero ?? o.id.slice(0,6)} criado`, data: o.created_at, status: o.status }];
+          if (["aprovado", "recusado"].includes(o.status)) r.push({ id: `orc-${o.id}-status`, tipo: "orcamento_status", titulo: `Orçamento #${o.numero ?? o.id.slice(0,6)} ${o.status === "aprovado" ? "aprovado" : "recusado"}`, data: o.created_at, status: o.status });
+          return r;
+        }),
+        ...(projs.data ?? []).map((p) => ({ id: `proj-${p.id}`, tipo: "projeto", titulo: `Projeto "${p.nome}" criado`, data: p.created_at, status: p.status })),
+      ].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+      setTimeline(items);
+    }).finally(() => setLoadingTimeline(false));
+  }, [cliente.id]);
 
   const handleAdd = async () => {
     if (!novoTitulo.trim() || !empresaId) return;
@@ -433,7 +482,14 @@ function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
             <div className="size-10 rounded-lg bg-secondary text-foreground/70 grid place-items-center text-[13px] font-semibold mb-2">
               {cliente.nome.split(" ").map((s) => s[0]).slice(0, 2).join("")}
             </div>
-            <div className="text-[15px] font-semibold">{cliente.nome}</div>
+            <div className="flex items-center gap-2">
+              <div className="text-[15px] font-semibold">{cliente.nome}</div>
+              {rfv && (
+                <span className={`text-[10.5px] font-medium px-2 py-0.5 rounded-full border ${rfv.color}`}>
+                  {rfv.emoji} {rfv.label}
+                </span>
+              )}
+            </div>
             <div className="text-[12px] text-muted-foreground">{cliente.origem ?? "—"} · {cliente.cidade ?? "—"}</div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground mt-1"><X className="size-4" /></button>
@@ -522,6 +578,44 @@ function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Feature 7: Timeline */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Clock className="size-3.5 text-muted-foreground" />
+              <span className="text-[12.5px] font-medium">Histórico</span>
+            </div>
+            {loadingTimeline ? (
+              <div className="flex items-center gap-2 text-[12px] text-muted-foreground py-2">
+                <Loader2 className="size-3.5 animate-spin" /> Carregando...
+              </div>
+            ) : timeline.length === 0 ? (
+              <div className="text-[12px] text-muted-foreground py-2">Sem histórico.</div>
+            ) : (
+              <div className="relative space-y-0 pl-4">
+                <div className="absolute left-0.5 top-2 bottom-2 w-px bg-border" />
+                {timeline.map((item) => {
+                  const Icon = item.tipo === "orcamento" || item.tipo === "orcamento_status" ? FileText
+                    : item.tipo === "projeto" ? Folder : Clock;
+                  const color = item.status === "aprovado" ? "text-emerald-600"
+                    : item.status === "recusado" ? "text-destructive"
+                    : "text-muted-foreground";
+                  return (
+                    <div key={item.id} className="flex items-start gap-2.5 pb-3 relative">
+                      <div className="absolute -left-4 top-0.5 size-2 rounded-full bg-border border-2 border-background" />
+                      <Icon className={`size-3.5 shrink-0 mt-0.5 ${color}`} />
+                      <div className="min-w-0">
+                        <div className={`text-[12px] font-medium ${color}`}>{item.titulo}</div>
+                        <div className="text-[10.5px] text-muted-foreground">
+                          {new Date(item.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
