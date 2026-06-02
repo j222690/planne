@@ -4,7 +4,7 @@ import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
   CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
-  Settings2, Palette, Map, Factory,
+  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +26,14 @@ interface Movel extends MovelCanvas {
   preco_estimado: number;
   chapas_mdf: number;
   nota: string;
+  // Interior config (Promob-like)
+  tipo_porta?: "dobradica" | "correr" | "aberta" | "basculante";
+  num_portas?: number;
+  num_prateleiras?: number;
+  num_gavetas?: number;
+  divisorias?: number;
+  ferragem?: "nacional" | "blum" | "hafele";
+  espelho?: boolean;
 }
 
 interface AnaliseIA {
@@ -976,6 +984,253 @@ const MDF_CORES_COMPLETO = [
   { nome: "Terracota", hex: "#b56a4a" },
 ];
 
+// ─── Helpers de cálculo (Promob-like) ────────────────────────────────────────
+
+function calcChapasPorConfig(largura: number, altura: number, profundidade: number, cfg: {
+  num_portas: number; num_prateleiras: number; num_gavetas: number; divisorias: number;
+}): number {
+  const A_CHAPA = 2.75 * 1.83; // m²
+  const lat = (profundidade / 100) * (altura / 100) * 2;
+  const horiz = (largura / 100) * (profundidade / 100) * (2 + cfg.num_prateleiras);
+  const portas = cfg.num_portas * ((largura / cfg.num_portas) / 100) * (altura / 100);
+  const gavetas = cfg.num_gavetas * (largura / 100) * 0.22;
+  const divis = cfg.divisorias * (profundidade / 100) * (altura / 100) * 0.5;
+  return Math.max(1, Math.ceil((lat + horiz + portas + gavetas + divis) * 1.12 / A_CHAPA));
+}
+
+function calcPrecoPorMovel(chapas: number, cfg: { ferragem?: string }, custoChapa = 85, margem = 3): number {
+  const ferragemMult = cfg.ferragem === "blum" ? 1.5 : cfg.ferragem === "hafele" ? 2.0 : 1.0;
+  const mdf = chapas * custoChapa * 1.15;
+  const ferr = mdf * 0.28 * ferragemMult;
+  const mao = mdf * 0.4;
+  return Math.round((mdf + ferr + mao) * margem);
+}
+
+const NOME_COR: Record<string, string> = {
+  "#f5f3f0": "Branco TX", "#f0ebe0": "Off White", "#d4d0cc": "Cinza Claro",
+  "#5a5a5a": "Cinza Grafite", "#2c2c2c": "Preto Fosco", "#c8a87a": "Carvalho Natural",
+  "#b8824a": "Freijó", "#8b6340": "Nogueira", "#7a5530": "Imbuia",
+  "#5a6a4a": "Verde Musgo", "#2a4a5a": "Azul Petróleo", "#b56a4a": "Terracota",
+};
+
+// ─── Vista de Elevação por Parede ─────────────────────────────────────────────
+
+function WallElevationSection({ wizard }: { wizard: WizardState }) {
+  const [paredeAtiva, setParedeAtiva] = useState<"bottom" | "top" | "left" | "right">("bottom");
+  const largM = parseFloat(wizard.form.largura) || 4;
+  const profM = parseFloat(wizard.form.profundidade) || 3;
+  const altM = parseFloat(wizard.form.altura) || 2.7;
+  const { moveis } = wizard;
+
+  const paredeW = (paredeAtiva === "top" || paredeAtiva === "bottom") ? largM : profM;
+  const customMoveis = moveis.filter(m => m.tipo_elemento === "movel" && m.customizado !== false);
+
+  const moveisDaParede = customMoveis.filter(m => {
+    const limiar = 0.45;
+    switch (paredeAtiva) {
+      case "top":    return m.y_pct * profM < limiar;
+      case "bottom": return (m.y_pct + m.profundidade_cm / 100 / profM) > 1 - limiar / profM;
+      case "left":   return m.x_pct * largM < limiar;
+      case "right":  return (m.x_pct + m.largura_cm / 100 / largM) > 1 - limiar / largM;
+    }
+  });
+
+  const SVG_W = 880; const SVG_H = 310;
+  const ML = 52; const MR = 16; const MT = 16; const MB = 44;
+  const drawW = SVG_W - ML - MR;
+  const drawH = SVG_H - MT - MB;
+  const scaleX = drawW / (paredeW * 100);
+  const scaleY = drawH / (altM * 100);
+
+  const paredeLabels: Record<string, string> = {
+    bottom: "Parede frontal (entrada)", top: "Parede de fundo", left: "Parede esquerda", right: "Parede direita"
+  };
+
+  return (
+    <Surface>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Layers className="size-4 text-accent" />
+          <span className="text-[14px] font-semibold">Vistas de elevação</span>
+          <span className="text-[12px] text-muted-foreground">{paredeLabels[paredeAtiva]}</span>
+        </div>
+        <div className="flex gap-1">
+          {([["bottom", "Frente"], ["top", "Fundo"], ["left", "Esquerda"], ["right", "Direita"]] as const).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setParedeAtiva(k)}
+              className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-colors ${
+                paredeAtiva === k ? "bg-foreground text-background" : "border border-border hover:bg-secondary text-muted-foreground"
+              }`}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-secondary/20 rounded-lg border border-border overflow-hidden">
+        <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ maxHeight: 310 }}>
+          {/* Chão */}
+          <line x1={ML} y1={MT + drawH} x2={ML + drawW} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
+          {/* Teto (tracejado) */}
+          <line x1={ML} y1={MT} x2={ML + drawW} y2={MT} stroke="#9ca3af" strokeWidth="1" strokeDasharray="6 4" />
+          {/* Paredes laterais */}
+          <line x1={ML} y1={MT} x2={ML} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
+          <line x1={ML + drawW} y1={MT} x2={ML + drawW} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
+          {/* Cota largura total */}
+          <line x1={ML} y1={MT + drawH + 22} x2={ML + drawW} y2={MT + drawH + 22} stroke="#9ca3af" strokeWidth="0.8" markerEnd="url(#arr)" />
+          <line x1={ML} y1={MT + drawH + 16} x2={ML} y2={MT + drawH + 28} stroke="#9ca3af" strokeWidth="0.8" />
+          <line x1={ML + drawW} y1={MT + drawH + 16} x2={ML + drawW} y2={MT + drawH + 28} stroke="#9ca3af" strokeWidth="0.8" />
+          <text x={ML + drawW / 2} y={MT + drawH + 38} textAnchor="middle" fontSize="11" fill="#6b7280">{paredeW.toFixed(1)}m</text>
+          {/* Cota altura */}
+          <text x={ML - 8} y={MT + drawH / 2 + 4} textAnchor="middle" fontSize="11" fill="#6b7280"
+            transform={`rotate(-90,${ML - 8},${MT + drawH / 2})`}>{altM}m</text>
+
+          {/* Grade horizontal */}
+          {[0.25, 0.5, 0.75].map(f => (
+            <line key={f} x1={ML} y1={MT + drawH * (1 - f)} x2={ML + drawW} y2={MT + drawH * (1 - f)}
+              stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="3 4" />
+          ))}
+
+          {/* Móveis */}
+          {moveisDaParede.map((m) => {
+            const posAlong_cm = (paredeAtiva === "left" || paredeAtiva === "right")
+              ? m.y_pct * profM * 100 : m.x_pct * largM * 100;
+            const wCm = (paredeAtiva === "left" || paredeAtiva === "right") ? m.profundidade_cm : m.largura_cm;
+            const hCm = m.altura_cm || 220;
+            const rx = ML + posAlong_cm * scaleX;
+            const ry = MT + drawH - hCm * scaleY;
+            const rw = wCm * scaleX;
+            const rh = hCm * scaleY;
+            const textColor = parseInt((m.cor_hex || "#f5f3f0").slice(1), 16) > 0x888888 ? "#374151" : "#f9fafb";
+
+            return (
+              <g key={m.id}>
+                <rect x={rx} y={ry} width={rw} height={rh} fill={m.cor_hex || "#f5f3f0"}
+                  stroke="#6b7280" strokeWidth="0.8" rx="1" />
+                {/* Nome */}
+                {rw > 45 && (
+                  <text x={rx + rw / 2} y={ry + 14} textAnchor="middle" fontSize="9.5" fill={textColor}>
+                    {m.nome.length > 14 ? m.nome.slice(0, 13) + "…" : m.nome}
+                  </text>
+                )}
+                {/* Largura */}
+                {rw > 40 && (
+                  <text x={rx + rw / 2} y={ry + rh - 5} textAnchor="middle" fontSize="9" fill={textColor} opacity="0.75">
+                    {wCm}cm
+                  </text>
+                )}
+                {/* Cotas externas */}
+                <line x1={rx} y1={MT + drawH + 8} x2={rx + rw} y2={MT + drawH + 8} stroke="#d1d5db" strokeWidth="0.6" />
+                <line x1={rx} y1={MT + drawH + 4} x2={rx} y2={MT + drawH + 13} stroke="#d1d5db" strokeWidth="0.6" />
+                <line x1={rx + rw} y1={MT + drawH + 4} x2={rx + rw} y2={MT + drawH + 13} stroke="#d1d5db" strokeWidth="0.6" />
+                {/* Cota altura à esquerda */}
+                {rh > 40 && (
+                  <text x={rx - 3} y={ry + rh / 2 + 3} textAnchor="end" fontSize="8.5" fill="#9ca3af">
+                    {hCm}cm
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {moveisDaParede.length === 0 && (
+            <text x={SVG_W / 2} y={MT + drawH / 2 + 4} textAnchor="middle" fontSize="13" fill="#9ca3af">
+              Nenhum móvel nesta parede
+            </text>
+          )}
+        </svg>
+      </div>
+    </Surface>
+  );
+}
+
+// ─── Resumo de Materiais ──────────────────────────────────────────────────────
+
+function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: number }) {
+  const custom = moveis.filter(m => m.tipo_elemento === "movel" && m.customizado !== false);
+
+  const porCor: Record<string, { hex: string; nome: string; chapas: number }> = {};
+  let totalChapas = 0, totalFita = 0;
+  const ferragens: Record<string, number> = { nacional: 0, blum: 0, hafele: 0 };
+
+  for (const m of custom) {
+    const hex = m.cor_hex || "#f5f3f0";
+    const nome = NOME_COR[hex] ?? "Cor personalizada";
+    if (!porCor[hex]) porCor[hex] = { hex, nome, chapas: 0 };
+    porCor[hex].chapas += m.chapas_mdf;
+    totalChapas += m.chapas_mdf;
+    totalFita += m.chapas_mdf * 22;
+    ferragens[(m.ferragem ?? "nacional")] += (m.num_portas ?? 2) + (m.num_gavetas ?? 0) * 2;
+  }
+
+  const valorTotal = totalChapas * custoChapa;
+
+  return (
+    <Surface>
+      <div className="flex items-center gap-2 mb-4">
+        <Package className="size-4 text-accent" />
+        <span className="text-[14px] font-semibold">Resumo de materiais</span>
+      </div>
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* Chapas por cor */}
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">MDF por cor/acabamento</div>
+          <div className="space-y-1.5">
+            {Object.values(porCor).map(c => (
+              <div key={c.hex} className="flex items-center gap-2 text-[12.5px]">
+                <span className="size-3.5 rounded shrink-0 border border-black/10" style={{ background: c.hex }} />
+                <span className="flex-1 text-muted-foreground truncate">{c.nome}</span>
+                <span className="font-medium tabular-nums">{c.chapas} chp</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-[12.5px] font-semibold pt-1 border-t border-border">
+              <span>Total</span>
+              <span>{totalChapas} chapas</span>
+            </div>
+            <div className="text-[11.5px] text-muted-foreground">
+              ≈ R$ {valorTotal.toLocaleString("pt-BR")} em MDF
+            </div>
+          </div>
+        </div>
+
+        {/* Fita de borda */}
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Fita de borda</div>
+          <div className="space-y-1.5">
+            {Object.values(porCor).map(c => (
+              <div key={c.hex} className="flex items-center gap-2 text-[12.5px]">
+                <span className="size-3.5 rounded shrink-0 border border-black/10" style={{ background: c.hex }} />
+                <span className="flex-1 text-muted-foreground truncate">{c.nome}</span>
+                <span className="font-medium tabular-nums">{Math.round(c.chapas * 22)}m</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-[12.5px] font-semibold pt-1 border-t border-border">
+              <span>Total</span>
+              <span>{Math.round(totalFita)}m</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Ferragens */}
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Ferragens estimadas</div>
+          <div className="space-y-1.5 text-[12.5px]">
+            {ferragens.nacional > 0 && (
+              <div className="flex justify-between"><span className="text-muted-foreground">Nacional</span><span>{ferragens.nacional} peças</span></div>
+            )}
+            {ferragens.blum > 0 && (
+              <div className="flex justify-between"><span className="text-muted-foreground">Blum (premium)</span><span>{ferragens.blum} peças</span></div>
+            )}
+            {ferragens.hafele > 0 && (
+              <div className="flex justify-between"><span className="text-muted-foreground">Häfele (superior)</span><span>{ferragens.hafele} peças</span></div>
+            )}
+            <div className="text-[11px] text-muted-foreground pt-1 border-t border-border leading-relaxed">
+              Inclui dobradiças, corrediças, puxadores e ajustadores de pé.
+            </div>
+          </div>
+        </div>
+      </div>
+    </Surface>
+  );
+}
+
 function MovelConfigPanel({ movel, onChange, onClose }: {
   movel: Movel;
   onChange: (patch: Partial<Movel>) => void;
@@ -1055,6 +1310,53 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
             </div>
           </div>
 
+          {/* Tipo de porta */}
+          <div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Tipo de portas</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {([
+                { v: "dobradica", l: "Dobradiça" },
+                { v: "correr", l: "Corrediça" },
+                { v: "basculante", l: "Basculante" },
+                { v: "aberta", l: "Aberto / Nicho" },
+              ] as const).map(({ v, l }) => (
+                <button key={v} type="button" onClick={() => onChange({ tipo_porta: v })}
+                  className={`h-8 rounded-md border text-[12px] transition-colors ${
+                    movel.tipo_porta === v
+                      ? "bg-accent/15 border-accent text-accent font-medium"
+                      : "border-border hover:border-border-strong text-muted-foreground"
+                  }`}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Interior do móvel */}
+          <div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Interior do móvel</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {([
+                { k: "num_portas" as const, l: "Portas", min: 1, max: 6 },
+                { k: "num_prateleiras" as const, l: "Prateleiras", min: 0, max: 8 },
+                { k: "num_gavetas" as const, l: "Gavetas", min: 0, max: 6 },
+                { k: "divisorias" as const, l: "Divisórias", min: 0, max: 4 },
+              ]).map(({ k, l, min, max }) => {
+                const val = (movel[k] ?? (k === "num_portas" ? 2 : 0)) as number;
+                return (
+                  <div key={k} className="flex items-center justify-between">
+                    <span className="text-[12px] text-muted-foreground">{l}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => onChange({ [k]: Math.max(min, val - 1) })}
+                        className="size-6 rounded border border-border hover:bg-secondary text-[14px] text-muted-foreground grid place-items-center">−</button>
+                      <span className="w-6 text-center text-[13px] font-medium tabular-nums">{val}</span>
+                      <button type="button" onClick={() => onChange({ [k]: Math.min(max, val + 1) })}
+                        className="size-6 rounded border border-border hover:bg-secondary text-[14px] text-muted-foreground grid place-items-center">+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Dimensões editáveis */}
           <div>
             <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Dimensões (cm)</div>
@@ -1068,13 +1370,66 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
                   <div className="text-[10.5px] text-muted-foreground mb-1">{label}</div>
                   <input
                     type="number"
-                    value={(movel as Record<string, unknown>)[k] as number || ""}
+                    value={(movel as unknown as Record<string, unknown>)[k] as number || ""}
                     onChange={(e) => onChange({ [k]: parseInt(e.target.value) || 0 } as Partial<Movel>)}
                     className="w-full rounded-md border border-border bg-surface-2 px-2 py-1 text-[12px] text-center outline-none focus:border-accent"
                   />
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Ferragens */}
+          <div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Ferragens</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { v: "nacional" as const, l: "Nacional", sub: "Padrão" },
+                { v: "blum" as const, l: "Blum", sub: "+50% custo" },
+                { v: "hafele" as const, l: "Häfele", sub: "+100% custo" },
+              ]).map(({ v, l, sub }) => (
+                <button key={v} type="button" onClick={() => onChange({ ferragem: v })}
+                  className={`rounded-md border p-2 text-left transition-all ${
+                    (movel.ferragem ?? "nacional") === v
+                      ? "border-accent bg-accent/10"
+                      : "border-border hover:border-border-strong"
+                  }`}>
+                  <div className="text-[12px] font-medium">{l}</div>
+                  <div className="text-[10.5px] text-muted-foreground">{sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Espelho + Recalcular */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <button type="button"
+              onClick={() => onChange({ espelho: !movel.espelho })}
+              className={`h-8 px-3 rounded-md border text-[12px] transition-colors ${
+                movel.espelho
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border hover:bg-secondary text-muted-foreground"
+              }`}>
+              Espelho interno {movel.espelho ? "✓" : ""}
+            </button>
+            <button type="button"
+              onClick={() => {
+                const chapas = calcChapasPorConfig(
+                  movel.largura_cm, movel.altura_cm || 220, movel.profundidade_cm,
+                  {
+                    num_portas: movel.num_portas ?? 2,
+                    num_prateleiras: movel.num_prateleiras ?? 0,
+                    num_gavetas: movel.num_gavetas ?? 0,
+                    divisorias: movel.divisorias ?? 0,
+                  }
+                );
+                const preco = calcPrecoPorMovel(chapas, { ferragem: movel.ferragem });
+                onChange({ chapas_mdf: chapas, preco_estimado: preco });
+                toast.success(`Recalculado: ${chapas} chapas · ${BRL(preco)}`);
+              }}
+              className="h-8 px-3 rounded-md border border-accent/40 bg-accent/5 text-accent text-[12px] font-medium hover:bg-accent/10 inline-flex items-center gap-1.5 transition-colors">
+              <RefreshCw className="size-3.5" /> Recalcular chapas e preço
+            </button>
           </div>
 
           {/* Nota */}
@@ -1305,7 +1660,27 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         )}
 
         {wizard.listaCorte && (
-          <div className="flex justify-end pt-2 border-t border-border">
+          <div className="flex items-center justify-between pt-2 border-t border-border gap-2">
+            <button
+              onClick={() => {
+                const rows = [
+                  ["Móvel", "Peça", "Material", "Largura(mm)", "Comprimento(mm)", "Qtd", "Fita"],
+                  ...wizard.listaCorte!.pecas.map((p) => [
+                    p.movel, p.peca, p.material, p.largura_mm, p.comprimento_mm, p.quantidade,
+                    [p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"].filter(Boolean).join("|") || "",
+                  ]),
+                ];
+                const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+                const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url; a.download = "lista-corte-planne.csv"; a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5"
+            >
+              <Download className="size-3.5" /> Exportar CSV
+            </button>
             <button
               onClick={criarOrdem}
               disabled={wizard.criandoOrdem}
@@ -1318,6 +1693,12 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           </div>
         )}
       </Surface>
+
+      {/* Vistas de elevação */}
+      <WallElevationSection wizard={wizard} />
+
+      {/* Resumo de materiais */}
+      <MateriaisResumo moveis={wizard.moveis} custoChapa={85} />
 
       {/* Preview rápido (Schnell) */}
       {wizard.previewUrl && (
