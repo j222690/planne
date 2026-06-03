@@ -34,7 +34,7 @@ const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
   cliente_id: z.string().optional(),
   descricao: z.string().optional(),
-  status: z.string().default("briefing"),
+  status: z.string(),
 });
 type FormData = z.infer<typeof schema>;
 

@@ -43,7 +43,7 @@ function HistoricoPrecos() {
       }
 
       const { data } = await query;
-      setHistorico((data ?? []) as HistoricoItem[]);
+      setHistorico((data ?? []) as unknown as HistoricoItem[]);
       setLoading(false);
     }
     load();

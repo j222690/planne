@@ -28,7 +28,7 @@ const lancSchema = z.object({
   descricao: z.string().min(1, "Descrição obrigatória"),
   valor: z.coerce.number().positive("Valor deve ser positivo"),
   categoria: z.string().optional(),
-  status: z.string().default("pendente"),
+  status: z.string(),
   vencimento: z.string().optional(),
 });
 type LancForm = z.infer<typeof lancSchema>;

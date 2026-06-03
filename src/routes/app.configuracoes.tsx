@@ -101,7 +101,7 @@ function Configuracoes() {
     const { data } = await supabase.from("empresa_membros")
       .select("user_id, role, perfis(nome, email, cargo)")
       .eq("empresa_id", eid);
-    setMembros((data ?? []) as Membro[]);
+    setMembros((data ?? []) as unknown as Membro[]);
   };
 
   useEffect(() => {
@@ -117,7 +117,7 @@ function Configuracoes() {
 
     getEmpresaAtual().then((e) => {
       if (!e) return;
-      const emp = e as Empresa;
+      const emp = e as unknown as Empresa;
       setEmpresa(emp);
       loadMembros(emp.id);
       setForm({

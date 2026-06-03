@@ -5,9 +5,10 @@ function getSupabase(userToken: string) {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return createClient(url, key, {
     global: { headers: { Authorization: `Bearer ${userToken}` } },
-  });
+  }) as any;
 }
 
 // ─── NF-e ─────────────────────────────────────────────────────────────────────
@@ -15,7 +16,8 @@ function getSupabase(userToken: string) {
 async function emitirNfe(
   req: VercelRequest,
   res: VercelResponse,
-  sb: ReturnType<typeof createClient>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: any
 ) {
   const { orcamento_id } = req.body as { orcamento_id: string };
   if (!orcamento_id) return res.status(400).json({ error: "orcamento_id é obrigatório" });
@@ -188,7 +190,8 @@ async function emitirNfe(
 async function gerarCobranca(
   req: VercelRequest,
   res: VercelResponse,
-  sb: ReturnType<typeof createClient>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: any
 ) {
   const { orcamento_id, tipo, vencimento_dias } = req.body as {
     orcamento_id: string;

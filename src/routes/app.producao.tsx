@@ -53,13 +53,13 @@ const pecaSchema = z.object({
   descricao_peca: z.string().min(1, "Obrigatório"),
   largura_mm: z.coerce.number().min(1),
   comprimento_mm: z.coerce.number().min(1),
-  quantidade: z.coerce.number().min(1).default(1),
+  quantidade: z.coerce.number().min(1),
   ambiente: z.string().optional(),
   movel: z.string().optional(),
-  fita_borda_l: z.boolean().default(false),
-  fita_borda_r: z.boolean().default(false),
-  fita_borda_t: z.boolean().default(false),
-  fita_borda_b: z.boolean().default(false),
+  fita_borda_l: z.boolean(),
+  fita_borda_r: z.boolean(),
+  fita_borda_t: z.boolean(),
+  fita_borda_b: z.boolean(),
 });
 type PecaForm = z.infer<typeof pecaSchema>;
 

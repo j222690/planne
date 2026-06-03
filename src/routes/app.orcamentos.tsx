@@ -193,16 +193,16 @@ const itemSchema = z.object({
   justificativa: z.string().optional(),
   descricao: z.string().min(1, "Descrição obrigatória"),
   quantidade: z.coerce.number().min(0.001),
-  unidade: z.string().default("un"),
+  unidade: z.string(),
   preco_custo: z.coerce.number().min(0),
   preco_unitario: z.coerce.number().min(0),
 });
 
 const schema = z.object({
   cliente_id: z.string().min(1, "Selecione um cliente"),
-  status: z.string().default("rascunho"),
-  margem_pct: z.coerce.number().min(0).default(300),
-  mao_de_obra: z.coerce.number().min(0).default(0),
+  status: z.string(),
+  margem_pct: z.coerce.number().min(0),
+  mao_de_obra: z.coerce.number().min(0),
   observacoes: z.string().optional(),
   itens: z.array(itemSchema).min(1, "Adicione ao menos um item"),
 });
@@ -1510,7 +1510,7 @@ function Orcamentos() {
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
       const data = await getOrcamentos((empresa as { id: string }).id);
-      setOrcs(data as Orc[]);
+      setOrcs(data as unknown as Orc[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro");
     } finally {
@@ -1894,7 +1894,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
       .finally(() => setLoadingItens(false));
     getEmpresaAtual().then((e) => {
       if (e) {
-        setEmpresaNome((e as { nome: string }).nome ?? "");
+        setEmpresaNome((e as unknown as { nome: string }).nome ?? "");
         setLogoUrl((e as { logo_url?: string | null }).logo_url ?? null);
         const eid = (e as { id: string }).id;
         setEmpresaId(eid);

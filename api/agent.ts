@@ -187,10 +187,11 @@ Referência de mercado 2025: MDF R$85/chapa, mão de obra 40% do MDF, margem tí
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function executeTool(
   name: string,
   args: Record<string, unknown>,
-  supabase: SupabaseClient,
+  supabase: any,
   empresaId: string,
   groqKey: string,
 ): Promise<unknown> {
@@ -230,8 +231,10 @@ async function executeTool(
         .gte("created_at", inicioMes);
       if (error) return { erro: error.message };
       const rows = data ?? [];
-      const receitas = rows.filter((l) => l.tipo === "entrada").reduce((s, l) => s + Number(l.valor), 0);
-      const despesas = rows.filter((l) => l.tipo === "saida").reduce((s, l) => s + Number(l.valor), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const receitas = rows.filter((l: any) => l.tipo === "entrada").reduce((s: number, l: any) => s + Number(l.valor), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const despesas = rows.filter((l: any) => l.tipo === "saida").reduce((s: number, l: any) => s + Number(l.valor), 0);
       return {
         mes: hoje.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
         receitas,

@@ -45,7 +45,7 @@ function NavContent({ path, onNavigate }: { path: string; onNavigate?: () => voi
 
   useEffect(() => {
     import("@/lib/db").then(({ getEmpresaAtual }) =>
-      getEmpresaAtual().then((e) => e && setEmpresa(e))
+      getEmpresaAtual().then((e) => e && setEmpresa(e as unknown as { nome: string; cidade: string | null }))
     );
   }, []);
 
@@ -182,7 +182,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       const results = [
         ...(clientes ?? []).map((c: { id: string; nome: string; email: string | null }) => ({ type: "Cliente", label: c.nome, sub: c.email ?? "", to: "/app/clientes" })),
-        ...(orcs ?? []).map((o: { id: string; numero: string | null; clientes: { nome: string } | null }) => ({ type: "Orçamento", label: o.numero ?? o.id, sub: (o.clientes as { nome: string } | null)?.nome ?? "", to: "/app/orcamentos" })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(orcs as any[] ?? []).map((o: any) => ({ type: "Orçamento", label: o.numero ?? o.id, sub: (o.clientes as { nome: string } | null)?.nome ?? "", to: "/app/orcamentos" })),
         ...(projs ?? []).map((p: { id: string; nome: string }) => ({ type: "Projeto", label: p.nome, sub: "", to: "/app/projetos" })),
       ];
       setSearchResults(results);
@@ -220,7 +221,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     const lastSeen = new Date(localStorage.getItem("planne_notif_seen") || "2000-01-01");
     const items: Notif[] = [
-      ...(orcs ?? []).map((o: { id: string; numero: string | null; status: string; created_at: string; clientes: { nome: string } | null }) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(orcs as any[] ?? []).map((o: any) => ({
         id: "orc-" + o.id,
         tipo: "orcamento" as const,
         titulo: `Orçamento ${o.numero ?? ""}${o.status === "aprovado" ? " aprovado" : o.status === "recusado" ? " recusado" : " criado"}`,

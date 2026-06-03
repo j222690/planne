@@ -48,9 +48,9 @@ function getCategoria(nome: string): string {
 const matSchema = z.object({
   nome: z.string().min(1, "Nome obrigatório"),
   codigo: z.string().optional(),
-  unidade: z.string().default("un"),
-  preco_custo: z.coerce.number().min(0).default(0),
-  preco_venda: z.coerce.number().min(0).default(0),
+  unidade: z.string(),
+  preco_custo: z.coerce.number().min(0),
+  preco_venda: z.coerce.number().min(0),
   categoria: z.string().optional(),
   cor: z.string().optional(),
   imagem_url: z.string().optional(),
@@ -405,7 +405,7 @@ function Materiais() {
         setEmpresaId((empresaResult.value as { id: string }).id);
       }
       if (data.status === "rejected") throw data.reason;
-      setMateriais(data.value as Material[]);
+      setMateriais(data.value as unknown as Material[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao carregar materiais");
     } finally {

@@ -44,7 +44,7 @@ interface Msg {
 function ToolCallBadge({ tc }: { tc: ToolCallSummary }) {
   const meta = TOOL_LABELS[tc.name] ?? { label: tc.name, Icon: Sparkles };
   const { Icon } = meta;
-  const hasError = tc.result && typeof tc.result === "object" && "erro" in (tc.result as object);
+  const hasError = Boolean(tc.result && typeof tc.result === "object" && "erro" in (tc.result as object));
   return (
     <div className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border ${
       hasError

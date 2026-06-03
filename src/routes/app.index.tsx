@@ -37,7 +37,7 @@ function Dashboard() {
           getMargemSemanal(eid),
         ]);
         setStats(s);
-        setOrcs(allOrcs as typeof orcs);
+        setOrcs(allOrcs as unknown as typeof orcs);
         setMarginData(margem);
         // Feature 4: load goals
         const p = (empresa as {parametros?: Record<string,unknown>}).parametros ?? {};
