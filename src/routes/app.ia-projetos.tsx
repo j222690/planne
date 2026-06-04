@@ -686,29 +686,56 @@ function Step1Form({ wizard, update, plantasSalvas }: {
 
   return (
     <Surface className="space-y-5 max-w-2xl">
-      {temPlantas && (
-        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Map className="size-3.5 text-accent" />
-            <span className="text-[12.5px] font-medium text-accent">Usar planta salva nas Configurações</span>
+
+      {/* ── Planta baixa — PRIMEIRO para extrair medidas e layout ── */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <Label>
+            Planta baixa do ambiente
+            <span className="ml-1 text-accent font-medium">(recomendado — a IA lê medidas, portas, janelas e vigas)</span>
+          </Label>
+          {wizard.planta && (
+            <button
+              type="button"
+              onClick={() => update({ planta: null })}
+              className="text-[11px] text-muted-foreground hover:text-destructive flex items-center gap-1"
+            >
+              <X className="size-3" /> remover
+            </button>
+          )}
+        </div>
+        <DropZone
+          label="Envie a planta baixa — a IA vai ler automaticamente medidas, onde ficam porta, janelas e vigas"
+          accept="image/*"
+          onFile={(f) => update({ planta: f as File })}
+          files={wizard.planta ? [wizard.planta] : undefined}
+        />
+        {wizard.planta && (
+          <div className="flex items-center gap-1.5 mt-1.5 text-[12px] text-emerald-600">
+            <CheckCircle2 className="size-3.5" /> {wizard.planta.name} — a IA vai analisar esta planta
           </div>
-          <div className="flex flex-wrap gap-2">
-            {Object.values(plantasSalvas).map((p) => (
+        )}
+        {!wizard.planta && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {temPlantas && Object.values(plantasSalvas).map((p) => (
               <button
                 key={p.nome}
                 type="button"
                 onClick={() => usarPlanta(p)}
-                className="h-8 px-3 rounded-md border border-accent/40 text-[12px] font-medium hover:bg-accent/10 transition-colors inline-flex items-center gap-1.5"
+                className="h-7 px-2.5 rounded-md border border-accent/40 text-[11.5px] font-medium hover:bg-accent/10 transition-colors inline-flex items-center gap-1.5"
               >
-                <Map className="size-3" /> {p.nome}
-                <span className="text-muted-foreground font-normal">
-                  {p.largura_cm / 100}×{p.profundidade_cm / 100}m
-                </span>
+                <Map className="size-3 text-accent" /> {p.nome}
+                <span className="text-muted-foreground font-normal">{p.largura_cm / 100}×{p.profundidade_cm / 100}m</span>
               </button>
             ))}
+            {!temPlantas && (
+              <span className="text-[11px] text-muted-foreground italic">
+                Sem planta? Preencha as medidas abaixo manualmente.
+              </span>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="grid gap-4">
         <div>
@@ -844,31 +871,29 @@ function Step1Form({ wizard, update, plantasSalvas }: {
   );
 }
 
-// ─── Step 2: Upload ───────────────────────────────────────────────────────────
+// ─── Step 2: Referências visuais ─────────────────────────────────────────────
 
 function Step2Upload({ wizard, update }: { wizard: WizardState; update: (p: Partial<WizardState>) => void }) {
   return (
     <Surface className="space-y-5 max-w-2xl">
-      <div className="grid gap-4">
-        <div>
-          <Label>Planta baixa <span className="text-muted-foreground font-normal">(opcional, mas melhora muito o resultado)</span></Label>
-          <DropZone
-            label="Envie a planta baixa do ambiente"
-            accept="image/*"
-            onFile={(f) => update({ planta: f as File })}
-            files={wizard.planta ? [wizard.planta] : undefined}
-          />
-          {wizard.planta && (
-            <div className="flex items-center gap-2 mt-1.5 text-[12px] text-muted-foreground">
-              <CheckCircle2 className="size-3.5 text-emerald-500" />
-              {wizard.planta.name}
-              <button onClick={() => update({ planta: null })} className="ml-auto hover:text-destructive">
-                <X className="size-3" />
-              </button>
-            </div>
-          )}
+      {/* Resumo da planta se já enviada */}
+      {wizard.planta && (
+        <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-[12.5px] text-emerald-700 dark:text-emerald-400">
+          <CheckCircle2 className="size-3.5 shrink-0" />
+          <span>Planta enviada: <strong>{wizard.planta.name}</strong> — a IA vai ler as medidas e o layout.</span>
+          <button onClick={() => update({ planta: null })} className="ml-auto text-muted-foreground hover:text-destructive">
+            <X className="size-3" />
+          </button>
         </div>
+      )}
+      {!wizard.planta && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[12.5px] text-amber-700 dark:text-amber-400">
+          <AlertCircle className="size-3.5 shrink-0" />
+          <span>Você não enviou a planta baixa. A IA usará apenas as medidas digitadas. <button onClick={() => update({ step: 1 })} className="underline font-medium">Voltar para adicionar</button>.</span>
+        </div>
+      )}
 
+      <div className="grid gap-4">
         <div>
           <Label>Referências visuais <span className="text-muted-foreground font-normal">(até 3 fotos de estilo/inspiração)</span></Label>
           <DropZone
@@ -983,6 +1008,28 @@ const MDF_CORES_COMPLETO = [
   { nome: "Azul Petróleo", hex: "#2a4a5a" },
   { nome: "Terracota", hex: "#b56a4a" },
 ];
+
+// ─── Detecção de mismatch de ambiente ────────────────────────────────────────
+
+const AMBIENTE_KEYWORDS: Record<string, string[]> = {
+  "Cozinha":       ["bancada", "arm-sup", "arm-inf", "armário superior", "armário inferior", "geladeira", "fogão", "cooktop", "pia", "despenseiro", "paneleiro"],
+  "Sala de estar": ["rack", "painel tv", "sofá", "estante", "aparador", "home theater"],
+  "Quarto casal":  ["roupeiro", "cama", "criado", "cabeceira", "cômoda", "guarda-roupa"],
+  "Quarto solteiro":["roupeiro", "cama solteiro", "escrivaninha", "estante", "guarda-roupa"],
+  "Home office":   ["escrivaninha", "mesa de trabalho", "estante", "arquivo", "cadeira"],
+  "Banheiro":      ["gabinete", "espelheira", "nicho", "cuba", "armário banheiro"],
+  "Closet":        ["roupeiro", "cabideiro", "nicho", "gavetas", "sapatos"],
+};
+
+function detectarMismatch(ambienteSelecionado: string, moveis: { nome: string; categoria: string }[]): string | null {
+  const texto = moveis.map((m) => (m.nome + " " + m.categoria).toLowerCase()).join(" ");
+  for (const [amb, kws] of Object.entries(AMBIENTE_KEYWORDS)) {
+    if (amb === ambienteSelecionado) continue;
+    const matches = kws.filter((kw) => texto.includes(kw.toLowerCase()));
+    if (matches.length >= 2) return amb;
+  }
+  return null;
+}
 
 // ─── Helpers de cálculo (Promob-like) ────────────────────────────────────────
 
@@ -1485,8 +1532,28 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     { label: "Mão de obra", value: orcamento.mao_de_obra },
   ];
 
+  const ambienteDetectado = detectarMismatch(wizard.form.ambiente, moveis);
+
   return (
     <div className="space-y-5">
+      {/* Mismatch banner */}
+      {ambienteDetectado && (
+        <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/8 px-4 py-3 text-[12.5px] text-amber-800 dark:text-amber-300">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <span className="font-semibold">Possível ambiente incorreto.</span>{" "}
+            A IA identificou elementos típicos de <strong>{ambienteDetectado}</strong>, mas o projeto foi criado como <strong>{wizard.form.ambiente}</strong>.
+            {" "}Verifique se o tipo de ambiente está correto antes de prosseguir.
+            <button
+              onClick={() => update({ form: { ...wizard.form, ambiente: ambienteDetectado as typeof wizard.form.ambiente }, step: 1 })}
+              className="ml-2 underline font-medium hover:opacity-80"
+            >
+              Corrigir para "{ambienteDetectado}"
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Error banner */}
       {wizard.error && (
         <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-[12.5px] text-destructive">
