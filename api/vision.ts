@@ -194,38 +194,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ? `As JANELAS ficam nas seguintes paredes: ${janelas.map((w) => WALL_PT[w] ?? w).join(", ")}.`
     : "Posicione janela(s) nas paredes mais adequadas para iluminação natural.";
 
+  const temPlanta = !!planta_b64;
+  const medidasRef = `${medidas?.largura ?? 4}m × ${medidas?.profundidade ?? 3}m × ${medidas?.altura ?? 2.7}m pé-direito`;
+
+  const medidasInstrucao = temPlanta
+    ? `MEDIDAS DO AMBIENTE: Planta baixa fornecida — leia as dimensões DIRETAMENTE da planta (escala, cotas ou proporção). As medidas declaradas pelo usuário (${medidasRef}) são uma referência aproximada; se a planta mostrar dimensões diferentes ou mais precisas, USE AS DA PLANTA.`
+    : `MEDIDAS ABSOLUTAS DO AMBIENTE (USE EXATAMENTE ESTAS — sem planta, não tente inferir):
+  - largura: ${medidas?.largura ?? 4}m
+  - profundidade: ${medidas?.profundidade ?? 3}m
+  - pé-direito: ${medidas?.altura ?? 2.7}m`;
+
+  const layoutInstrucao = temPlanta
+    ? `PORTA E JANELAS: Identifique a posição da porta principal e das janelas DIRETAMENTE na planta baixa. ${porta_parede ? `O usuário indicou que a porta fica na ${WALL_PT[porta_parede] ?? porta_parede} — confirme pela planta.` : "Detecte pela planta."}`
+    : `LAYOUT DO CÔMODO:\n${portaDesc}\n${janelasDesc}`;
+
   const userContent: unknown[] = [
     {
       type: "text",
       text: `AMBIENTE: ${ambiente}
-MEDIDAS ABSOLUTAS DO AMBIENTE (fornecidas pelo cliente — USE EXATAMENTE ESTAS, não tente inferir da imagem):
-  - largura: ${medidas?.largura ?? 4}m
-  - profundidade: ${medidas?.profundidade ?? 3}m
-  - pé-direito: ${medidas?.altura ?? 2.7}m
+${medidasInstrucao}
 
 ESTILO: ${estilo ?? "Moderno"}
 COR/ACABAMENTO MDF preferido: ${cor_mdf || "#f5f3f0"} — use como base para cor_hex dos móveis de MDF
 DESCRIÇÃO DO CLIENTE: ${descricao || "Não informada"}
 
-LAYOUT DO CÔMODO (obrigatório incluir no JSON):
-${portaDesc}
-${janelasDesc}
+${layoutInstrucao}
 
 INSTRUÇÃO CRÍTICA: Inclua TODOS os elementos do cômodo no array "moveis":
-1. Porta (tipo_elemento: "porta") na parede indicada acima
-2. Janela(s) (tipo_elemento: "janela") nas paredes indicadas
+1. Porta (tipo_elemento: "porta") na parede identificada
+2. Janela(s) (tipo_elemento: "janela") nas paredes identificadas
 3. Móveis existentes/comprados: cama, sofá, geladeira, fogão, etc. (tipo_elemento: "existente", customizado: false, preco_estimado: 0)
 4. Marcenaria planejada: armários, roupeiros, racks, bancadas, etc. (tipo_elemento: "movel", customizado: true)
 
 O orçamento e os itens devem considerar APENAS os elementos com customizado: true.
-LEMBRETE FINAL: As dimensões do ambiente são ${medidas?.largura ?? 4}m × ${medidas?.profundidade ?? 3}m. Nenhum móvel pode ser maior que o ambiente.`,
+LEMBRETE FINAL: Nenhum móvel pode ser maior que o ambiente. ${temPlanta ? "Use as dimensões lidas da planta para escalar os móveis." : `Ambiente: ${medidasRef}.`}`,
     },
   ];
 
   if (planta_b64) {
     userContent.push({
       type: "text",
-      text: `PLANTA BAIXA PARA REFERÊNCIA DE LAYOUT APENAS — use para entender a disposição espacial (posição de elementos, circulação). NÃO use a imagem para inferir ou alterar as dimensões declaradas acima.`,
+      text: `PLANTA BAIXA — leia desta imagem: dimensões reais do cômodo, posição e parede da porta principal, posição e paredes das janelas, vigas ou pilares se houver. Use estas informações para preencher o JSON.`,
     });
     userContent.push({
       type: "image_url",

@@ -764,7 +764,14 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         </div>
 
         <div>
-          <Label>Medidas do ambiente</Label>
+          <div className="flex items-center gap-2 mb-1">
+            <Label>Medidas do ambiente</Label>
+            {wizard.planta && (
+              <span className="text-[11px] text-accent font-medium bg-accent/10 px-1.5 py-0.5 rounded">
+                Será lido da planta — confirme se necessário
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-3">
             {[["largura", "Largura (m)"], ["profundidade", "Profundidade (m)"], ["altura", "Pé-direito (m)"]].map(([k, lbl]) => (
               <div key={k}>
@@ -774,7 +781,8 @@ function Step1Form({ wizard, update, plantasSalvas }: {
                   step="0.1"
                   value={f[k as keyof typeof f]}
                   onChange={(e) => set(k as keyof typeof f, e.target.value)}
-                  className="input text-center"
+                  placeholder={wizard.planta ? "da planta" : ""}
+                  className={`input text-center ${wizard.planta ? "border-accent/40 bg-accent/5" : ""}`}
                 />
               </div>
             ))}
@@ -800,10 +808,16 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         </div>
 
         {/* Porta + Janelas — layout do cômodo */}
-        <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-secondary/40 border border-border">
+        <div className={`grid grid-cols-2 gap-4 p-3 rounded-lg border ${wizard.planta ? "bg-accent/5 border-accent/30" : "bg-secondary/40 border-border"}`}>
+          {wizard.planta && (
+            <div className="col-span-2 flex items-center gap-1.5 text-[11.5px] text-accent mb-1">
+              <CheckCircle2 className="size-3.5" />
+              <span>Com planta enviada, a IA vai detectar porta e janelas automaticamente. Preencha só se quiser sobrescrever.</span>
+            </div>
+          )}
           {/* Porta */}
           <div>
-            <Label>Porta principal</Label>
+            <Label>Porta principal {wizard.planta && <span className="text-muted-foreground font-normal">(opcional)</span>}</Label>
             <div className="text-[11px] text-muted-foreground mb-2">Em qual parede fica?</div>
             <div className="grid grid-cols-2 gap-1.5">
               {(["top", "bottom", "left", "right"] as PardeType[]).map((wall) => (
@@ -825,7 +839,7 @@ function Step1Form({ wizard, update, plantasSalvas }: {
 
           {/* Janelas */}
           <div>
-            <Label>Janelas</Label>
+            <Label>Janelas {wizard.planta && <span className="text-muted-foreground font-normal">(opcional)</span>}</Label>
             <div className="text-[11px] text-muted-foreground mb-2">Em quais paredes?</div>
             <div className="grid grid-cols-2 gap-1.5">
               {(["top", "bottom", "left", "right"] as PardeType[]).map((wall) => (
