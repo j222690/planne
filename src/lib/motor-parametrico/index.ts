@@ -98,6 +98,28 @@ export {
   ESP_FUNDO_MM,
 } from "./tipos";
 
+// Fase 2 — Motor Paramétrico V1
+export {
+  gerarLayoutCozinhaLinear,
+  encaixarModulos,
+  BASE_ALTURA_CM,
+  BASE_PROFUNDIDADE_CM,
+  AEREO_ALTURA_CM,
+  AEREO_PROFUNDIDADE_CM,
+} from "./layout-cozinha-linear";
+export type { PreferenciasCozinha, ResultadoLayout } from "./layout-cozinha-linear";
+
+export {
+  MODULOS_BASE_COZINHA,
+  MODULOS_AEREOS_COZINHA,
+  BIBLIOTECA_COZINHA,
+  LARGURAS_PADRAO,
+  getTemplateBase,
+  getTemplateAereo,
+} from "./biblioteca-cozinha";
+
+export { projetoToMovelInput, calcularCustoEstimado } from "./adapters";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,
