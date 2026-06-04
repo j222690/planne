@@ -1,4 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+// Nota: plantaToAmbiente importado condicionalmente para evitar
+// dependências circulares entre api/ e src/lib/ em produção Vercel.
+// A conversão para AmbienteGeometrico é feita inline abaixo.
 
 function detectMime(b64: string): string {
   if (b64.startsWith("/9j")) return "image/jpeg";
@@ -114,7 +117,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const d = await r.json() as { choices: { message: { content: string } }[] };
     const result = JSON.parse(d.choices[0].message.content) as PlantaAnalisada;
     result.analisado_em = new Date().toISOString();
-    return res.json(result);
+
+    // Fase 1 — Motor Paramétrico: incluir AmbienteGeometrico no response
+    // Campo aditivo — clientes existentes que ignoram o campo não são afetados.
+    const toP = (s: string) =>
+      ["top", "bottom", "left", "right"].includes(s) ? s : "bottom";
+
+    const largura = result.largura_cm;
+    const profundidade = result.profundidade_cm;
+    const altura = result.altura_cm || 270;
+
+    const buildSeg = (comprimento: number) => [{
+      inicio_cm: 0, fim_cm: comprimento, comprimento_cm: comprimento,
+      altura_util_cm: altura, bloqueado_por_janela_baixa: false,
+    }];
+
+    const aberturasPorParede: Record<string, unknown[]> = {
+      top: [], bottom: [], left: [], right: [],
+    };
+
+    if (result.porta_principal) {
+      const p = result.porta_principal;
+      const par = toP(p.parede);
+      const comp = par === "top" || par === "bottom" ? largura : profundidade;
+      aberturasPorParede[par].push({
+        id: "porta_principal", _tipo: "porta", parede: par,
+        posicao_cm: Math.round(p.x_pct * comp), largura_cm: p.largura_cm,
+        subtipo: "simples", altura_cm: 210, zona_exclusao_cm: 90,
+        lado_dobradica: "esquerda", sentido_abertura: "para_dentro",
+      });
+    }
+
+    (result.janelas || []).forEach((j, i) => {
+      const par = toP(j.parede);
+      const comp = par === "top" || par === "bottom" ? largura : profundidade;
+      aberturasPorParede[par].push({
+        id: `janela_${i}`, _tipo: "janela", parede: par,
+        posicao_cm: Math.round(j.x_pct * comp), largura_cm: j.largura_cm,
+        subtipo: "abrir", altura_peitoril_cm: 100, altura_verga_cm: altura - 30,
+        bloqueia_base: false, bloqueia_aereo: false,
+      });
+    });
+
+    const buildParede = (id: string, comprimento: number) => ({
+      id, comprimento_cm: comprimento, espessura_cm: 15, altura_cm: altura,
+      aberturas: aberturasPorParede[id] || [],
+      segmentos_livres: buildSeg(comprimento),
+      obstaculos_adjacentes: [],
+    });
+
+    const ambiente_geometrico = {
+      id: `amb_${Date.now()}`,
+      dimensoes: {
+        largura_cm: largura, profundidade_cm: profundidade, altura_cm: altura,
+        area_m2: Math.round((largura * profundidade) / 10000 * 100) / 100,
+      },
+      paredes: {
+        top: buildParede("top", largura),
+        bottom: buildParede("bottom", largura),
+        left: buildParede("left", profundidade),
+        right: buildParede("right", profundidade),
+      },
+      obstaculos: [], pontos_eletricos: [], pontos_hidraulicos: [],
+      fonte: "imagem", escala_detectada: null, confianca_extracao: 0.7,
+      extraido_em: result.analisado_em,
+    };
+
+    return res.json({ ...result, ambiente_geometrico });
   } catch (e) {
     return res.status(500).json({ error: e instanceof Error ? e.message : "Erro ao analisar planta" });
   }
