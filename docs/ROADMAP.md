@@ -179,16 +179,49 @@ do endpoint e os exports no `index.ts`. Tudo aditivo.
 
 ---
 
-## FASE 6 — AMBIENTES COMPLEXOS ⏳ PENDENTE
+## FASE 6 — AMBIENTES COMPLEXOS ✅ CONCLUÍDA
 
-**Entregáveis:**
-- [ ] Cozinha em L
-- [ ] Cozinha em U
-- [ ] Ilha
-- [ ] Closet
-- [ ] Dormitório
-- [ ] Banheiro
-- [ ] Lavanderia
+**Objetivo:** Estender o motor para todos os ambientes da casa.
+
+| Entregável | Status | Gerador |
+|---|---|---|
+| Cozinha em L (2 paredes + canto) | ✅ | `gerarLayoutCozinhaL()` |
+| Cozinha em U (3 paredes + 2 cantos) | ✅ | `gerarLayoutCozinhaU()` |
+| Ilha (central + circulação) | ✅ | `gerarLayoutIlha()` |
+| Dormitório (roupeiros) | ✅ | `gerarLayoutDormitorio()` |
+| Closet em L (mix funcional) | ✅ | `gerarLayoutCloset()` |
+| Banheiro (gabinete pia + espelheira) | ✅ | `gerarLayoutBanheiro()` |
+| Lavanderia (tanque + armário serviço) | ✅ | `gerarLayoutLavanderia()` |
+
+**Arquitetura criada:**
+```
+layout-shared.ts          — fundação: material, config, encaixe, instanciação, montagem
+regras-corte-comuns.ts    — RegraCorte/RegraFerragem reutilizáveis (corpo, porta, gaveta, ferragens)
+biblioteca-quarto.ts      — roupeiro, gaveteiro, cabideiro, sapateira
+biblioteca-servicos.ts    — gabinete pia, espelheira, gabinete tanque, armário serviço
+layout-cozinha-l-u.ts     — cozinhas L e U com tratamento de canto (recuo 55cm)
+layout-ilha.ts            — ilha central com validação de circulação (90cm)
+layout-quarto.ts          — dormitório e closet
+layout-servicos.ts        — banheiro e lavanderia (prioriza ponto hidráulico)
+```
+
+**Destaques técnicos:**
+- Refatoração da cozinha linear (Fase 2) para usar a fundação compartilhada — zero regressão.
+- Tratamento de canto em L/U: parede secundária recua a profundidade do gabinete (55cm)
+  para não colidir no canto. Validado por testes de não-sobreposição.
+- Ilha valida circulação mínima de 90cm em ambos os eixos antes de dimensionar.
+- Banheiro/lavanderia escolhem a parede pelo ponto hidráulico quando presente.
+- Roupeiros altos (250cm) recebem 4 dobradiças por porta automaticamente.
+- Rule Engine (Fase 3), Engenharia (Fase 4) e Orçamento (Fase 5) rodam em TODOS os ambientes.
+
+**Endpoint:** `api/motor-parametrico.ts` aceita `tipo_layout` (cozinha_linear, cozinha_l,
+cozinha_u, ilha, dormitorio, closet, banheiro, lavanderia) e despacha para o gerador correto.
+
+**Total acumulado: 163 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** os novos arquivos são aditivos; a refatoração da cozinha linear preserva a API
+pública (`gerarLayoutCozinhaLinear`, `encaixarModulos`). Reverter = remover os 8 arquivos
+novos e restaurar a versão anterior de `layout-cozinha-linear.ts`.
 
 ---
 

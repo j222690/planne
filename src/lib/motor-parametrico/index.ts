@@ -169,6 +169,73 @@ export type {
   TresVersoes,
 } from "./orcamento-inteligente";
 
+// Fase 6 — Ambientes Complexos
+// Fundação compartilhada de layout
+export {
+  criarMaterialPadrao,
+  configPadrao,
+  encaixarLarguras,
+  instanciarModulos,
+  montarProjeto,
+  maiorSegmento,
+  comprimentoLivre,
+  paredesPorComprimento,
+  saoAdjacentes,
+  PAREDE_OPOSTA,
+  PAREDES_ADJACENTES,
+} from "./layout-shared";
+export type { PreferenciasBase, ResultadoLayoutBase } from "./layout-shared";
+
+// Cozinhas complexas
+export { gerarLayoutCozinhaL, gerarLayoutCozinhaU } from "./layout-cozinha-l-u";
+export type { PreferenciasCozinhaMP } from "./layout-cozinha-l-u";
+export { gerarLayoutIlha, CIRCULACAO_ILHA_MIN_CM, ILHA_PROFUNDIDADE_CM } from "./layout-ilha";
+export type { PreferenciasIlha } from "./layout-ilha";
+
+// Quarto / Closet
+export {
+  gerarLayoutDormitorio,
+  gerarLayoutCloset,
+} from "./layout-quarto";
+export type { PreferenciasQuarto } from "./layout-quarto";
+export {
+  MODULOS_ROUPEIRO,
+  MODULOS_GAVETEIRO,
+  MODULOS_CABIDEIRO,
+  MODULOS_SAPATEIRA,
+  BIBLIOTECA_QUARTO,
+  getTemplateRoupeiro,
+  getTemplateGaveteiro,
+  getTemplateCabideiro,
+  getTemplateSapateira,
+} from "./biblioteca-quarto";
+
+// Banheiro / Lavanderia
+export {
+  gerarLayoutBanheiro,
+  gerarLayoutLavanderia,
+} from "./layout-servicos";
+export type { PreferenciasServico } from "./layout-servicos";
+export {
+  MODULOS_GABINETE_PIA,
+  MODULOS_ESPELHEIRA,
+  MODULOS_GABINETE_TANQUE,
+  MODULOS_ARMARIO_SERVICO,
+  BIBLIOTECA_SERVICOS,
+  getTemplateGabinetePia,
+  getTemplateEspelheira,
+  getTemplateGabineteTanque,
+  getTemplateArmarioServico,
+} from "./biblioteca-servicos";
+
+// Regras de corte reutilizáveis
+export {
+  regrasCorpo,
+  regraPortaDobradica,
+  regraPortaCorrer,
+  regrasGaveta,
+} from "./regras-corte-comuns";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,

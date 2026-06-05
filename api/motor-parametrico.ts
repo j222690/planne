@@ -19,14 +19,25 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { gerarLayoutCozinhaLinear } from "../src/lib/motor-parametrico/layout-cozinha-linear";
+import { gerarLayoutCozinhaL, gerarLayoutCozinhaU } from "../src/lib/motor-parametrico/layout-cozinha-l-u";
+import { gerarLayoutIlha } from "../src/lib/motor-parametrico/layout-ilha";
+import { gerarLayoutDormitorio, gerarLayoutCloset } from "../src/lib/motor-parametrico/layout-quarto";
+import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../src/lib/motor-parametrico/layout-servicos";
 import { projetoToMovelInput } from "../src/lib/motor-parametrico/adapters";
 import { criarAmbienteManual } from "../src/lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
 import { gerarTresVersoes } from "../src/lib/motor-parametrico/orcamento-inteligente";
-import type { AmbienteGeometrico, ParedeId } from "../src/lib/motor-parametrico/tipos";
-import type { PreferenciasCozinha } from "../src/lib/motor-parametrico/layout-cozinha-linear";
+import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../src/lib/motor-parametrico/tipos";
+import type { ResultadoValidacao } from "../src/lib/motor-parametrico/rule-engine";
+
+type TipoLayout =
+  | "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"
+  | "dormitorio" | "closet" | "banheiro" | "lavanderia";
 
 interface RequestBody {
+  // Tipo de ambiente a gerar (default: cozinha_linear)
+  tipo_layout?: TipoLayout;
+
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
   ambiente_geometrico?: AmbienteGeometrico;
 
@@ -42,16 +53,28 @@ interface RequestBody {
   // Preferências do usuário
   preferencias: {
     parede_principal?: ParedeId;
+    paredes?: ParedeId[];
     cor_mdf_hex?: string;
-    ferragem?: PreferenciasCozinha["ferragem"];
-    tipo_porta_base?: PreferenciasCozinha["tipo_porta_base"];
-    tipo_porta_aereo?: PreferenciasCozinha["tipo_porta_aereo"];
-    versao_comercial?: PreferenciasCozinha["versao_comercial"];
+    ferragem?: "nacional" | "blum" | "hafele" | "grass";
+    tipo_porta_base?: "dobradica" | "correr";
+    tipo_porta_aereo?: "dobradica" | "basculante";
+    tipo_porta?: "dobradica" | "correr" | "espelho";
+    versao_comercial?: "economica" | "intermediaria" | "premium";
+    com_aereos?: boolean;
+    com_superior?: boolean;
     nome?: string;
     empresa_id?: string;
     cliente_id?: string;
     criado_por?: string;
   };
+}
+
+/** Resultado normalizado entre todos os geradores. */
+interface LayoutNormalizado {
+  projeto: ProjetoFabricavel;
+  validacao: ResultadoValidacao;
+  avisos: string[];
+  paredes_usadas: ParedeId[];
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -91,21 +114,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 2. Resolver preferências com defaults
     const prefs = body.preferencias ?? {};
-    const preferencias: PreferenciasCozinha = {
-      parede_principal: prefs.parede_principal,
+    const comum = {
       cor_mdf_hex: prefs.cor_mdf_hex ?? "#f5f3f0",
-      ferragem: prefs.ferragem ?? "nacional",
-      tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
-      tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
-      versao_comercial: prefs.versao_comercial ?? "intermediaria",
+      ferragem: prefs.ferragem ?? "nacional" as const,
+      versao_comercial: prefs.versao_comercial ?? "intermediaria" as const,
       nome: prefs.nome,
       empresa_id: prefs.empresa_id,
       cliente_id: prefs.cliente_id,
       criado_por: prefs.criado_por ?? "motor_parametrico",
     };
+    const tipoLayout: TipoLayout = body.tipo_layout ?? "cozinha_linear";
 
-    // 3. Gerar layout (100% determinístico, sem IA)
-    const resultado = gerarLayoutCozinhaLinear(ambiente, preferencias);
+    // 3. Despachar para o gerador correto (100% determinístico, sem IA)
+    const resultado = gerarLayout(tipoLayout, ambiente, prefs, comum);
 
     // 4. Gerar MovelInput[] para compatibilidade com calcular-orcamento
     const moveis_calc = projetoToMovelInput(resultado.projeto);
@@ -119,6 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const ms = Date.now() - inicio;
 
     return res.json({
+      tipo_layout: tipoLayout,
       projeto: resultado.projeto,
       moveis_calc,
       // Veredicto do Rule Engine (Fase 3)
@@ -128,15 +150,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 3 versões comerciais com custos completos (Fase 5)
       orcamentos,
       resultado: {
-        parede_usada: resultado.parede_usada,
-        largura_disponivel_cm: resultado.largura_disponivel_cm,
-        largura_ocupada_cm: resultado.largura_ocupada_cm,
-        aproveitamento_pct: resultado.aproveitamento_pct,
+        paredes_usadas: resultado.paredes_usadas,
         avisos: resultado.avisos,
         status_validacao: resultado.validacao.status,
         score_validacao: resultado.validacao.score,
-        num_modulos_base: resultado.projeto.modulos.filter(m => m.modulo_template_codigo.startsWith("base_")).length,
-        num_modulos_aereo: resultado.projeto.modulos.filter(m => m.modulo_template_codigo.startsWith("aereo_")).length,
+        num_modulos: resultado.projeto.modulos.length,
         num_pecas_total: resultado.projeto.metricas.num_pecas_total,
         chapas_estimadas: resultado.projeto.metricas.chapas_15mm + resultado.projeto.metricas.chapas_6mm,
         metros_fita: resultado.projeto.metricas.metros_fita_borda,
@@ -147,5 +165,100 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({
       error: e instanceof Error ? e.message : "Erro interno no motor paramétrico",
     });
+  }
+}
+
+// ─── DISPATCHER DE LAYOUT ─────────────────────────────────────────────────────
+
+type PrefsBody = RequestBody["preferencias"];
+interface PrefsComuns {
+  cor_mdf_hex: string;
+  ferragem: "nacional" | "blum" | "hafele" | "grass";
+  versao_comercial: "economica" | "intermediaria" | "premium";
+  nome?: string;
+  empresa_id?: string;
+  cliente_id?: string;
+  criado_por: string;
+}
+
+/**
+ * Roteia para o gerador correto e normaliza a saída para LayoutNormalizado.
+ */
+function gerarLayout(
+  tipo: TipoLayout,
+  ambiente: AmbienteGeometrico,
+  prefs: PrefsBody,
+  comum: PrefsComuns,
+): LayoutNormalizado {
+  switch (tipo) {
+    case "cozinha_l": {
+      const r = gerarLayoutCozinhaL(ambiente, {
+        ...comum,
+        tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
+        tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
+        paredes: prefs.paredes,
+        com_aereos: prefs.com_aereos,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "cozinha_u": {
+      const r = gerarLayoutCozinhaU(ambiente, {
+        ...comum,
+        tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
+        tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
+        paredes: prefs.paredes,
+        com_aereos: prefs.com_aereos,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "ilha": {
+      const r = gerarLayoutIlha(ambiente, {
+        ...comum,
+        tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "dormitorio": {
+      const r = gerarLayoutDormitorio(ambiente, {
+        ...comum,
+        tipo_porta: prefs.tipo_porta,
+        paredes: prefs.paredes,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "closet": {
+      const r = gerarLayoutCloset(ambiente, {
+        ...comum,
+        tipo_porta: prefs.tipo_porta,
+        paredes: prefs.paredes,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "banheiro": {
+      const r = gerarLayoutBanheiro(ambiente, {
+        ...comum,
+        parede_principal: prefs.parede_principal,
+        com_superior: prefs.com_superior,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "lavanderia": {
+      const r = gerarLayoutLavanderia(ambiente, {
+        ...comum,
+        parede_principal: prefs.parede_principal,
+        com_superior: prefs.com_superior,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "cozinha_linear":
+    default: {
+      const r = gerarLayoutCozinhaLinear(ambiente, {
+        ...comum,
+        parede_principal: prefs.parede_principal,
+        tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
+        tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };
+    }
   }
 }
