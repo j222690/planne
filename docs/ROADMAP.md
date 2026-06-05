@@ -111,15 +111,33 @@ Resultado → Aprovado / Aprovado com alertas / Reprovado ✅
 
 ---
 
-## FASE 4 — ENGENHARIA AUTOMÁTICA ⏳ PENDENTE
+## FASE 4 — ENGENHARIA AUTOMÁTICA ✅ CONCLUÍDA
 
 **Objetivo:** Transformar projeto em produção.
 
-**Entregáveis:**
-- [ ] Lista de peças completa (integrada com Fase 2)
-- [ ] Lista de ferragens
-- [ ] Lista de materiais
-- [ ] Lista de compras
+| Entregável | Status | Função |
+|---|---|---|
+| Lista de peças consolidada (agrupa idênticas) | ✅ | `consolidarPecas()` |
+| Lista de ferragens agregada por tipo+marca | ✅ | `consolidarFerragens()` |
+| Lista de materiais (chapas por espessura + custo) | ✅ | `consolidarMateriais()` |
+| Metros de fita de borda (líquido + desperdício) | ✅ | `consolidarFita()` |
+| Lista de compras (necessário − estoque) | ✅ | `gerarListaCompras()` |
+| Pacote completo de engenharia | ✅ | `gerarEngenharia()` |
+| Testes (26 casos) | ✅ | `__tests__/engenharia.test.ts` |
+
+**Arquivo criado:** `src/lib/motor-parametrico/engenharia.ts`
+
+**Características:**
+- Todas as funções puras (sem I/O), consolidam dados já calculados na Fase 1/2.
+- Peças idênticas (mesmo material + dimensão + fita) são agrupadas e contadas.
+- Desperdício de chapa (15%) e de fita (15%) aplicados no dimensionamento.
+- `gerarListaCompras()` desconta estoque atual e compatível com a entidade `ListaCompras` do núcleo.
+
+**Integração:** o endpoint `api/motor-parametrico.ts` agora retorna o campo `engenharia` com peças, ferragens, materiais, fita e resumo de custos. Aditivo, não quebra Fases 2/3.
+
+**Total acumulado: 112 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** remover `engenharia.ts` e seu teste; remover o campo `engenharia` do endpoint e os exports no `index.ts`. Tudo aditivo.
 
 ---
 

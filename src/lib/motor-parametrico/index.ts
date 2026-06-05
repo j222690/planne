@@ -137,6 +137,26 @@ export type {
   StatusValidacao,
 } from "./rule-engine";
 
+// Fase 4 — Engenharia Automática
+export {
+  consolidarPecas,
+  consolidarFerragens,
+  consolidarMateriais,
+  consolidarFita,
+  gerarListaCompras,
+  gerarEngenharia,
+  DESPERDICIO_CHAPA_PCT,
+  DESPERDICIO_FITA_PCT,
+} from "./engenharia";
+export type {
+  ListaEngenharia,
+  PecaConsolidada,
+  FerragemConsolidada,
+  MaterialConsolidado,
+  ResumoFita,
+  EstoqueAtual,
+} from "./engenharia";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,

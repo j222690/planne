@@ -21,6 +21,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { gerarLayoutCozinhaLinear } from "../src/lib/motor-parametrico/layout-cozinha-linear";
 import { projetoToMovelInput } from "../src/lib/motor-parametrico/adapters";
 import { criarAmbienteManual } from "../src/lib/motor-parametrico/ambiente";
+import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
 import type { AmbienteGeometrico, ParedeId } from "../src/lib/motor-parametrico/tipos";
 import type { PreferenciasCozinha } from "../src/lib/motor-parametrico/layout-cozinha-linear";
 
@@ -108,6 +109,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 4. Gerar MovelInput[] para compatibilidade com calcular-orcamento
     const moveis_calc = projetoToMovelInput(resultado.projeto);
 
+    // 5. Gerar pacote de engenharia (Fase 4): peças, ferragens, materiais, compras
+    const engenharia = gerarEngenharia(resultado.projeto);
+
     const ms = Date.now() - inicio;
 
     return res.json({
@@ -115,6 +119,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       moveis_calc,
       // Veredicto do Rule Engine (Fase 3)
       validacao: resultado.validacao,
+      // Pacote de engenharia para produção (Fase 4)
+      engenharia,
       resultado: {
         parede_usada: resultado.parede_usada,
         largura_disponivel_cm: resultado.largura_disponivel_cm,
