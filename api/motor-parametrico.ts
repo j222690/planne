@@ -22,6 +22,7 @@ import { gerarLayoutCozinhaLinear } from "../src/lib/motor-parametrico/layout-co
 import { projetoToMovelInput } from "../src/lib/motor-parametrico/adapters";
 import { criarAmbienteManual } from "../src/lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
+import { gerarTresVersoes } from "../src/lib/motor-parametrico/orcamento-inteligente";
 import type { AmbienteGeometrico, ParedeId } from "../src/lib/motor-parametrico/tipos";
 import type { PreferenciasCozinha } from "../src/lib/motor-parametrico/layout-cozinha-linear";
 
@@ -112,6 +113,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 5. Gerar pacote de engenharia (Fase 4): peças, ferragens, materiais, compras
     const engenharia = gerarEngenharia(resultado.projeto);
 
+    // 6. Gerar 3 versões de orçamento (Fase 5): econômica / intermediária / premium
+    const orcamentos = gerarTresVersoes(resultado.projeto);
+
     const ms = Date.now() - inicio;
 
     return res.json({
@@ -121,6 +125,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       validacao: resultado.validacao,
       // Pacote de engenharia para produção (Fase 4)
       engenharia,
+      // 3 versões comerciais com custos completos (Fase 5)
+      orcamentos,
       resultado: {
         parede_usada: resultado.parede_usada,
         largura_disponivel_cm: resultado.largura_disponivel_cm,

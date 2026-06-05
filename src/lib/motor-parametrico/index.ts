@@ -157,6 +157,18 @@ export type {
   EstoqueAtual,
 } from "./engenharia";
 
+// Fase 5 — Orçamento Inteligente
+export {
+  calcularOrcamentoCompleto,
+  gerarTresVersoes,
+  CONFIG_CUSTO_PADRAO,
+} from "./orcamento-inteligente";
+export type {
+  ConfiguracaoCusto,
+  OrcamentoCompleto,
+  TresVersoes,
+} from "./orcamento-inteligente";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,

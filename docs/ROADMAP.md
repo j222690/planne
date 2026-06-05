@@ -141,17 +141,41 @@ Resultado → Aprovado / Aprovado com alertas / Reprovado ✅
 
 ---
 
-## FASE 5 — ORÇAMENTO INTELIGENTE ⏳ PENDENTE
+## FASE 5 — ORÇAMENTO INTELIGENTE ✅ CONCLUÍDA
 
 **Objetivo:** Calcular custos automaticamente.
 
-**Entregáveis:**
-- [ ] MDF por chapa (18mm, 15mm, 6mm)
-- [ ] Ferragens por contagem real
-- [ ] Produção (horas × valor/hora por etapa)
-- [ ] Instalação (deslocamento + equipe)
-- [ ] Margens configuráveis por empresa
-- [ ] 3 versões: econômica / intermediária / premium
+| Entregável | Status | Detalhe |
+|---|---|---|
+| MDF por chapa (18mm, 15mm, 6mm) | ✅ | via `consolidarMateriais` (Fase 4) |
+| Ferragens por contagem real | ✅ | tabela `PRECO_FERRAGEM_REF` (18 tipos) |
+| Produção (horas × valor/hora) | ✅ | 5 etapas: corte, bordagem, usinagem, montagem, acabamento |
+| Instalação (deslocamento + equipe) | ✅ | horas × valor + km × custo |
+| Custos indiretos | ✅ | overhead + impostos (regime) + comissão |
+| Margens configuráveis por empresa | ✅ | `ConfiguracaoCusto` (default BR 2026) |
+| 3 versões: econômica/intermediária/premium | ✅ | `gerarTresVersoes()` |
+| Testes (20 casos) | ✅ | `__tests__/orcamento-inteligente.test.ts` |
+
+**Arquivo criado:** `src/lib/motor-parametrico/orcamento-inteligente.ts`
+
+**Função principal:** `calcularOrcamentoCompleto(projeto, versao, config)` decompõe o custo em
+material + produção + instalação + indiretos → preço de venda com margem real.
+
+**Sanidade econômica (cozinha 4m × 3m, 14 módulos):**
+| Versão | Custo total | Preço de venda | Margem |
+|---|---|---|---|
+| Econômica | R$ 5.278 | R$ 8.120 | 35% |
+| Intermediária | R$ 6.654 | R$ 12.098 | 45% |
+| Premium | R$ 9.397 | R$ 22.373 | 58% |
+
+**Integração:** o endpoint retorna o campo `orcamentos` (3 versões com custos completos).
+A `ConfiguracaoCusto` usa defaults de mercado; tela de configuração por empresa fica para
+fase futura (migração + UI), sem bloquear o motor.
+
+**Total acumulado: 132 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** remover `orcamento-inteligente.ts` e seu teste; remover o campo `orcamentos`
+do endpoint e os exports no `index.ts`. Tudo aditivo.
 
 ---
 
