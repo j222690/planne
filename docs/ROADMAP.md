@@ -1,6 +1,6 @@
 # PLANNE ROADMAP
 > Arquivo de rastreamento das fases. Atualizado automaticamente pelo arquiteto principal.
-> Última atualização: 2026-06-04
+> Última atualização: 2026-06-05 — Fases 1, 2 e 3 concluídas (86 testes verdes)
 
 ---
 
@@ -54,34 +54,60 @@ ALTER TABLE room_projects DROP COLUMN IF EXISTS projeto_fabricavel, DROP COLUMN 
 
 ---
 
-## FASE 2 — MOTOR PARAMÉTRICO V1 ⏳ AGUARDANDO AUTORIZAÇÃO
+## FASE 2 — MOTOR PARAMÉTRICO V1 ✅ CONCLUÍDA
 
 **Objetivo:** Gerar cozinhas lineares automaticamente.
 
-**Critério de aceite:**
+**Critério de aceite (atingido):**
 ```
-Parede 4m → Projeto → Peças → Ferragens
+Parede 4m → Projeto → Peças → Ferragens ✅
 ```
 
-**Entregáveis planejados:**
-- [ ] `src/lib/motor-parametrico/biblioteca-cozinha.ts` — 16 módulos base + 16 aéreos
-- [ ] `src/lib/motor-parametrico/layout-cozinha-linear.ts` — algoritmo de encaixe
-- [ ] `src/lib/motor-parametrico/adapters.ts` — bridge para `_calc.ts`
-- [ ] `api/motor-parametrico.ts` — endpoint serverless
-- [ ] Testes: layout 320cm, 400cm, parede com porta, parede com janela
-- [ ] UI: botão "Motor Paramétrico" em `app.ia-projetos.tsx` para cozinhas
+| Entregável | Status | Arquivo |
+|---|---|---|
+| Biblioteca de módulos (8 base + 8 aéreos) | ✅ | `src/lib/motor-parametrico/biblioteca-cozinha.ts` |
+| Algoritmo de layout linear + encaixe greedy | ✅ | `src/lib/motor-parametrico/layout-cozinha-linear.ts` |
+| Bridge para `_calc.ts` | ✅ | `src/lib/motor-parametrico/adapters.ts` |
+| Endpoint serverless (< 100ms, zero IA) | ✅ | `api/motor-parametrico.ts` |
+| Testes do algoritmo (33 casos) | ✅ | `src/lib/motor-parametrico/__tests__/layout.test.ts` |
+| UI: painel "Motor Paramétrico" para cozinhas | ✅ | `src/routes/app.ia-projetos.tsx` |
+
+**Validações do algoritmo `encaixarModulos`:**
+- 400cm → 400cm exato · 320cm → 320cm exato · 380cm → 380cm exato
+- Nenhum módulo < 30cm ou > 90cm · Aproveitamento ≥ 85% (paredes 300–500cm)
+
+**Rollback:** remover `api/motor-parametrico.ts`, os 4 arquivos da biblioteca/layout e o painel UI. O `_calc.ts` legado nunca foi tocado.
 
 ---
 
-## FASE 3 — RULE ENGINE ⏳ PENDENTE
+## FASE 3 — RULE ENGINE ✅ CONCLUÍDA
 
 **Objetivo:** Validar projetos automaticamente.
 
-**Entregáveis:**
-- [ ] Validação de circulação mínima (90cm)
-- [ ] Validação de distâncias mínimas entre módulos
-- [ ] Validação de portas e janelas
-- [ ] Sistema de score: Aprovado / Aprovado com alertas / Reprovado
+**Critério de aceite (atingido):**
+```
+Resultado → Aprovado / Aprovado com alertas / Reprovado ✅
+```
+
+| Entregável | Status | Detalhe |
+|---|---|---|
+| `validarProjeto()` — função pura auditável | ✅ | `src/lib/motor-parametrico/rule-engine.ts` |
+| Validação de circulação mínima (80cm / 90cm) | ✅ | erro < 80cm · alerta < 90cm |
+| Validação de módulo dentro da parede | ✅ | erro se ultrapassa o limite físico |
+| Validação de módulo invadindo porta | ✅ | erro se sobrepõe vão de porta |
+| Validação de base sob janela baixa | ✅ | alerta se peitoril < 90cm |
+| Validação de aéreo colidindo com teto | ✅ | erro/alerta por folga |
+| Validação de largura de módulo (30–90cm) | ✅ | alerta fora da faixa |
+| Validação de aproveitamento (< 85%) | ✅ | alerta |
+| Validação de ponto hidráulico atendido | ✅ | alerta se sem gabinete adjacente |
+| Sistema de score 0–100 + status | ✅ | erro −25 · alerta −8 |
+| Testes do Rule Engine (19 casos) | ✅ | `src/lib/motor-parametrico/__tests__/rule-engine.test.ts` |
+
+**Integração:** `gerarLayoutCozinhaLinear()` já retorna o campo `validacao` (aditivo, não quebra Fase 2). O endpoint expõe `validacao`, `status_validacao` e `score_validacao`.
+
+**Total acumulado: 86 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** remover `rule-engine.ts` e seu teste; remover o campo `validacao` de `ResultadoLayout` e os exports no `index.ts`. Tudo aditivo.
 
 ---
 

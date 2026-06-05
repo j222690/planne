@@ -39,6 +39,7 @@ import {
   AEREO_PROFUNDIDADE_CM,
 } from "./biblioteca-cozinha";
 import { calcularPecas, calcularFerragens, calcularMetricas } from "./pecas";
+import { validarProjeto, type ResultadoValidacao } from "./rule-engine";
 
 // ─── TIPOS DE ENTRADA ─────────────────────────────────────────────────────────
 
@@ -88,6 +89,8 @@ export interface ResultadoLayout {
   aproveitamento_pct: number;
   /** Mensagens de aviso (não erros — projeto é válido mesmo com avisos). */
   avisos: string[];
+  /** Veredicto do Rule Engine (Fase 3): aprovado / aprovado_com_alertas / reprovado. */
+  validacao: ResultadoValidacao;
 }
 
 // ─── FUNÇÃO PRINCIPAL ─────────────────────────────────────────────────────────
@@ -291,6 +294,9 @@ export function gerarLayoutCozinhaLinear(
     atualizado_em: agora,
   };
 
+  // 11. Validar o projeto contra o Rule Engine (Fase 3)
+  const validacao = validarProjeto(projeto);
+
   return {
     projeto,
     parede_usada: paredeId,
@@ -298,6 +304,7 @@ export function gerarLayoutCozinhaLinear(
     largura_ocupada_cm: larguraOcupada,
     aproveitamento_pct: aproveitamento,
     avisos,
+    validacao,
   };
 }
 

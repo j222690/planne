@@ -113,12 +113,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({
       projeto: resultado.projeto,
       moveis_calc,
+      // Veredicto do Rule Engine (Fase 3)
+      validacao: resultado.validacao,
       resultado: {
         parede_usada: resultado.parede_usada,
         largura_disponivel_cm: resultado.largura_disponivel_cm,
         largura_ocupada_cm: resultado.largura_ocupada_cm,
         aproveitamento_pct: resultado.aproveitamento_pct,
         avisos: resultado.avisos,
+        status_validacao: resultado.validacao.status,
+        score_validacao: resultado.validacao.score,
         num_modulos_base: resultado.projeto.modulos.filter(m => m.modulo_template_codigo.startsWith("base_")).length,
         num_modulos_aereo: resultado.projeto.modulos.filter(m => m.modulo_template_codigo.startsWith("aereo_")).length,
         num_pecas_total: resultado.projeto.metricas.num_pecas_total,

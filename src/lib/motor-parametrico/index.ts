@@ -120,6 +120,23 @@ export {
 
 export { projetoToMovelInput, calcularCustoEstimado } from "./adapters";
 
+// Fase 3 — Rule Engine
+export {
+  validarProjeto,
+  CIRCULACAO_MINIMA_CM,
+  CIRCULACAO_CONFORTAVEL_CM,
+  LARGURA_MODULO_MIN_CM,
+  LARGURA_MODULO_MAX_CM,
+  APROVEITAMENTO_MIN_PCT,
+  FOLGA_TETO_MIN_CM,
+} from "./rule-engine";
+export type {
+  ResultadoValidacao,
+  ViolacaoRegra,
+  SeveridadeRegra,
+  StatusValidacao,
+} from "./rule-engine";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,
