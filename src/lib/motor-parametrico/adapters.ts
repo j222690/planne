@@ -11,7 +11,38 @@
  */
 
 import type { ProjetoFabricavel, ModuloInstanciado } from "./tipos";
-import type { MovelInput } from "../../api/_calc";
+
+/**
+ * Subconjunto de MovelInput de api/_calc.ts.
+ * Definido localmente para não depender de import de api/ (camada serverless).
+ * Deve manter compatibilidade com a interface real em api/_calc.ts.
+ */
+export interface MovelInput {
+  id?: string;
+  nome: string;
+  tipo?: string;
+  largura_cm: number;
+  profundidade_cm: number;
+  altura_cm: number;
+  portas: number;
+  tipo_porta?: "abrir" | "correr" | "sem" | "abrir_vidro" | "abrir_espelho" | "correr_vidro" | "correr_espelho";
+  gavetas: number;
+  prateleiras: number;
+  tem_fundo?: boolean;
+  tem_rodape?: boolean;
+  tem_pes?: boolean;
+  pe_altura_cm?: number;
+  tem_roda_teto?: boolean;
+  altura_teto_cm?: number;
+  mdf_id?: string;
+  mdf_caixa_id?: string;
+  mdf_externo_id?: string;
+  fundo_id?: string;
+  dobradica_id?: string;
+  corrediça_porta_id?: string;
+  corrediça_gaveta_id?: string;
+  puxador_id?: string;
+}
 
 /**
  * Converte um ProjetoFabricavel em MovelInput[] para consumo por api/_calc.ts.
@@ -112,5 +143,3 @@ export function calcularCustoEstimado(projeto: ProjetoFabricavel): {
   };
 }
 
-// Re-export do tipo que o exterior precisa
-export type { MovelInput };

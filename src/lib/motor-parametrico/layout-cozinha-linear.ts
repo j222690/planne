@@ -419,7 +419,3 @@ function criarMaterialPadrao(cor_hex: string, espessura: 6 | 15 | 18): Material 
   };
 }
 
-// Necessário para importar Material no escopo do arquivo
-type Material = import("./tipos").Material;
-type ProjetoFabricavel = import("./tipos").ProjetoFabricavel;
-type ModuloInstanciado = import("./tipos").ModuloInstanciado;

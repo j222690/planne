@@ -102,10 +102,6 @@ export {
 export {
   gerarLayoutCozinhaLinear,
   encaixarModulos,
-  BASE_ALTURA_CM,
-  BASE_PROFUNDIDADE_CM,
-  AEREO_ALTURA_CM,
-  AEREO_PROFUNDIDADE_CM,
 } from "./layout-cozinha-linear";
 export type { PreferenciasCozinha, ResultadoLayout } from "./layout-cozinha-linear";
 
@@ -116,6 +112,10 @@ export {
   LARGURAS_PADRAO,
   getTemplateBase,
   getTemplateAereo,
+  BASE_ALTURA_CM,
+  BASE_PROFUNDIDADE_CM,
+  AEREO_ALTURA_CM,
+  AEREO_PROFUNDIDADE_CM,
 } from "./biblioteca-cozinha";
 
 export { projetoToMovelInput, calcularCustoEstimado } from "./adapters";

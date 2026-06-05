@@ -1528,6 +1528,11 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   clientes: { id: string; nome: string }[];
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
+  const [motorAberto, setMotorAberto] = useState(false);
+  const [motorLoading, setMotorLoading] = useState(false);
+  const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
+  const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">("nacional");
+
   const { analise, moveis } = wizard;
   if (!analise) return null;
   const { orcamento, descricao_comercial, observacoes_tecnicas } = analise;
@@ -1819,6 +1824,111 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           </div>
         )}
       </Surface>
+
+      {/* Motor Paramétrico — disponível para cozinha */}
+      {wizard.form.ambiente === "Cozinha" && (
+        <Surface className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Settings2 className="size-4 text-emerald-500" />
+              <span className="text-[14px] font-semibold">Motor Paramétrico</span>
+              <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
+                100% determinístico · sem IA · &lt;100ms
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMotorAberto(v => !v)}
+              className="text-[12px] text-muted-foreground hover:text-foreground"
+            >
+              {motorAberto ? "Fechar" : "Configurar"}
+            </button>
+          </div>
+
+          <p className="text-[12.5px] text-muted-foreground">
+            Gere a cozinha linear automaticamente com módulos padrão de mercado.
+            O resultado substitui os móveis sugeridos pela IA.
+          </p>
+
+          {motorAberto && (
+            <div className="space-y-3 pt-2 border-t border-border">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Parede principal</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {(["top", "bottom", "left", "right"] as const).map(p => (
+                      <button key={p} type="button" onClick={() => setMotorParede(p)}
+                        className={`h-8 text-[12px] rounded-md border transition-colors ${motorParede === p ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}>
+                        {p === "top" ? "↑ Fundo" : p === "bottom" ? "↓ Entrada" : p === "left" ? "← Esq." : "→ Dir."}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Qualidade das ferragens</div>
+                  <div className="space-y-1">
+                    {([["nacional", "Nacional", "Padrão"], ["blum", "Blum", "+50% custo"], ["hafele", "Häfele", "+100% custo"]] as const).map(([v, l, sub]) => (
+                      <button key={v} type="button" onClick={() => setMotorFerragem(v)}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border text-[12px] transition-all ${motorFerragem === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                        <span className="font-medium">{l}</span>
+                        <span className="text-muted-foreground text-[11px]">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={motorLoading}
+                onClick={async () => {
+                  setMotorLoading(true);
+                  try {
+                    const res = await fetch("/api/motor-parametrico", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        medidas: {
+                          largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
+                          profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
+                          altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
+                          porta_parede: wizard.form.porta_parede,
+                          janelas_paredes: wizard.form.janelas,
+                        },
+                        preferencias: {
+                          parede_principal: motorParede,
+                          cor_mdf_hex: wizard.form.cor_mdf,
+                          ferragem: motorFerragem,
+                          tipo_porta_base: "dobradica",
+                          tipo_porta_aereo: "dobradica",
+                          versao_comercial: "intermediaria",
+                        },
+                      }),
+                    });
+                    if (!res.ok) throw new Error((await res.json() as { error: string }).error);
+                    const data = await res.json() as { projeto: { modulos: Movel[] }; resultado: { avisos: string[]; aproveitamento_pct: number; num_modulos_base: number; num_modulos_aereo: number } };
+                    update({ moveis: data.projeto.modulos as unknown as Movel[] });
+                    setMotorAberto(false);
+                    const r = data.resultado;
+                    toast.success(`Motor gerou ${r.num_modulos_base} bases + ${r.num_modulos_aereo} aéreos · ${r.aproveitamento_pct}% aproveitamento`);
+                    if (r.avisos?.length) r.avisos.forEach(a => toast.info(a));
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
+                  } finally {
+                    setMotorLoading(false);
+                  }
+                }}
+                className="w-full h-10 rounded-md bg-emerald-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-opacity"
+              >
+                {motorLoading
+                  ? <><Loader2 className="size-4 animate-spin" /> Gerando layout…</>
+                  : <><Settings2 className="size-4" /> Gerar cozinha linear automaticamente</>}
+              </button>
+            </div>
+          )}
+        </Surface>
+      )}
 
       {/* Actions */}
       <Surface className="space-y-4">
