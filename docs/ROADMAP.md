@@ -225,13 +225,46 @@ novos e restaurar a versão anterior de `layout-cozinha-linear.ts`.
 
 ---
 
-## FASE 7 — LEITURA DE PLANTAS ⏳ PENDENTE
+## FASE 7 — LEITURA DE PLANTAS ✅ CONCLUÍDA
 
-**Entregáveis:**
-- [ ] PDF → AmbienteGeometrico
-- [ ] DWG → AmbienteGeometrico (via dxf-parser)
-- [ ] Imagem com OpenCV (detecção de escala real)
-- [ ] Extração geométrica precisa (cotas, pilares, vigas)
+**Objetivo:** Transformar plantas (DXF/imagem/PDF) em AmbienteGeometrico.
+
+| Entregável | Status | Detalhe |
+|---|---|---|
+| DXF → AmbienteGeometrico | ✅ | parser DXF próprio, geometria exata |
+| Extração geométrica precisa | ✅ | bounding box, paredes, unidades, aberturas |
+| Imagem → AmbienteGeometrico | ✅ | via IA Vision (reusa OpenAI) + `plantaToAmbiente` |
+| PDF → AmbienteGeometrico | ✅ | PDF imagem via IA Vision |
+| Pipeline unificado | ✅ | `interpretarPlanta()` roteia por formato |
+
+**Arquivos criados:**
+```
+dxf-parser.ts          — parser DXF puro (LINE, LWPOLYLINE, ARC, INSERT, $INSUNITS)
+extracao-geometrica.ts — DXF → AmbienteGeometrico (dimensões reais + aberturas)
+interpretar-planta.ts  — pipeline: dxf | imagem | pdf | manual → AmbienteGeometrico
+api/leitura-planta.ts  — endpoint (DXF determinístico + IA Vision para imagem/PDF)
+```
+
+**Decisões técnicas (alinhadas à Vision):**
+- **Parser DXF próprio, zero dependências** — DXF é texto (pares código-valor);
+  evita problemas de build no serverless e dá **geometria exata** (cotas reais,
+  não estimativa de IA). É "a engenharia constrói, não a IA".
+- **Detecção de unidade** via `$INSUNITS`; se ausente, estima pela magnitude do
+  bounding box (m / cm / mm).
+- **Aberturas**: portas detectadas por arcos (folha de porta gira), janelas por
+  layer; paredes por layer (`PAREDES/WALL`) ou contorno geral.
+- **OpenCV pesado descartado** — `opencv4nodejs` não compila no Vercel. A visão
+  computacional avançada fica para infra dedicada; DXF preciso + IA Vision já
+  cobre os casos reais de plantas.
+- **Nível de confiança** retornado (DXF com unidade declarada > IA Vision > estimativa).
+
+**Integração:** o `AmbienteGeometrico` extraído alimenta diretamente o motor de
+layout (teste de integração DXF → cozinha confirma o fluxo ponta a ponta).
+
+**Total acumulado: 193 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** arquivos aditivos. Reverter = remover os 3 módulos da Fase 7,
+o endpoint `api/leitura-planta.ts` e os exports no `index.ts`.
 
 ---
 

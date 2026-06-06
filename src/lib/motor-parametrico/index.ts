@@ -236,6 +236,34 @@ export {
   regrasGaveta,
 } from "./regras-corte-comuns";
 
+// Fase 7 — Leitura de Plantas
+export {
+  parseDXF,
+  fatorParaCm,
+  boundingBox,
+  comprimentoSegmento,
+  orientacaoSegmento,
+} from "./dxf-parser";
+export type {
+  DXFParseado,
+  SegmentoDXF,
+  ArcoDXF,
+  InsercaoDXF,
+  PontoDXF,
+  UnidadeDXF,
+} from "./dxf-parser";
+
+export { dxfParaAmbiente } from "./extracao-geometrica";
+export type { ResultadoExtracao } from "./extracao-geometrica";
+
+export { interpretarPlanta } from "./interpretar-planta";
+export type {
+  FormatoPlanta,
+  EntradaInterpretacao,
+  ResultadoInterpretacao,
+  PlantaAnalisadaIA,
+} from "./interpretar-planta";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,
