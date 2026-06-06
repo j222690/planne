@@ -280,6 +280,22 @@ export {
 } from "./exportacao-corte";
 export type { EtiquetaPeca, ExportacoesCorte } from "./exportacao-corte";
 
+// Fase 9 — PCP
+export {
+  gerarEtapasProducao,
+  validarDAG,
+  ordenarTopologicamente,
+  calcularCronograma,
+  gerarOrdemProducao,
+  PARAMETROS_PCP_PADRAO,
+} from "./pcp";
+export type {
+  ParametrosPCP,
+  EtapaAgendada,
+  OpcoesOrdemProducao,
+  ResultadoPCP,
+} from "./pcp";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,

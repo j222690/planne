@@ -312,13 +312,47 @@ O `api/lista-corte.ts` legado (guillotine) permanece intacto.
 
 ---
 
-## FASE 9 — PCP ⏳ PENDENTE
+## FASE 9 — PCP ✅ CONCLUÍDA
 
-**Entregáveis:**
-- [ ] Cronograma automático de produção
-- [ ] Sequenciamento de etapas (DAG)
-- [ ] Integração com produção e instalação
-- [ ] Lista de compras com prazo de entrega
+**Objetivo:** Planejar e controlar a produção a partir do projeto.
+
+| Entregável | Status | Detalhe |
+|---|---|---|
+| Sequenciamento de etapas (DAG) | ✅ | `gerarEtapasProducao()` + `validarDAG()` |
+| Cronograma automático | ✅ | `calcularCronograma()` topo-sort + dias úteis |
+| Integração produção + instalação | ✅ | 8 etapas: separação → … → instalação |
+| Lista de compras com prazo | ✅ | integra `gerarListaCompras()` (Fase 4) |
+| Ordem de produção completa | ✅ | `gerarOrdemProducao()` → OrdemProducao do núcleo |
+
+**Arquivo criado:** `src/lib/motor-parametrico/pcp.ts`
+
+**Sequência de etapas (DAG):**
+```
+separação → corte CNC → bordagem → usinagem → montagem
+  → [pintura/laca se houver] → inspeção → embalagem → instalação
+```
+- Cada etapa tem função responsável, duração estimada e checklist de qualidade.
+- Etapas de duração nula (ex.: pintura sem laca) são omitidas e as dependências
+  reconectadas, mantendo o DAG válido.
+
+**Cronograma:**
+- Ordenação topológica garante que cada etapa só inicia após suas dependências.
+- `avancarHorasUteis()` respeita jornada (8h/dia) e pula fins de semana.
+- Datas de início/conclusão por etapa + data de entrega prometida.
+
+**Validação:** `validarDAG()` detecta ciclos via DFS (3 estados). Testado com
+grafo cíclico artificial.
+
+**Resultado real (cozinha 4m, 14 módulos):** 8 etapas, 25,7h de produção,
+prazo de 2 dias úteis, entrega prometida calculada.
+
+**Integração:** o endpoint retorna o campo `pcp` (cronograma enxuto: etapas
+agendadas + datas + lista de compras), sem duplicar o projeto/plano já presentes.
+
+**Total acumulado: 238 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** arquivo aditivo. Reverter = remover `pcp.ts`, o campo `pcp` do
+endpoint e os exports no `index.ts`.
 
 ---
 

@@ -29,6 +29,8 @@ import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
 import { gerarTresVersoes } from "../src/lib/motor-parametrico/orcamento-inteligente";
 import { gerarPlanoNesting } from "../src/lib/motor-parametrico/nesting";
 import { gerarExportacoes } from "../src/lib/motor-parametrico/exportacao-corte";
+import { gerarOrdemProducao } from "../src/lib/motor-parametrico/pcp";
+import { gerarListaCompras } from "../src/lib/motor-parametrico/engenharia";
 import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../src/lib/motor-parametrico/tipos";
 import type { ResultadoValidacao } from "../src/lib/motor-parametrico/rule-engine";
 
@@ -144,6 +146,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const planoBruto = gerarPlanoNesting(todasPecas, resultado.projeto.metricas.metros_fita_borda);
     const { plano: plano_corte, exportacoes: exportacoes_corte } = gerarExportacoes(planoBruto, resultado.projeto.id);
 
+    // 8. Gerar PCP (Fase 9): ordem de produção com cronograma + lista de compras
+    const lista_compras = gerarListaCompras(resultado.projeto);
+    const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
+
     const ms = Date.now() - inicio;
 
     return res.json({
@@ -159,6 +165,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Plano de corte com nesting MaxRects + exportações (Fase 8)
       plano_corte,
       exportacoes_corte,
+      // PCP: cronograma + etapas + lista de compras (Fase 9)
+      pcp: {
+        numero: pcpResultado.ordem.numero,
+        data_inicio_planejada: pcpResultado.ordem.data_inicio_planejada,
+        data_entrega_prometida: pcpResultado.ordem.data_entrega_prometida,
+        dag_valido: pcpResultado.dag_valido,
+        duracao_total_horas: pcpResultado.duracao_total_horas,
+        prazo_dias_uteis: pcpResultado.prazo_dias_uteis,
+        etapas: pcpResultado.etapas_agendadas,
+        lista_compras: pcpResultado.ordem.lista_compras,
+      },
       resultado: {
         paredes_usadas: resultado.paredes_usadas,
         avisos: resultado.avisos,
@@ -169,6 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         chapas_nesting: plano_corte.resumo.total_chapas,
         desperdicio_pct: plano_corte.resumo.desperdicio_pct,
         metros_fita: resultado.projeto.metricas.metros_fita_borda,
+        prazo_producao_dias: pcpResultado.prazo_dias_uteis,
         tempo_ms: ms,
       },
     });
