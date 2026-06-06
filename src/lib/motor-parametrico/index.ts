@@ -264,6 +264,22 @@ export type {
   PlantaAnalisadaIA,
 } from "./interpretar-planta";
 
+// Fase 8 — Plano de Corte
+export {
+  gerarPlanoNesting,
+  gerarSvgChapa,
+  KERF_MM,
+  MARGEM_CHAPA_MM,
+} from "./nesting";
+export type { OpcoesNesting } from "./nesting";
+export {
+  gerarCSVCorte,
+  gerarDXFCorte,
+  gerarEtiquetas,
+  gerarExportacoes,
+} from "./exportacao-corte";
+export type { EtiquetaPeca, ExportacoesCorte } from "./exportacao-corte";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,

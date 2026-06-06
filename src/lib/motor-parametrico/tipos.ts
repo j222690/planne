@@ -678,7 +678,7 @@ export interface EventoStatus {
 }
 
 export interface PlanoNesting {
-  algoritmo: "bottom_left_fill" | "deepnest" | "guillotine";
+  algoritmo: "bottom_left_fill" | "deepnest" | "guillotine" | "maxrects";
   chapas: ChapaAlocada[];
   resumo: {
     total_pecas: number;

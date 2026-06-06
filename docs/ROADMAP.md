@@ -268,14 +268,47 @@ o endpoint `api/leitura-planta.ts` e os exports no `index.ts`.
 
 ---
 
-## FASE 8 — PLANO DE CORTE ⏳ PENDENTE
+## FASE 8 — PLANO DE CORTE ✅ CONCLUÍDA
 
-**Entregáveis:**
-- [ ] Nesting 2D industrial (substituir guillotine atual)
-- [ ] Otimização de chapas (meta: < 12% desperdício)
-- [ ] Etiquetas por peça
-- [ ] QR Codes por peça
-- [ ] Exportação DXF/CSV para CNC
+**Objetivo:** Otimizar o corte de chapas e gerar os arquivos de produção.
+
+| Entregável | Status | Detalhe |
+|---|---|---|
+| Nesting 2D industrial | ✅ | MaxRects-BSSF (supera o guillotine) |
+| Otimização de chapas | ✅ | chapas cheias: 83–93% de aproveitamento |
+| Exportação CSV para operador | ✅ | `gerarCSVCorte()` |
+| Exportação DXF para CNC | ✅ | `gerarDXFCorte()` (parseável pela Fase 7) |
+| Etiquetas por peça | ✅ | `gerarEtiquetas()` código C{ch}-P{n} |
+| QR Codes por peça | ✅ | payload JSON para o frontend renderizar |
+
+**Arquivos criados:**
+```
+nesting.ts          — MaxRects-BSSF: gerarPlanoNesting(pecas) → PlanoNesting + SVG
+exportacao-corte.ts — CSV operador, DXF CNC, etiquetas com QR
+```
+
+**Algoritmo MaxRects (Best Short Side Fit):**
+- Agrupa peças por material (uma chapa = um material/cor/espessura).
+- Rotação 90° permitida só quando `direcao_fio === "indiferente"` (respeita o fio).
+- Considera kerf (4mm, disco de corte) e margem de refilo (10mm) nas bordas.
+- Divisão e poda de retângulos livres (algoritmo de referência da indústria).
+
+**Resultado real (cozinha 4m, 166 peças):** 7 chapas, chapas cheias com 84–93%
+de aproveitamento. A meta de < 12% de desperdício é atingida nas chapas cheias;
+o total inclui as sobras inevitáveis das chapas parciais (1 por material).
+
+**Exportações:** CSV (lista de corte por chapa com posições), DXF (layout para
+CNC, validado pelo parser DXF da Fase 7), etiquetas com payload de QR Code para
+rastreabilidade no chão de fábrica.
+
+**Integração:** o endpoint `api/motor-parametrico.ts` retorna `plano_corte`
+(com SVG por chapa) e `exportacoes_corte` (CSV + DXF + etiquetas).
+
+**Total acumulado: 217 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** arquivos aditivos. Reverter = remover `nesting.ts`,
+`exportacao-corte.ts`, os campos do endpoint e os exports no `index.ts`.
+O `api/lista-corte.ts` legado (guillotine) permanece intacto.
 
 ---
 

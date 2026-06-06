@@ -27,6 +27,8 @@ import { projetoToMovelInput } from "../src/lib/motor-parametrico/adapters";
 import { criarAmbienteManual } from "../src/lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
 import { gerarTresVersoes } from "../src/lib/motor-parametrico/orcamento-inteligente";
+import { gerarPlanoNesting } from "../src/lib/motor-parametrico/nesting";
+import { gerarExportacoes } from "../src/lib/motor-parametrico/exportacao-corte";
 import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../src/lib/motor-parametrico/tipos";
 import type { ResultadoValidacao } from "../src/lib/motor-parametrico/rule-engine";
 
@@ -137,6 +139,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 6. Gerar 3 versões de orçamento (Fase 5): econômica / intermediária / premium
     const orcamentos = gerarTresVersoes(resultado.projeto);
 
+    // 7. Gerar plano de corte (Fase 8): nesting MaxRects + exportações
+    const todasPecas = resultado.projeto.modulos.flatMap((m) => m.pecas);
+    const planoBruto = gerarPlanoNesting(todasPecas, resultado.projeto.metricas.metros_fita_borda);
+    const { plano: plano_corte, exportacoes: exportacoes_corte } = gerarExportacoes(planoBruto, resultado.projeto.id);
+
     const ms = Date.now() - inicio;
 
     return res.json({
@@ -149,6 +156,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       engenharia,
       // 3 versões comerciais com custos completos (Fase 5)
       orcamentos,
+      // Plano de corte com nesting MaxRects + exportações (Fase 8)
+      plano_corte,
+      exportacoes_corte,
       resultado: {
         paredes_usadas: resultado.paredes_usadas,
         avisos: resultado.avisos,
@@ -156,7 +166,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         score_validacao: resultado.validacao.score,
         num_modulos: resultado.projeto.modulos.length,
         num_pecas_total: resultado.projeto.metricas.num_pecas_total,
-        chapas_estimadas: resultado.projeto.metricas.chapas_15mm + resultado.projeto.metricas.chapas_6mm,
+        chapas_nesting: plano_corte.resumo.total_chapas,
+        desperdicio_pct: plano_corte.resumo.desperdicio_pct,
         metros_fita: resultado.projeto.metricas.metros_fita_borda,
         tempo_ms: ms,
       },
