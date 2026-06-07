@@ -4,7 +4,7 @@ import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
   CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
-  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers,
+  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers, Plus,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,9 +96,18 @@ type PlantaSalva = {
   porta_principal?: { parede: string }; janelas?: { parede: string }[];
 };
 
+interface ComodoWizard {
+  id: string;
+  nome: string;   // instância nomeada: "Cozinha", "Quarto Maria"
+  tipo: string;   // tipo de ambiente
+  feito: boolean; // já gerou projeto?
+}
+
 interface WizardState {
   step: 1 | 2 | 3 | 4 | 5;
   projetoId: string | null;
+  comodos: ComodoWizard[];
+  comodoAtivoId: string | null;
   form: {
     nome: string;
     ambiente: string;
@@ -298,6 +307,8 @@ function IAProjetoPage() {
     setWizard({
       step: 1,
       projetoId: null,
+      comodos: [],
+      comodoAtivoId: null,
       form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "", cor_mdf: "#f5f3f0", porta_parede: "bottom", janelas: [] },
       planta: null,
       referencias: [],
@@ -384,7 +395,11 @@ function IAProjetoPage() {
         // persist failure is non-blocking
       }
 
-      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId });
+      // Marcar o cômodo ativo como concluído (multi-cômodo)
+      const comodosAtualizados = (wizard.comodos ?? []).map((c) =>
+        c.id === wizard.comodoAtivoId ? { ...c, feito: true } : c,
+      );
+      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId, comodos: comodosAtualizados });
     } catch (e) {
       update({ analisando: false, error: e instanceof Error ? e.message : "Erro" });
     }
@@ -684,8 +699,73 @@ function Step1Form({ wizard, update, plantasSalvas }: {
   const valid = f.nome.trim().length > 0;
   const temPlantas = Object.keys(plantasSalvas).length > 0;
 
+  const comodos = wizard.comodos ?? [];
+  const [novoComodoTipo, setNovoComodoTipo] = useState("");
+
+  const addComodo = (tipo: string) => {
+    if (!tipo) return;
+    const mesmoTipo = comodos.filter((c) => c.tipo === tipo).length;
+    const nome = mesmoTipo > 0 ? `${tipo} ${mesmoTipo + 1}` : tipo;
+    const novo: ComodoWizard = { id: Math.random().toString(36).slice(2), nome, tipo, feito: false };
+    update({
+      comodos: [...comodos, novo],
+      comodoAtivoId: novo.id,
+      form: { ...f, nome: nome, ambiente: tipo },
+    });
+    setNovoComodoTipo("");
+  };
+
+  const selecionarComodo = (c: ComodoWizard) => {
+    update({ comodoAtivoId: c.id, form: { ...f, nome: c.nome, ambiente: c.tipo } });
+  };
+
+  const removerComodo = (id: string) => {
+    update({
+      comodos: comodos.filter((c) => c.id !== id),
+      comodoAtivoId: wizard.comodoAtivoId === id ? null : wizard.comodoAtivoId,
+    });
+  };
+
   return (
     <Surface className="space-y-5 max-w-2xl">
+
+      {/* ── Cômodos do projeto — escolher quais ambientes terão móveis ── */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <Label>Cômodos do projeto <span className="text-muted-foreground font-normal">— cada um tem sua medida/planta</span></Label>
+          {comodos.length > 0 && <span className="text-[11px] text-muted-foreground">{comodos.length} cômodo(s)</span>}
+        </div>
+        {comodos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {comodos.map((c) => (
+              <div key={c.id}
+                className={`group inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-md border text-[12px] font-medium transition-colors cursor-pointer ${wizard.comodoAtivoId === c.id ? "border-accent bg-accent/10 text-accent" : "border-border hover:bg-secondary"}`}
+                onClick={() => selecionarComodo(c)}>
+                {c.feito && <CheckCircle2 className="size-3 text-emerald-500" />}
+                {c.nome}
+                <button type="button" onClick={(e) => { e.stopPropagation(); removerComodo(c.id); }}
+                  className="text-muted-foreground/60 hover:text-destructive"><X className="size-3" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <select value={novoComodoTipo} onChange={(e) => setNovoComodoTipo(e.target.value)}
+            className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none text-foreground">
+            <option value="">Adicionar cômodo...</option>
+            {AMBIENTES.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <button type="button" onClick={() => addComodo(novoComodoTipo)} disabled={!novoComodoTipo}
+            className="h-8 px-3 rounded-md border border-border text-[12.5px] font-medium hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1.5">
+            <Plus className="size-3.5" /> Adicionar
+          </button>
+        </div>
+        {comodos.length > 0 && (
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            Trabalhe um cômodo por vez: selecione um chip acima, preencha medidas/planta e gere o projeto. Depois volte e faça o próximo.
+          </p>
+        )}
+      </div>
 
       {/* ── Planta baixa — PRIMEIRO para extrair medidas e layout ── */}
       <div>
