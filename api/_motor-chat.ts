@@ -46,11 +46,7 @@ Diretrizes:
 
 const MAX_ITERACOES = 5;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
-  }
-
+export async function chatHandler(req: VercelRequest, res: VercelResponse) {
   const body = req.body as RequestBody;
   if (!body.mensagens || body.mensagens.length === 0) {
     return res.status(400).json({ error: "Campo 'mensagens' obrigatório." });

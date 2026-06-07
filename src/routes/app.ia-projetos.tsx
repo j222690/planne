@@ -464,7 +464,7 @@ function IAProjetoPage() {
         const poll = setInterval(async () => {
           attempts++;
           try {
-            const r = await fetch(`/api/render-status?job_id=${data.job_id}`);
+            const r = await fetch(`/api/render?job_id=${data.job_id}`);
             if (!r.ok) {
               const errText = await r.text();
               clearInterval(poll);
@@ -1885,10 +1885,11 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                 onClick={async () => {
                   setMotorLoading(true);
                   try {
-                    const res = await fetch("/api/motor-parametrico", {
+                    const res = await fetch("/api/motor?action=gerar", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
+                        action: "gerar",
                         medidas: {
                           largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
                           profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,

@@ -91,11 +91,7 @@ async function analisarComIA(planta_b64: string, descricao?: string): Promise<Pl
   return JSON.parse(d.choices[0].message.content) as PlantaAnalisadaIA;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
-  }
-
+export async function lerPlantaHandler(req: VercelRequest, res: VercelResponse) {
   const body = req.body as RequestBody;
   if (!body.formato) {
     return res.status(400).json({ error: "Campo 'formato' obrigatório (dxf | imagem | pdf | manual)." });

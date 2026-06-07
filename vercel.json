@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
+    "api/motor.ts": { "maxDuration": 60 },
     "api/render.ts": { "maxDuration": 60 },
     "api/calcular-orcamento.ts": { "maxDuration": 30 },
     "api/agent.ts": { "maxDuration": 60 },

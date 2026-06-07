@@ -82,11 +82,7 @@ interface LayoutNormalizado {
   paredes_usadas: ParedeId[];
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
-  }
-
+export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
   const body = req.body as RequestBody;
 
   if (!body.ambiente_geometrico && !body.medidas) {
