@@ -331,6 +331,31 @@ export type {
   SeveridadeTecnica,
 } from "./consultor-tecnico";
 
+// Fase 11 — Copiloto da Marcenaria
+export {
+  orquestrarProjeto,
+  calcularIndicadores,
+  analisarViabilidade,
+  gerarSugestoes,
+} from "./copiloto";
+export type {
+  TipoComodo,
+  PreferenciasCopiloto,
+  IndicadoresNegocio,
+  AnaliseViabilidade,
+  NivelRisco,
+  Sugestao,
+  PacoteProjeto,
+} from "./copiloto";
+
+export {
+  FERRAMENTAS_COPILOTO,
+  FERRAMENTAS_POR_NOME,
+  ferramentasFormatoOpenAI,
+  executarFerramenta,
+} from "./copiloto-tools";
+export type { FerramentaCopiloto, PropriedadeSchema } from "./copiloto-tools";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,

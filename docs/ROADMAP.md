@@ -401,10 +401,68 @@ A camada LLM conversacional usa esta base como contexto auditável (não substit
 
 ---
 
-## FASE 11 — COPILOTO DA MARCENARIA ⏳ PENDENTE
+## FASE 11 — COPILOTO DA MARCENARIA ✅ CONCLUÍDA
 
-**Entregáveis:**
-- [ ] Chat operacional integrado ao motor
-- [ ] Indicadores de negócio em tempo real
-- [ ] Análises preditivas (margem, prazo, estoque)
-- [ ] Sugestões automáticas de otimização
+**Objetivo:** Costurar todas as fases num copiloto operacional.
+
+| Entregável | Status | Detalhe |
+|---|---|---|
+| Chat operacional integrado ao motor | ✅ | `api/copiloto.ts` (LLM + tool-calling) |
+| Orquestração end-to-end | ✅ | `orquestrarProjeto()` (Fases 1–10 num pipeline) |
+| Indicadores de negócio | ✅ | `calcularIndicadores()` (KPIs em tempo real) |
+| Análise preditiva | ✅ | `analisarViabilidade()` (risco + score) |
+| Sugestões automáticas | ✅ | `gerarSugestoes()` (acionáveis por prioridade) |
+
+**Arquivos criados:**
+```
+copiloto.ts        — orquestração + indicadores + viabilidade + sugestões
+copiloto-tools.ts  — catálogo de 5 ferramentas para o LLM (tool-calling)
+api/copiloto.ts    — endpoint de chat conversacional
+```
+
+**Orquestração (`orquestrarProjeto`):** um único ponto de entrada que executa
+todo o pipeline:
+```
+recomendar layout → gerar layout → validar → engenharia → orçamento (3 versões)
+  → plano de corte → PCP → análise técnica → indicadores → viabilidade → sugestões
+```
+Pacote completo gerado em ~60ms, 100% determinístico.
+
+**Indicadores:** linear de marcenaria, peso, nº peças/chapas/ferragens,
+aproveitamento de chapa, preço por metro linear e por m², margem, prazo.
+
+**Viabilidade (preditiva):** 4 fatores (validação, margem, desperdício, prazo)
+→ nível de risco (baixo/médio/alto) + score geral.
+
+**Sugestões:** erros de validação (alta), recomendações técnicas (média),
+margem baixa e upsell premium (comercial) — cada uma com ação concreta.
+
+**Ferramentas do LLM (`copiloto-tools`):** criar_ambiente, interpretar_planta,
+recomendar_layout, gerar_projeto_completo, consultar_conhecimento. O LLM **decide**
+qual chamar; a execução é determinística (Vision: "a IA decide, o motor constrói").
+
+**Total acumulado: 291 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** arquivos aditivos. Reverter = remover os 2 módulos, o endpoint
+`api/copiloto.ts` e os exports no `index.ts`.
+
+---
+
+## 🏁 ROADMAP 100% CONCLUÍDO
+
+Todas as 11 fases entregues. O motor paramétrico Planne cobre o ciclo completo:
+
+```
+Planta (DXF/imagem/medidas)
+  → AmbienteGeometrico
+  → Layout recomendado pela IA (cozinha linear/L/U/ilha, dormitório, closet, banheiro, lavanderia)
+  → Validação (Rule Engine)
+  → Peças + Ferragens + Materiais
+  → Orçamento (3 versões com engenharia de custos)
+  → Plano de corte (nesting MaxRects + DXF/CSV/etiquetas QR para CNC)
+  → Ordem de Produção (cronograma DAG)
+  → Análise técnica + indicadores + sugestões
+  → Chat operacional (copiloto)
+```
+
+**291 testes · 0 erros TypeScript · arquitetura 100% determinística e auditável.**
