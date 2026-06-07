@@ -433,6 +433,12 @@ function IAProjetoPage() {
           ambiente: wizard.form.ambiente,
           estilo: wizard.form.estilo,
           estilo_detectado: wizard.analise.estilo_detectado,
+          // Dimensões reais do ambiente — para o render respeitar proporções
+          medidas: {
+            largura: parseFloat(wizard.form.largura) || 4,
+            profundidade: parseFloat(wizard.form.profundidade) || 3,
+            altura: parseFloat(wizard.form.altura) || 2.7,
+          },
           moveis: wizard.analise.moveis.map((m) => ({
             nome: m.nome,
             categoria: m.categoria,
@@ -440,6 +446,11 @@ function IAProjetoPage() {
             largura_cm: m.largura_cm,
             profundidade_cm: m.profundidade_cm,
             altura_cm: m.altura_cm,
+            // Posicionamento espacial — para o render respeitar a disposição
+            x_pct: m.x_pct,
+            y_pct: m.y_pct,
+            parede: m.parede,
+            tipo_elemento: m.tipo_elemento,
           })),
           descricao: wizard.analise.resumo,
           descricao_comercial: wizard.analise.descricao_comercial,

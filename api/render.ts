@@ -9,6 +9,11 @@ interface MovelInput {
   largura_cm?: number;
   profundidade_cm?: number;
   altura_cm?: number;
+  // Posicionamento espacial (vista de cima) — para fidelidade do render
+  x_pct?: number;        // 0 (esquerda) a 1 (direita)
+  y_pct?: number;        // 0 (fundo) a 1 (frente/entrada)
+  parede?: "top" | "bottom" | "left" | "right";
+  tipo_elemento?: "movel" | "porta" | "janela" | "existente";
 }
 
 function hexToVisual(hex?: string): string {
@@ -59,6 +64,67 @@ interface RenderInput {
   descricao: string;
   descricao_comercial?: string;
   mode?: "schnell" | "pro";
+  // Dimensões reais do ambiente (m) — para fidelidade do render
+  medidas?: { largura: number; profundidade: number; altura: number };
+  // Planta baixa exportada (base64) — usada como guia de composição no Flux
+  planta_b64?: string;
+}
+
+// ─── Descrição espacial do layout (top-down → linguagem natural) ────────────────
+
+function lado(x?: number): string {
+  if (x === undefined) return "";
+  if (x < 0.33) return "left";
+  if (x > 0.66) return "right";
+  return "center";
+}
+
+function profundidadeRel(y?: number): string {
+  if (y === undefined) return "";
+  if (y < 0.33) return "against the back wall";
+  if (y > 0.66) return "near the entrance";
+  return "in the middle of the room";
+}
+
+const PAREDE_EN: Record<string, string> = {
+  top: "back wall", bottom: "front wall (entrance)", left: "left wall", right: "right wall",
+};
+
+/**
+ * Descreve o layout real do ambiente em linguagem natural, para o render
+ * respeitar a disposição dos móveis, portas e janelas.
+ */
+function describeLayout(moveis: MovelInput[], medidas?: RenderInput["medidas"]): string {
+  const partes: string[] = [];
+
+  if (medidas?.largura && medidas?.profundidade) {
+    partes.push(`room dimensions ${medidas.largura}m wide × ${medidas.profundidade}m deep${medidas.altura ? ` × ${medidas.altura}m ceiling height` : ""}`);
+  }
+
+  const marcenaria = moveis.filter((m) => (m.tipo_elemento ?? "movel") === "movel");
+  const existentes = moveis.filter((m) => m.tipo_elemento === "existente");
+  const portas = moveis.filter((m) => m.tipo_elemento === "porta");
+  const janelas = moveis.filter((m) => m.tipo_elemento === "janela");
+
+  const descreveMovel = (m: MovelInput) => {
+    const loc = [profundidadeRel(m.y_pct), lado(m.x_pct) ? `on the ${lado(m.x_pct)}` : ""].filter(Boolean).join(", ");
+    return loc ? `${m.nome} ${loc}` : m.nome;
+  };
+
+  if (marcenaria.length > 0) {
+    partes.push("custom built-in furniture layout: " + marcenaria.slice(0, 8).map(descreveMovel).join("; "));
+  }
+  if (existentes.length > 0) {
+    partes.push("existing furniture: " + existentes.slice(0, 5).map(descreveMovel).join("; "));
+  }
+  for (const p of portas.slice(0, 2)) {
+    partes.push(`door on the ${PAREDE_EN[p.parede ?? "bottom"]}`);
+  }
+  for (const j of janelas.slice(0, 3)) {
+    partes.push(`window on the ${PAREDE_EN[j.parede ?? "top"]}`);
+  }
+
+  return partes.join(". ");
 }
 
 const ESTILO_MAP: Record<string, string> = {
@@ -87,19 +153,25 @@ const AMBIENTE_MAP: Record<string, string> = {
 function buildRenderPrompt(input: RenderInput): string {
   const roomEn = AMBIENTE_MAP[input.ambiente] ?? input.ambiente;
   const styleEn = ESTILO_MAP[input.estilo] ?? input.estilo;
-  const moveisList = input.moveis.slice(0, 10).map(generateVisualContext).filter(Boolean).join(", ");
+  const moveisList = input.moveis
+    .filter((m) => (m.tipo_elemento ?? "movel") === "movel")
+    .slice(0, 10).map(generateVisualContext).filter(Boolean).join(", ");
   const dominantColor = hexToVisual(input.moveis[0]?.cor_hex) || "neutral warm wood tone";
+  const layout = describeLayout(input.moveis, input.medidas);
 
   return [
     "professional interior architecture visualization, photorealistic render, finished completed room",
     `${styleEn} ${roomEn}`,
     "fully furnished and decorated, ready to live in",
+    // Layout real do projeto — guia a disposição dos móveis na cena
+    layout ? `IMPORTANT spatial layout to respect: ${layout}` : "",
     moveisList ? `custom planned furniture: ${moveisList}` : "",
     `color palette: ${dominantColor}, harmonious complementary tones`,
     "Brazilian luxury marcenaria planejada, premium MDF finishing, perfect edges and details",
+    "furniture proportions must match the specified dimensions",
     "styled with decorative objects, plants, artwork, throw pillows and rugs",
     "8K photorealistic, cinematic lighting, warm natural light from windows",
-    "wide angle interior shot showing full room composition",
+    "wide angle interior shot showing full room composition from the entrance point of view",
     "architectural magazine quality, 24mm lens, clean sophisticated atmosphere",
     "no people, no text, no watermarks",
     input.descricao ? input.descricao.slice(0, 200) : "",
@@ -172,6 +244,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           guidance: fluxCfg.guidance,
           output_format: "jpeg",
           safety_tolerance: 2,
+          // Planta baixa como guia de composição (Redux-style image conditioning).
+          // Faz o render respeitar a disposição/cores do layout real do projeto.
+          ...(input.planta_b64 ? { image_prompt: input.planta_b64 } : {}),
         }),
       });
 
