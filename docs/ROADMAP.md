@@ -356,13 +356,48 @@ endpoint e os exports no `index.ts`.
 
 ---
 
-## FASE 10 — IA MARCENEIRA ⏳ PENDENTE
+## FASE 10 — IA MARCENEIRA ✅ CONCLUÍDA
 
-**Entregáveis:**
-- [ ] Conhecimento técnico de MDF e ferragens
-- [ ] Sugestões de layout baseadas em normas (NBR)
-- [ ] Estimativas de produção calibradas
-- [ ] Análise de custos regionais
+**Objetivo:** Dar ao sistema conhecimento técnico de marcenaria — auditável.
+
+| Entregável | Status | Detalhe |
+|---|---|---|
+| Conhecimento técnico de MDF | ✅ | `ESPECS_MDF` (usos, vãos, densidade) |
+| Conhecimento técnico de ferragens | ✅ | `ESPECS_FERRAGEM` + regras de dimensionamento |
+| Sugestões de layout (normas/NBR) | ✅ | `recomendarLayout()` com justificativa |
+| Estimativas calibradas | ✅ | peso por peça, dobradiças, corrediças por regra |
+| Análise técnica de projeto | ✅ | `analisarProjeto()` recomendações auditáveis |
+
+**Arquivos criados:**
+```
+conhecimento-tecnico.ts — base determinística: MDF, ferragens, NORMAS (NBR/ergonomia),
+                          BOAS_PRATICAS, perfis de módulo + consulta textual
+consultor-tecnico.ts    — recomendarLayout() e analisarProjeto() (a "IA Marceneira")
+```
+
+**Filosofia (alinhada à Vision):**
+> "A IA decide. O motor paramétrico constrói." · "Não criar IA sem integração com o núcleo."
+
+A IA Marceneira **não inventa medidas**. Ela:
+- **DECIDE** o tipo de layout (linear/L/U/ilha/dormitório/closet/banheiro/lavanderia)
+  a partir da geometria + normas, com justificativa rastreável.
+- **ANALISA** o projeto cruzando os módulos com a base de conhecimento (vão de
+  prateleira × espessura, dobradiças por altura, corrediça por profundidade,
+  circulação, peso, sugestão de LED).
+- Cada recomendação aponta para uma **norma (código ERG/NBR)** ou **boa prática (BP-xx)**.
+
+A camada LLM conversacional usa esta base como contexto auditável (não substitui as regras).
+
+**Resultado real:**
+- Cozinha 4×1.8m → linear · Cozinha 4.5×4.5m → U (alt: L, ilha) · Quarto → dormitório
+- Análise de cozinha 4m: 262kg, 14 recomendações com referências (BP-05 etc.)
+
+**Integração:** o endpoint retorna `analise_tecnica` (recomendações + peso total).
+
+**Total acumulado: 265 testes passando, 0 erros TypeScript no motor.**
+
+**Rollback:** arquivos aditivos. Reverter = remover os 2 módulos, o campo
+`analise_tecnica` do endpoint e os exports no `index.ts`.
 
 ---
 

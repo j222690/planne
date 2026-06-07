@@ -31,6 +31,7 @@ import { gerarPlanoNesting } from "../src/lib/motor-parametrico/nesting";
 import { gerarExportacoes } from "../src/lib/motor-parametrico/exportacao-corte";
 import { gerarOrdemProducao } from "../src/lib/motor-parametrico/pcp";
 import { gerarListaCompras } from "../src/lib/motor-parametrico/engenharia";
+import { analisarProjeto } from "../src/lib/motor-parametrico/consultor-tecnico";
 import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../src/lib/motor-parametrico/tipos";
 import type { ResultadoValidacao } from "../src/lib/motor-parametrico/rule-engine";
 
@@ -150,6 +151,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const lista_compras = gerarListaCompras(resultado.projeto);
     const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
 
+    // 9. Análise técnica da IA Marceneira (Fase 10): recomendações auditáveis
+    const analise_tecnica = analisarProjeto(resultado.projeto);
+
     const ms = Date.now() - inicio;
 
     return res.json({
@@ -176,6 +180,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         etapas: pcpResultado.etapas_agendadas,
         lista_compras: pcpResultado.ordem.lista_compras,
       },
+      // Análise técnica auditável da IA Marceneira (Fase 10)
+      analise_tecnica,
       resultado: {
         paredes_usadas: resultado.paredes_usadas,
         avisos: resultado.avisos,

@@ -296,6 +296,41 @@ export type {
   ResultadoPCP,
 } from "./pcp";
 
+// Fase 10 — IA Marceneira (conhecimento técnico)
+export {
+  ESPECS_MDF,
+  ESPECS_FERRAGEM,
+  NORMAS,
+  BOAS_PRATICAS,
+  PERFIS_MODULO,
+  espessuraParaVao,
+  pesoPeca,
+  numDobradicasPorPorta,
+  corredicaParaProfundidade,
+  boasPraticasPorCategoria,
+  consultarConhecimento,
+} from "./conhecimento-tecnico";
+export type {
+  EspecMDF,
+  EspecFerragem,
+  NormaTecnica,
+  BoaPratica,
+  PerfilModulo,
+  RespostaConhecimento,
+} from "./conhecimento-tecnico";
+
+export {
+  recomendarLayout,
+  analisarProjeto,
+} from "./consultor-tecnico";
+export type {
+  TipoLayoutRecomendado,
+  RecomendacaoLayout,
+  RecomendacaoTecnica,
+  AnaliseTecnica,
+  SeveridadeTecnica,
+} from "./consultor-tecnico";
+
 // Funções de AmbienteGeometrico
 export {
   calcularSegmentosLivres,
