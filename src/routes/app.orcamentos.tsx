@@ -398,6 +398,20 @@ function WallVisualization({
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
 
+// Um cômodo do orçamento — instância nomeada com medida e/ou planta próprias.
+interface ComodoOrc {
+  id: string;
+  nome: string;            // "Cozinha", "Quarto Maria" (editável)
+  tipo: string;            // chave de MOVEIS_POR_AMBIENTE
+  largura: number;
+  profundidade: number;
+  altura: number;
+  plantaB64: string | null;
+  plantaNome: string | null;
+  plantaInfo: PlantaInfo | null;
+  analisando: boolean;
+}
+
 function OrcamentoModal({ onClose, onSaved, editOrc }: {
   onClose: () => void; onSaved: () => void; editOrc?: Orc & { itens?: OrcItem[] };
 }) {
@@ -417,6 +431,67 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [medidas, setMedidas] = useState({ largura: 0, profundidade: 0, altura: 2.7 });
   const [comodosMedidas, setComodosMedidas] = useState<Record<string, { largura: number; profundidade: number; altura: number }>>({});
   const [descricao, setDescricao] = useState("");
+
+  // Cômodos do orçamento (instâncias nomeadas, cada um com medida e/ou planta)
+  const [comodos, setComodos] = useState<ComodoOrc[]>([]);
+  const [novoComodoTipo, setNovoComodoTipo] = useState("");
+
+  const addComodo = (tipo: string) => {
+    if (!tipo) return;
+    setComodos((prev) => {
+      const mesmoTipo = prev.filter((c) => c.tipo === tipo).length;
+      const nome = mesmoTipo > 0 ? `${tipo} ${mesmoTipo + 1}` : tipo;
+      return [...prev, {
+        id: Math.random().toString(36).slice(2),
+        nome, tipo, largura: 0, profundidade: 0, altura: 2.7,
+        plantaB64: null, plantaNome: null, plantaInfo: null, analisando: false,
+      }];
+    });
+    setNovoComodoTipo("");
+  };
+
+  const updateComodo = (id: string, patch: Partial<ComodoOrc>) =>
+    setComodos((prev) => prev.map((c) => c.id === id ? { ...c, ...patch } : c));
+
+  const removeComodo = (id: string) => {
+    const c = comodos.find((x) => x.id === id);
+    setComodos((prev) => prev.filter((x) => x.id !== id));
+    // Remover móveis do cômodo removido
+    if (c) setMoveis((prev) => prev.filter((m) => m.comodo_nome !== c.nome));
+  };
+
+  const analisarPlantaComodo = async (id: string, file: File) => {
+    const b64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    updateComodo(id, { plantaB64: b64, plantaNome: file.name, plantaInfo: null, analisando: true });
+    try {
+      const res = await fetch("/api/analisar-planta", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planta_b64: b64 }),
+      });
+      if (res.ok) {
+        const info = await res.json() as PlantaInfo;
+        updateComodo(id, {
+          plantaInfo: info, analisando: false,
+          largura: info.largura_cm / 100, profundidade: info.profundidade_cm / 100, altura: info.altura_cm / 100,
+        });
+        toast.success(`Planta analisada: ${(info.largura_cm / 100).toFixed(1)}×${(info.profundidade_cm / 100).toFixed(1)}m`);
+      } else {
+        updateComodo(id, { analisando: false });
+        toast.error("Não foi possível analisar a planta deste cômodo");
+      }
+    } catch {
+      updateComodo(id, { analisando: false });
+      toast.error("Erro ao analisar planta");
+    }
+  };
+
+  /** Cômodo é válido se tem planta OU largura+profundidade. */
+  const comodoValido = (c: ComodoOrc) => !!c.plantaB64 || (c.largura > 0 && c.profundidade > 0);
 
   // Planta analisada
   const [plantaInfo, setPlantaInfo] = useState<PlantaInfo | null>(null);
@@ -584,21 +659,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
     setAiLoading(true);
     try {
-      const ambienteContexto = (() => {
-        const rooms = new Set<string>();
-        for (const m of moveis) {
-          const room = AMBIENTES.find((a) => MOVEIS_POR_AMBIENTE[a].some((t) => t.tipo === m.tipo));
-          if (room) rooms.add(room);
-        }
-        return rooms.size > 0 ? [...rooms].join(" e ") : "Residencial";
-      })();
+      const ambienteContexto = comodos.length > 0
+        ? [...new Set(comodos.map((c) => c.nome))].join(" e ")
+        : "Residencial";
+      const primeiro = comodos[0];
       const body = {
         ambiente: ambienteContexto, descricao, margem_pct: margemPct,
         moveis,
         materiais: catalogo,
-        ...(plantaB64 ? { planta_b64: plantaB64 } : {}),
-        ...(!plantaB64 && (medidas.largura || medidas.profundidade) ? { medidas } : {}),
-        ...(plantaInfo ? { restricoes_espaciais: plantaInfo } : {}),
+        // Medidas por cômodo (cada um com sua planta ou medida já resolvida)
+        comodos: comodosMedidas,
+        ...(primeiro && primeiro.largura ? { medidas: { largura: primeiro.largura, profundidade: primeiro.profundidade, altura: primeiro.altura } } : {}),
       };
       const res = await fetch("/api/calcular-orcamento", {
         method: "POST",
@@ -729,62 +800,81 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               </div>
             </div>
 
-            {/* Planta baixa */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Planta baixa (opcional)</Label>
-                {plantaNome && (
-                  <button type="button" onClick={() => { setPlantaB64(null); setPlantaNome(null); setPlantaInfo(null); }}
-                    className="text-[11px] text-destructive hover:opacity-70">remover</button>
-                )}
+            {/* Cômodos — cada um com sua medida e/ou planta */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label>Cômodos do projeto *</Label>
+                <span className="text-[11px] text-muted-foreground">{comodos.length} cômodo(s)</span>
               </div>
-              {plantaNome ? (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[13px] text-emerald-700 dark:text-emerald-400">
-                    <ImageUp className="size-3.5" /> {plantaNome}
-                    {analisandoPlanta
-                      ? <span className="text-[11px] ml-auto text-emerald-600/70 flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> Analisando...</span>
-                      : plantaInfo
-                        ? <span className="text-[11px] ml-auto text-emerald-600/70">✓ {plantaInfo.paredes.length} paredes · {(plantaInfo.largura_cm / 100).toFixed(1)}m × {(plantaInfo.profundidade_cm / 100).toFixed(1)}m × {(plantaInfo.altura_cm / 100).toFixed(1)}m</span>
-                        : <span className="text-[11px] ml-auto text-emerald-600/70">Medidas extraídas automaticamente</span>
-                    }
+
+              {comodos.length === 0 && (
+                <div className="text-[12px] text-muted-foreground bg-surface-2 border border-dashed border-border rounded-md px-3 py-4 text-center">
+                  Adicione os cômodos que terão móveis. Cada um pode ter sua própria planta ou medida.
+                </div>
+              )}
+
+              {comodos.map((c) => (
+                <div key={c.id} className="rounded-lg border border-border bg-surface-2 p-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <input value={c.nome} onChange={(e) => updateComodo(c.id, { nome: e.target.value })}
+                      className="flex-1 h-8 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium outline-none"
+                      placeholder="Nome do cômodo" />
+                    <span className="text-[10px] px-1.5 py-1 rounded bg-accent/10 text-accent font-medium shrink-0">{c.tipo}</span>
+                    <button type="button" onClick={() => removeComodo(c.id)}
+                      className="text-muted-foreground hover:text-destructive shrink-0"><X className="size-4" /></button>
                   </div>
-                  {plantaInfo?.observacoes && (
-                    <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground px-1">
-                      <Info className="size-3 shrink-0 mt-0.5" /><span>{plantaInfo.observacoes}</span>
+
+                  {/* Planta do cômodo */}
+                  {c.plantaNome ? (
+                    <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[12px] text-emerald-700 dark:text-emerald-400">
+                      <ImageUp className="size-3.5" /> <span className="truncate">{c.plantaNome}</span>
+                      {c.analisando
+                        ? <span className="text-[10.5px] ml-auto flex items-center gap-1 shrink-0"><Loader2 className="size-3 animate-spin" /> Analisando...</span>
+                        : c.plantaInfo
+                          ? <span className="text-[10.5px] ml-auto shrink-0">✓ {(c.plantaInfo.largura_cm / 100).toFixed(1)}×{(c.plantaInfo.profundidade_cm / 100).toFixed(1)}m</span>
+                          : null}
+                      <button type="button" onClick={() => updateComodo(c.id, { plantaB64: null, plantaNome: null, plantaInfo: null })}
+                        className="text-[10.5px] text-destructive hover:opacity-70 shrink-0 ml-1">remover</button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-dashed border-border text-[12px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer">
+                      <ImageUp className="size-3.5" /> Planta deste cômodo (IA extrai as medidas)
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) analisarPlantaComodo(c.id, f); e.target.value = ""; }} />
+                    </label>
+                  )}
+
+                  {/* Medidas — só se não tiver planta */}
+                  {!c.plantaB64 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["largura", "profundidade", "altura"] as const).map((dim) => {
+                        const faltando = dim !== "altura" && !c[dim];
+                        return (
+                          <input key={dim} type="number" step="0.01" min="0.1"
+                            placeholder={dim === "largura" ? "Larg m *" : dim === "profundidade" ? "Prof m *" : "Alt m"}
+                            value={c[dim] || ""}
+                            onChange={(e) => updateComodo(c.id, { [dim]: Number(e.target.value) })}
+                            className={`w-full h-8 rounded-md border bg-background px-2.5 text-[12.5px] outline-none ${faltando ? "border-destructive/60 placeholder:text-destructive/60" : "border-border"}`} />
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-              ) : (
-                <button type="button" onClick={() => plantaRef.current?.click()}
-                  className="flex items-center gap-2 h-9 px-3 w-full rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
-                  <ImageUp className="size-3.5" /> Adicionar planta baixa — a IA extrai as medidas automaticamente
-                </button>
-              )}
-              <input ref={plantaRef} type="file" accept="image/*" className="hidden" onChange={handlePlantaUpload} />
-            </div>
+              ))}
 
-            {/* Medidas manuais — só mostra se não tiver planta */}
-            {!plantaB64 && (
-              <div>
-                <Label>Medidas do ambiente *</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["largura", "profundidade", "altura"] as const).map((dim) => {
-                    const obrigatorio = dim !== "altura";
-                    const faltando = obrigatorio && !medidas[dim];
-                    return (
-                      <div key={dim} className="relative">
-                        <input type="number" step="0.01" min="0.1"
-                          placeholder={dim === "largura" ? "Larg m *" : dim === "profundidade" ? "Prof m *" : "Alt m"}
-                          value={medidas[dim] || ""}
-                          onChange={(e) => setMedidas((prev) => ({ ...prev, [dim]: Number(e.target.value) }))}
-                          className={`w-full h-9 rounded-md border bg-surface-2 px-2.5 text-[13px] outline-none ${faltando ? "border-destructive/60 placeholder:text-destructive/60" : "border-border"}`} />
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Adicionar cômodo */}
+              <div className="flex items-center gap-2">
+                <select value={novoComodoTipo} onChange={(e) => setNovoComodoTipo(e.target.value)}
+                  className="flex-1 h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground">
+                  <option value="">Escolher tipo de cômodo...</option>
+                  {Object.keys(MOVEIS_POR_AMBIENTE).map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <button type="button" onClick={() => addComodo(novoComodoTipo)} disabled={!novoComodoTipo}
+                  className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1.5">
+                  <Plus className="size-3.5" /> Adicionar
+                </button>
               </div>
-            )}
+            </div>
 
             {/* Descrição */}
             <div>
@@ -809,10 +899,14 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               </div>
               <button type="button" onClick={() => {
                 if (!clienteId) { toast.error("Selecione um cliente."); return; }
-                if (!plantaB64 && (!medidas.largura || !medidas.profundidade)) {
-                  toast.error("Informe a largura e profundidade do ambiente, ou faça upload da planta baixa.");
+                if (comodos.length === 0) { toast.error("Adicione ao menos um cômodo."); return; }
+                const invalidos = comodos.filter((c) => !comodoValido(c));
+                if (invalidos.length > 0) {
+                  toast.error(`Informe a planta ou as medidas de: ${invalidos.map((c) => c.nome).join(", ")}`);
                   return;
                 }
+                // Sincronizar comodosMedidas a partir dos cômodos (para geração/save)
+                setComodosMedidas(Object.fromEntries(comodos.map((c) => [c.nome, { largura: c.largura, profundidade: c.profundidade, altura: c.altura }])));
                 setFase("moveis");
               }}
                 className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5">
@@ -847,22 +941,25 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   className="w-full h-8 rounded border border-border bg-surface-2 pl-8 pr-3 text-[12.5px] outline-none focus:border-border-strong" />
               </div>
 
-              {/* Seções por ambiente */}
+              {/* Seções por cômodo escolhido */}
               <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
-                {AMBIENTES.map((amb) => {
-                  const templates = MOVEIS_POR_AMBIENTE[amb];
+                {comodos.map((c) => {
+                  const templates = MOVEIS_POR_AMBIENTE[c.tipo] ?? [];
                   const filtered = searchMoveis.trim()
                     ? templates.filter((t) => t.nome.toLowerCase().includes(searchMoveis.toLowerCase()))
                     : templates;
                   if (filtered.length === 0) return null;
-                  const selCount = templates.filter((t) => moveis.some((m) => m.tipo === t.tipo && m.comodo_nome === amb)).length;
-                  const isOpen = openAmbientes.has(amb) || selCount > 0 || searchMoveis.trim().length > 0;
-                  const dimAmb = comodosMedidas[amb] ?? { largura: 0, profundidade: 0, altura: 0 };
+                  const selCount = templates.filter((t) => moveis.some((m) => m.tipo === t.tipo && m.comodo_nome === c.nome)).length;
+                  const isOpen = openAmbientes.has(c.nome) || selCount > 0 || searchMoveis.trim().length > 0;
                   return (
-                    <div key={amb} className="rounded-lg border border-border overflow-hidden">
-                      <button type="button" onClick={() => toggleAmbiente(amb)}
+                    <div key={c.id} className="rounded-lg border border-border overflow-hidden">
+                      <button type="button" onClick={() => toggleAmbiente(c.nome)}
                         className="w-full flex items-center justify-between px-3 py-2 bg-secondary/30 hover:bg-secondary/50 transition-colors text-left">
-                        <span className="text-[12.5px] font-medium">{amb}</span>
+                        <span className="text-[12.5px] font-medium flex items-center gap-2">
+                          {c.nome}
+                          {c.plantaB64 && <span className="text-[10px] text-emerald-600 dark:text-emerald-400">planta</span>}
+                          <span className="text-[10.5px] text-muted-foreground">{c.largura > 0 ? `${c.largura}×${c.profundidade}m` : ""}</span>
+                        </span>
                         <div className="flex items-center gap-2">
                           {selCount > 0 && (
                             <span className="text-[10.5px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-medium">{selCount} sel.</span>
@@ -871,24 +968,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         </div>
                       </button>
                       {isOpen && (
-                        <div className="px-2.5 py-2 space-y-2">
-                          {/* Medidas do cômodo */}
-                          <div className="flex gap-1.5 items-center">
-                            <span className="text-[10.5px] text-muted-foreground shrink-0">Medidas (m):</span>
-                            {(["largura", "profundidade", "altura"] as const).map((dim) => (
-                              <div key={dim} className="flex-1 min-w-0">
-                                <input type="number" step="0.1" min="0" placeholder={dim === "largura" ? "L" : dim === "profundidade" ? "P" : "Alt"}
-                                  value={dimAmb[dim] || ""}
-                                  onChange={(e) => setComodosMedidas((prev) => ({ ...prev, [amb]: { ...dimAmb, [dim]: Number(e.target.value) } }))}
-                                  className="w-full h-6 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none focus:border-border-strong" />
-                              </div>
-                            ))}
-                          </div>
+                        <div className="px-2.5 py-2">
                           <div className="flex flex-wrap gap-1.5">
                             {filtered.map((template) => {
-                              const sel = moveis.find((m) => m.tipo === template.tipo && m.comodo_nome === amb);
+                              const sel = moveis.find((m) => m.tipo === template.tipo && m.comodo_nome === c.nome);
                               return (
-                                <button key={template.tipo} type="button" onClick={() => toggleMovel(template, amb)}
+                                <button key={template.tipo} type="button" onClick={() => toggleMovel(template, c.nome)}
                                   className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${sel ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
                                   {template.nome}
                                 </button>
