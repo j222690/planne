@@ -182,13 +182,13 @@ function buildRenderPrompt(input: RenderInput): string {
 
 const FLUX_CONFIGS = {
   schnell: {
-    endpoint: "https://api.bfl.ml/v1/flux-schnell",
+    endpoint: "https://api.bfl.ai/v1/flux-schnell",
     steps: 4,
     guidance: 3.5,
     label: "Flux Schnell (preview)",
   },
   pro: {
-    endpoint: "https://api.bfl.ml/v1/flux-pro-1.1",
+    endpoint: "https://api.bfl.ai/v1/flux-pro-1.1",
     steps: 40,
     guidance: 3.5,
     label: "Flux Pro 1.1 (premium)",
@@ -345,7 +345,7 @@ async function statusHandler(req: VercelRequest, res: VercelResponse) {
   if (!fluxKey) return res.status(500).json({ error: "FLUX_API_KEY não configurada" });
   if (!job_id) return res.status(400).json({ error: "job_id obrigatório" });
 
-  const response = await fetch(`https://api.bfl.ml/v1/get_result?id=${job_id}`, {
+  const response = await fetch(`https://api.bfl.ai/v1/get_result?id=${job_id}`, {
     headers: { "X-Key": fluxKey },
   });
 
