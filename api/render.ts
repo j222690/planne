@@ -284,7 +284,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           n: 1,
           size: "1024x1024",
           quality: "standard",
-          style: "natural",
         }),
       });
 
@@ -312,7 +311,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           n: 1,
           size: "1792x1024",
           quality: "hd",
-          style: "natural",
         }),
       });
 
