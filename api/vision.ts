@@ -11,9 +11,19 @@ REGRAS OBRIGATÓRIAS:
 4. INCLUA todos os móveis de marcenaria planejada com tipo_elemento: "movel" e customizado: true.
 5. DIMENSIONE tudo usando EXCLUSIVAMENTE as medidas numéricas fornecidas pelo usuário no texto (largura, profundidade, pé-direito). NUNCA tente inferir ou corrigir as dimensões com base na imagem da planta — a imagem serve apenas para entender a disposição espacial (onde ficam elementos no espaço). As medidas do usuário são as medidas reais medidas no local.
 6. POSICIONE todos os elementos de forma funcional (vista superior), respeitando circulação mínima de 80cm entre móveis.
-7. NUNCA retorne menos de 5 elementos para qualquer ambiente (incluindo porta + janela).
+7. MARCENARIA COMPLETA E SOB MEDIDA — esta é a regra mais importante: gere TODA a marcenaria planejada que caiba no ambiente, dimensionada para PREENCHER as paredes disponíveis (sob medida, não móveis soltos pequenos). NUNCA retorne menos de 4 móveis de MARCENARIA (tipo_elemento "movel", customizado true) por ambiente, ALÉM de portas, janelas e existentes. Em cozinha, inclua SEMPRE armários inferiores E superiores E bancada (no mínimo). Aproveite todas as paredes livres: se uma parede tem 3m livres, o armário deve ter ~3m (sob medida), não 1m.
 8. O preço e chapas_mdf de porta, janela e existente devem ser ZERO (não fazem parte do orçamento de marcenaria).
-9. Os móveis de marcenaria NÃO devem ultrapassar as dimensões do ambiente. Cada móvel deve caber dentro da largura e profundidade declaradas pelo usuário, respeitando a escala real.
+9. Os móveis de marcenaria NÃO devem ultrapassar as dimensões do ambiente. Cada móvel deve caber dentro da largura e profundidade declaradas pelo usuário, respeitando a escala real. As LARGURAS dos móveis devem ser dimensionadas ao espaço real da parede (sob medida).
+
+CHECKLIST OBRIGATÓRIO DE MARCENARIA POR AMBIENTE (inclua todos que couberem no espaço):
+- Cozinha: armários inferiores (gabinetes base, sob medida na parede), armários superiores (aéreos, sob medida), bancada/tampo, torre quente (forno+micro-ondas), paneleiro ou despenseiro. Geladeira/fogão/cooktop = existente.
+- Quarto casal/solteiro: roupeiro/guarda-roupa (sob medida, ocupando a parede), painel/cabeceira, criado-mudo (1 a 2), cômoda OU gaveteiro, opcional escrivaninha/penteadeira. Cama = existente.
+- Closet: roupeiros, módulos de prateleiras abertas, gaveteiros, sapateira, cabideiros.
+- Sala de estar: rack/painel de TV (sob medida na parede), estante/painel ripado, aparador/buffet, opcional home theater. Sofá/mesa de centro = existente.
+- Home office/Escritório: bancada/mesa de trabalho (sob medida), armário de arquivos, estante/prateleiras, gaveteiro. Cadeira = existente.
+- Banheiro: gabinete da pia (sob medida), espelheira/armário-espelho, nicho. Vaso/box = existente.
+- Lavanderia: gabinete do tanque, armário de produtos, bancada de apoio. Tanque/máquina = existente.
+- Área gourmet: bancada/balcão, armários inferiores e superiores, adega/nichos. Churrasqueira/cooktop = existente.
 
 TIPOS DE ELEMENTOS:
 - "movel" = marcenaria planejada (armário, roupeiro, cozinha, rack, prateleiras, nichos, gaveteiro, etc.) — customizado: true
@@ -224,10 +234,10 @@ INSTRUÇÃO CRÍTICA: Inclua TODOS os elementos do cômodo no array "moveis":
 1. Porta (tipo_elemento: "porta") na parede identificada
 2. Janela(s) (tipo_elemento: "janela") nas paredes identificadas
 3. Móveis existentes/comprados: cama, sofá, geladeira, fogão, etc. (tipo_elemento: "existente", customizado: false, preco_estimado: 0)
-4. Marcenaria planejada: armários, roupeiros, racks, bancadas, etc. (tipo_elemento: "movel", customizado: true)
+4. Marcenaria planejada SOB MEDIDA: gere TODA a marcenaria que caiba (mínimo 4 móveis tipo "movel"), dimensionada para preencher as paredes livres. Para ${ambiente}, siga o CHECKLIST OBRIGATÓRIO DE MARCENARIA do sistema e inclua todos os módulos cabíveis (ex.: cozinha = armários inferiores + superiores + bancada + torre + paneleiro).
 
 O orçamento e os itens devem considerar APENAS os elementos com customizado: true.
-LEMBRETE FINAL: Nenhum móvel pode ser maior que o ambiente. ${temPlanta ? "Use as dimensões lidas da planta para escalar os móveis." : `Ambiente: ${medidasRef}.`}`,
+LEMBRETE FINAL: Nenhum móvel pode ser maior que o ambiente, mas a marcenaria deve ser SOB MEDIDA (ocupar ao máximo as paredes livres, não móveis pequenos soltos). ${temPlanta ? "Use as dimensões lidas da planta para escalar os móveis." : `Ambiente: ${medidasRef}.`}`,
     },
   ];
 
