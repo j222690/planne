@@ -228,6 +228,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "Nenhuma API de render configurada (FLUX_API_KEY ou OPENAI_API_KEY)" });
   }
 
+  // Diagnóstico de configuração de chaves (tamanhos apenas, sem expor valores)
+  if (body.descricao === "__diag__") {
+    return res.json({
+      flux_key_len: (fluxKey ?? "").length,
+      flux_key_trim_len: (fluxKey ?? "").trim().length,
+      flux_key_preview: fluxKey ? `${fluxKey.trim().slice(0, 4)}…${fluxKey.trim().slice(-2)}` : null,
+      openai_key_len: (openaiKey ?? "").length,
+    });
+  }
+
   const prompt = buildRenderPrompt(input);
   const fluxCfg = FLUX_CONFIGS[mode];
 
