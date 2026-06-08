@@ -269,31 +269,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ── DALL-E fallback ────────────────────────────────────────────────────────
-  // schnell → DALL-E 2 (1024×1024, ~4–8s, without Pro plan 60s maxDuration)
-  // pro     → DALL-E 3 HD (1792×1024, ~20–40s, requires maxDuration: 60 in vercel.json)
+  // ── DALL-E fallback (DALL-E 2 foi descontinuado pela OpenAI) ────────────────
+  // schnell → DALL-E 3 standard (1024×1024)
+  // pro     → DALL-E 3 HD (1792×1024, requires maxDuration: 60 in vercel.json)
   if (openaiKey) {
     if (mode === "schnell") {
-      // DALL-E 2: fast, within Vercel 10s limit, good for previews
+      // DALL-E 3 standard: preview de qualidade (dall-e-2 não existe mais)
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
         body: JSON.stringify({
-          model: "dall-e-2",
-          prompt: prompt.slice(0, 1000),
+          model: "dall-e-3",
+          prompt: prompt.slice(0, 4000),
           n: 1,
           size: "1024x1024",
+          quality: "standard",
+          style: "natural",
         }),
       });
 
       if (!response.ok) {
         const err = await response.text();
-        return res.status(502).json({ error: `DALL-E 2: ${err.slice(0, 300)}` });
+        return res.status(502).json({ error: `DALL-E 3 (preview): ${err.slice(0, 300)}` });
       }
 
       const data = (await response.json()) as { data: { url: string }[] };
       return res.json({
-        provider: "dalle2",
+        provider: "dalle3",
         status: "completed",
         url: data.data[0].url,
         mode,
