@@ -236,7 +236,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const response = await fetch(fluxCfg.endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Key": fluxKey },
+        headers: { "Content-Type": "application/json", "x-key": fluxKey.trim() },
         body: JSON.stringify({
           prompt,
           width: mode === "schnell" ? 1024 : 1440,
@@ -351,7 +351,7 @@ async function statusHandler(req: VercelRequest, res: VercelResponse) {
   if (!job_id) return res.status(400).json({ error: "job_id obrigatório" });
 
   const response = await fetch(`https://api.bfl.ai/v1/get_result?id=${job_id}`, {
-    headers: { "X-Key": fluxKey },
+    headers: { "x-key": fluxKey.trim() },
   });
 
   if (!response.ok) {
