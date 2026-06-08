@@ -182,10 +182,11 @@ function buildRenderPrompt(input: RenderInput): string {
 
 const FLUX_CONFIGS = {
   schnell: {
-    endpoint: "https://api.bfl.ai/v1/flux-schnell",
-    steps: 4,
-    guidance: 3.5,
-    label: "Flux Schnell (preview)",
+    // flux-schnell não existe na API comercial; flux-dev é o rápido/barato p/ preview
+    endpoint: "https://api.bfl.ai/v1/flux-dev",
+    steps: 28,
+    guidance: 3,
+    label: "Flux Dev (preview)",
   },
   pro: {
     endpoint: "https://api.bfl.ai/v1/flux-pro-1.1",
