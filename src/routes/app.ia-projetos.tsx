@@ -1609,6 +1609,127 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
   );
 }
 
+// Resultado completo do motor paramétrico (/api/motor?action=gerar)
+interface VersaoOrc {
+  versao: string;
+  analise_financeira: { custo_total: number; preco_venda: number; margem_desejada_pct: number };
+  prazo_producao_dias: number;
+}
+interface MotorResultado {
+  projeto: { modulos: Movel[] };
+  validacao: { status: string; score: number; resumo: { erros: number; alertas: number } };
+  orcamentos: { economica: VersaoOrc; intermediaria: VersaoOrc; premium: VersaoOrc; comparativo: { preco_economica: number; preco_intermediaria: number; preco_premium: number } };
+  plano_corte: { resumo: { total_chapas: number; total_pecas: number; desperdicio_pct: number; metros_fita_total: number } };
+  exportacoes_corte: { csv_operador: string; dxf_corte: string; etiquetas: { codigo: string; descricao: string }[] };
+  pcp: { numero: string; prazo_dias_uteis: number; duracao_total_horas: number; data_entrega_prometida: string; etapas: { tipo: string; duracao_estimada_horas: number; funcao_responsavel: string }[] };
+  analise_tecnica: { recomendacoes: { severidade: string; titulo: string; detalhe: string; referencia?: string }[]; resumo: { total: number; atencao: number; peso_total_kg: number } };
+  resultado: { avisos: string[]; status_validacao: string; score_validacao: number };
+}
+
+// Ambientes do wizard → tipo de layout do motor paramétrico
+const AMBIENTE_TO_LAYOUT: Record<string, string> = {
+  "Cozinha": "cozinha_linear",
+  "Área gourmet": "cozinha_linear",
+  "Quarto casal": "dormitorio",
+  "Quarto solteiro": "dormitorio",
+  "Closet": "closet",
+  "Banheiro": "banheiro",
+};
+
+function baixarArquivo(conteudo: string, nome: string, mime: string) {
+  const blob = new Blob([conteudo], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nome; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Painel que exibe o resultado completo do motor paramétrico
+function MotorResultadoPainel({ data }: { data: MotorResultado }) {
+  const statusClasse = data.validacao.status === "aprovado"
+    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+    : data.validacao.status === "reprovado"
+      ? "bg-red-500/10 text-red-700 dark:text-red-400"
+      : "bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  const c = data.orcamentos.comparativo;
+  const recs = data.analise_tecnica.recomendacoes.filter((r) => r.severidade !== "info").slice(0, 4);
+
+  return (
+    <div className="space-y-3 pt-3 border-t border-border">
+      {/* Validação */}
+      <div className={`flex items-center gap-2 text-[12.5px] px-3 py-2 rounded-md ${statusClasse}`}>
+        <CheckCircle2 className="size-4" />
+        <span className="font-semibold capitalize">{data.validacao.status.replace(/_/g, " ")}</span>
+        <span>· score {data.validacao.score}/100</span>
+        {data.validacao.resumo.alertas > 0 && <span className="text-amber-600">· {data.validacao.resumo.alertas} alerta(s)</span>}
+      </div>
+
+      {/* 3 versões de orçamento */}
+      <div>
+        <div className="text-[12px] font-semibold mb-1.5 flex items-center gap-1.5"><DollarSign className="size-3.5 text-accent" /> 3 versões de orçamento</div>
+        <div className="grid grid-cols-3 gap-2">
+          {([["economica", "Econômica", c.preco_economica], ["intermediaria", "Intermediária", c.preco_intermediaria], ["premium", "Premium", c.preco_premium]] as const).map(([k, label, preco]) => {
+            const v = data.orcamentos[k];
+            return (
+              <div key={k} className={`rounded-md border p-2.5 ${k === "intermediaria" ? "border-accent bg-accent/5" : "border-border"}`}>
+                <div className="text-[11px] text-muted-foreground">{label}</div>
+                <div className="text-[15px] font-bold mt-0.5">{BRL(preco)}</div>
+                <div className="text-[10.5px] text-muted-foreground mt-1">
+                  custo {BRL(v.analise_financeira.custo_total)} · margem {v.analise_financeira.margem_desejada_pct}%
+                </div>
+                <div className="text-[10.5px] text-muted-foreground">prazo {v.prazo_producao_dias} dias</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Plano de corte + PCP */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-md border border-border p-2.5">
+          <div className="text-[12px] font-semibold mb-1 flex items-center gap-1.5"><Scissors className="size-3.5 text-accent" /> Plano de corte</div>
+          <div className="text-[11px] text-muted-foreground space-y-0.5">
+            <div>{data.plano_corte.resumo.total_chapas} chapas · {data.plano_corte.resumo.total_pecas} peças</div>
+            <div>{data.plano_corte.resumo.desperdicio_pct}% desperdício · {data.plano_corte.resumo.metros_fita_total}m fita</div>
+            <div>{data.exportacoes_corte.etiquetas.length} etiquetas QR</div>
+          </div>
+          <div className="flex gap-1.5 mt-2">
+            <button type="button" onClick={() => baixarArquivo(data.exportacoes_corte.csv_operador, "plano-corte.csv", "text/csv")}
+              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1"><Download className="size-3" /> CSV</button>
+            <button type="button" onClick={() => baixarArquivo(data.exportacoes_corte.dxf_corte, "plano-corte.dxf", "application/dxf")}
+              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1"><Download className="size-3" /> DXF</button>
+          </div>
+        </div>
+        <div className="rounded-md border border-border p-2.5">
+          <div className="text-[12px] font-semibold mb-1 flex items-center gap-1.5"><Factory className="size-3.5 text-accent" /> Produção (PCP)</div>
+          <div className="text-[11px] text-muted-foreground space-y-0.5">
+            <div>Ordem {data.pcp.numero}</div>
+            <div>{data.pcp.etapas.length} etapas · {data.pcp.duracao_total_horas}h</div>
+            <div>prazo {data.pcp.prazo_dias_uteis} dias úteis</div>
+            <div>entrega {new Date(data.pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recomendações técnicas */}
+      {recs.length > 0 && (
+        <div className="rounded-md border border-border p-2.5">
+          <div className="text-[12px] font-semibold mb-1.5 flex items-center gap-1.5"><AlertCircle className="size-3.5 text-amber-500" /> Recomendações técnicas · {data.analise_tecnica.resumo.peso_total_kg}kg</div>
+          <div className="space-y-1">
+            {recs.map((r, i) => (
+              <div key={i} className="text-[11px] text-muted-foreground">
+                <span className={`font-medium ${r.severidade === "atencao" ? "text-amber-600" : "text-foreground"}`}>{r.titulo}</span>
+                {r.referencia && <span className="text-[10px] ml-1 opacity-60">[{r.referencia}]</span>}
+                <span className="block opacity-80">{r.detalhe}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte, criarOrdem, clientes }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
@@ -1623,6 +1744,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const [motorLoading, setMotorLoading] = useState(false);
   const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
   const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">("nacional");
+  const [motorResultado, setMotorResultado] = useState<MotorResultado | null>(null);
 
   const { analise, moveis } = wizard;
   if (!analise) return null;
@@ -1916,15 +2038,15 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         )}
       </Surface>
 
-      {/* Motor Paramétrico — disponível para cozinha */}
-      {wizard.form.ambiente === "Cozinha" && (
+      {/* Motor Paramétrico — disponível para ambientes suportados */}
+      {AMBIENTE_TO_LAYOUT[wizard.form.ambiente] && (
         <Surface className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Settings2 className="size-4 text-emerald-500" />
               <span className="text-[14px] font-semibold">Motor Paramétrico</span>
               <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
-                100% determinístico · sem IA · &lt;100ms
+                projeto fabricável · 3 orçamentos · plano de corte · PCP
               </span>
             </div>
             <button
@@ -1937,8 +2059,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           </div>
 
           <p className="text-[12.5px] text-muted-foreground">
-            Gere a cozinha linear automaticamente com módulos padrão de mercado.
-            O resultado substitui os móveis sugeridos pela IA.
+            Gere o projeto fabricável determinístico: módulos reais, validação,
+            3 versões de orçamento, plano de corte para CNC e cronograma de produção.
           </p>
 
           {motorAberto && (
@@ -1981,6 +2103,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
                         action: "gerar",
+                        tipo_layout: AMBIENTE_TO_LAYOUT[wizard.form.ambiente],
                         medidas: {
                           largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
                           profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
@@ -1999,12 +2122,11 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                       }),
                     });
                     if (!res.ok) throw new Error((await res.json() as { error: string }).error);
-                    const data = await res.json() as { projeto: { modulos: Movel[] }; resultado: { avisos: string[]; aproveitamento_pct: number; num_modulos_base: number; num_modulos_aereo: number } };
+                    const data = await res.json() as MotorResultado;
                     update({ moveis: data.projeto.modulos as unknown as Movel[] });
+                    setMotorResultado(data);
                     setMotorAberto(false);
-                    const r = data.resultado;
-                    toast.success(`Motor gerou ${r.num_modulos_base} bases + ${r.num_modulos_aereo} aéreos · ${r.aproveitamento_pct}% aproveitamento`);
-                    if (r.avisos?.length) r.avisos.forEach(a => toast.info(a));
+                    toast.success(`Projeto fabricável gerado · validação ${data.validacao.status} (${data.validacao.score})`);
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
                   } finally {
@@ -2014,11 +2136,14 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                 className="w-full h-10 rounded-md bg-emerald-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-opacity"
               >
                 {motorLoading
-                  ? <><Loader2 className="size-4 animate-spin" /> Gerando layout…</>
-                  : <><Settings2 className="size-4" /> Gerar cozinha linear automaticamente</>}
+                  ? <><Loader2 className="size-4 animate-spin" /> Gerando projeto fabricável…</>
+                  : <><Settings2 className="size-4" /> Gerar projeto fabricável</>}
               </button>
             </div>
           )}
+
+          {/* ── Resultado completo do motor ── */}
+          {motorResultado && <MotorResultadoPainel data={motorResultado} />}
         </Surface>
       )}
 
