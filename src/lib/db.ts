@@ -436,3 +436,95 @@ export async function deleteCalendarioEvento(id: string) {
   const { error } = await supabase.from("calendario_eventos").delete().eq("id", id);
   if (error) throw error;
 }
+
+// ─── Onboarding: garantir empresa ──────────────────────────────────────────────
+
+/**
+ * Garante que o usuário logado tenha uma empresa vinculada.
+ * Fallback em app para o trigger SQL handle_new_user (caso o trigger não exista
+ * ou o usuário seja anterior à migração). Idempotente.
+ */
+export async function garantirEmpresa() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
+
+  const existente = await getEmpresaAtual();
+  if (existente) return existente;
+
+  const meta = session.user.user_metadata as { company_name?: string } | undefined;
+  const nome = meta?.company_name?.trim()
+    || session.user.email?.split("@")[0]
+    || "Minha Marcenaria";
+
+  // Cria empresa + vínculo (depende de RLS permitir; o trigger SQL é o caminho principal)
+  const { data: emp, error: empErr } = await supabase
+    .from("empresas").insert({ nome }).select("id").single();
+  if (empErr) {
+    // RLS bloqueou — o trigger SQL deve cuidar disso; retorna null silenciosamente
+    return null;
+  }
+  await supabase.from("empresa_membros").insert({
+    user_id: session.user.id, empresa_id: (emp as { id: string }).id, role: "owner",
+  });
+  return getEmpresaAtual();
+}
+
+// ─── Billing: planos e assinaturas ─────────────────────────────────────────────
+
+export interface Plano {
+  id: string;
+  nome: string;
+  preco_mensal: number;
+  limite_orcamentos: number | null;
+  limite_renders: number | null;
+  limite_usuarios: number | null;
+  recursos: string[];
+  destaque: boolean;
+  ordem: number;
+}
+
+export async function getPlanos(): Promise<Plano[]> {
+  const { data, error } = await supabase
+    .from("planos")
+    .select("*")
+    .eq("ativo", true)
+    .order("ordem");
+  if (error) throw error;
+  return (data ?? []) as Plano[];
+}
+
+export interface Assinatura {
+  id: string;
+  empresa_id: string;
+  plano_id: string;
+  status: "pendente" | "ativa" | "atrasada" | "cancelada";
+  asaas_payment_url: string | null;
+  proximo_vencimento: string | null;
+}
+
+export async function getAssinatura(empresaId: string): Promise<Assinatura | null> {
+  const { data } = await supabase
+    .from("assinaturas")
+    .select("id,empresa_id,plano_id,status,asaas_payment_url,proximo_vencimento")
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  return (data as Assinatura) ?? null;
+}
+
+/**
+ * Inicia o checkout de um plano: chama o backend (Asaas) e devolve o link de
+ * pagamento. O webhook do Asaas ativa a assinatura quando o pagamento confirma.
+ */
+export async function iniciarCheckout(planoId: string): Promise<{ payment_url: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Sessão expirada");
+
+  const res = await fetch("/api/fiscal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "criar-assinatura", user_token: session.access_token, plano_id: planoId }),
+  });
+  const data = await res.json() as { payment_url?: string; error?: string };
+  if (!res.ok || !data.payment_url) throw new Error(data.error ?? "Erro ao iniciar checkout");
+  return { payment_url: data.payment_url };
+}

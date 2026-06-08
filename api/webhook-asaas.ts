@@ -39,7 +39,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const payment = event.payment;
   const externalRef = payment.externalReference ?? "";
 
-  // externalReference é "orc-{orcamento_id}"
+  // externalReference "empresa-{id}" → pagamento de assinatura de plano
+  if (externalRef.startsWith("empresa-")) {
+    const empresaId = externalRef.slice(8);
+    const venc = new Date();
+    venc.setMonth(venc.getMonth() + 1);
+    await sb.from("assinaturas").update({
+      status: "ativa",
+      proximo_vencimento: venc.toISOString().slice(0, 10),
+      atualizado_em: new Date().toISOString(),
+    }).eq("empresa_id", empresaId);
+    return res.json({ ok: true, assinatura: "ativa" });
+  }
+
+  // externalReference "orc-{orcamento_id}" → pagamento de orçamento
   const orcId = externalRef.startsWith("orc-") ? externalRef.slice(4) : null;
   if (!orcId) return res.json({ ok: true, ignored: true });
 

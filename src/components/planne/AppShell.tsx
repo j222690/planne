@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, Users, Boxes, Truck, Sparkles,
   Hammer, Wallet, Settings, Search, Bell, Command, ChevronsUpDown,
   Folder, LogOut, Menu, X, Sun, Moon, Wand2,
-  CalendarDays, GitBranch, BarChart3, History,
+  CalendarDays, GitBranch, BarChart3, History, CreditCard,
   CheckCheck, FileText as FileText2, UserPlus, FolderPlus,
 } from "lucide-react";
 import { Logo } from "./Logo";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 const nav = [
   { group: "Visão geral", items: [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/app/planos", label: "Planos", icon: CreditCard },
   ]},
   { group: "Comercial", items: [
     { to: "/app/orcamentos", label: "Orçamentos", icon: FileText },

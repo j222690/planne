@@ -366,6 +366,97 @@ async function gerarCobranca(
 
 // ─── Handler principal ────────────────────────────────────────────────────────
 
+// ─── Billing: assinatura de plano (Planne cobra a marcenaria via Asaas) ────────
+
+async function criarAssinatura(
+  req: VercelRequest,
+  res: VercelResponse,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: any,
+) {
+  const { plano_id } = req.body as { plano_id: string };
+  if (!plano_id) return res.status(400).json({ error: "plano_id é obrigatório" });
+
+  // Token Asaas da PLATAFORMA Planne (não o da empresa) — você configura no Vercel
+  const asaasToken = process.env.ASAAS_PLATFORM_TOKEN;
+  const ambiente = process.env.ASAAS_PLATFORM_AMBIENTE || "sandbox";
+  if (!asaasToken) {
+    return res.status(400).json({ error: "ASAAS_PLATFORM_TOKEN não configurado no servidor." });
+  }
+
+  // Empresa do usuário
+  const { data: membro } = await sb.from("empresa_membros").select("empresa_id").single();
+  if (!membro) return res.status(403).json({ error: "Usuário sem empresa" });
+  const { data: empresa } = await sb
+    .from("empresas").select("id, nome, cnpj, email, telefone").eq("id", membro.empresa_id).single();
+  if (!empresa) return res.status(404).json({ error: "Empresa não encontrada" });
+
+  // Plano
+  const { data: plano } = await sb.from("planos").select("id, nome, preco_mensal").eq("id", plano_id).single();
+  if (!plano) return res.status(404).json({ error: "Plano não encontrado" });
+
+  const baseUrl = ambiente === "producao" ? "https://api.asaas.com/v3" : "https://sandbox.asaas.com/api/v3";
+  const headers = { "Content-Type": "application/json", access_token: asaasToken };
+
+  // Customer Asaas (a marcenaria)
+  const cpfCnpj = ((empresa.cnpj as string) ?? "").replace(/\D/g, "");
+  let customerId: string | null = null;
+  if (cpfCnpj) {
+    const r = await fetch(`${baseUrl}/customers?cpfCnpj=${cpfCnpj}`, { headers });
+    if (r.ok) customerId = ((await r.json()) as { data?: { id: string }[] }).data?.[0]?.id ?? null;
+  }
+  if (!customerId) {
+    const r = await fetch(`${baseUrl}/customers`, {
+      method: "POST", headers,
+      body: JSON.stringify({
+        name: empresa.nome, cpfCnpj: cpfCnpj || undefined,
+        email: empresa.email || undefined, phone: empresa.telefone || undefined,
+        externalReference: `empresa-${empresa.id}`,
+      }),
+    });
+    const c = (await r.json()) as { id?: string; errors?: { description: string }[] };
+    if (c.errors?.length) return res.status(400).json({ error: `Asaas (cliente): ${c.errors.map((e) => e.description).join("; ")}` });
+    customerId = c.id ?? null;
+  }
+  if (!customerId) return res.status(400).json({ error: "Não foi possível criar o cliente no Asaas" });
+
+  // Assinatura recorrente mensal
+  const nextDue = new Date(); nextDue.setDate(nextDue.getDate() + 3);
+  const subRes = await fetch(`${baseUrl}/subscriptions`, {
+    method: "POST", headers,
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "UNDEFINED", // cliente escolhe boleto/pix/cartão na fatura
+      value: Number(plano.preco_mensal),
+      nextDueDate: nextDue.toISOString().slice(0, 10),
+      cycle: "MONTHLY",
+      description: `Planne — Plano ${plano.nome}`,
+      externalReference: `empresa-${empresa.id}`,
+    }),
+  });
+  const sub = (await subRes.json()) as { id?: string; errors?: { description: string }[] };
+  if (sub.errors?.length) return res.status(400).json({ error: `Asaas (assinatura): ${sub.errors.map((e) => e.description).join("; ")}` });
+  if (!sub.id) return res.status(400).json({ error: "Falha ao criar assinatura no Asaas" });
+
+  // Link de pagamento da primeira cobrança
+  let paymentUrl = "";
+  const payRes = await fetch(`${baseUrl}/subscriptions/${sub.id}/payments`, { headers });
+  if (payRes.ok) {
+    const pays = (await payRes.json()) as { data?: { invoiceUrl?: string }[] };
+    paymentUrl = pays.data?.[0]?.invoiceUrl ?? "";
+  }
+
+  // Registrar/atualizar a assinatura (upsert por empresa)
+  await sb.from("assinaturas").upsert({
+    empresa_id: empresa.id, plano_id: plano.id, status: "pendente",
+    asaas_customer_id: customerId, asaas_subscription_id: sub.id,
+    asaas_payment_url: paymentUrl, ciclo: "MONTHLY",
+    proximo_vencimento: nextDue.toISOString().slice(0, 10), atualizado_em: new Date().toISOString(),
+  }, { onConflict: "empresa_id" });
+
+  return res.json({ payment_url: paymentUrl, subscription_id: sub.id });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -381,6 +472,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (action === "emitir-nfe") return emitirNfe(req, res, sb);
   if (action === "gerar-boleto") return gerarCobranca(req, res, sb);
+  if (action === "criar-assinatura") return criarAssinatura(req, res, sb);
 
   return res.status(400).json({ error: `Ação desconhecida: ${action}` });
 }

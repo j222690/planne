@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppProjetosRouteImport } from './routes/app.projetos'
 import { Route as AppProducaoRouteImport } from './routes/app.producao'
+import { Route as AppPlanosRouteImport } from './routes/app.planos'
 import { Route as AppPipelineRouteImport } from './routes/app.pipeline'
 import { Route as AppOrcamentosRouteImport } from './routes/app.orcamentos'
 import { Route as AppMateriaisRouteImport } from './routes/app.materiais'
@@ -57,6 +58,11 @@ const AppProjetosRoute = AppProjetosRouteImport.update({
 const AppProducaoRoute = AppProducaoRouteImport.update({
   id: '/producao',
   path: '/producao',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanosRoute = AppPlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPipelineRoute = AppPipelineRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
   '/app/pipeline': typeof AppPipelineRoute
+  '/app/planos': typeof AppPlanosRoute
   '/app/producao': typeof AppProducaoRoute
   '/app/projetos': typeof AppProjetosRoute
   '/app/': typeof AppIndexRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
   '/app/pipeline': typeof AppPipelineRoute
+  '/app/planos': typeof AppPlanosRoute
   '/app/producao': typeof AppProducaoRoute
   '/app/projetos': typeof AppProjetosRoute
   '/app': typeof AppIndexRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/app/materiais': typeof AppMateriaisRoute
   '/app/orcamentos': typeof AppOrcamentosRoute
   '/app/pipeline': typeof AppPipelineRoute
+  '/app/planos': typeof AppPlanosRoute
   '/app/producao': typeof AppProducaoRoute
   '/app/projetos': typeof AppProjetosRoute
   '/app/': typeof AppIndexRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/app/materiais'
     | '/app/orcamentos'
     | '/app/pipeline'
+    | '/app/planos'
     | '/app/producao'
     | '/app/projetos'
     | '/app/'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/app/materiais'
     | '/app/orcamentos'
     | '/app/pipeline'
+    | '/app/planos'
     | '/app/producao'
     | '/app/projetos'
     | '/app'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/app/materiais'
     | '/app/orcamentos'
     | '/app/pipeline'
+    | '/app/planos'
     | '/app/producao'
     | '/app/projetos'
     | '/app/'
@@ -301,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/producao'
       fullPath: '/app/producao'
       preLoaderRoute: typeof AppProducaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/planos': {
+      id: '/app/planos'
+      path: '/planos'
+      fullPath: '/app/planos'
+      preLoaderRoute: typeof AppPlanosRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/pipeline': {
@@ -411,6 +430,7 @@ interface AppRouteChildren {
   AppMateriaisRoute: typeof AppMateriaisRoute
   AppOrcamentosRoute: typeof AppOrcamentosRoute
   AppPipelineRoute: typeof AppPipelineRoute
+  AppPlanosRoute: typeof AppPlanosRoute
   AppProducaoRoute: typeof AppProducaoRoute
   AppProjetosRoute: typeof AppProjetosRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -430,6 +450,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMateriaisRoute: AppMateriaisRoute,
   AppOrcamentosRoute: AppOrcamentosRoute,
   AppPipelineRoute: AppPipelineRoute,
+  AppPlanosRoute: AppPlanosRoute,
   AppProducaoRoute: AppProducaoRoute,
   AppProjetosRoute: AppProjetosRoute,
   AppIndexRoute: AppIndexRoute,
