@@ -261,11 +261,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // Flux falhou — mostra o erro REAL (não mascara no DALL-E).
+      // A causa quase sempre é key inválida (401) ou sem saldo na conta BFL.
       const errText = await response.text();
-      // Se Flux falhou por crédito/key, cai no DALL-E
-      if (!openaiKey) return res.status(502).json({ error: `Flux: ${errText.slice(0, 300)}` });
-    } catch {
-      if (!openaiKey) return res.status(502).json({ error: "Flux indisponível e OPENAI_API_KEY não configurada" });
+      const dica = response.status === 401 || response.status === 403
+        ? " Verifique se a FLUX_API_KEY está correta em api.bfl.ai (sem espaços)."
+        : response.status === 402 || /credit|insufficient|balance/i.test(errText)
+          ? " A conta Black Forest Labs está sem saldo — adicione créditos em api.bfl.ai."
+          : "";
+      return res.status(502).json({ error: `Flux (HTTP ${response.status}): ${errText.slice(0, 250)}.${dica}` });
+    } catch (e) {
+      return res.status(502).json({ error: `Flux indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
     }
   }
 
