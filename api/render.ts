@@ -178,22 +178,14 @@ function buildRenderPrompt(input: RenderInput): string {
   ].filter(Boolean).join(", ");
 }
 
-// ─── Flux configs ──────────────────────────────────────────────────────────────
+// ─── FluxAPI.ai configs (serviço usado: api.fluxapi.ai, auth Bearer) ────────────
+
+const FLUXAPI_GENERATE = "https://api.fluxapi.ai/api/v1/flux/kontext/generate";
+const FLUXAPI_STATUS = "https://api.fluxapi.ai/api/v1/flux/kontext/record-info";
 
 const FLUX_CONFIGS = {
-  schnell: {
-    // flux-schnell não existe na API comercial; flux-dev é o rápido/barato p/ preview
-    endpoint: "https://api.bfl.ai/v1/flux-dev",
-    steps: 28,
-    guidance: 3,
-    label: "Flux Dev (preview)",
-  },
-  pro: {
-    endpoint: "https://api.bfl.ai/v1/flux-pro-1.1",
-    steps: 40,
-    guidance: 3.5,
-    label: "Flux Pro 1.1 (premium)",
-  },
+  schnell: { model: "flux-kontext-pro", label: "Flux Kontext Pro (preview)" },
+  pro: { model: "flux-kontext-max", label: "Flux Kontext Max (premium)" },
 } as const;
 
 // ─── Handler ───────────────────────────────────────────────────────────────────
@@ -228,61 +220,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "Nenhuma API de render configurada (FLUX_API_KEY ou OPENAI_API_KEY)" });
   }
 
-  // Diagnóstico de configuração de chaves (tamanhos apenas, sem expor valores)
-  if (body.descricao === "__diag__") {
-    return res.json({
-      flux_key_len: (fluxKey ?? "").length,
-      flux_key_trim_len: (fluxKey ?? "").trim().length,
-      flux_key_preview: fluxKey ? `${fluxKey.trim().slice(0, 4)}…${fluxKey.trim().slice(-2)}` : null,
-      openai_key_len: (openaiKey ?? "").length,
-    });
-  }
-
   const prompt = buildRenderPrompt(input);
   const fluxCfg = FLUX_CONFIGS[mode];
 
-  // ── Flux (Schnell ou Pro) ──────────────────────────────────────────────────
+  // ── FluxAPI.ai (Kontext Pro/Max) ────────────────────────────────────────────
   if (fluxKey) {
     try {
-      const response = await fetch(fluxCfg.endpoint, {
+      const response = await fetch(FLUXAPI_GENERATE, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-key": fluxKey.trim() },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${fluxKey.trim()}` },
         body: JSON.stringify({
           prompt,
-          width: mode === "schnell" ? 1024 : 1440,
-          height: mode === "schnell" ? 680 : 960,
-          steps: fluxCfg.steps,
-          guidance: fluxCfg.guidance,
-          output_format: "jpeg",
-          safety_tolerance: 2,
-          // Planta baixa como guia de composição (Redux-style image conditioning).
-          // Faz o render respeitar a disposição/cores do layout real do projeto.
-          ...(input.planta_b64 ? { image_prompt: input.planta_b64 } : {}),
+          model: fluxCfg.model,
+          aspectRatio: "16:9",        // interior wide
+          outputFormat: "jpeg",
+          promptUpsampling: true,
+          safetyTolerance: 2,
+          // Planta como guia de composição (modo edição) — requer URL pública
+          ...(input.planta_b64 && /^https?:\/\//.test(input.planta_b64) ? { inputImage: input.planta_b64 } : {}),
         }),
       });
 
-      if (response.ok) {
-        const data = (await response.json()) as { id: string };
+      const json = (await response.json().catch(() => ({}))) as {
+        code?: number; msg?: string; data?: { taskId?: string };
+      };
+
+      if (response.ok && json.data?.taskId) {
         return res.json({
-          provider: mode === "schnell" ? "flux-schnell" : "flux-pro",
-          job_id: data.id,
+          provider: "fluxapi",
+          job_id: json.data.taskId,
           status: "processing",
           mode,
           prompt,
         });
       }
 
-      // Flux falhou — mostra o erro REAL (não mascara no DALL-E).
-      // A causa quase sempre é key inválida (401) ou sem saldo na conta BFL.
-      const errText = await response.text();
+      // Erro real do FluxAPI (key inválida, sem crédito, etc.)
       const dica = response.status === 401 || response.status === 403
-        ? " Verifique se a FLUX_API_KEY está correta em api.bfl.ai (sem espaços)."
-        : response.status === 402 || /credit|insufficient|balance/i.test(errText)
-          ? " A conta Black Forest Labs está sem saldo — adicione créditos em api.bfl.ai."
+        ? " Verifique a FLUX_API_KEY (Bearer) em fluxapi.ai."
+        : /credit|insufficient|balance|quota/i.test(json.msg ?? "")
+          ? " A conta FluxAPI.ai está sem créditos — recarregue em fluxapi.ai."
           : "";
-      return res.status(502).json({ error: `Flux (HTTP ${response.status}): ${errText.slice(0, 250)}.${dica}` });
+      return res.status(502).json({ error: `FluxAPI (HTTP ${response.status}): ${json.msg ?? "sem taskId"}.${dica}` });
     } catch (e) {
-      return res.status(502).json({ error: `Flux indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
+      return res.status(502).json({ error: `FluxAPI indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
     }
   }
 
@@ -351,8 +332,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   return res.status(500).json({ error: "Nenhuma API disponível" });
 }
 
-// ─── Status do job (consolidado de render-status) ────────────────────────────
+// ─── Status do job (FluxAPI.ai record-info) ──────────────────────────────────
 // GET /api/render?job_id=XXX
+// successFlag: 0=gerando, 1=sucesso, 2/3=falha
 async function statusHandler(req: VercelRequest, res: VercelResponse) {
   const { job_id } = req.query;
   const fluxKey = process.env.FLUX_API_KEY;
@@ -360,22 +342,26 @@ async function statusHandler(req: VercelRequest, res: VercelResponse) {
   if (!fluxKey) return res.status(500).json({ error: "FLUX_API_KEY não configurada" });
   if (!job_id) return res.status(400).json({ error: "job_id obrigatório" });
 
-  const response = await fetch(`https://api.bfl.ai/v1/get_result?id=${job_id}`, {
-    headers: { "x-key": fluxKey.trim() },
+  const response = await fetch(`${FLUXAPI_STATUS}?taskId=${job_id}`, {
+    headers: { Authorization: `Bearer ${fluxKey.trim()}` },
   });
 
   if (!response.ok) {
-    return res.status(502).json({ error: "Erro ao consultar Flux" });
+    return res.status(502).json({ error: "Erro ao consultar FluxAPI" });
   }
 
-  const data = (await response.json()) as {
-    status: string;
-    result?: { sample: string };
+  const json = (await response.json().catch(() => ({}))) as {
+    data?: { successFlag?: number; response?: { resultImageUrl?: string } };
   };
 
-  if (data.status === "Ready" && data.result?.sample) {
-    return res.json({ status: "completed", url: data.result.sample });
-  }
+  const flag = json.data?.successFlag;
+  const url = json.data?.response?.resultImageUrl;
 
-  return res.json({ status: data.status === "Error" ? "error" : "processing" });
+  if (flag === 1 && url) {
+    return res.json({ status: "completed", url });
+  }
+  if (flag === 2 || flag === 3) {
+    return res.json({ status: "error", error: "FluxAPI não conseguiu gerar a imagem." });
+  }
+  return res.json({ status: "processing" });
 }
