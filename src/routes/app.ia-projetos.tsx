@@ -1628,7 +1628,10 @@ interface MotorResultado {
   projeto: { modulos: Movel[] };
   validacao: { status: string; score: number; resumo: { erros: number; alertas: number } };
   orcamentos: { economica: VersaoOrc; intermediaria: VersaoOrc; premium: VersaoOrc; comparativo: { preco_economica: number; preco_intermediaria: number; preco_premium: number } };
-  plano_corte: { resumo: { total_chapas: number; total_pecas: number; desperdicio_pct: number; metros_fita_total: number } };
+  plano_corte: {
+    resumo: { total_chapas: number; total_pecas: number; desperdicio_pct: number; metros_fita_total: number };
+    chapas: { numero_sequencial: number; material: { nome_display: string }; pecas_alocadas: { peca_id: string; largura_mm: number; comprimento_mm: number; etiqueta: string; rotacionada: boolean }[] }[];
+  };
   exportacoes_corte: { csv_operador: string; dxf_corte: string; etiquetas: { codigo: string; descricao: string }[] };
   pcp: { numero: string; prazo_dias_uteis: number; duracao_total_horas: number; data_entrega_prometida: string; etapas: { tipo: string; duracao_estimada_horas: number; funcao_responsavel: string }[] };
   analise_tecnica: { recomendacoes: { severidade: string; titulo: string; detalhe: string; referencia?: string }[]; resumo: { total: number; atencao: number; peso_total_kg: number } };
@@ -1655,9 +1658,10 @@ function baixarArquivo(conteudo: string, nome: string, mime: string) {
 }
 
 // Painel que exibe o resultado completo do motor paramétrico
-function MotorResultadoPainel({ data, onUsarVersao, criandoVersao }: {
+function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
+  onCriarOrdem: () => void;
   criandoVersao: string | null;
 }) {
   const statusClasse = data.validacao.status === "aprovado"
@@ -1726,6 +1730,10 @@ function MotorResultadoPainel({ data, onUsarVersao, criandoVersao }: {
             <div>prazo {data.pcp.prazo_dias_uteis} dias úteis</div>
             <div>entrega {new Date(data.pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}</div>
           </div>
+          <button type="button" disabled={!!criandoVersao} onClick={onCriarOrdem}
+            className="mt-2 w-full h-7 rounded-md bg-foreground text-background text-[11.5px] font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1">
+            {criandoVersao === "ordem" ? "Criando…" : <><Factory className="size-3" /> Criar ordem de produção</>}
+          </button>
         </div>
       </div>
 
@@ -1852,6 +1860,49 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       setCriandoVersao(null);
     }
   }, [motorResultado, wizard.form, wizard.clienteId, navigateMotor]);
+
+  // Cria a ordem de produção a partir do plano de corte (nesting) + PCP do motor
+  const criarOrdemDoMotor = useCallback(async () => {
+    if (!motorResultado) return;
+    setCriandoVersao("ordem");
+    try {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) throw new Error("Empresa não encontrada");
+      const eid = (empresa as { id: string }).id;
+      const pc = motorResultado.plano_corte;
+      const pcp = motorResultado.pcp;
+
+      const { data: ordem } = await supabase.from("ordens_producao").insert({
+        empresa_id: eid,
+        status: "aberta",
+        observacoes: `${wizard.form.nome || wizard.form.ambiente} (motor paramétrico) · ${pc.resumo.total_chapas} chapas · ${pc.resumo.total_pecas} peças · ${pc.resumo.desperdicio_pct}% desperdício · ${pc.resumo.metros_fita_total}m fita. ` +
+          `PCP: ${pcp.etapas.length} etapas, ${pcp.duracao_total_horas}h, prazo ${pcp.prazo_dias_uteis} dias úteis (entrega ${new Date(pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}).`,
+      }).select("id,numero").single();
+      if (!ordem) throw new Error("Erro ao criar ordem");
+
+      // Peças do plano de corte real (nesting MaxRects), com etiqueta e chapa
+      const pecas = pc.chapas.flatMap((ch) =>
+        ch.pecas_alocadas.map((p) => ({
+          ordem_producao_id: ordem.id,
+          descricao_peca: p.etiqueta,
+          material: ch.material.nome_display,
+          largura_mm: Math.round(p.largura_mm),
+          comprimento_mm: Math.round(p.comprimento_mm),
+          quantidade: 1,
+          fita_borda: null,
+          observacao: `Chapa ${ch.numero_sequencial}${p.rotacionada ? " · girada 90°" : ""}`,
+        })),
+      );
+      if (pecas.length > 0) await supabase.from("pecas_corte").insert(pecas).throwOnError();
+
+      toast.success(`Ordem #${ordem.numero ?? ""} criada com ${pecas.length} peças (plano de corte do motor)!`);
+      navigateMotor({ to: "/app/producao" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar ordem");
+    } finally {
+      setCriandoVersao(null);
+    }
+  }, [motorResultado, wizard.form, navigateMotor]);
 
   const { analise, moveis } = wizard;
   if (!analise) return null;
@@ -2213,7 +2264,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           )}
 
           {/* ── Resultado completo do motor ── */}
-          {motorResultado && <MotorResultadoPainel data={motorResultado} onUsarVersao={criarOrcamentoDoMotor} criandoVersao={criandoVersao} />}
+          {motorResultado && <MotorResultadoPainel data={motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao} />}
         </Surface>
       )}
 
