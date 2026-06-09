@@ -412,6 +412,24 @@ interface ComodoOrc {
   analisando: boolean;
 }
 
+// Tipo de cômodo → layout do motor paramétrico (ambientes fabricáveis pelo motor)
+const COMODO_TO_LAYOUT: Record<string, string> = {
+  "Cozinha": "cozinha_linear",
+  "Área gourmet": "cozinha_linear",
+  "Quarto": "dormitorio",
+  "Closet": "closet",
+  "Banheiro": "banheiro",
+  "Lavanderia": "lavanderia",
+};
+
+interface ItemMotorOrc {
+  descricao: string; quantidade: number; preco_custo: number; preco_unitario: number; total: number;
+}
+interface VersaoConsolidada {
+  itens: ItemMotorOrc[]; total: number; custo: number; margem: number;
+}
+type MotorVersoes = Record<"economica" | "intermediaria" | "premium", VersaoConsolidada>;
+
 function OrcamentoModal({ onClose, onSaved, editOrc }: {
   onClose: () => void; onSaved: () => void; editOrc?: Orc & { itens?: OrcItem[] };
 }) {
@@ -515,6 +533,75 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const { fields, append, remove, replace } = useFieldArray({ control, name: "itens" });
   const itens = watch("itens");
   const subtotal = itens.reduce((s, i) => s + (Number(i.preco_unitario) || 0) * (Number(i.quantidade) || 0), 0);
+
+  // ─── Motor paramétrico: 3 versões consolidadas de todos os cômodos fabricáveis ──
+  const [motorVersoes, setMotorVersoes] = useState<MotorVersoes | null>(null);
+  const [motorGerando, setMotorGerando] = useState(false);
+
+  const gerarPeloMotor = async () => {
+    const suportados = comodos.filter((c) => COMODO_TO_LAYOUT[c.tipo] && comodoValido(c));
+    if (suportados.length === 0) {
+      toast.error("Adicione ao menos um cômodo fabricável (cozinha, quarto, closet, banheiro, lavanderia) com medidas ou planta.");
+      return;
+    }
+    setMotorGerando(true);
+    try {
+      const acc: MotorVersoes = {
+        economica: { itens: [], total: 0, custo: 0, margem: 0 },
+        intermediaria: { itens: [], total: 0, custo: 0, margem: 0 },
+        premium: { itens: [], total: 0, custo: 0, margem: 0 },
+      };
+      for (const c of suportados) {
+        const res = await fetch("/api/motor?action=gerar", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "gerar",
+            tipo_layout: COMODO_TO_LAYOUT[c.tipo],
+            medidas: {
+              largura_cm: Math.round((c.largura || 4) * 100),
+              profundidade_cm: Math.round((c.profundidade || 3) * 100),
+              altura_cm: Math.round((c.altura || 2.7) * 100),
+            },
+            preferencias: {
+              parede_principal: "top", cor_mdf_hex: "#D9C7A8", ferragem: "nacional",
+              tipo_porta_base: "dobradica", tipo_porta_aereo: "dobradica", versao_comercial: "intermediaria",
+            },
+          }),
+        });
+        if (!res.ok) throw new Error(`${c.nome}: ${(await res.json() as { error: string }).error}`);
+        const data = await res.json() as {
+          orcamentos: Record<string, { itens: ItemMotorOrc[]; analise_financeira: { custo_total: number; preco_venda: number; margem_desejada_pct: number } }>;
+        };
+        (["economica", "intermediaria", "premium"] as const).forEach((k) => {
+          const ov = data.orcamentos[k];
+          acc[k].itens.push(...ov.itens.map((it) => ({ ...it, descricao: `${c.nome} — ${it.descricao}` })));
+          acc[k].total += ov.analise_financeira.preco_venda;
+          acc[k].custo += ov.analise_financeira.custo_total;
+          acc[k].margem = ov.analise_financeira.margem_desejada_pct;
+        });
+      }
+      setMotorVersoes(acc);
+      toast.success(`${suportados.length} cômodo(s) calculados pelo motor — 3 versões prontas.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
+    } finally {
+      setMotorGerando(false);
+    }
+  };
+
+  const usarVersaoMotor = (k: "economica" | "intermediaria" | "premium") => {
+    if (!motorVersoes) return;
+    const v = motorVersoes[k];
+    replace(v.itens.map((it) => ({
+      descricao: it.descricao, quantidade: it.quantidade, unidade: "un",
+      preco_custo: it.preco_custo, preco_unitario: it.preco_unitario,
+    })));
+    if (clienteId) setValue("cliente_id", clienteId);
+    setValue("margem_pct", Math.round(v.margem));
+    setMargemPct(Math.round(v.margem));
+    setFase("revisar");
+    toast.success(`Versão ${k} aplicada (${v.itens.length} itens).`);
+  };
 
   useEffect(() => {
     async function load() {
@@ -883,6 +970,45 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 value={descricao} onChange={(e) => setDescricao(e.target.value)}
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
             </div>
+
+            {/* ── Motor paramétrico: orçamento automático em 3 versões ── */}
+            {comodos.some((c) => COMODO_TO_LAYOUT[c.tipo]) && (
+              <div className="rounded-lg border border-accent/40 bg-accent/5 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[13px] font-semibold flex items-center gap-1.5">
+                      <Sparkles className="size-4 text-accent" /> Orçamento automático (motor paramétrico)
+                    </div>
+                    <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                      Gera o projeto fabricável e 3 versões com custos reais de engenharia, sem selecionar móveis um a um.
+                    </div>
+                  </div>
+                  <button type="button" disabled={motorGerando} onClick={gerarPeloMotor}
+                    className="h-9 px-3.5 rounded-md bg-accent text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5 shrink-0">
+                    {motorGerando ? <><Loader2 className="size-3.5 animate-spin" /> Gerando…</> : <>Gerar 3 versões</>}
+                  </button>
+                </div>
+
+                {motorVersoes && (
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    {([["economica", "Econômica"], ["intermediaria", "Intermediária"], ["premium", "Premium"]] as const).map(([k, label]) => {
+                      const v = motorVersoes[k];
+                      return (
+                        <div key={k} className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/10" : "border-border bg-surface-2"}`}>
+                          <div className="text-[11px] text-muted-foreground">{label}</div>
+                          <div className="text-[15px] font-bold mt-0.5">R$ {v.total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                          <div className="text-[10.5px] text-muted-foreground mt-0.5">custo R$ {v.custo.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} · {v.itens.length} itens</div>
+                          <button type="button" onClick={() => usarVersaoMotor(k)}
+                            className={`mt-2 h-7 rounded-md text-[11.5px] font-medium ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}>
+                            Usar esta versão
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-3">
