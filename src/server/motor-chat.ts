@@ -14,7 +14,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   ferramentasFormatoOpenAI,
   executarFerramenta,
-} from "../src/lib/motor-parametrico/copiloto-tools";
+} from "../lib/motor-parametrico/copiloto-tools";
 
 interface Mensagem {
   role: "system" | "user" | "assistant" | "tool";

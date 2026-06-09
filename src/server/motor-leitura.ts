@@ -17,8 +17,8 @@ import {
   interpretarPlanta,
   type FormatoPlanta,
   type PlantaAnalisadaIA,
-} from "../src/lib/motor-parametrico/interpretar-planta";
-import type { ParedeId } from "../src/lib/motor-parametrico/tipos";
+} from "../lib/motor-parametrico/interpretar-planta";
+import type { ParedeId } from "../lib/motor-parametrico/tipos";
 
 interface RequestBody {
   formato: FormatoPlanta;

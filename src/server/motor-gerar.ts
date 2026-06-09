@@ -18,24 +18,24 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { gerarLayoutCozinhaLinear } from "../src/lib/motor-parametrico/layout-cozinha-linear";
-import { gerarLayoutCozinhaL, gerarLayoutCozinhaU } from "../src/lib/motor-parametrico/layout-cozinha-l-u";
-import { gerarLayoutIlha } from "../src/lib/motor-parametrico/layout-ilha";
-import { gerarLayoutDormitorio, gerarLayoutCloset } from "../src/lib/motor-parametrico/layout-quarto";
-import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../src/lib/motor-parametrico/layout-servicos";
-import { gerarLayoutSala } from "../src/lib/motor-parametrico/layout-sala";
-import { gerarLayoutEscritorio } from "../src/lib/motor-parametrico/layout-escritorio";
-import { projetoToMovelInput } from "../src/lib/motor-parametrico/adapters";
-import { criarAmbienteManual } from "../src/lib/motor-parametrico/ambiente";
-import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
-import { gerarTresVersoes } from "../src/lib/motor-parametrico/orcamento-inteligente";
-import { gerarPlanoNesting } from "../src/lib/motor-parametrico/nesting";
-import { gerarExportacoes } from "../src/lib/motor-parametrico/exportacao-corte";
-import { gerarOrdemProducao } from "../src/lib/motor-parametrico/pcp";
-import { gerarListaCompras } from "../src/lib/motor-parametrico/engenharia";
-import { analisarProjeto } from "../src/lib/motor-parametrico/consultor-tecnico";
-import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../src/lib/motor-parametrico/tipos";
-import type { ResultadoValidacao } from "../src/lib/motor-parametrico/rule-engine";
+import { gerarLayoutCozinhaLinear } from "../lib/motor-parametrico/layout-cozinha-linear";
+import { gerarLayoutCozinhaL, gerarLayoutCozinhaU } from "../lib/motor-parametrico/layout-cozinha-l-u";
+import { gerarLayoutIlha } from "../lib/motor-parametrico/layout-ilha";
+import { gerarLayoutDormitorio, gerarLayoutCloset } from "../lib/motor-parametrico/layout-quarto";
+import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../lib/motor-parametrico/layout-servicos";
+import { gerarLayoutSala } from "../lib/motor-parametrico/layout-sala";
+import { gerarLayoutEscritorio } from "../lib/motor-parametrico/layout-escritorio";
+import { projetoToMovelInput } from "../lib/motor-parametrico/adapters";
+import { criarAmbienteManual } from "../lib/motor-parametrico/ambiente";
+import { gerarEngenharia } from "../lib/motor-parametrico/engenharia";
+import { gerarTresVersoes } from "../lib/motor-parametrico/orcamento-inteligente";
+import { gerarPlanoNesting } from "../lib/motor-parametrico/nesting";
+import { gerarExportacoes } from "../lib/motor-parametrico/exportacao-corte";
+import { gerarOrdemProducao } from "../lib/motor-parametrico/pcp";
+import { gerarListaCompras } from "../lib/motor-parametrico/engenharia";
+import { analisarProjeto } from "../lib/motor-parametrico/consultor-tecnico";
+import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../lib/motor-parametrico/tipos";
+import type { ResultadoValidacao } from "../lib/motor-parametrico/rule-engine";
 
 type TipoLayout =
   | "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"

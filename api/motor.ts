@@ -3,8 +3,9 @@
  * Endpoint unificado do motor (roteia por `action`).
  *
  * Consolida três funcionalidades num único Serverless Function (plano Hobby
- * do Vercel limita a 12 funções). A lógica de cada uma vive em módulos `_`
- * (que o Vercel não trata como função).
+ * do Vercel limita a 12 funções). A lógica de cada uma vive em src/server/
+ * (fora de api/, para ser bundlada no deploy — arquivos `_` em api/ NÃO são
+ * incluídos no runtime serverless).
  *
  * POST /api/motor
  *   body.action = "gerar"      → gera projeto completo (layout → PCP)
@@ -15,9 +16,9 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { gerarHandler } from "./_motor-gerar";
-import { lerPlantaHandler } from "./_motor-leitura";
-import { chatHandler } from "./_motor-chat";
+import { gerarHandler } from "../src/server/motor-gerar";
+import { lerPlantaHandler } from "../src/server/motor-leitura";
+import { chatHandler } from "../src/server/motor-chat";
 
 type Acao = "gerar" | "ler-planta" | "chat";
 
