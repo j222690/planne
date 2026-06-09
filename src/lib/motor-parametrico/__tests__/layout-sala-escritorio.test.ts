@@ -8,12 +8,12 @@ import type { PreferenciasEscritorio } from "../layout-escritorio";
 const prefsSala: PreferenciasSala = {
   cor_mdf_hex: "#D9C7A8",
   ferragem: "nacional",
-  margem_desejada_pct: 300,
+  versao_comercial: "intermediaria",
 };
 const prefsEsc: PreferenciasEscritorio = {
   cor_mdf_hex: "#D9C7A8",
   ferragem: "nacional",
-  margem_desejada_pct: 300,
+  versao_comercial: "intermediaria",
 };
 
 function ambiente(largura = 400, profundidade = 350) {
