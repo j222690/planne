@@ -23,6 +23,8 @@ import { gerarLayoutCozinhaL, gerarLayoutCozinhaU } from "../src/lib/motor-param
 import { gerarLayoutIlha } from "../src/lib/motor-parametrico/layout-ilha";
 import { gerarLayoutDormitorio, gerarLayoutCloset } from "../src/lib/motor-parametrico/layout-quarto";
 import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../src/lib/motor-parametrico/layout-servicos";
+import { gerarLayoutSala } from "../src/lib/motor-parametrico/layout-sala";
+import { gerarLayoutEscritorio } from "../src/lib/motor-parametrico/layout-escritorio";
 import { projetoToMovelInput } from "../src/lib/motor-parametrico/adapters";
 import { criarAmbienteManual } from "../src/lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../src/lib/motor-parametrico/engenharia";
@@ -37,7 +39,8 @@ import type { ResultadoValidacao } from "../src/lib/motor-parametrico/rule-engin
 
 type TipoLayout =
   | "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"
-  | "dormitorio" | "closet" | "banheiro" | "lavanderia";
+  | "dormitorio" | "closet" | "banheiro" | "lavanderia"
+  | "sala" | "escritorio";
 
 interface RequestBody {
   // Tipo de ambiente a gerar (default: cozinha_linear)
@@ -67,6 +70,8 @@ interface RequestBody {
     versao_comercial?: "economica" | "intermediaria" | "premium";
     com_aereos?: boolean;
     com_superior?: boolean;
+    com_painel?: boolean;
+    com_gaveteiro?: boolean;
     nome?: string;
     empresa_id?: string;
     cliente_id?: string;
@@ -278,6 +283,24 @@ function gerarLayout(
         ...comum,
         parede_principal: prefs.parede_principal,
         com_superior: prefs.com_superior,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "sala": {
+      const r = gerarLayoutSala(ambiente, {
+        ...comum,
+        parede_principal: prefs.parede_principal,
+        com_superior: prefs.com_superior,
+        com_painel: prefs.com_painel,
+      });
+      return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
+    }
+    case "escritorio": {
+      const r = gerarLayoutEscritorio(ambiente, {
+        ...comum,
+        parede_principal: prefs.parede_principal,
+        com_superior: prefs.com_superior,
+        com_gaveteiro: prefs.com_gaveteiro,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
     }

@@ -420,6 +420,8 @@ const COMODO_TO_LAYOUT: Record<string, string> = {
   "Closet": "closet",
   "Banheiro": "banheiro",
   "Lavanderia": "lavanderia",
+  "Sala": "sala",
+  "Escritório": "escritorio",
 };
 
 interface ItemMotorOrc {

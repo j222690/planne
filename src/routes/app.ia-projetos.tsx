@@ -1647,6 +1647,11 @@ const AMBIENTE_TO_LAYOUT: Record<string, string> = {
   "Closet": "closet",
   "Banheiro": "banheiro",
   "Lavanderia": "lavanderia",
+  "Sala": "sala",
+  "Sala de estar": "sala",
+  "Home theater": "sala",
+  "Escritório": "escritorio",
+  "Home office": "escritorio",
 };
 
 function baixarArquivo(conteudo: string, nome: string, mime: string) {

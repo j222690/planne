@@ -228,6 +228,32 @@ export {
   getTemplateArmarioServico,
 } from "./biblioteca-servicos";
 
+// Sala (home theater)
+export { gerarLayoutSala } from "./layout-sala";
+export type { PreferenciasSala } from "./layout-sala";
+export {
+  MODULOS_RACK_TV,
+  MODULOS_PAINEL_RIPADO,
+  MODULOS_NICHO_SALA,
+  BIBLIOTECA_SALA,
+  getTemplateRackTv,
+  getTemplatePainelRipado,
+  getTemplateNichoSala,
+} from "./biblioteca-sala";
+
+// Escritório (home office)
+export { gerarLayoutEscritorio } from "./layout-escritorio";
+export type { PreferenciasEscritorio } from "./layout-escritorio";
+export {
+  MODULOS_ESCRIVANINHA,
+  MODULOS_GAVETEIRO_ESC,
+  MODULOS_ESTANTE_ESC,
+  BIBLIOTECA_ESCRITORIO,
+  getTemplateEscrivaninha,
+  getTemplateGaveteiroEsc,
+  getTemplateEstanteEsc,
+} from "./biblioteca-escritorio";
+
 // Regras de corte reutilizáveis
 export {
   regrasCorpo,
