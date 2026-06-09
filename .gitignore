@@ -33,3 +33,4 @@ dist-ssr
 
 .vercel
 supabase/.temp/
+api/motor.js

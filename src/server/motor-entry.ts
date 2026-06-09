@@ -1,24 +1,21 @@
 /**
  * PLANNE — Motor Paramétrico
- * Endpoint unificado do motor (roteia por `action`).
+ * Entry point do endpoint unificado (roteia por `action`).
  *
- * Consolida três funcionalidades num único Serverless Function (plano Hobby
- * do Vercel limita a 12 funções). A lógica de cada uma vive em src/server/
- * (fora de api/, para ser bundlada no deploy — arquivos `_` em api/ NÃO são
- * incluídos no runtime serverless).
+ * Este arquivo é BUNDLADO por scripts/bundle-motor.mjs → api/motor.js
+ * (autocontido). Necessário porque o Vercel, com "type": "module", não bundla
+ * imports de api/ → src/, e arquivos `_` em api/ não vão para o runtime.
  *
  * POST /api/motor
  *   body.action = "gerar"      → gera projeto completo (layout → PCP)
  *   body.action = "ler-planta" → interpreta planta (DXF/imagem/manual)
  *   body.action = "chat"       → copiloto conversacional (LLM + ferramentas)
- *
- * Compatível também com query: /api/motor?action=gerar
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { gerarHandler } from "../src/server/motor-gerar";
-import { lerPlantaHandler } from "../src/server/motor-leitura";
-import { chatHandler } from "../src/server/motor-chat";
+import { gerarHandler } from "./motor-gerar";
+import { lerPlantaHandler } from "./motor-leitura";
+import { chatHandler } from "./motor-chat";
 
 type Acao = "gerar" | "ler-planta" | "chat";
 
