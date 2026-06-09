@@ -1610,10 +1610,19 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
 }
 
 // Resultado completo do motor paramétrico (/api/motor?action=gerar)
+interface ItemVersao {
+  descricao: string;
+  quantidade: number;
+  preco_custo: number;
+  preco_unitario: number;
+  total: number;
+  observacao?: string;
+}
 interface VersaoOrc {
   versao: string;
   analise_financeira: { custo_total: number; preco_venda: number; margem_desejada_pct: number };
   prazo_producao_dias: number;
+  itens: ItemVersao[];
 }
 interface MotorResultado {
   projeto: { modulos: Movel[] };
@@ -1634,6 +1643,7 @@ const AMBIENTE_TO_LAYOUT: Record<string, string> = {
   "Quarto solteiro": "dormitorio",
   "Closet": "closet",
   "Banheiro": "banheiro",
+  "Lavanderia": "lavanderia",
 };
 
 function baixarArquivo(conteudo: string, nome: string, mime: string) {
@@ -1645,7 +1655,11 @@ function baixarArquivo(conteudo: string, nome: string, mime: string) {
 }
 
 // Painel que exibe o resultado completo do motor paramétrico
-function MotorResultadoPainel({ data }: { data: MotorResultado }) {
+function MotorResultadoPainel({ data, onUsarVersao, criandoVersao }: {
+  data: MotorResultado;
+  onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
+  criandoVersao: string | null;
+}) {
   const statusClasse = data.validacao.status === "aprovado"
     ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
     : data.validacao.status === "reprovado"
@@ -1671,13 +1685,17 @@ function MotorResultadoPainel({ data }: { data: MotorResultado }) {
           {([["economica", "Econômica", c.preco_economica], ["intermediaria", "Intermediária", c.preco_intermediaria], ["premium", "Premium", c.preco_premium]] as const).map(([k, label, preco]) => {
             const v = data.orcamentos[k];
             return (
-              <div key={k} className={`rounded-md border p-2.5 ${k === "intermediaria" ? "border-accent bg-accent/5" : "border-border"}`}>
+              <div key={k} className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/5" : "border-border"}`}>
                 <div className="text-[11px] text-muted-foreground">{label}</div>
                 <div className="text-[15px] font-bold mt-0.5">{BRL(preco)}</div>
                 <div className="text-[10.5px] text-muted-foreground mt-1">
                   custo {BRL(v.analise_financeira.custo_total)} · margem {v.analise_financeira.margem_desejada_pct}%
                 </div>
                 <div className="text-[10.5px] text-muted-foreground">prazo {v.prazo_producao_dias} dias</div>
+                <button type="button" disabled={!!criandoVersao} onClick={() => onUsarVersao(k)}
+                  className={`mt-2 h-7 rounded-md text-[11.5px] font-medium transition-opacity disabled:opacity-50 ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}>
+                  {criandoVersao === k ? "Criando…" : "Usar esta versão"}
+                </button>
               </div>
             );
           })}
@@ -1745,6 +1763,95 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
   const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">("nacional");
   const [motorResultado, setMotorResultado] = useState<MotorResultado | null>(null);
+  const [motorAuto, setMotorAuto] = useState(false);
+  const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
+  const navigateMotor = useNavigate();
+
+  const tipoLayoutMotor = AMBIENTE_TO_LAYOUT[wizard.form.ambiente];
+
+  // Gera o projeto fabricável pelo motor determinístico (protagonista do fluxo)
+  const gerarMotor = useCallback(async () => {
+    if (!tipoLayoutMotor) return;
+    setMotorLoading(true);
+    try {
+      const res = await fetch("/api/motor?action=gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "gerar",
+          tipo_layout: tipoLayoutMotor,
+          medidas: {
+            largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
+            profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
+            altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
+            porta_parede: wizard.form.porta_parede,
+            janelas_paredes: wizard.form.janelas,
+          },
+          preferencias: {
+            parede_principal: motorParede,
+            cor_mdf_hex: wizard.form.cor_mdf,
+            ferragem: motorFerragem,
+            tipo_porta_base: "dobradica",
+            tipo_porta_aereo: "dobradica",
+            versao_comercial: "intermediaria",
+          },
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json() as { error: string }).error);
+      const data = await res.json() as MotorResultado;
+      setMotorResultado(data);
+      setMotorAberto(false);
+      toast.success(`Projeto fabricável gerado · validação ${data.validacao.status} (${data.validacao.score})`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
+    } finally {
+      setMotorLoading(false);
+    }
+  }, [tipoLayoutMotor, wizard.form, motorParede, motorFerragem]);
+
+  // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
+  useEffect(() => {
+    if (tipoLayoutMotor && !motorResultado && !motorAuto && !motorLoading) {
+      setMotorAuto(true);
+      gerarMotor();
+    }
+  }, [tipoLayoutMotor, motorResultado, motorAuto, motorLoading, gerarMotor]);
+
+  // Cria o orçamento formal a partir de uma das 3 versões reais do motor
+  const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
+    if (!motorResultado) return;
+    const v = motorResultado.orcamentos[versao];
+    setCriandoVersao(versao);
+    try {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) throw new Error("Empresa não encontrada");
+      const eid = (empresa as { id: string }).id;
+      const orc = await upsertOrcamento(eid, {
+        status: "rascunho",
+        margem_pct: v.analise_financeira.margem_desejada_pct,
+        subtotal: v.analise_financeira.custo_total,
+        total: v.analise_financeira.preco_venda,
+        observacoes: `${wizard.form.nome || wizard.form.ambiente} — versão ${versao} (motor paramétrico). Prazo ${v.prazo_producao_dias} dias.`,
+        cliente_id: wizard.clienteId ?? null,
+      });
+      const itens = (v.itens ?? []).map((it) => ({
+        orcamento_id: orc.id,
+        descricao: it.descricao,
+        quantidade: it.quantidade,
+        unidade: "un",
+        preco_custo: it.preco_custo,
+        preco_unitario: it.preco_unitario,
+        total: it.total,
+      }));
+      if (itens.length > 0) await supabase.from("orcamento_itens").insert(itens);
+      toast.success(`Orçamento ${orc.numero} criado (versão ${versao})!`);
+      navigateMotor({ to: "/app/orcamentos" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
+    } finally {
+      setCriandoVersao(null);
+    }
+  }, [motorResultado, wizard.form, wizard.clienteId, navigateMotor]);
 
   const { analise, moveis } = wizard;
   if (!analise) return null;
@@ -2095,55 +2202,18 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               <button
                 type="button"
                 disabled={motorLoading}
-                onClick={async () => {
-                  setMotorLoading(true);
-                  try {
-                    const res = await fetch("/api/motor?action=gerar", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        action: "gerar",
-                        tipo_layout: AMBIENTE_TO_LAYOUT[wizard.form.ambiente],
-                        medidas: {
-                          largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
-                          profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
-                          altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
-                          porta_parede: wizard.form.porta_parede,
-                          janelas_paredes: wizard.form.janelas,
-                        },
-                        preferencias: {
-                          parede_principal: motorParede,
-                          cor_mdf_hex: wizard.form.cor_mdf,
-                          ferragem: motorFerragem,
-                          tipo_porta_base: "dobradica",
-                          tipo_porta_aereo: "dobradica",
-                          versao_comercial: "intermediaria",
-                        },
-                      }),
-                    });
-                    if (!res.ok) throw new Error((await res.json() as { error: string }).error);
-                    const data = await res.json() as MotorResultado;
-                    update({ moveis: data.projeto.modulos as unknown as Movel[] });
-                    setMotorResultado(data);
-                    setMotorAberto(false);
-                    toast.success(`Projeto fabricável gerado · validação ${data.validacao.status} (${data.validacao.score})`);
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
-                  } finally {
-                    setMotorLoading(false);
-                  }
-                }}
+                onClick={gerarMotor}
                 className="w-full h-10 rounded-md bg-emerald-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-opacity"
               >
                 {motorLoading
                   ? <><Loader2 className="size-4 animate-spin" /> Gerando projeto fabricável…</>
-                  : <><Settings2 className="size-4" /> Gerar projeto fabricável</>}
+                  : <><Settings2 className="size-4" /> {motorResultado ? "Refazer com estas configurações" : "Gerar projeto fabricável"}</>}
               </button>
             </div>
           )}
 
           {/* ── Resultado completo do motor ── */}
-          {motorResultado && <MotorResultadoPainel data={motorResultado} />}
+          {motorResultado && <MotorResultadoPainel data={motorResultado} onUsarVersao={criarOrcamentoDoMotor} criandoVersao={criandoVersao} />}
         </Surface>
       )}
 
