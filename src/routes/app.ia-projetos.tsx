@@ -586,8 +586,17 @@ function IAProjetoPage() {
     }
   }, [wizard]);
 
+  // Guard contra criação duplicada de orçamento (BUG 4) — síncrono, sobrevive a
+  // re-renders pois é ref, não estado.
+  const criandoOrcRef = useRef(false);
+
   const criarOrcamentoFormal = useCallback(async (clienteIdOverride?: string) => {
     if (!wizard?.analise) return;
+    // BUG 4: guard síncrono contra duplo-clique / loading lento. O ref bloqueia
+    // antes do próximo render (disabled de estado só aplicaria no re-render),
+    // evitando criar N orçamentos idênticos.
+    if (criandoOrcRef.current) return;
+    criandoOrcRef.current = true;
     const cid = clienteIdOverride ?? wizard.clienteId;
     try {
       const empresa = await getEmpresaAtual();
@@ -623,6 +632,8 @@ function IAProjetoPage() {
       navigate({ to: "/app/orcamentos" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
+    } finally {
+      criandoOrcRef.current = false;
     }
   }, [wizard, navigate]);
 
