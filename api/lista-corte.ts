@@ -31,8 +31,19 @@ interface ChapaMaterial {
   layouts: { sheet_index: number; placed: PlacedPiece[] }[];
 }
 
-function calcularChapas(pecas: PecaCorte[]): ChapaMaterial[] {
+// Peça que não cabe na chapa padrão em nenhuma orientação — precisa de emenda,
+// chapa especial ou revisão do projeto. NÃO pode ser descartada em silêncio.
+interface PecaInvalida {
+  peca: string;
+  material: string;
+  largura_mm: number;
+  comprimento_mm: number;
+  motivo: string;
+}
+
+function calcularChapas(pecas: PecaCorte[]): { materiais: ChapaMaterial[]; invalidas: PecaInvalida[] } {
   const byMat = new Map<string, { w: number; h: number; label: string }[]>();
+  const invalidas: PecaInvalida[] = [];
   for (const p of pecas) {
     if (!p.largura_mm || !p.comprimento_mm || !p.quantidade) continue;
     if (NAO_CHAPA.test(p.material)) continue;
@@ -56,7 +67,17 @@ function calcularChapas(pecas: PecaCorte[]): ChapaMaterial[] {
       const orientations: [number, number][] = [];
       if (piece.w <= SHEET_W && piece.h <= SHEET_H) orientations.push([piece.w, piece.h]);
       if (piece.h <= SHEET_W && piece.w <= SHEET_H) orientations.push([piece.h, piece.w]);
-      if (orientations.length === 0) continue;
+      if (orientations.length === 0) {
+        // Peça excede a chapa padrão (2750×1830) — registra em vez de descartar.
+        invalidas.push({
+          peca: piece.label,
+          material,
+          largura_mm: piece.w,
+          comprimento_mm: piece.h,
+          motivo: `Excede a chapa padrão ${SHEET_W}×${SHEET_H}mm em ambas as orientações`,
+        });
+        continue;
+      }
 
       let placed = false;
 
@@ -102,7 +123,7 @@ function calcularChapas(pecas: PecaCorte[]): ChapaMaterial[] {
     });
   }
 
-  return results;
+  return { materiais: results, invalidas };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -114,15 +135,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const resultado = gerarListaCorte(moveis);
 
-    const chapas = calcularChapas(resultado.pecas);
+    const { materiais: chapas, invalidas } = calcularChapas(resultado.pecas);
     const totalChapas = chapas.reduce((s, c) => s + c.chapas_com_folga, 0);
 
     return res.json({
       ...resultado,
+      pecas_invalidas: invalidas,
       resumo: {
         ...resultado.resumo,
         chapas_estimadas: totalChapas,
         chapas_por_material: chapas,
+        pecas_invalidas_count: invalidas.length,
       },
     });
   } catch (e) {

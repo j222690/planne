@@ -71,6 +71,7 @@ interface PecaCorte {
 
 interface ListaCorteResult {
   pecas: PecaCorte[];
+  pecas_invalidas?: { peca: string; material: string; largura_mm: number; comprimento_mm: number; motivo: string }[];
   resumo: { total_pecas: number; chapas_estimadas: number; metros_fita: number };
 }
 
@@ -2119,6 +2120,21 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         {wizard.listaCorteLoading && (
           <div className="flex items-center gap-2 py-6 justify-center text-[13px] text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Calculando peças com GPT-4o mini…
+          </div>
+        )}
+
+        {wizard.listaCorte?.pecas_invalidas && wizard.listaCorte.pecas_invalidas.length > 0 && (
+          <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5">
+            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+              <AlertCircle className="size-3.5" /> {wizard.listaCorte.pecas_invalidas.length} peça(s) maior(es) que a chapa — precisam de emenda ou revisão
+            </div>
+            <ul className="mt-1 space-y-0.5">
+              {wizard.listaCorte.pecas_invalidas.map((p, i) => (
+                <li key={i} className="text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{p.peca}</span> — {p.largura_mm}×{p.comprimento_mm}mm ({p.material})
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
