@@ -191,6 +191,26 @@ function pecasCorpo(
   return result;
 }
 
+// ── Metragem de fita de borda ────────────────────────────────────────────────
+/**
+ * Soma os metros lineares de fita de borda de um conjunto de peças.
+ *
+ * Convenção geométrica de cada peça (largura_mm × comprimento_mm):
+ *   - fita_t / fita_b (topo/base) correm ao longo da LARGURA
+ *   - fita_l / fita_r (esquerda/direita) correm ao longo do COMPRIMENTO
+ * Logo, uma peça com fita nos 4 lados consome o perímetro: 2·(largura+comprimento).
+ */
+export function calcularMetrosFita(pecas: PecaCorte[]): number {
+  let metros = 0;
+  for (const p of pecas) {
+    if (p.fita_t) metros += (p.largura_mm / 1000) * p.quantidade;
+    if (p.fita_b) metros += (p.largura_mm / 1000) * p.quantidade;
+    if (p.fita_l) metros += (p.comprimento_mm / 1000) * p.quantidade;
+    if (p.fita_r) metros += (p.comprimento_mm / 1000) * p.quantidade;
+  }
+  return metros;
+}
+
 // ── Gerar lista de peças completa para todos os móveis ───────────────────────
 export function gerarListaCorte(moveis: MovelInput[]): { pecas: PecaCorte[]; resumo: { total_pecas: number; metros_fita: number } } {
   const pecas: PecaCorte[] = [];
@@ -237,14 +257,8 @@ export function gerarListaCorte(moveis: MovelInput[]): { pecas: PecaCorte[]; res
     }
   }
 
-  // Calcular metros de fita
-  let metrosFita = 0;
-  for (const p of pecas) {
-    if (p.fita_t) metrosFita += (p.comprimento_mm / 1000) * p.quantidade;
-    if (p.fita_b) metrosFita += (p.comprimento_mm / 1000) * p.quantidade;
-    if (p.fita_l) metrosFita += (p.largura_mm / 1000) * p.quantidade;
-    if (p.fita_r) metrosFita += (p.largura_mm / 1000) * p.quantidade;
-  }
+  // Calcular metros de fita (ver calcularMetrosFita para a convenção geométrica).
+  const metrosFita = calcularMetrosFita(pecas);
 
   const totalPecas = pecas.reduce((s, p) => s + p.quantidade, 0);
 
