@@ -540,6 +540,20 @@ function IAProjetoPage() {
             largura_cm: m.largura_cm,
             profundidade_cm: m.profundidade_cm,
             altura_cm: m.altura_cm,
+            // BUG 2: sem estes campos a lista de corte saía sem portas, gavetas
+            // nem prateleiras. _calc.ts usa "portas/gavetas/prateleiras" (sem
+            // "num_") e tipo_porta em outra nomenclatura ("abrir/correr/sem").
+            portas: m.num_portas ?? 2,
+            tipo_porta: (() => {
+              const t = m.tipo_porta;
+              if (t === "dobradica") return "abrir";
+              if (t === "correr") return "correr";
+              if (t === "aberta") return "sem";
+              return "abrir";
+            })(),
+            gavetas: m.num_gavetas ?? 0,
+            prateleiras: m.num_prateleiras ?? 0,
+            tem_fundo: true,
           })),
         }),
       });
