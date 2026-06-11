@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getEmpresaAtual, getClientes, upsertOrcamento } from "@/lib/db";
-import { checkAndConsumeCredito } from "@/lib/credits";
+import { checkAndConsumeCredito, getCreditosDisponiveis } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, exportSvgToPng, type MovelCanvas } from "@/components/planne/RoomCanvas";
 
@@ -410,17 +410,30 @@ function IAProjetoPage() {
   const gerarRender = useCallback(async (mode: "schnell" | "pro" = "pro") => {
     if (!wizard?.analise) return;
 
-    // Crédito apenas para render premium
+    // BUG 3: crédito de render só é DEBITADO quando o render conclui com sucesso.
+    // Aqui apenas verificamos disponibilidade (sem consumir) — assim, se o render
+    // falhar (timeout, erro, fila), o crédito não é perdido. O débito acontece em
+    // consumirCreditoRender(), chamado nos pontos de conclusão.
+    let empresaIdRender: string | null = null;
     if (mode === "pro") {
       try {
         const empresa = await getEmpresaAtual();
         if (empresa) {
-          const result = await checkAndConsumeCredito((empresa as { id: string }).id, "render");
-          if (!result.ok) { toast.error(result.mensagem ?? "Sem créditos de render."); return; }
-          toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
+          empresaIdRender = (empresa as { id: string }).id;
+          const saldo = await getCreditosDisponiveis(empresaIdRender, "render");
+          if (saldo <= 0) { toast.error("Sem créditos de render. Recarregue em Configurações."); return; }
         }
       } catch { /* não bloqueia */ }
     }
+
+    // Debita o crédito (premium) apenas ao confirmar o render — nunca antes.
+    const consumirCreditoRender = async () => {
+      if (mode !== "pro" || !empresaIdRender) return;
+      try {
+        const result = await checkAndConsumeCredito(empresaIdRender, "render");
+        if (result.ok) toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
+      } catch { /* não bloqueia a exibição do render já gerado */ }
+    };
 
     update({ renderLoading: true, renderMode: mode, error: null });
 
@@ -474,6 +487,7 @@ function IAProjetoPage() {
       };
 
       if (data.status === "completed" && data.url) {
+        await consumirCreditoRender();
         await saveRenderUrl(data.url);
         if (mode === "schnell") {
           update({ previewUrl: data.url, renderLoading: false });
@@ -500,6 +514,7 @@ function IAProjetoPage() {
             const s = await r.json() as { status: string; url?: string; error?: string };
             if (s.status === "completed" && s.url) {
               clearInterval(poll);
+              await consumirCreditoRender();
               await saveRenderUrl(s.url, data.job_id);
               if (mode === "schnell") {
                 update({ previewUrl: s.url, renderLoading: false });
