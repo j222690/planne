@@ -2119,7 +2119,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
         {wizard.listaCorteLoading && (
           <div className="flex items-center gap-2 py-6 justify-center text-[13px] text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> Calculando peças com GPT-4o mini…
+            <Loader2 className="size-4 animate-spin" /> Calculando lista de corte…
           </div>
         )}
 
