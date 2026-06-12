@@ -599,8 +599,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       preco_custo: it.preco_custo, preco_unitario: it.preco_unitario,
     })));
     if (clienteId) setValue("cliente_id", clienteId);
-    setValue("margem_pct", Math.round(v.margem));
-    setMargemPct(Math.round(v.margem));
+    // BUG 7: margem_pct é MULTIPLICADOR (venda/custo × 100), não o markup interno
+    // do motor. Converte para o multiplicador real (compatível com o input min=100).
+    const mult = Math.round((v.total / Math.max(1, v.custo)) * 100);
+    setValue("margem_pct", mult);
+    setMargemPct(mult);
     setFase("revisar");
     toast.success(`Versão ${k} aplicada (${v.itens.length} itens).`);
   };

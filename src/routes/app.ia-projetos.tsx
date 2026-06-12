@@ -1880,11 +1880,15 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
       const eid = (empresa as { id: string }).id;
+      // BUG 7: o campo margem_pct é MULTIPLICADOR (venda/custo × 100) em todo o
+      // sistema. O motor usa markup internamente (margem_desejada_pct); converte-se
+      // para o multiplicador real para não poluir dashboard/edição.
+      const fin = v.analise_financeira;
       const orc = await upsertOrcamento(eid, {
         status: "rascunho",
-        margem_pct: v.analise_financeira.margem_desejada_pct,
-        subtotal: v.analise_financeira.custo_total,
-        total: v.analise_financeira.preco_venda,
+        margem_pct: Math.round((fin.preco_venda / Math.max(1, fin.custo_total)) * 100),
+        subtotal: fin.custo_total,
+        total: fin.preco_venda,
         observacoes: `${wizard.form.nome || wizard.form.ambiente} — versão ${versao} (motor paramétrico). Prazo ${v.prazo_producao_dias} dias.`,
         cliente_id: wizard.clienteId ?? null,
       });

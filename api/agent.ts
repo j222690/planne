@@ -308,6 +308,7 @@ async function executeTool(
         };
       });
 
+      const totalVenda = itensComPreco.reduce((s, i) => s + i.total, 0);
       const { data: orc, error: orcErr } = await supabase
         .from("orcamentos")
         .insert({
@@ -315,9 +316,11 @@ async function executeTool(
           cliente_id: cliente.id,
           numero,
           status: "rascunho",
-          total: itensComPreco.reduce((s, i) => s + i.total, 0),
+          total: totalVenda,
           subtotal,
-          margem_pct: 300,
+          // BUG 7: margem_pct é MULTIPLICADOR (venda/custo × 100). Os preços da IA
+          // já são absolutos, então grava-se a margem REAL, não 300 fixo.
+          margem_pct: Math.round((totalVenda / Math.max(1, subtotal)) * 100),
           observacoes: args.descricao ? String(args.descricao) : `Projeto: ${moveis.join(", ")}`,
         })
         .select("id,numero")
