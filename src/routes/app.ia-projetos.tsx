@@ -97,11 +97,18 @@ type PlantaSalva = {
   porta_principal?: { parede: string }; janelas?: { parede: string }[];
 };
 
+interface ComodoVersaoResumo {
+  total: number;
+  custo: number;
+  itens: { descricao: string; quantidade: number; preco_custo: number; preco_unitario: number; total: number }[];
+}
 interface ComodoWizard {
   id: string;
   nome: string;   // instância nomeada: "Cozinha", "Quarto Maria"
   tipo: string;   // tipo de ambiente
   feito: boolean; // já gerou projeto?
+  // 3.4: resumo das 3 versões do motor por cômodo (para consolidação)
+  motorVersoes?: { economica: ComodoVersaoResumo; intermediaria: ComodoVersaoResumo; premium: ComodoVersaoResumo };
 }
 
 interface WizardState {
@@ -1965,13 +1972,30 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       const data = await res.json() as MotorResultado;
       setMotorResultado(data);
       setMotorAberto(false);
+
+      // 3.4: guarda o resumo das 3 versões no cômodo ativo, para consolidação.
+      if (wizard.comodoAtivoId) {
+        const cmp = data.orcamentos.comparativo;
+        const resumo = (k: "economica" | "intermediaria" | "premium", preco: number): ComodoVersaoResumo => ({
+          total: preco,
+          custo: data.orcamentos[k].analise_financeira.custo_total,
+          itens: data.orcamentos[k].itens ?? [],
+        });
+        const motorVersoes = {
+          economica: resumo("economica", cmp.preco_economica),
+          intermediaria: resumo("intermediaria", cmp.preco_intermediaria),
+          premium: resumo("premium", cmp.preco_premium),
+        };
+        update({ comodos: wizard.comodos.map((cm) => cm.id === wizard.comodoAtivoId ? { ...cm, motorVersoes, feito: true } : cm) });
+      }
+
       toast.success(`Projeto fabricável gerado · validação ${data.validacao.status} (${data.validacao.score})`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, motorParede, motorFerragem, empresaParams]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, empresaParams]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
@@ -2074,6 +2098,45 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       setCriandoVersao(null);
     }
   }, [motorResultado, wizard.form, navigateMotor]);
+
+  // 3.4: orçamento consolidado — soma os itens de todos os cômodos (uma versão).
+  const comodosConsolidaveis = wizard.comodos.filter((c) => c.motorVersoes);
+  const criarOrcamentoConsolidado = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
+    const comodos = wizard.comodos.filter((c) => c.motorVersoes);
+    if (comodos.length === 0) return;
+    setCriandoVersao(`consolidado-${versao}`);
+    try {
+      const empresa = await getEmpresaAtual();
+      if (!empresa) throw new Error("Empresa não encontrada");
+      const eid = (empresa as { id: string }).id;
+      let totalVenda = 0, totalCusto = 0;
+      const itensTodos: { descricao: string; quantidade: number; preco_custo: number; preco_unitario: number; total: number }[] = [];
+      for (const c of comodos) {
+        const v = c.motorVersoes![versao];
+        totalVenda += v.total; totalCusto += v.custo;
+        itensTodos.push(...v.itens.map((it) => ({ ...it, descricao: `${c.nome} — ${it.descricao}` })));
+      }
+      const orc = await upsertOrcamento(eid, {
+        status: "rascunho",
+        margem_pct: Math.round((totalVenda / Math.max(1, totalCusto)) * 100),
+        subtotal: totalCusto,
+        total: totalVenda,
+        observacoes: `Projeto completo (${versao}): ${comodos.map((c) => c.nome).join(", ")}.`,
+        cliente_id: wizard.clienteId ?? null,
+      });
+      const itens = itensTodos.map((it) => ({
+        orcamento_id: orc.id, descricao: it.descricao, quantidade: it.quantidade,
+        unidade: "un", preco_custo: it.preco_custo, preco_unitario: it.preco_unitario, total: it.total,
+      }));
+      if (itens.length > 0) await supabase.from("orcamento_itens").insert(itens);
+      toast.success(`Orçamento consolidado ${orc.numero} criado (${comodos.length} cômodos)!`);
+      navigateMotor({ to: "/app/orcamentos" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento consolidado");
+    } finally {
+      setCriandoVersao(null);
+    }
+  }, [wizard.comodos, wizard.clienteId, navigateMotor]);
 
   const { analise, moveis } = wizard;
   if (!analise) return null;
@@ -2184,6 +2247,41 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             : <div className="text-[12.5px] text-muted-foreground py-6 text-center">Calculando módulos, validação, 3 orçamentos e plano de corte CNC…</div>}
         </Surface>
       )}
+
+      {/* 3.4: consolidação multi-cômodo — projeto completo somando todos os cômodos */}
+      {comodosConsolidaveis.length >= 2 && (() => {
+        const soma = (v: "economica" | "intermediaria" | "premium") =>
+          comodosConsolidaveis.reduce((s, c) => s + (c.motorVersoes![v].total), 0);
+        return (
+          <Surface className="space-y-3 border-accent/40 bg-accent/5">
+            <div className="flex items-center gap-2">
+              <Package className="size-4 text-accent" />
+              <span className="text-[14px] font-semibold">Projeto completo</span>
+              <span className="text-[11px] text-muted-foreground">{comodosConsolidaveis.length} cômodos</span>
+            </div>
+            <div className="space-y-1">
+              {comodosConsolidaveis.map((c) => (
+                <div key={c.id} className="flex items-center justify-between text-[12px]">
+                  <span className="text-muted-foreground">{c.nome}</span>
+                  <span className="tabular-nums">{BRL(c.motorVersoes!.intermediaria.total)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border">
+              {([["economica", "Econômica"], ["intermediaria", "Intermediária"], ["premium", "Premium"]] as const).map(([k, label]) => (
+                <div key={k} className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/10" : "border-border"}`}>
+                  <div className="text-[11px] text-muted-foreground">{label} · total</div>
+                  <div className="text-[15px] font-bold mt-0.5">{BRL(soma(k))}</div>
+                  <button type="button" disabled={!!criandoVersao} onClick={() => criarOrcamentoConsolidado(k)}
+                    className={`mt-2 h-7 rounded-md text-[11.5px] font-medium disabled:opacity-50 ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}>
+                    {criandoVersao === `consolidado-${k}` ? "Criando…" : "Orçar tudo"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Surface>
+        );
+      })()}
 
       <div className="grid md:grid-cols-2 gap-5">
         {/* Estimativa rápida da IA (referência) — o valor final vem do Motor acima */}
