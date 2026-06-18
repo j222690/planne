@@ -1716,8 +1716,16 @@ interface VersaoOrc {
   prazo_producao_dias: number;
   itens: ItemVersao[];
 }
+interface ModuloMotor {
+  nome_display?: string;
+  nome?: string;
+  largura_cm: number;
+  altura_cm: number;
+  profundidade_cm: number;
+  configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
+}
 interface MotorResultado {
-  projeto: { modulos: Movel[] };
+  projeto: { modulos: ModuloMotor[] };
   validacao: { status: string; score: number; resumo: { erros: number; alertas: number } };
   orcamentos: { economica: VersaoOrc; intermediaria: VersaoOrc; premium: VersaoOrc; comparativo: { preco_economica: number; preco_intermediaria: number; preco_premium: number } };
   plano_corte: {
@@ -1778,6 +1786,33 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao 
         <span>· score {data.validacao.score}/100</span>
         {data.validacao.resumo.alertas > 0 && <span className="text-amber-600">· {data.validacao.resumo.alertas} alerta(s)</span>}
       </div>
+
+      {/* 3.2: módulos do projeto fabricável — visibilidade do que o motor gerou */}
+      {data.projeto?.modulos?.length > 0 && (
+        <details className="rounded-md border border-border">
+          <summary className="cursor-pointer select-none px-2.5 py-2 text-[12px] font-semibold flex items-center gap-1.5">
+            <Package className="size-3.5 text-accent" /> Módulos do projeto ({data.projeto.modulos.length})
+          </summary>
+          <div className="px-2.5 pb-2.5 space-y-1 max-h-56 overflow-auto">
+            {data.projeto.modulos.map((m, i) => {
+              const cfg = m.configuracao ?? {};
+              const detalhes = [
+                cfg.num_portas ? `${cfg.num_portas} porta(s)` : "",
+                cfg.num_gavetas ? `${cfg.num_gavetas} gaveta(s)` : "",
+                cfg.num_prateleiras ? `${cfg.num_prateleiras} prat.` : "",
+              ].filter(Boolean).join(" · ");
+              return (
+                <div key={i} className="flex items-center justify-between text-[11.5px] border-b border-border/40 last:border-0 py-0.5">
+                  <span className="font-medium truncate max-w-[55%]">{m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {Math.round(m.largura_cm)}×{Math.round(m.altura_cm)}×{Math.round(m.profundidade_cm)}cm{detalhes ? ` · ${detalhes}` : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
 
       {/* 3 versões de orçamento */}
       <div>
