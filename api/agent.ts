@@ -147,6 +147,7 @@ async function estimarPrecos(
   moveis: string[],
   contexto: string,
   groqKey: string,
+  catalogoRef?: string,
 ): Promise<{ descricao: string; preco_custo: number; preco_venda: number }[]> {
   try {
     const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -169,7 +170,9 @@ ${moveis.map((m, i) => `${i + 1}. ${m}`).join("\n")}
 Responda exatamente neste formato JSON (array, sem texto extra):
 [{"descricao":"nome do item","preco_custo":0,"preco_venda":0}]
 
-Referência de mercado 2025: MDF R$85/chapa, mão de obra 40% do MDF, margem típica 2.5x a 3x o custo.`,
+${catalogoRef
+  ? `Use o catálogo de preços REAL desta marcenaria como base (preços em R$):\n${catalogoRef}`
+  : "Referência de mercado 2025: MDF R$85/chapa, mão de obra 40% do MDF, margem típica 2.5x a 3x o custo."}`,
           },
         ],
         max_tokens: 800,
@@ -290,7 +293,16 @@ async function executeTool(
       // Estimar preços com IA antes de criar os itens
       const moveis = args.moveis_lista as string[];
       const contexto = [args.ambiente, args.descricao].filter(Boolean).join(" — ");
-      const precos = await estimarPrecos(moveis, contexto, groqKey);
+      // 3.6: usa o catálogo real de materiais da empresa como base de preços.
+      const { data: materiaisEmpresa } = await supabase
+        .from("materiais")
+        .select("nome, preco_custo, preco_venda, categoria")
+        .eq("empresa_id", empresaId);
+      const catalogoRef = (materiaisEmpresa as { nome: string; preco_custo: number; preco_venda: number }[] | null ?? [])
+        .slice(0, 40)
+        .map((m) => `${m.nome}: custo R$${m.preco_custo}, venda R$${m.preco_venda}`)
+        .join("\n") || undefined;
+      const precos = await estimarPrecos(moveis, contexto, groqKey, catalogoRef);
 
       let subtotal = 0;
       const itensComPreco = moveis.map((m, i) => {
