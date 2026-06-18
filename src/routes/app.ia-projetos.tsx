@@ -1946,6 +1946,17 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     }
   }, [tipoLayoutMotor, motorResultado, motorAuto, motorLoading, gerarMotor]);
 
+  // 3.1: recalcula em tempo real ao ajustar parede principal / ferragem
+  // (debounce 800ms). Só após a 1ª geração — não dispara no mount.
+  const ajusteInicial = useRef(true);
+  useEffect(() => {
+    if (!tipoLayoutMotor || !motorResultado) return;
+    if (ajusteInicial.current) { ajusteInicial.current = false; return; }
+    const t = setTimeout(() => { gerarMotor(); }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motorParede, motorFerragem]);
+
   // Cria o orçamento formal a partir de uma das 3 versões reais do motor
   const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
     if (!motorResultado) return;
