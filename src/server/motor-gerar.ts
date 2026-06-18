@@ -26,7 +26,7 @@ import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../lib/motor-paramet
 import { gerarLayoutSala } from "../lib/motor-parametrico/layout-sala";
 import { gerarLayoutEscritorio } from "../lib/motor-parametrico/layout-escritorio";
 import { projetoToMovelInput } from "../lib/motor-parametrico/adapters";
-import { criarAmbienteManual } from "../lib/motor-parametrico/ambiente";
+import { criarAmbienteManual, calcularSegmentosLivres } from "../lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../lib/motor-parametrico/engenharia";
 import { gerarTresVersoes } from "../lib/motor-parametrico/orcamento-inteligente";
 import { gerarPlanoNesting } from "../lib/motor-parametrico/nesting";
@@ -104,6 +104,15 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
 
     if (body.ambiente_geometrico) {
       ambiente = body.ambiente_geometrico;
+      // 2.1: ambientes vindos de analisar-planta trazem as aberturas mas os
+      // segmentos_livres podem vir "crus" (parede inteira). Recalcula a partir
+      // das aberturas para que portas/janelas baixas realmente bloqueiem módulos.
+      for (const id of ["top", "bottom", "left", "right"] as ParedeId[]) {
+        const parede = ambiente.paredes?.[id];
+        if (parede?.aberturas) {
+          parede.segmentos_livres = calcularSegmentosLivres(parede);
+        }
+      }
     } else {
       const m = body.medidas!;
       if (!m.largura_cm || !m.profundidade_cm) {

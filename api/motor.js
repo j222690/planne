@@ -4601,6 +4601,12 @@ async function gerarHandler(req, res) {
     let ambiente;
     if (body.ambiente_geometrico) {
       ambiente = body.ambiente_geometrico;
+      for (const id of ["top", "bottom", "left", "right"]) {
+        const parede = ambiente.paredes?.[id];
+        if (parede?.aberturas) {
+          parede.segmentos_livres = calcularSegmentosLivres(parede);
+        }
+      }
     } else {
       const m = body.medidas;
       if (!m.largura_cm || !m.profundidade_cm) {

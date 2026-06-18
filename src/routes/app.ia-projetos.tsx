@@ -122,6 +122,10 @@ interface WizardState {
     janelas: PardeType[];
   };
   planta: File | null;
+  // AmbienteGeometrico real extraído da planta (paredes, portas, janelas,
+  // segmentos livres) — alimenta o Motor para respeitar aberturas. Null = motor
+  // usa as medidas manuais como retângulo (2.1).
+  ambienteGeometrico: Record<string, unknown> | null;
   referencias: File[];
   analisando: boolean;
   analise: AnaliseIA | null;
@@ -312,6 +316,7 @@ function IAProjetoPage() {
       comodoAtivoId: null,
       form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "", cor_mdf: "#f5f3f0", porta_parede: "bottom", janelas: [] },
       planta: null,
+      ambienteGeometrico: null,
       referencias: [],
       analisando: false,
       analise: null,
@@ -344,7 +349,9 @@ function IAProjetoPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada");
 
-      const res = await fetch("/api/vision", {
+      // 2.1: quando há planta, extrair o AmbienteGeometrico real (paredes,
+      // portas, janelas) em PARALELO com a análise Vision — sem somar latência.
+      const visionPromise = fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -366,6 +373,19 @@ function IAProjetoPage() {
           margem_padrao: empresaParams.margem_padrao,
         }),
       });
+
+      const ambientePromise: Promise<Record<string, unknown> | null> = planta_b64
+        ? fetch("/api/analisar-planta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ planta_b64, formato: "imagem" }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => (d?.ambiente_geometrico as Record<string, unknown>) ?? null)
+            .catch(() => null)
+        : Promise.resolve(null);
+
+      const [res, ambienteGeometrico] = await Promise.all([visionPromise, ambientePromise]);
 
       if (!res.ok) {
         const err = await res.json() as { error: string };
@@ -400,7 +420,7 @@ function IAProjetoPage() {
       const comodosAtualizados = (wizard.comodos ?? []).map((c) =>
         c.id === wizard.comodoAtivoId ? { ...c, feito: true } : c,
       );
-      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId, comodos: comodosAtualizados });
+      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId, comodos: comodosAtualizados, ambienteGeometrico });
     } catch (e) {
       update({ analisando: false, error: e instanceof Error ? e.message : "Erro" });
     }
@@ -1834,13 +1854,20 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         body: JSON.stringify({
           action: "gerar",
           tipo_layout: tipoLayoutMotor,
-          medidas: {
-            largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
-            profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
-            altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
-            porta_parede: wizard.form.porta_parede,
-            janelas_paredes: wizard.form.janelas,
-          },
+          // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real
+          // (paredes/portas/janelas) — a Rule Engine respeita as aberturas. Caso
+          // contrário, cai para as medidas manuais (retângulo).
+          ...(wizard.ambienteGeometrico
+            ? { ambiente_geometrico: wizard.ambienteGeometrico }
+            : {
+                medidas: {
+                  largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
+                  profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
+                  altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
+                  porta_parede: wizard.form.porta_parede,
+                  janelas_paredes: wizard.form.janelas,
+                },
+              }),
           preferencias: {
             parede_principal: motorParede,
             cor_mdf_hex: wizard.form.cor_mdf,
@@ -1861,7 +1888,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, motorParede, motorFerragem]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, motorParede, motorFerragem]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
