@@ -2076,13 +2076,30 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         </div>
       </Surface>
 
+      {/* 2.3: Motor é o protagonista — projeto fabricável e 3 versões no topo */}
+      {AMBIENTE_TO_LAYOUT[wizard.form.ambiente] && (motorLoading || motorResultado) && (
+        <Surface className="space-y-3 border-emerald-500/30">
+          <div className="flex items-center gap-2">
+            <Settings2 className="size-4 text-emerald-500" />
+            <span className="text-[14px] font-semibold">Projeto fabricável</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">Motor Paramétrico</span>
+            {motorLoading && <span className="ml-auto text-[11.5px] text-muted-foreground inline-flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> gerando…</span>}
+          </div>
+          {motorResultado
+            ? <MotorResultadoPainel data={motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao} />
+            : <div className="text-[12.5px] text-muted-foreground py-6 text-center">Calculando módulos, validação, 3 orçamentos e plano de corte CNC…</div>}
+        </Surface>
+      )}
+
       <div className="grid md:grid-cols-2 gap-5">
-        {/* Orçamento */}
+        {/* Estimativa rápida da IA (referência) — o valor final vem do Motor acima */}
         <Surface>
           <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="size-4 text-accent" />
-            <span className="text-[14px] font-semibold">Orçamento estimado</span>
-            <span className="ml-auto text-[11.5px] text-muted-foreground">Margem: {orcamento.margem_pct}%</span>
+            <DollarSign className="size-4 text-muted-foreground" />
+            <span className="text-[14px] font-semibold">{motorResultado ? "Estimativa rápida da IA" : "Orçamento estimado"}</span>
+            {motorResultado
+              ? <span className="ml-auto text-[10.5px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">referência</span>
+              : <span className="ml-auto text-[11.5px] text-muted-foreground">Margem: {orcamento.margem_pct}%</span>}
           </div>
           <div className="space-y-2">
             {linhasOrc.map((l) => (
@@ -2294,10 +2311,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Settings2 className="size-4 text-emerald-500" />
-              <span className="text-[14px] font-semibold">Motor Paramétrico</span>
-              <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
-                projeto fabricável · 3 orçamentos · plano de corte · PCP
-              </span>
+              <span className="text-[14px] font-semibold">Ajustar projeto fabricável</span>
+              <span className="text-[11px] text-muted-foreground">parede principal · ferragens</span>
             </div>
             <button
               type="button"
@@ -2307,11 +2322,6 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               {motorAberto ? "Fechar" : "Configurar"}
             </button>
           </div>
-
-          <p className="text-[12.5px] text-muted-foreground">
-            Gere o projeto fabricável determinístico: módulos reais, validação,
-            3 versões de orçamento, plano de corte para CNC e cronograma de produção.
-          </p>
 
           {motorAberto && (
             <div className="space-y-3 pt-2 border-t border-border">
@@ -2355,8 +2365,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             </div>
           )}
 
-          {/* ── Resultado completo do motor ── */}
-          {motorResultado && <MotorResultadoPainel data={motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao} />}
+          {/* Resultado do motor é exibido no topo do Step 4 (2.3) */}
         </Surface>
       )}
 
