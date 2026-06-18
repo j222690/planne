@@ -108,7 +108,11 @@ function describeLayout(moveis: MovelInput[], medidas?: RenderInput["medidas"]):
 
   const descreveMovel = (m: MovelInput) => {
     const loc = [profundidadeRel(m.y_pct), lado(m.x_pct) ? `on the ${lado(m.x_pct)}` : ""].filter(Boolean).join(", ");
-    return loc ? `${m.nome} ${loc}` : m.nome;
+    // 3.3: dimensões reais → o render respeita proporção e escala de cada peça
+    const dim = m.largura_cm && m.altura_cm
+      ? ` (${Math.round(m.largura_cm)}cm wide × ${Math.round(m.altura_cm)}cm tall)`
+      : "";
+    return `${m.nome}${dim}${loc ? ` ${loc}` : ""}`;
   };
 
   if (marcenaria.length > 0) {
