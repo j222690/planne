@@ -341,8 +341,29 @@ function IAProjetoPage() {
   const analisar = useCallback(async () => {
     if (!wizard) return;
     update({ analisando: true, error: null });
+    let projetoId: string | null = wizard.projetoId;
 
     try {
+      // 3.7: cria o projeto ANTES da análise — o projetoId fica garantido mesmo
+      // se a análise falhar depois. Tenta com status; faz fallback sem a coluna
+      // (a migration de status pode ainda não ter sido aplicada).
+      const empresaInicial = await getEmpresaAtual();
+      const eidInicial = empresaInicial ? (empresaInicial as { id: string }).id : null;
+      if (eidInicial && !projetoId) {
+        const base = {
+          empresa_id: eidInicial,
+          nome: wizard.form.nome,
+          ambiente: wizard.form.ambiente,
+          estilo: wizard.form.estilo,
+          medidas: { largura: parseFloat(wizard.form.largura) || 4, profundidade: parseFloat(wizard.form.profundidade) || 3, altura: parseFloat(wizard.form.altura) || 2.7 },
+          analise_ia: {},
+        };
+        let ins = await supabase.from("room_projects").insert({ ...base, status: "analisando" }).select("id").single();
+        if (ins.error) ins = await supabase.from("room_projects").insert(base).select("id").single();
+        projetoId = ins.data?.id ?? null;
+        if (projetoId) update({ projetoId });
+      }
+
       const planta_b64 = wizard.planta ? await fileToBase64(wizard.planta) : undefined;
       const referencias_b64 = await Promise.all(wizard.referencias.map(fileToBase64));
 
@@ -394,21 +415,26 @@ function IAProjetoPage() {
 
       const { analise } = await res.json() as { analise: AnaliseIA };
 
-      // Persist to room_projects
-      let projetoId: string | null = null;
+      // 3.7: persiste o resultado no projeto criado no início (UPDATE). Se não
+      // houver projeto (sem empresa, ou criação inicial falhou), cria agora.
+      const dadosProjeto = {
+        analise_ia: analise,
+        moveis_layout: analise.moveis ?? [],
+        orcamento_ia: analise.orcamento,
+        orcamento_base_texto: analise.descricao_comercial,
+      };
       try {
-        const empresa = await getEmpresaAtual();
-        if (empresa) {
+        if (projetoId) {
+          const upd = await supabase.from("room_projects").update({ ...dadosProjeto, status: "pronto" }).eq("id", projetoId);
+          if (upd.error) await supabase.from("room_projects").update(dadosProjeto).eq("id", projetoId);
+        } else if (eidInicial) {
           const { data: proj } = await supabase.from("room_projects").insert({
-            empresa_id: (empresa as { id: string }).id,
+            empresa_id: eidInicial,
             nome: wizard.form.nome,
             ambiente: wizard.form.ambiente,
             estilo: wizard.form.estilo,
             medidas: { largura: parseFloat(wizard.form.largura) || 4, profundidade: parseFloat(wizard.form.profundidade) || 3, altura: parseFloat(wizard.form.altura) || 2.7 },
-            analise_ia: analise,
-            moveis_layout: analise.moveis ?? [],
-            orcamento_ia: analise.orcamento,
-            orcamento_base_texto: analise.descricao_comercial,
+            ...dadosProjeto,
           }).select("id").single();
           projetoId = proj?.id ?? null;
         }
@@ -422,6 +448,11 @@ function IAProjetoPage() {
       );
       update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId, comodos: comodosAtualizados, ambienteGeometrico });
     } catch (e) {
+      // 3.7: marca o projeto como erro (tolerante à coluna status) em vez de
+      // deixá-lo "analisando" para sempre. Não bloqueia o toast de erro.
+      if (projetoId) {
+        supabase.from("room_projects").update({ status: "erro" }).eq("id", projetoId).then(() => {}, () => {});
+      }
       update({ analisando: false, error: e instanceof Error ? e.message : "Erro" });
     }
   }, [wizard]);
