@@ -2140,7 +2140,10 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         </Surface>
       </div>
 
-      {/* Lista de corte */}
+      {/* Lista de corte legada (Guillotine) — só para ambientes SEM motor (2.4).
+          Com motor, o plano de corte (nesting MaxRects) + CSV/DXF já estão no
+          painel do projeto fabricável no topo. */}
+      {!AMBIENTE_TO_LAYOUT[wizard.form.ambiente] && (
       <Surface>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -2259,6 +2262,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           </div>
         )}
       </Surface>
+      )}
 
       {/* Vistas de elevação */}
       <WallElevationSection wizard={wizard} />
@@ -2399,11 +2403,21 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         )}
 
         <div className="flex gap-2 flex-wrap">
+          {/* 2.5: com motor disponível, o orçamento formal sai do motor (versão
+              intermediária por padrão; as 3 versões ficam no painel do topo).
+              O fluxo Vision só é usado quando o motor não rodou. */}
           <button
-            onClick={() => criarOrcamento(wizard.clienteId ?? undefined)}
-            className="h-10 px-4 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-2"
+            onClick={() => motorResultado
+              ? criarOrcamentoDoMotor("intermediaria")
+              : criarOrcamento(wizard.clienteId ?? undefined)}
+            disabled={!!criandoVersao}
+            className="h-10 px-4 rounded-md border border-border text-[13px] font-medium hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-2"
           >
-            <FileText className="size-4" /> {wizard.clienteNome ? `Criar orçamento — ${wizard.clienteNome}` : "Criar orçamento"}
+            <FileText className="size-4" /> {criandoVersao === "intermediaria"
+              ? "Criando…"
+              : motorResultado
+                ? "Criar orçamento (intermediária)"
+                : (wizard.clienteNome ? `Criar orçamento — ${wizard.clienteNome}` : "Criar orçamento")}
           </button>
 
           <button
