@@ -4634,7 +4634,8 @@ async function gerarHandler(req, res) {
     const resultado = gerarLayout(tipoLayout, ambiente, prefs, comum);
     const moveis_calc = projetoToMovelInput(resultado.projeto);
     const engenharia = gerarEngenharia(resultado.projeto);
-    const orcamentos = gerarTresVersoes(resultado.projeto);
+    const cfgCusto = { ...CONFIG_CUSTO_PADRAO, ...body.config_custo ?? {} };
+    const orcamentos = gerarTresVersoes(resultado.projeto, cfgCusto);
     const todasPecas = resultado.projeto.modulos.flatMap((m) => m.pecas);
     const planoBruto = gerarPlanoNesting(todasPecas, resultado.projeto.metricas.metros_fita_borda);
     const { plano: plano_corte, exportacoes: exportacoes_corte } = gerarExportacoes(planoBruto, resultado.projeto.id);

@@ -756,7 +756,7 @@ function IAProjetoPage() {
           {wizard.step === 1 && <Step1Form wizard={wizard} update={update} plantasSalvas={plantasSalvas} />}
           {wizard.step === 2 && <Step2Upload wizard={wizard} update={update} />}
           {wizard.step === 3 && <Step3Analyzing wizard={wizard} analisar={analisar} />}
-          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} criarOrdem={criarOrdemProducao} clientes={clientes} />}
+          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} criarOrdem={criarOrdemProducao} clientes={clientes} empresaParams={empresaParams} />}
           {wizard.step === 5 && <Step5Render wizard={wizard} update={update} criarOrcamento={() => criarOrcamentoFormal(wizard.clienteId ?? undefined)} />}
         </motion.div>
       </AnimatePresence>
@@ -1853,7 +1853,7 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao 
   );
 }
 
-function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte, criarOrdem, clientes }: {
+function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte, criarOrdem, clientes, empresaParams }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   gerarRender: (mode?: "schnell" | "pro") => void;
@@ -1861,6 +1861,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   gerarListaCorte: () => void;
   criarOrdem: () => void;
   clientes: { id: string; nome: string }[];
+  empresaParams: { mdf_custo_chapa: number; mao_obra_hora: number; margem_padrao: number };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const [motorAberto, setMotorAberto] = useState(false);
@@ -1885,6 +1886,22 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         body: JSON.stringify({
           action: "gerar",
           tipo_layout: tipoLayoutMotor,
+          // 3.5: custos da empresa. mao_obra_hora (default 45) escala os valores-
+          // hora por etapa proporcionalmente — fator 1 quando não configurado, sem
+          // distorcer os padrões de mercado.
+          ...((() => {
+            const f = (empresaParams.mao_obra_hora || 45) / 45;
+            return Math.abs(f - 1) < 0.01 ? {} : {
+              config_custo: {
+                valor_hora_corte: 45 * f,
+                valor_hora_bordagem: 40 * f,
+                valor_hora_usinagem: 50 * f,
+                valor_hora_montagem: 55 * f,
+                valor_hora_acabamento: 60 * f,
+                valor_hora_instalacao: 65 * f,
+              },
+            };
+          })()),
           // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real
           // (paredes/portas/janelas) — a Rule Engine respeita as aberturas. Caso
           // contrário, cai para as medidas manuais (retângulo).
@@ -1919,7 +1936,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, motorParede, motorFerragem]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, motorParede, motorFerragem, empresaParams]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {

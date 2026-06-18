@@ -28,7 +28,8 @@ import { gerarLayoutEscritorio } from "../lib/motor-parametrico/layout-escritori
 import { projetoToMovelInput } from "../lib/motor-parametrico/adapters";
 import { criarAmbienteManual, calcularSegmentosLivres } from "../lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../lib/motor-parametrico/engenharia";
-import { gerarTresVersoes } from "../lib/motor-parametrico/orcamento-inteligente";
+import { gerarTresVersoes, CONFIG_CUSTO_PADRAO } from "../lib/motor-parametrico/orcamento-inteligente";
+import type { ConfiguracaoCusto } from "../lib/motor-parametrico/orcamento-inteligente";
 import { gerarPlanoNesting } from "../lib/motor-parametrico/nesting";
 import { gerarExportacoes } from "../lib/motor-parametrico/exportacao-corte";
 import { gerarOrdemProducao } from "../lib/motor-parametrico/pcp";
@@ -45,6 +46,10 @@ type TipoLayout =
 interface RequestBody {
   // Tipo de ambiente a gerar (default: cozinha_linear)
   tipo_layout?: TipoLayout;
+
+  // 3.5: custos reais da empresa (valores-hora, overhead, etc.). Merge com os
+  // padrões de mercado; só os campos enviados sobrescrevem.
+  config_custo?: Partial<ConfiguracaoCusto>;
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
   ambiente_geometrico?: AmbienteGeometrico;
@@ -150,7 +155,9 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
     const engenharia = gerarEngenharia(resultado.projeto);
 
     // 6. Gerar 3 versões de orçamento (Fase 5): econômica / intermediária / premium
-    const orcamentos = gerarTresVersoes(resultado.projeto);
+    // 3.5: usa os custos da empresa (merge sobre os padrões de mercado).
+    const cfgCusto: ConfiguracaoCusto = { ...CONFIG_CUSTO_PADRAO, ...(body.config_custo ?? {}) };
+    const orcamentos = gerarTresVersoes(resultado.projeto, cfgCusto);
 
     // 7. Gerar plano de corte (Fase 8): nesting MaxRects + exportações
     const todasPecas = resultado.projeto.modulos.flatMap((m) => m.pecas);
