@@ -64,11 +64,23 @@ interface RenderInput {
   descricao: string;
   descricao_comercial?: string;
   mode?: "schnell" | "pro";
+  // Ângulo de câmera — gera múltiplas vistas do mesmo ambiente
+  vista?: VistaCamera;
   // Dimensões reais do ambiente (m) — para fidelidade do render
   medidas?: { largura: number; profundidade: number; altura: number };
   // Planta baixa exportada (base64) — usada como guia de composição no Flux
   planta_b64?: string;
 }
+
+// Vistas que, juntas, cobrem o espaço interno inteiro do ambiente.
+type VistaCamera = "geral" | "frontal" | "canto" | "lateral";
+
+const VISTAS_CAMERA: Record<VistaCamera, string> = {
+  geral: "wide angle establishing shot from the entrance, showing the FULL room composition, 24mm lens",
+  frontal: "front-facing view centered on the main wall and its built-in furniture, eye-level, symmetric composition",
+  canto: "corner perspective from the opposite side, wide angle capturing two walls and the complete layout",
+  lateral: "side view along the longest wall, showing the depth and circulation of the room, 28mm lens",
+};
 
 // ─── Descrição espacial do layout (top-down → linguagem natural) ────────────────
 
@@ -175,8 +187,9 @@ function buildRenderPrompt(input: RenderInput): string {
     "furniture proportions must match the specified dimensions",
     "styled with decorative objects, plants, artwork, throw pillows and rugs",
     "8K photorealistic, cinematic lighting, warm natural light from windows",
-    "wide angle interior shot showing full room composition from the entrance point of view",
-    "architectural magazine quality, 24mm lens, clean sophisticated atmosphere",
+    // Ângulo de câmera da vista solicitada (cada vista cobre uma parte do ambiente)
+    VISTAS_CAMERA[input.vista ?? "geral"],
+    "architectural magazine quality, clean sophisticated atmosphere",
     "no people, no text, no watermarks",
     input.descricao ? input.descricao.slice(0, 200) : "",
   ].filter(Boolean).join(", ");
@@ -215,6 +228,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     descricao: body.descricao ?? "",
     descricao_comercial: body.descricao_comercial,
     mode,
+    vista: body.vista,
+    medidas: body.medidas,
   };
 
   const fluxKey = process.env.FLUX_API_KEY;

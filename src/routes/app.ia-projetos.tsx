@@ -138,6 +138,7 @@ interface WizardState {
   analise: AnaliseIA | null;
   moveis: Movel[];
   renderUrl: string | null;
+  renderUrls: string[];   // múltiplas vistas do ambiente (galeria)
   renderLoading: boolean;
   renderJobId: string | null;
   listaCorte: ListaCorteResult | null;
@@ -329,6 +330,7 @@ function IAProjetoPage() {
       analise: null,
       moveis: [],
       renderUrl: null,
+      renderUrls: [],
       renderLoading: false,
       renderJobId: null,
       listaCorte: null,
@@ -485,119 +487,99 @@ function IAProjetoPage() {
       } catch { /* não bloqueia */ }
     }
 
-    // Debita o crédito (premium) apenas ao confirmar o render — nunca antes.
+    // Debita 1 crédito pelo CONJUNTO de vistas (não por imagem), só no 1º sucesso.
+    let creditoDebitado = false;
     const consumirCreditoRender = async () => {
-      if (mode !== "pro" || !empresaIdRender) return;
+      if (mode !== "pro" || !empresaIdRender || creditoDebitado) return;
+      creditoDebitado = true;
       try {
         const result = await checkAndConsumeCredito(empresaIdRender, "render");
         if (result.ok) toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
       } catch { /* não bloqueia a exibição do render já gerado */ }
     };
 
-    update({ renderLoading: true, renderMode: mode, error: null });
+    const medidasPayload = {
+      largura: parseFloat(wizard.form.largura) || 4,
+      profundidade: parseFloat(wizard.form.profundidade) || 3,
+      altura: parseFloat(wizard.form.altura) || 2.7,
+    };
+    const moveisPayload = wizard.analise.moveis.map((m) => ({
+      nome: m.nome, categoria: m.categoria, cor_hex: m.cor_hex,
+      largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
+      x_pct: m.x_pct, y_pct: m.y_pct, parede: m.parede, tipo_elemento: m.tipo_elemento,
+    }));
 
-    try {
-      const res = await fetch("/api/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          ambiente: wizard.form.ambiente,
-          estilo: wizard.form.estilo,
-          estilo_detectado: wizard.analise.estilo_detectado,
-          // Dimensões reais do ambiente — para o render respeitar proporções
-          medidas: {
-            largura: parseFloat(wizard.form.largura) || 4,
-            profundidade: parseFloat(wizard.form.profundidade) || 3,
-            altura: parseFloat(wizard.form.altura) || 2.7,
-          },
-          moveis: wizard.analise.moveis.map((m) => ({
-            nome: m.nome,
-            categoria: m.categoria,
-            cor_hex: m.cor_hex,
-            largura_cm: m.largura_cm,
-            profundidade_cm: m.profundidade_cm,
-            altura_cm: m.altura_cm,
-            // Posicionamento espacial — para o render respeitar a disposição
-            x_pct: m.x_pct,
-            y_pct: m.y_pct,
-            parede: m.parede,
-            tipo_elemento: m.tipo_elemento,
-          })),
-          descricao: wizard.analise.resumo,
-          descricao_comercial: wizard.analise.descricao_comercial,
-        }),
-      });
+    // Polling de um job até concluir → resolve com a URL (ou null em falha).
+    const pollRenderJob = (jobId: string): Promise<string | null> => new Promise((resolve) => {
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const r = await fetch(`/api/render?job_id=${jobId}`);
+          if (!r.ok) { clearInterval(poll); resolve(null); return; }
+          const s = await r.json() as { status: string; url?: string; error?: string };
+          if (s.status === "completed" && s.url) { clearInterval(poll); resolve(s.url); }
+          else if (s.status === "error" || s.error) { clearInterval(poll); resolve(null); }
+          else if (attempts > 40) { clearInterval(poll); resolve(null); }
+        } catch { clearInterval(poll); resolve(null); }
+      }, 3000);
+    });
 
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}) as Record<string, unknown>) as { error?: string };
-        throw new Error(errBody.error ?? `Erro ao iniciar render (HTTP ${res.status})`);
-      }
+    // Gera uma vista (ângulo de câmera) e resolve com a URL final.
+    const gerarVista = async (vista: string): Promise<string | null> => {
+      try {
+        const res = await fetch("/api/render", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode, vista,
+            ambiente: wizard.form.ambiente,
+            estilo: wizard.form.estilo,
+            estilo_detectado: wizard.analise!.estilo_detectado,
+            medidas: medidasPayload,
+            moveis: moveisPayload,
+            descricao: wizard.analise!.resumo,
+            descricao_comercial: wizard.analise!.descricao_comercial,
+          }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json() as { url?: string; job_id?: string; status: string };
+        if (data.status === "completed" && data.url) return data.url;
+        if (data.job_id) return await pollRenderJob(data.job_id);
+        return null;
+      } catch { return null; }
+    };
 
-      const data = await res.json() as { provider: string; url?: string; job_id?: string; status: string };
-
-      const saveRenderUrl = async (url: string, jobId?: string) => {
-        if (wizard.projetoId) {
-          await supabase.from("room_projects").update({ render_url: url }).eq("id", wizard.projetoId);
-        }
-        if (jobId) {
-          await supabase.from("render_jobs").update({ render_url: url, status: "completed" }).eq("id", jobId);
-        }
-      };
-
-      if (data.status === "completed" && data.url) {
-        await consumirCreditoRender();
-        await saveRenderUrl(data.url);
-        if (mode === "schnell") {
-          update({ previewUrl: data.url, renderLoading: false });
-          toast.success("Preview gerado!");
-        } else {
-          update({ renderUrl: data.url, renderLoading: false, step: 5 });
-        }
-        return;
-      }
-
-      if (data.job_id) {
-        update({ renderJobId: data.job_id });
-        let attempts = 0;
-        const poll = setInterval(async () => {
-          attempts++;
-          try {
-            const r = await fetch(`/api/render?job_id=${data.job_id}`);
-            if (!r.ok) {
-              const errText = await r.text();
-              clearInterval(poll);
-              update({ renderLoading: false, error: `Erro ao consultar render: ${errText.slice(0, 200)}` });
-              return;
-            }
-            const s = await r.json() as { status: string; url?: string; error?: string };
-            if (s.status === "completed" && s.url) {
-              clearInterval(poll);
-              await consumirCreditoRender();
-              await saveRenderUrl(s.url, data.job_id);
-              if (mode === "schnell") {
-                update({ previewUrl: s.url, renderLoading: false });
-                toast.success("Preview rápido gerado!");
-              } else {
-                update({ renderUrl: s.url, renderLoading: false, step: 5 });
-                toast.success("Render premium gerado!");
-              }
-            } else if (s.status === "error" || s.error) {
-              clearInterval(poll);
-              update({ renderLoading: false, error: s.error ?? "Erro no render. Tente novamente." });
-            } else if (attempts > 40) {
-              clearInterval(poll);
-              update({ renderLoading: false, error: "Tempo limite excedido (120s). Tente novamente." });
-            }
-          } catch (pollErr) {
-            clearInterval(poll);
-            update({ renderLoading: false, error: pollErr instanceof Error ? pollErr.message : "Erro ao verificar render" });
-          }
-        }, 3000);
-      }
-    } catch (e) {
-      update({ renderLoading: false, error: e instanceof Error ? e.message : "Erro" });
+    // Preview rápido (schnell): 1 vista geral. Premium (pro): 4 vistas que cobrem
+    // o espaço interno inteiro (entrada, parede principal, canto oposto, lateral).
+    if (mode === "schnell") {
+      update({ renderLoading: true, renderMode: mode, error: null });
+      const url = await gerarVista("geral");
+      if (url) { update({ previewUrl: url, renderLoading: false }); toast.success("Preview gerado!"); }
+      else update({ renderLoading: false, error: "Não foi possível gerar o preview." });
+      return;
     }
+
+    update({ renderLoading: true, renderMode: mode, error: null, renderUrls: [] });
+    const vistas = ["geral", "frontal", "canto", "lateral"];
+    const urls: string[] = [];
+    await Promise.all(vistas.map(async (vista) => {
+      const url = await gerarVista(vista);
+      if (url) {
+        urls.push(url);
+        await consumirCreditoRender();
+        update({ renderUrls: [...urls] }); // mostra as imagens conforme ficam prontas
+      }
+    }));
+
+    if (urls.length === 0) {
+      update({ renderLoading: false, error: "Não foi possível gerar as imagens. Tente novamente." });
+      return;
+    }
+    if (wizard.projetoId) {
+      try { await supabase.from("room_projects").update({ render_url: urls[0] }).eq("id", wizard.projetoId); } catch { /* não bloqueia */ }
+    }
+    update({ renderUrls: urls, renderUrl: urls[0], renderLoading: false, step: 5 });
+    toast.success(`${urls.length} vista(s) do ambiente geradas!`);
   }, [wizard]);
 
   const gerarListaCorte = useCallback(async () => {
@@ -2655,38 +2637,43 @@ function Step5Render({ wizard, update, criarOrcamento }: {
             {wizard.form.ambiente} · {wizard.form.estilo}
           </div>
         </div>
-        {wizard.renderUrl ? (
-          <div>
-            <img
-              src={wizard.renderUrl}
-              alt="Render do projeto"
-              className="w-full object-cover max-h-[520px]"
-            />
-            <div className="p-4 flex items-center gap-3">
-              <a
-                href={wizard.renderUrl}
-                download="render-planne.jpg"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5"
-              >
-                <ImageIcon className="size-3.5" /> Baixar render
-              </a>
-              <button
-                onClick={() => update({ step: 4 })}
-                className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center gap-1.5"
-              >
-                <ChevronLeft className="size-3.5" /> Voltar ao layout
-              </button>
+        {(() => {
+          const galeria = wizard.renderUrls?.length ? wizard.renderUrls : (wizard.renderUrl ? [wizard.renderUrl] : []);
+          const rotulos = ["Visão geral (entrada)", "Parede principal", "Canto oposto", "Vista lateral"];
+          return galeria.length > 0 ? (
+            <div>
+              <div className="grid grid-cols-2 gap-1.5 p-1.5">
+                {galeria.map((url, i) => (
+                  <a key={i} href={url} download={`render-planne-${i + 1}.jpg`} target="_blank" rel="noopener noreferrer"
+                    className="group relative block overflow-hidden rounded-md">
+                    <img src={url} alt={rotulos[i] ?? `Vista ${i + 1}`} className="w-full object-cover aspect-[4/3]" />
+                    <span className="absolute bottom-1 left-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded">{rotulos[i] ?? `Vista ${i + 1}`}</span>
+                    <span className="absolute top-1 right-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 inline-flex items-center gap-1"><ImageIcon className="size-2.5" /> baixar</span>
+                  </a>
+                ))}
+              </div>
+              {wizard.renderLoading && (
+                <div className="px-4 py-2 text-[12px] text-muted-foreground inline-flex items-center gap-1.5">
+                  <Loader2 className="size-3.5 animate-spin" /> Gerando mais vistas… ({galeria.length}/4)
+                </div>
+              )}
+              <div className="p-4 flex items-center gap-3">
+                <button
+                  onClick={() => update({ step: 4 })}
+                  className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="size-3.5" /> Voltar ao layout
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center py-20 gap-4">
-            <Loader2 className="size-8 animate-spin text-accent" />
-            <div className="text-[14px] font-medium">Gerando render cinematográfico…</div>
-            <div className="text-[13px] text-muted-foreground">Pode levar até 60 segundos</div>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col items-center py-20 gap-4">
+              <Loader2 className="size-8 animate-spin text-accent" />
+              <div className="text-[14px] font-medium">Gerando vistas do ambiente…</div>
+              <div className="text-[13px] text-muted-foreground">4 ângulos que mostram o espaço inteiro · pode levar ~1 min</div>
+            </div>
+          );
+        })()}
       </Surface>
 
       {wizard.renderUrl && wizard.analise && (
