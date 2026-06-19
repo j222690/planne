@@ -139,6 +139,7 @@ interface WizardState {
   moveis: Movel[];
   renderUrl: string | null;
   renderUrls: string[];   // múltiplas vistas do ambiente (galeria)
+  motorResultado: MotorResultado | null;
   renderLoading: boolean;
   renderJobId: string | null;
   listaCorte: ListaCorteResult | null;
@@ -156,7 +157,7 @@ type SavedProject = {
   created_at: string; render_url: string | null;
 };
 
-const AMBIENTES = ["Sala de estar", "Quarto casal", "Quarto solteiro", "Cozinha", "Home office", "Closet", "Banheiro", "Área gourmet", "Escritório"];
+const AMBIENTES = ["Sala de estar", "Quarto casal", "Quarto solteiro", "Cozinha", "Home office", "Closet", "Banheiro", "Lavanderia", "Área gourmet", "Escritório"];
 const ESTILOS = ["Moderno Minimalista", "Contemporâneo", "Clássico", "Industrial", "Escandinavo", "Boho Chic", "Rústico", "Luxo"];
 
 const BRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -331,6 +332,7 @@ function IAProjetoPage() {
       moveis: [],
       renderUrl: null,
       renderUrls: [],
+      motorResultado: null,
       renderLoading: false,
       renderJobId: null,
       listaCorte: null,
@@ -746,7 +748,7 @@ function IAProjetoPage() {
           {wizard.step === 2 && <Step2Upload wizard={wizard} update={update} />}
           {wizard.step === 3 && <Step3Analyzing wizard={wizard} analisar={analisar} />}
           {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} criarOrdem={criarOrdemProducao} clientes={clientes} empresaParams={empresaParams} />}
-          {wizard.step === 5 && <Step5Render wizard={wizard} update={update} criarOrcamento={() => criarOrcamentoFormal(wizard.clienteId ?? undefined)} />}
+          {wizard.step === 5 && <Step5Render wizard={wizard} update={update} criarOrcamento={() => criarOrcamentoFormal(wizard.clienteId ?? undefined)} gerarRender={gerarRender} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -1892,9 +1894,10 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const [motorLoading, setMotorLoading] = useState(false);
   const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
   const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">("nacional");
-  const [motorResultado, setMotorResultado] = useState<MotorResultado | null>(null);
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
+  const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
+  const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<"cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha">("cozinha_linear");
   const navigateMotor = useNavigate();
 
   const tipoLayoutMotor = AMBIENTE_TO_LAYOUT[wizard.form.ambiente];
@@ -1909,7 +1912,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "gerar",
-          tipo_layout: tipoLayoutMotor,
+          tipo_layout: wizard.form.ambiente === "Cozinha" ? motorLayoutCozinha : tipoLayoutMotor,
           // 3.5: custos da empresa. mao_obra_hora (default 45) escala os valores-
           // hora por etapa proporcionalmente — fator 1 quando não configurado, sem
           // distorcer os padrões de mercado.
@@ -1944,15 +1947,16 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             parede_principal: motorParede,
             cor_mdf_hex: wizard.form.cor_mdf,
             ferragem: motorFerragem,
-            tipo_porta_base: "dobradica",
+            tipo_porta_base: motorTipoPorta,
             tipo_porta_aereo: "dobradica",
+            tipo_porta: motorTipoPorta,
             versao_comercial: "intermediaria",
           },
         }),
       });
       if (!res.ok) throw new Error((await res.json() as { error: string }).error);
       const data = await res.json() as MotorResultado;
-      setMotorResultado(data);
+      update({ motorResultado: data });
       setMotorAberto(false);
 
       // 3.4: guarda o resumo das 3 versões no cômodo ativo, para consolidação.
@@ -1977,31 +1981,31 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, empresaParams]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, empresaParams]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
-    if (tipoLayoutMotor && !motorResultado && !motorAuto && !motorLoading) {
+    if (tipoLayoutMotor && !wizard.motorResultado && !motorAuto && !motorLoading) {
       setMotorAuto(true);
       gerarMotor();
     }
-  }, [tipoLayoutMotor, motorResultado, motorAuto, motorLoading, gerarMotor]);
+  }, [tipoLayoutMotor, wizard.motorResultado, motorAuto, motorLoading, gerarMotor]);
 
   // 3.1: recalcula em tempo real ao ajustar parede principal / ferragem
   // (debounce 800ms). Só após a 1ª geração — não dispara no mount.
   const ajusteInicial = useRef(true);
   useEffect(() => {
-    if (!tipoLayoutMotor || !motorResultado) return;
+    if (!tipoLayoutMotor || !wizard.motorResultado) return;
     if (ajusteInicial.current) { ajusteInicial.current = false; return; }
     const t = setTimeout(() => { gerarMotor(); }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motorParede, motorFerragem]);
+  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha]);
 
   // Cria o orçamento formal a partir de uma das 3 versões reais do motor
   const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
-    if (!motorResultado) return;
-    const v = motorResultado.orcamentos[versao];
+    if (!wizard.motorResultado) return;
+    const v = wizard.motorResultado.orcamentos[versao];
     setCriandoVersao(versao);
     try {
       const empresa = await getEmpresaAtual();
@@ -2036,18 +2040,18 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setCriandoVersao(null);
     }
-  }, [motorResultado, wizard.form, wizard.clienteId, navigateMotor]);
+  }, [wizard.motorResultado, wizard.form, wizard.clienteId, navigateMotor]);
 
   // Cria a ordem de produção a partir do plano de corte (nesting) + PCP do motor
   const criarOrdemDoMotor = useCallback(async () => {
-    if (!motorResultado) return;
+    if (!wizard.motorResultado) return;
     setCriandoVersao("ordem");
     try {
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
       const eid = (empresa as { id: string }).id;
-      const pc = motorResultado.plano_corte;
-      const pcp = motorResultado.pcp;
+      const pc = wizard.motorResultado.plano_corte;
+      const pcp = wizard.motorResultado.pcp;
 
       const { data: ordem } = await supabase.from("ordens_producao").insert({
         empresa_id: eid,
@@ -2079,7 +2083,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setCriandoVersao(null);
     }
-  }, [motorResultado, wizard.form, navigateMotor]);
+  }, [wizard.motorResultado, wizard.form, navigateMotor]);
 
   // 3.4: orçamento consolidado — soma os itens de todos os cômodos (uma versão).
   const comodosConsolidaveis = wizard.comodos.filter((c) => c.motorVersoes);
@@ -2173,7 +2177,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       {wizard.renderLoading && (
         <div className="flex items-center gap-3 rounded-md border border-violet-400/30 bg-violet-50 dark:bg-violet-950/20 px-4 py-3 text-[12.5px] text-violet-700 dark:text-violet-300">
           <Loader2 className="size-4 animate-spin shrink-0" />
-          <span>{wizard.renderMode === "schnell" ? "Gerando preview rápido… aguarde ~10s" : "Gerando render premium… pode levar até 60s"}</span>
+          <span>{wizard.renderMode === "schnell" ? "Gerando preview rápido… aguarde ~10s" : wizard.renderUrls.length > 0 ? `Gerando render premium… ${wizard.renderUrls.length}/4 vistas prontas` : "Gerando render premium… pode levar até 60s"}</span>
         </div>
       )}
 
@@ -2216,7 +2220,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       </Surface>
 
       {/* 2.3: Motor é o protagonista — projeto fabricável e 3 versões no topo */}
-      {AMBIENTE_TO_LAYOUT[wizard.form.ambiente] && (motorLoading || motorResultado) && (
+      {AMBIENTE_TO_LAYOUT[wizard.form.ambiente] && (motorLoading || wizard.motorResultado) && (
         <Surface className="space-y-3 border-emerald-500/30">
           <div className="flex items-center gap-2">
             <Settings2 className="size-4 text-emerald-500" />
@@ -2224,8 +2228,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">Motor Paramétrico</span>
             {motorLoading && <span className="ml-auto text-[11.5px] text-muted-foreground inline-flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> gerando…</span>}
           </div>
-          {motorResultado
-            ? <MotorResultadoPainel data={motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao} />
+          {wizard.motorResultado
+            ? <MotorResultadoPainel data={wizard.motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao} />
             : <div className="text-[12.5px] text-muted-foreground py-6 text-center">Calculando módulos, validação, 3 orçamentos e plano de corte CNC…</div>}
         </Surface>
       )}
@@ -2270,8 +2274,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         <Surface>
           <div className="flex items-center gap-2 mb-4">
             <DollarSign className="size-4 text-muted-foreground" />
-            <span className="text-[14px] font-semibold">{motorResultado ? "Estimativa rápida da IA" : "Orçamento estimado"}</span>
-            {motorResultado
+            <span className="text-[14px] font-semibold">{wizard.motorResultado ? "Estimativa rápida da IA" : "Orçamento estimado"}</span>
+            {wizard.motorResultado
               ? <span className="ml-auto text-[10.5px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">referência</span>
               : <span className="ml-auto text-[11.5px] text-muted-foreground">Margem: {orcamento.margem_pct}%</span>}
           </div>
@@ -2297,19 +2301,39 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         <Surface>
           <div className="flex items-center gap-2 mb-4">
             <Package className="size-4 text-accent" />
-            <span className="text-[14px] font-semibold">Móveis sugeridos</span>
+            <span className="text-[14px] font-semibold">{wizard.motorResultado ? "Módulos fabricáveis" : "Móveis sugeridos"}</span>
+            {wizard.motorResultado && <span className="ml-auto text-[10.5px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">Motor</span>}
           </div>
-          <div className="space-y-2 max-h-64 overflow-auto">
-            {moveis.map((m) => (
-              <div key={m.id} className="flex items-start gap-2 text-[12px]">
-                <div className="size-3 rounded-sm shrink-0 mt-0.5" style={{ background: m.cor_hex || "#ccc" }} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{m.nome}</div>
-                  <div className="text-muted-foreground">{m.largura_cm}×{m.profundidade_cm}×{m.altura_cm}cm · {m.chapas_mdf} chapas</div>
-                </div>
-                <div className="shrink-0 tabular-nums text-muted-foreground">{BRL(m.preco_estimado)}</div>
-              </div>
-            ))}
+          <div className="space-y-1.5 max-h-64 overflow-auto">
+            {wizard.motorResultado
+              ? wizard.motorResultado.projeto.modulos.map((m, i) => {
+                  const cfg = m.configuracao ?? {};
+                  const detalhe = [
+                    cfg.num_portas ? `${cfg.num_portas}p` : "",
+                    cfg.num_gavetas ? `${cfg.num_gavetas}g` : "",
+                    cfg.num_prateleiras ? `${cfg.num_prateleiras}prat` : "",
+                  ].filter(Boolean).join(" · ");
+                  return (
+                    <div key={i} className="flex items-start gap-2 text-[12px]">
+                      <div className="size-3 rounded-sm shrink-0 mt-0.5 bg-emerald-500/30 border border-emerald-500/40" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}</div>
+                        <div className="text-muted-foreground">{Math.round(m.largura_cm)}×{Math.round(m.profundidade_cm)}×{Math.round(m.altura_cm)}cm{detalhe ? ` · ${detalhe}` : ""}</div>
+                      </div>
+                    </div>
+                  );
+                })
+              : moveis.map((m) => (
+                  <div key={m.id} className="flex items-start gap-2 text-[12px]">
+                    <div className="size-3 rounded-sm shrink-0 mt-0.5" style={{ background: m.cor_hex || "#ccc" }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{m.nome}</div>
+                      <div className="text-muted-foreground">{m.largura_cm}×{m.profundidade_cm}×{m.altura_cm}cm · {m.chapas_mdf} chapas</div>
+                    </div>
+                    <div className="shrink-0 tabular-nums text-muted-foreground">{BRL(m.preco_estimado)}</div>
+                  </div>
+                ))
+            }
           </div>
         </Surface>
       </div>
@@ -2530,6 +2554,41 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                 </div>
               </div>
 
+              {/* Tipo de porta — base e roupeiros */}
+              <div>
+                <div className="text-[11.5px] text-muted-foreground mb-1.5">Tipo de porta</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {([["dobradica", "Dobradiça", "Abre para fora"], ["correr", "Corrediça", "Desliza lateralmente"]] as const).map(([v, l, sub]) => (
+                    <button key={v} type="button" onClick={() => setMotorTipoPorta(v)}
+                      className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorTipoPorta === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                      <span className="font-medium">{l}</span>
+                      <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Layout de cozinha — só aparece quando o ambiente é Cozinha */}
+              {wizard.form.ambiente === "Cozinha" && (
+                <div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Layout da cozinha</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      ["cozinha_linear", "Linear", "Módulos numa parede só"],
+                      ["cozinha_l", "Em L", "Duas paredes perpendiculares"],
+                      ["cozinha_u", "Em U", "Três paredes — máximo espaço"],
+                      ["ilha", "Com ilha", "Bancada central no ambiente"],
+                    ] as const).map(([v, l, sub]) => (
+                      <button key={v} type="button" onClick={() => setMotorLayoutCozinha(v)}
+                        className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorLayoutCozinha === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                        <span className="font-medium">{l}</span>
+                        <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button
                 type="button"
                 disabled={motorLoading}
@@ -2538,7 +2597,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               >
                 {motorLoading
                   ? <><Loader2 className="size-4 animate-spin" /> Gerando projeto fabricável…</>
-                  : <><Settings2 className="size-4" /> {motorResultado ? "Refazer com estas configurações" : "Gerar projeto fabricável"}</>}
+                  : <><Settings2 className="size-4" /> {wizard.motorResultado ? "Refazer com estas configurações" : "Gerar projeto fabricável"}</>}
               </button>
             </div>
           )}
@@ -2581,7 +2640,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               intermediária por padrão; as 3 versões ficam no painel do topo).
               O fluxo Vision só é usado quando o motor não rodou. */}
           <button
-            onClick={() => motorResultado
+            onClick={() => wizard.motorResultado
               ? criarOrcamentoDoMotor("intermediaria")
               : criarOrcamento(wizard.clienteId ?? undefined)}
             disabled={!!criandoVersao}
@@ -2589,7 +2648,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           >
             <FileText className="size-4" /> {criandoVersao === "intermediaria"
               ? "Criando…"
-              : motorResultado
+              : wizard.motorResultado
                 ? "Criar orçamento (intermediária)"
                 : (wizard.clienteNome ? `Criar orçamento — ${wizard.clienteNome}` : "Criar orçamento")}
           </button>
@@ -2623,69 +2682,94 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
 // ─── Step 5: Render ───────────────────────────────────────────────────────────
 
-function Step5Render({ wizard, update, criarOrcamento }: {
+function Step5Render({ wizard, update, criarOrcamento, gerarRender }: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   criarOrcamento: () => void;
+  gerarRender: (mode?: "schnell" | "pro") => void;
 }) {
+  const galeria = wizard.renderUrls?.length ? wizard.renderUrls : (wizard.renderUrl ? [wizard.renderUrl] : []);
+  const rotulos = ["Visão geral (entrada)", "Parede principal", "Canto oposto", "Vista lateral"];
+  // Total preferencial: usa o motor (intermediária) quando disponível — mais preciso que Vision
+  const totalMotor = wizard.motorResultado?.orcamentos.comparativo.preco_intermediaria;
+  const totalExibido = totalMotor ?? wizard.analise?.orcamento.total ?? 0;
+  const isMotorTotal = !!totalMotor;
+
   return (
     <div className="space-y-5">
       <Surface padded={false}>
-        <div className="px-5 py-3 border-b border-border">
-          <div className="text-[14px] font-semibold">Render Premium</div>
-          <div className="text-[12px] text-muted-foreground mt-0.5">
-            {wizard.form.ambiente} · {wizard.form.estilo}
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+          <div>
+            <div className="text-[14px] font-semibold">Render Premium</div>
+            <div className="text-[12px] text-muted-foreground mt-0.5">
+              {wizard.form.ambiente} · {wizard.form.estilo}
+            </div>
           </div>
+          <button
+            onClick={() => gerarRender("pro")}
+            disabled={wizard.renderLoading}
+            className="h-8 px-3 rounded-md border border-violet-400 text-violet-700 dark:text-violet-300 text-[12px] font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 disabled:opacity-60 inline-flex items-center gap-1.5"
+            title="Gerar novo set de 4 vistas — consome 1 crédito"
+          >
+            {wizard.renderLoading
+              ? <><Loader2 className="size-3.5 animate-spin" /> {galeria.length}/4</>
+              : <><RefreshCw className="size-3.5" /> Novo render</>}
+          </button>
         </div>
-        {(() => {
-          const galeria = wizard.renderUrls?.length ? wizard.renderUrls : (wizard.renderUrl ? [wizard.renderUrl] : []);
-          const rotulos = ["Visão geral (entrada)", "Parede principal", "Canto oposto", "Vista lateral"];
-          return galeria.length > 0 ? (
-            <div>
-              <div className="grid grid-cols-2 gap-1.5 p-1.5">
-                {galeria.map((url, i) => (
-                  <a key={i} href={url} download={`render-planne-${i + 1}.jpg`} target="_blank" rel="noopener noreferrer"
-                    className="group relative block overflow-hidden rounded-md">
-                    <img src={url} alt={rotulos[i] ?? `Vista ${i + 1}`} className="w-full object-cover aspect-[4/3]" />
-                    <span className="absolute bottom-1 left-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded">{rotulos[i] ?? `Vista ${i + 1}`}</span>
-                    <span className="absolute top-1 right-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 inline-flex items-center gap-1"><ImageIcon className="size-2.5" /> baixar</span>
-                  </a>
-                ))}
-              </div>
-              {wizard.renderLoading && (
-                <div className="px-4 py-2 text-[12px] text-muted-foreground inline-flex items-center gap-1.5">
-                  <Loader2 className="size-3.5 animate-spin" /> Gerando mais vistas… ({galeria.length}/4)
+        {galeria.length > 0 ? (
+          <div>
+            <div className="grid grid-cols-2 gap-1.5 p-1.5">
+              {galeria.map((url, i) => (
+                <a key={i} href={url} download={`render-planne-${i + 1}.jpg`} target="_blank" rel="noopener noreferrer"
+                  className="group relative block overflow-hidden rounded-md">
+                  <img src={url} alt={rotulos[i] ?? `Vista ${i + 1}`} className="w-full object-cover aspect-[4/3]" />
+                  <span className="absolute bottom-1 left-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded">{rotulos[i] ?? `Vista ${i + 1}`}</span>
+                  <span className="absolute top-1 right-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 inline-flex items-center gap-1"><ImageIcon className="size-2.5" /> baixar</span>
+                </a>
+              ))}
+              {/* Placeholders enquanto restam vistas chegando */}
+              {wizard.renderLoading && galeria.length < 4 && Array.from({ length: 4 - galeria.length }).map((_, i) => (
+                <div key={`ph-${i}`} className="aspect-[4/3] rounded-md bg-secondary/60 grid place-items-center">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground/50" />
                 </div>
-              )}
-              <div className="p-4 flex items-center gap-3">
-                <button
-                  onClick={() => update({ step: 4 })}
-                  className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center gap-1.5"
-                >
-                  <ChevronLeft className="size-3.5" /> Voltar ao layout
-                </button>
+              ))}
+            </div>
+            {wizard.renderLoading && (
+              <div className="px-4 py-2 text-[12px] text-muted-foreground inline-flex items-center gap-1.5">
+                <Loader2 className="size-3.5 animate-spin" /> {galeria.length}/4 vistas prontas…
               </div>
+            )}
+            <div className="p-4 flex items-center gap-3">
+              <button
+                onClick={() => update({ step: 4 })}
+                className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center gap-1.5"
+              >
+                <ChevronLeft className="size-3.5" /> Voltar ao layout
+              </button>
             </div>
-          ) : (
-            <div className="flex flex-col items-center py-20 gap-4">
-              <Loader2 className="size-8 animate-spin text-accent" />
-              <div className="text-[14px] font-medium">Gerando vistas do ambiente…</div>
-              <div className="text-[13px] text-muted-foreground">4 ângulos que mostram o espaço inteiro · pode levar ~1 min</div>
-            </div>
-          );
-        })()}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center py-20 gap-4">
+            <Loader2 className="size-8 animate-spin text-accent" />
+            <div className="text-[14px] font-medium">Gerando vistas do ambiente…</div>
+            <div className="text-[13px] text-muted-foreground">4 ângulos que mostram o espaço inteiro · pode levar ~1 min</div>
+          </div>
+        )}
       </Surface>
 
-      {wizard.renderUrl && wizard.analise && (
+      {(wizard.renderUrl || galeria.length > 0) && (
         <div className="grid md:grid-cols-2 gap-4">
           <Surface padded={false} className="p-4">
-            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-2">Total do projeto</div>
+            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-1">
+              Total do projeto {isMotorTotal && <span className="text-emerald-600 normal-case">(motor paramétrico)</span>}
+            </div>
             <div className="text-[28px] font-bold text-accent tabular-nums">
-              {BRL(wizard.analise.orcamento.total)}
+              {BRL(totalExibido)}
             </div>
-            <div className="text-[12px] text-muted-foreground mt-1">
-              Margem: {wizard.analise.orcamento.margem_pct}% · {wizard.moveis.length} móveis
-            </div>
+            {isMotorTotal
+              ? <div className="text-[12px] text-muted-foreground mt-1">Versão intermediária · {wizard.motorResultado!.projeto.modulos.length} módulos</div>
+              : <div className="text-[12px] text-muted-foreground mt-1">Margem: {wizard.analise?.orcamento.margem_pct ?? 0}% · {wizard.moveis.length} móveis</div>
+            }
           </Surface>
           <Surface padded={false} className="p-4">
             <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-3">Próximos passos</div>
