@@ -4,7 +4,7 @@ import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tool
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual, upsertLancamento, updateLancamento, deleteLancamento } from "@/lib/db";
 import { Loader2, Plus, X, MoreHorizontal, Pencil, Trash2, CheckCircle2, Download } from "lucide-react";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -312,7 +312,7 @@ function Financeiro() {
         }
       });
       // add approved orçamentos as projected income in month 1
-      const nextMonth = format(subMonths(hoje, -1), "MMM/yy", { locale: ptBR });
+      const nextMonth = format(addMonths(hoje, 1), "MMM/yy", { locale: ptBR });
       if (projetadoPorMes[nextMonth]) {
         (orcAprovados ?? []).forEach((o) => { projetadoPorMes[nextMonth].entradas += Number(o.total ?? 0) * 0.5; });
       }

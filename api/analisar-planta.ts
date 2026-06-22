@@ -79,7 +79,10 @@ export interface PlantaAnalisada {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { planta_b64, ambiente } = req.body as { planta_b64: string; ambiente?: string };
+  // Aceita tanto planta_b64 (novo) quanto imagem_b64 (legado) para compatibilidade
+  const body = req.body as { planta_b64?: string; imagem_b64?: string; ambiente?: string };
+  const planta_b64 = body.planta_b64 ?? body.imagem_b64;
+  const { ambiente } = body;
   if (!planta_b64) return res.status(400).json({ error: "Imagem da planta não fornecida" });
 
   const openaiKey = process.env.OPENAI_API_KEY;

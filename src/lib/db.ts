@@ -131,12 +131,13 @@ export async function getFornecedores(empresaId: string) {
 }
 
 // ─── Materiais ────────────────────────────────────────────────────────────────
-export async function getMateriais(_empresaId?: string) {
-  const { data, error } = await supabase
+export async function getMateriais(empresaId?: string) {
+  let q = supabase
     .from("materiais")
     .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,largura_mm,comprimento_mm,fornecedor_id,fornecedores(nome),categoria_id")
-    .eq("ativo", true)
-    .order("nome");
+    .eq("ativo", true);
+  if (empresaId) q = q.eq("empresa_id", empresaId);
+  const { data, error } = await q.order("nome");
   if (error) throw error;
   return data ?? [];
 }

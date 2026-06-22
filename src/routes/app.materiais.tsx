@@ -396,16 +396,11 @@ function Materiais() {
     try {
       setLoading(true);
       setError(null);
-      // Carrega empresa em paralelo (opcional — apenas para operações de escrita)
-      const [empresaResult, data] = await Promise.allSettled([
-        getEmpresaAtual(),
-        getMateriais(),
-      ]);
-      if (empresaResult.status === "fulfilled" && empresaResult.value) {
-        setEmpresaId((empresaResult.value as { id: string }).id);
-      }
-      if (data.status === "rejected") throw data.reason;
-      setMateriais(data.value as unknown as Material[]);
+      const empresa = await getEmpresaAtual();
+      const eid = empresa ? (empresa as { id: string }).id : undefined;
+      if (eid) setEmpresaId(eid);
+      const data = await getMateriais(eid);
+      setMateriais(data as unknown as Material[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao carregar materiais");
     } finally {

@@ -664,7 +664,7 @@ function IAProjetoPage() {
           descricao: m.nome,
           quantidade: 1,
           unidade: "un",
-          preco_custo: Math.round(m.preco_estimado / (wizard.analise!.orcamento.margem_pct / 100)),
+          preco_custo: Math.round(m.preco_estimado / Math.max(wizard.analise!.orcamento.margem_pct / 100, 0.01)),
           preco_unitario: m.preco_estimado,
           total: m.preco_estimado,
         }));
@@ -696,19 +696,23 @@ function IAProjetoPage() {
       }).select("id,numero").single();
       if (!ordem) throw new Error("Erro ao criar ordem");
 
-      // Salvar peças como cortes na ordem
+      // Salvar peças como cortes na ordem (tabela lista_corte)
       const pecas = wizard.listaCorte.pecas.map((p) => ({
         ordem_producao_id: ordem.id,
+        empresa_id: eid,
         descricao_peca: `${p.peca} (${p.movel})`,
-        material: p.material,
         largura_mm: p.largura_mm,
         comprimento_mm: p.comprimento_mm,
         quantidade: p.quantidade,
-        fita_borda: [p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"].filter(Boolean).join("|") || null,
-        observacao: p.observacao ?? null,
+        movel: p.movel ?? null,
+        fita_borda_l: !!p.fita_l,
+        fita_borda_r: !!p.fita_r,
+        fita_borda_t: !!p.fita_t,
+        fita_borda_b: !!p.fita_b,
+        cortado: false,
       }));
       if (pecas.length > 0) {
-        await supabase.from("pecas_corte").insert(pecas).throwOnError();
+        await supabase.from("lista_corte").insert(pecas).throwOnError();
       }
       toast.success(`Ordem de produção #${ordem.numero ?? ""} criada com ${pecas.length} peças!`);
       update({ criandoOrdem: false });
@@ -2070,16 +2074,19 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       const pecas = pc.chapas.flatMap((ch) =>
         ch.pecas_alocadas.map((p) => ({
           ordem_producao_id: ordem.id,
-          descricao_peca: p.etiqueta,
-          material: ch.material.nome_display,
+          empresa_id: eid,
+          descricao_peca: `${p.etiqueta} · ${ch.material.nome_display} · Chapa ${ch.numero_sequencial}${p.rotacionada ? " (girada 90°)" : ""}`,
           largura_mm: Math.round(p.largura_mm),
           comprimento_mm: Math.round(p.comprimento_mm),
           quantidade: 1,
-          fita_borda: null,
-          observacao: `Chapa ${ch.numero_sequencial}${p.rotacionada ? " · girada 90°" : ""}`,
+          fita_borda_l: false,
+          fita_borda_r: false,
+          fita_borda_t: false,
+          fita_borda_b: false,
+          cortado: false,
         })),
       );
-      if (pecas.length > 0) await supabase.from("pecas_corte").insert(pecas).throwOnError();
+      if (pecas.length > 0) await supabase.from("lista_corte").insert(pecas).throwOnError();
 
       toast.success(`Ordem #${ordem.numero ?? ""} criada com ${pecas.length} peças (plano de corte do motor)!`);
       navigateMotor({ to: "/app/producao" });

@@ -287,8 +287,8 @@ async function executeTool(
       const cliente = clientes?.[0];
       if (!cliente) return { erro: `Cliente "${args.cliente_nome}" não encontrado. Crie o cliente primeiro com criar_cliente.` };
 
-      const { count } = await supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("empresa_id", empresaId);
-      const numero = `ORC-${String((count ?? 0) + 1).padStart(4, "0")}`;
+      // Usa timestamp para evitar duplicatas em inserts concorrentes (trigger no banco gera o numero definitivo)
+      const numero = `ORC-${Date.now().toString().slice(-6)}`;
 
       // Estimar preços com IA antes de criar os itens
       const moveis = args.moveis_lista as string[];
