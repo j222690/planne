@@ -164,11 +164,57 @@ const AMBIENTE_MAP: Record<string, string> = {
   "Banheiro": "bathroom",
   "Área gourmet": "gourmet outdoor kitchen terrace",
   "Escritório": "professional office workspace",
+  "Lavanderia": "laundry utility room",
+};
+
+// ─── Iluminação específica por estilo ────────────────────────────────────────
+
+const LIGHTING_BY_STYLE: Record<string, string> = {
+  "Moderno Minimalista": "cool white diffused LED ceiling panels, recessed spotlights, indirect strip lighting concealed behind cabinets, 5600K clean shadowless illumination",
+  "Contemporâneo": "balanced natural daylight from wide floor-to-ceiling windows, warm white recessed ceiling lights 3000K, discreet accent spots highlighting furniture details",
+  "Clássico": "warm traditional chandelier 2700K, elegant wall sconces with fabric shades, soft golden even illumination throughout the room",
+  "Industrial": "exposed Edison filament pendant bulbs 2200K warm amber, high-contrast chiaroscuro shadows, cool blue ambient light from large industrial windows",
+  "Escandinavo": "soft diffused north-facing daylight, hygge warm candle accent lighting 2400K, cozy warm glow with no harsh shadows, hygge atmosphere",
+  "Boho Chic": "golden afternoon sunlight streaming through sheer linen curtains, rattan pendant lamp casting intricate patterned shadows, fairy lights in corners",
+  "Rústico": "warm low-angle side light through rustic wooden shutters, incandescent warm glow 2200K, candlelight flickering on wooden surfaces",
+  "Luxo": "dramatic architectural golden lighting 3200K, concealed LED strips in every niche and shelf, soft downlights highlighting marble surfaces, crystal chandelier casting brilliant reflections",
+};
+
+// ─── Decorações específicas por estilo ────────────────────────────────────────
+
+const DECOR_BY_STYLE: Record<string, string> = {
+  "Moderno Minimalista": "single white tulip in tall geometric ceramic vase, abstract geometric print in thin black frame, concrete sphere sculpture on shelf, matte ceramic coffee cup on counter",
+  "Contemporâneo": "curated architectural art book stack on coffee table, sculptural matte ceramic vase, small succulent in designer pot, abstract canvas painting",
+  "Clássico": "crystal vase with fresh white hydrangeas, ornate gilded picture frame with classical art, rich velvet throw pillow, silk drapes with tassel trim",
+  "Industrial": "vintage Edison table lamp, industrial metal pipe bookend with hardcover books, reclaimed wooden decorative crate, raw brick wall texture visible",
+  "Escandinavo": "dried pampas grass in white ceramic vase, chunky knit wool throw blanket draped on chair, beeswax candle cluster on tray, small monstera plant",
+  "Boho Chic": "macramé wall hanging above sofa, terracotta pots with cacti and trailing pothos plant, layered vintage kilim area rug, woven rattan basket",
+  "Rústico": "handmade clay pottery on shelf, wooden cutting board with artisan bread loaf, dried herb bundle hanging, mason jar with wildflowers, linen napkins",
+  "Luxo": "fresh white orchid arrangement in crystal vase, Carrara marble decorative tray with gold accessories, brass candlestick holders, luxury coffee table book, cashmere throw",
+};
+
+// ─── Acessórios específicos por ambiente ──────────────────────────────────────
+
+const DECOR_BY_AMBIENTE: Record<string, string> = {
+  "Cozinha": "polished granite countertop with integrated stainless steel sink, espresso coffee machine on counter, ceramic fruit bowl with fresh fruits, bar stools at the island counter, kitchen herb garden on window sill",
+  "Sala de estar": "elegant area rug with sophisticated pattern, glass coffee table with stacked design books, throw blanket draped on sofa arm, tall indoor floor plant in corner, decorative cushions",
+  "Quarto casal": "matching bedside tables with warm reading lamps, alarm clock, carefully folded throw blanket at foot of bed, framed art above upholstered headboard",
+  "Quarto solteiro": "study desk with warm desk lamp and open notebook, bookshelf with books and collectibles, backpack near desk, small potted cactus plant",
+  "Banheiro": "neatly folded white spa towels, stone soap dispenser and dish set, white orchid on marble countertop, LED-backlit frameless mirror, scented candle on tray",
+  "Closet": "organized shoes visible through glass panel doors, neatly folded clothes stacked, jewelry tray on shelf, full-length mirror with slim frame",
+  "Lavanderia": "modern front-load washing machine neatly integrated, stack of clean folded laundry, matching labeled detergent bottles arranged on shelf, small potted succulent, wire laundry basket",
+  "Escritório": "open laptop on organized desk, warm desk lamp with brass base, pen and pencil holder, framed motivational artwork, organized document tray, small succulent plant",
+  "Home office": "open laptop with external monitor, ergonomic chair with lumbar support, organized bookshelf, ceramic coffee mug, cork board with notes and calendar",
+  "Área gourmet": "stainless steel outdoor grill with hood, pendant lights above marble counter, bar stools, wine rack with bottles, fresh herbs in pots",
 };
 
 function buildRenderPrompt(input: RenderInput): string {
   const roomEn = AMBIENTE_MAP[input.ambiente] ?? input.ambiente;
   const styleEn = ESTILO_MAP[input.estilo] ?? input.estilo;
+  const lighting = LIGHTING_BY_STYLE[input.estilo] ?? "warm natural window light, 3000K warm white LED ceiling lights";
+  const decorStyle = DECOR_BY_STYLE[input.estilo] ?? "curated decorative objects, plants, framed artwork";
+  const decorAmbiente = DECOR_BY_AMBIENTE[input.ambiente] ?? "";
+
   const moveisList = input.moveis
     .filter((m) => (m.tipo_elemento ?? "movel") === "movel")
     .slice(0, 10).map(generateVisualContext).filter(Boolean).join(", ");
@@ -176,21 +222,23 @@ function buildRenderPrompt(input: RenderInput): string {
   const layout = describeLayout(input.moveis, input.medidas);
 
   return [
-    "professional interior architecture visualization, photorealistic render, finished completed room",
+    "professional interior architecture visualization, photorealistic render, award-winning completed room",
     `${styleEn} ${roomEn}`,
-    "fully furnished and decorated, ready to live in",
+    "fully furnished and decorated, ready to live in, no empty or unfinished areas in the room",
     // Layout real do projeto — guia a disposição dos móveis na cena
     layout ? `IMPORTANT spatial layout to respect: ${layout}` : "",
-    moveisList ? `custom planned furniture: ${moveisList}` : "",
-    `color palette: ${dominantColor}, harmonious complementary tones`,
-    "Brazilian luxury marcenaria planejada, premium MDF finishing, perfect edges and details",
-    "furniture proportions must match the specified dimensions",
-    "styled with decorative objects, plants, artwork, throw pillows and rugs",
-    "8K photorealistic, cinematic lighting, warm natural light from windows",
+    moveisList ? `custom built-in marcenaria furniture: ${moveisList}` : "",
+    `dominant color palette: ${dominantColor}, harmonious complementary tones throughout the entire space`,
+    "Brazilian luxury marcenaria planejada, premium MDF melamina finish, crisp ABS edgebanding on all panels, aluminum profile handles, soft-close concealed hinges, impeccable joinery",
+    "furniture dimensions and proportions must exactly match the specified measurements",
+    `lighting: ${lighting}`,
+    decorStyle ? `style-appropriate decor: ${decorStyle}` : "",
+    decorAmbiente ? `room accessories: ${decorAmbiente}` : "",
     // Ângulo de câmera da vista solicitada (cada vista cobre uma parte do ambiente)
     VISTAS_CAMERA[input.vista ?? "geral"],
-    "architectural magazine quality, clean sophisticated atmosphere",
-    "no people, no text, no watermarks",
+    "8K photorealistic CGI render, ultra-high detail on material surfaces, accurate light physics and reflections",
+    "Architectural Digest magazine quality, sharp focus throughout, cinematic composition",
+    "no people, no text overlays, no watermarks, no unfinished walls, complete flooring visible",
     input.descricao ? input.descricao.slice(0, 200) : "",
   ].filter(Boolean).join(", ");
 }

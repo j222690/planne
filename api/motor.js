@@ -3484,7 +3484,11 @@ var CONFIG_CUSTO_PADRAO = {
   aliquota_imposto_pct: 6,
   comissao_pct: 5,
   margem_desejada_pct: 45,
-  desperdicio_material_pct: 15
+  desperdicio_material_pct: 15,
+  chapa_largura_mm: 2750,
+  chapa_comprimento_mm: 1830,
+  preco_chapa_mdf_15: 85,
+  preco_chapa_mdf_18: 105
 };
 var AJUSTES_VERSAO = {
   economica: { mult_ferragem: 1, mult_material: 1, margem_pct: 35, rotulo: "Econ\xF4mica \u2014 ferragem nacional, MDF 15mm" },
@@ -4631,10 +4635,30 @@ async function gerarHandler(req, res) {
       criado_por: prefs.criado_por ?? "motor_parametrico"
     };
     const tipoLayout = body.tipo_layout ?? "cozinha_linear";
+    const cfgCusto = { ...CONFIG_CUSTO_PADRAO, ...body.config_custo ?? {} };
     const resultado = gerarLayout(tipoLayout, ambiente, prefs, comum);
+    {
+      const { chapa_largura_mm: l, chapa_comprimento_mm: c } = cfgCusto;
+      const precosPorEspessura = {
+        15: cfgCusto.preco_chapa_mdf_15,
+        18: cfgCusto.preco_chapa_mdf_18
+      };
+      const areaNova = l / 1e3 * (c / 1e3);
+      for (const modulo of resultado.projeto.modulos) {
+        for (const peca of modulo.pecas) {
+          const novoPreco = precosPorEspessura[peca.material.espessura_mm] ?? peca.material.preco_custo_chapa;
+          peca.material = {
+            ...peca.material,
+            largura_chapa_mm: l,
+            comprimento_chapa_mm: c,
+            area_chapa_m2: areaNova,
+            preco_custo_chapa: novoPreco
+          };
+        }
+      }
+    }
     const moveis_calc = projetoToMovelInput(resultado.projeto);
     const engenharia = gerarEngenharia(resultado.projeto);
-    const cfgCusto = { ...CONFIG_CUSTO_PADRAO, ...body.config_custo ?? {} };
     const orcamentos = gerarTresVersoes(resultado.projeto, cfgCusto);
     const todasPecas = resultado.projeto.modulos.flatMap((m) => m.pecas);
     const planoBruto = gerarPlanoNesting(todasPecas, resultado.projeto.metricas.metros_fita_borda);

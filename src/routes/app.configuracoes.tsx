@@ -78,6 +78,7 @@ function Configuracoes() {
   const [params, setParams] = useState({
     mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35,
     meta_faturamento: 0, meta_margem: 0,
+    chapa_largura_mm: 2750, chapa_comprimento_mm: 1830,
   });
 
   const [fiscal, setFiscal] = useState({
@@ -137,6 +138,8 @@ function Configuracoes() {
         margem_padrao: Number(p.margem_padrao ?? 300),
         meta_faturamento: Number(p.meta_faturamento ?? 0),
         meta_margem: Number(p.meta_margem ?? 0),
+        chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
+        chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
       });
       setFiscal({
         focus_nfe_token: String(p.focus_nfe_token ?? ""),
@@ -371,9 +374,11 @@ function Configuracoes() {
             <div className="text-[12.5px] font-semibold mb-4">Precificação padrão</div>
             <div className="space-y-3">
               {[
-                { label: "MDF — custo por chapa (R$)", key: "mdf_custo_chapa", step: "1" },
+                { label: "MDF — custo por chapa 15mm (R$)", key: "mdf_custo_chapa", step: "1" },
                 { label: "Mão de obra — custo/hora (R$)", key: "mao_obra_hora", step: "1" },
                 { label: "Multiplicador padrão (300 = 3× o custo)", key: "margem_padrao", step: "10" },
+                { label: "Chapa MDF — largura real (mm, padrão 2750)", key: "chapa_largura_mm", step: "10" },
+                { label: "Chapa MDF — comprimento real (mm, padrão 1830)", key: "chapa_comprimento_mm", step: "10" },
               ].map(({ label, key, step }) => (
                 <label key={key} className="block">
                   <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>

@@ -88,6 +88,12 @@ export interface ConfiguracaoCusto {
   // Comercial
   margem_desejada_pct: number;   // markup sobre o custo total
   desperdicio_material_pct: number;
+
+  // Chapas MDF — dimensões e preços reais da empresa (substituem os hardcoded)
+  chapa_largura_mm: number;    // default 2750mm
+  chapa_comprimento_mm: number; // default 1830mm
+  preco_chapa_mdf_15: number;  // R$/chapa 15mm (default R$85)
+  preco_chapa_mdf_18: number;  // R$/chapa 18mm (default R$105)
 }
 
 /** Configuração padrão — médias de mercado BR 2026. */
@@ -116,6 +122,11 @@ export const CONFIG_CUSTO_PADRAO: ConfiguracaoCusto = {
 
   margem_desejada_pct: 45,
   desperdicio_material_pct: 15,
+
+  chapa_largura_mm: 2750,
+  chapa_comprimento_mm: 1830,
+  preco_chapa_mdf_15: 85,
+  preco_chapa_mdf_18: 105,
 };
 
 // ─── MULTIPLICADORES DE VERSÃO ────────────────────────────────────────────────

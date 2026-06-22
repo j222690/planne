@@ -145,8 +145,36 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
     };
     const tipoLayout: TipoLayout = body.tipo_layout ?? "cozinha_linear";
 
+    // 3.5: custos reais da empresa — merge sobre os padrões de mercado. Feito
+    // aqui para podermos patchar os materiais antes de engenharia + nesting.
+    const cfgCusto: ConfiguracaoCusto = { ...CONFIG_CUSTO_PADRAO, ...(body.config_custo ?? {}) };
+
     // 3. Despachar para o gerador correto (100% determinístico, sem IA)
     const resultado = gerarLayout(tipoLayout, ambiente, prefs, comum);
+
+    // Aplicar preços e dimensões reais da chapa MDF cadastrada pela empresa.
+    // Assim o nesting e a engenharia usam as medidas verdadeiras da fornecedora,
+    // não o hardcoded 2750×1830 do padrão de mercado.
+    {
+      const { chapa_largura_mm: l, chapa_comprimento_mm: c } = cfgCusto;
+      const precosPorEspessura: Record<number, number> = {
+        15: cfgCusto.preco_chapa_mdf_15,
+        18: cfgCusto.preco_chapa_mdf_18,
+      };
+      const areaNova = (l / 1000) * (c / 1000);
+      for (const modulo of resultado.projeto.modulos) {
+        for (const peca of modulo.pecas) {
+          const novoPreco = precosPorEspessura[peca.material.espessura_mm] ?? peca.material.preco_custo_chapa;
+          peca.material = {
+            ...peca.material,
+            largura_chapa_mm: l,
+            comprimento_chapa_mm: c,
+            area_chapa_m2: areaNova,
+            preco_custo_chapa: novoPreco,
+          };
+        }
+      }
+    }
 
     // 4. Gerar MovelInput[] para compatibilidade com calcular-orcamento
     const moveis_calc = projetoToMovelInput(resultado.projeto);
@@ -155,8 +183,6 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
     const engenharia = gerarEngenharia(resultado.projeto);
 
     // 6. Gerar 3 versões de orçamento (Fase 5): econômica / intermediária / premium
-    // 3.5: usa os custos da empresa (merge sobre os padrões de mercado).
-    const cfgCusto: ConfiguracaoCusto = { ...CONFIG_CUSTO_PADRAO, ...(body.config_custo ?? {}) };
     const orcamentos = gerarTresVersoes(resultado.projeto, cfgCusto);
 
     // 7. Gerar plano de corte (Fase 8): nesting MaxRects + exportações

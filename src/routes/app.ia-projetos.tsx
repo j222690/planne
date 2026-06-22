@@ -282,7 +282,7 @@ function IAProjetoPage() {
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [plantasSalvas, setPlantasSalvas] = useState<Record<string, PlantaSalva>>({});
-  const [empresaParams, setEmpresaParams] = useState({ mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 300 });
+  const [empresaParams, setEmpresaParams] = useState({ mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 300, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830 });
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const navigate = useNavigate();
 
@@ -307,6 +307,8 @@ function IAProjetoPage() {
         mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
         mao_obra_hora: Number(p.mao_obra_hora ?? 45),
         margem_padrao: Number(p.margem_padrao ?? 300),
+        chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
+        chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
       });
       if (p.plantas_baixas && typeof p.plantas_baixas === "object") {
         setPlantasSalvas(p.plantas_baixas as Record<string, PlantaSalva>);
@@ -1887,7 +1889,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   gerarListaCorte: () => void;
   criarOrdem: () => void;
   clientes: { id: string; nome: string }[];
-  empresaParams: { mdf_custo_chapa: number; mao_obra_hora: number; margem_padrao: number };
+  empresaParams: { mdf_custo_chapa: number; mao_obra_hora: number; margem_padrao: number; chapa_largura_mm: number; chapa_comprimento_mm: number };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const [motorAberto, setMotorAberto] = useState(false);
@@ -1913,22 +1915,25 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         body: JSON.stringify({
           action: "gerar",
           tipo_layout: wizard.form.ambiente === "Cozinha" ? motorLayoutCozinha : tipoLayoutMotor,
-          // 3.5: custos da empresa. mao_obra_hora (default 45) escala os valores-
-          // hora por etapa proporcionalmente — fator 1 quando não configurado, sem
-          // distorcer os padrões de mercado.
-          ...((() => {
+          // Custos reais da empresa: mão de obra, preço de chapa e dimensões.
+          // mao_obra_hora escala todos os valores-hora por etapa proporcionalmente.
+          config_custo: (() => {
             const f = (empresaParams.mao_obra_hora || 45) / 45;
-            return Math.abs(f - 1) < 0.01 ? {} : {
-              config_custo: {
+            return {
+              ...(Math.abs(f - 1) >= 0.01 ? {
                 valor_hora_corte: 45 * f,
                 valor_hora_bordagem: 40 * f,
                 valor_hora_usinagem: 50 * f,
                 valor_hora_montagem: 55 * f,
                 valor_hora_acabamento: 60 * f,
                 valor_hora_instalacao: 65 * f,
-              },
+              } : {}),
+              preco_chapa_mdf_15: empresaParams.mdf_custo_chapa,
+              preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
+              chapa_largura_mm: empresaParams.chapa_largura_mm,
+              chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
             };
-          })()),
+          })(),
           // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real
           // (paredes/portas/janelas) — a Rule Engine respeita as aberturas. Caso
           // contrário, cai para as medidas manuais (retângulo).
