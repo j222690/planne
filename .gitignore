@@ -33,3 +33,7 @@ dist-ssr
 
 .vercel
 supabase/.temp/
+
+vercel-out.txt
+vercel-dev.log
+vercel-err.txt

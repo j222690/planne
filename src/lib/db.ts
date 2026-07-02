@@ -30,6 +30,8 @@ export interface MaterialInput {
   fornecedor_id?: string | null;
   categoria_id?: string | null;
   imagem_url?: string | null;
+  estoque_atual?: number | null;
+  estoque_minimo?: number | null;
 }
 
 export interface ProjetoInput {
@@ -134,7 +136,7 @@ export async function getFornecedores(empresaId: string) {
 export async function getMateriais(empresaId?: string) {
   let q = supabase
     .from("materiais")
-    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,largura_mm,comprimento_mm,fornecedor_id,fornecedores(nome),categoria_id")
+    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,largura_mm,comprimento_mm,fornecedor_id,fornecedores(nome),categoria_id,estoque_atual,estoque_minimo")
     .eq("ativo", true);
   if (empresaId) q = q.eq("empresa_id", empresaId);
   const { data, error } = await q.order("nome");

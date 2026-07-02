@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Upload, Sparkles, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff, PackageX } from "lucide-react";
+import { Upload, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff, PackageX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getMateriais, getEmpresaAtual, getFornecedores, upsertMaterial, updateMaterial, deleteMaterial } from "@/lib/db";
@@ -21,7 +21,7 @@ type Material = {
   cor: string | null; espessura_mm: number | null; imagem_url: string | null;
   largura_mm: number | null; comprimento_mm: number | null;
   fornecedores: { nome: string } | null;
-  estoque?: number | null;
+  estoque_atual?: number | null;
   estoque_minimo?: number | null;
 };
 
@@ -138,7 +138,7 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateri
       cor: initialData.cor ?? "", imagem_url: initialData.imagem_url ?? "",
       espessura_mm: initialData.espessura_mm ?? undefined,
       fornecedor_id: initialData.fornecedor_id ?? "",
-      estoque_atual: initialData.estoque ?? undefined,
+      estoque_atual: initialData.estoque_atual ?? undefined,
       estoque_minimo: initialData.estoque_minimo ?? undefined,
     } : { unidade: "un", preco_custo: 0, preco_venda: 0 },
   });
@@ -470,7 +470,7 @@ function Materiais() {
 
       {/* Feature 12: Stock alerts */}
       {(() => {
-        const baixos = materiais.filter((m) => m.estoque != null && m.estoque_minimo != null && m.estoque <= m.estoque_minimo);
+        const baixos = materiais.filter((m) => m.estoque_atual != null && m.estoque_minimo != null && m.estoque_atual <= m.estoque_minimo);
         if (baixos.length === 0) return null;
         return (
           <div className="mb-4 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 flex items-start gap-2.5">
@@ -506,9 +506,6 @@ function Materiais() {
             <button onClick={() => setShowModal(true)}
               className="h-9 px-3 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 inline-flex items-center gap-1.5">
               <Plus className="size-3.5" /> Novo material
-            </button>
-            <button className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary inline-flex items-center gap-1.5">
-              <Sparkles className="size-3.5" /> Padronizar com IA
             </button>
           </>
         }

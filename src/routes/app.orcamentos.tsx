@@ -1023,7 +1023,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 </button>
                 <input ref={pdfRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handlePdfImport} />
                 <span className="text-muted-foreground text-[11px]">·</span>
-                <button type="button" onClick={() => { setValue("cliente_id", clienteId); setFase("revisar"); }}
+                <button type="button" onClick={() => {
+                  if (!clienteId) { toast.error("Selecione um cliente antes de preencher manualmente."); return; }
+                  setValue("cliente_id", clienteId);
+                  setFase("revisar");
+                }}
                   className="text-[12px] text-muted-foreground hover:text-foreground">
                   Preencher manualmente
                 </button>

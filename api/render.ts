@@ -281,10 +281,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
 
   const fluxKey = process.env.FLUX_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
 
-  if (!fluxKey && !openaiKey) {
-    return res.status(500).json({ error: "Nenhuma API de render configurada (FLUX_API_KEY ou OPENAI_API_KEY)" });
+  if (!fluxKey && !geminiKey) {
+    return res.status(500).json({ error: "Nenhuma API de render configurada (FLUX_API_KEY ou GEMINI_API_KEY)" });
   }
 
   const prompt = buildRenderPrompt(input);
@@ -334,65 +334,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ── DALL-E fallback (DALL-E 2 foi descontinuado pela OpenAI) ────────────────
-  // schnell → DALL-E 3 standard (1024×1024)
-  // pro     → DALL-E 3 HD (1792×1024, requires maxDuration: 60 in vercel.json)
-  if (openaiKey) {
-    if (mode === "schnell") {
-      // DALL-E 3 standard: preview de qualidade (dall-e-2 não existe mais)
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
+  // ── Google Gemini Imagen 3 (fallback acessível) ─────────────────────────────
+  // Retorna a imagem como bytes base64 → devolvemos data URI (sem storage externo).
+  // pro    → imagen-3.0-generate-002 (qualidade máxima)
+  // schnell→ imagen-3.0-fast-generate-001 (preview rápido)
+  if (geminiKey) {
+    const model = mode === "schnell" ? "imagen-3.0-fast-generate-001" : "imagen-3.0-generate-002";
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${geminiKey.trim()}`;
+    try {
+      const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt.slice(0, 4000),
-          n: 1,
-          size: "1024x1024",
-          quality: "standard",
+          instances: [{ prompt: prompt.slice(0, 4000) }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: "16:9",
+            personGeneration: "dont_allow",
+          },
         }),
       });
 
       if (!response.ok) {
         const err = await response.text();
-        return res.status(502).json({ error: `DALL-E 3 (preview): ${err.slice(0, 300)}` });
+        const dica = response.status === 400 && /billed|billing|not enabled|permission/i.test(err)
+          ? " Imagen 3 requer conta Google AI com faturamento ativo (não está no tier gratuito)."
+          : response.status === 403
+            ? " Verifique a GEMINI_API_KEY em aistudio.google.com."
+            : "";
+        return res.status(502).json({ error: `Gemini Imagen (HTTP ${response.status}): ${err.slice(0, 200)}.${dica}` });
       }
 
-      const data = (await response.json()) as { data: { url: string }[] };
+      const data = (await response.json()) as {
+        predictions?: { bytesBase64Encoded?: string; mimeType?: string }[];
+      };
+      const pred = data.predictions?.[0];
+      if (!pred?.bytesBase64Encoded) {
+        return res.status(502).json({ error: "Gemini Imagen não retornou imagem (possível bloqueio de segurança do prompt)." });
+      }
+
+      const mime = pred.mimeType ?? "image/png";
       return res.json({
-        provider: "dalle3",
+        provider: "gemini-imagen",
         status: "completed",
-        url: data.data[0].url,
+        url: `data:${mime};base64,${pred.bytesBase64Encoded}`,
         mode,
         prompt,
       });
-    } else {
-      // DALL-E 3 HD: high quality, requires maxDuration: 60 in vercel.json (Vercel Pro plan)
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt.slice(0, 4000),
-          n: 1,
-          size: "1792x1024",
-          quality: "hd",
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        return res.status(502).json({ error: `DALL-E 3: ${err.slice(0, 300)}` });
-      }
-
-      const data = (await response.json()) as { data: { url: string; revised_prompt: string }[] };
-      return res.json({
-        provider: "dalle3",
-        status: "completed",
-        url: data.data[0].url,
-        mode,
-        prompt,
-        revised_prompt: data.data[0].revised_prompt,
-      });
+    } catch (e) {
+      return res.status(502).json({ error: `Gemini Imagen indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
     }
   }
 

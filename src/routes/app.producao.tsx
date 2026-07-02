@@ -100,7 +100,7 @@ function NovaOrdemModal({ onClose, onSaved, empresaId }: { onClose: () => void; 
     // Item 7: check material stock levels
     supabase.from("materiais")
       .select("nome,estoque_atual,estoque_minimo")
-      .or(`empresa_id.is.null,empresa_id.eq.${empresaId}`)
+      .eq("empresa_id", empresaId)
       .not("estoque_atual", "is", null)
       .not("estoque_minimo", "is", null)
       .then(({ data }) => {
