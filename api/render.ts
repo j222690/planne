@@ -208,6 +208,43 @@ const DECOR_BY_AMBIENTE: Record<string, string> = {
   "Área gourmet": "stainless steel outdoor grill with hood, pendant lights above marble counter, bar stools, wine rack with bottles, fresh herbs in pots",
 };
 
+// ─── Regras de funcionalidade e ergonomia (marcenaria real) ───────────────────
+// O modelo de imagem não conhece as boas práticas de marcenaria; estas regras
+// evitam erros funcionais comuns (armário alto demais, gaveta embaixo da pia,
+// objeto bloqueando porta, folga insuficiente para abrir portas, etc.).
+
+const REGRAS_FUNCIONAIS_GERAL =
+  "functional ergonomic cabinetmaking layout following real marcenaria best practices: " +
+  "upper wall cabinets mounted at ergonomic height reachable by a standing adult, " +
+  "NO extra cabinets stacked above the upper cabinets, no unreachable high storage near the ceiling, " +
+  "cabinet doors at practical realistic proportions (not excessively tall or oversized), " +
+  "every cabinet, wardrobe and room door must have full clearance to open completely, " +
+  "NO plants, objects, furniture or decor blocking or standing in front of any door or drawer, " +
+  "respect circulation space and door swing clearance between furniture pieces";
+
+const FUNCIONAL_POR_AMBIENTE: Record<string, string> = {
+  "Cozinha":
+    "the base cabinet under the sink MUST have hinged swing doors (never drawers) to allow access to the faucet and plumbing; " +
+    "oven, cooktop and stove positioned away from windows at a safe distance from the glass; " +
+    "drawers only where practical, doors under the sink and under the cooktop; " +
+    "countertop at standard ergonomic working height",
+  "Área gourmet":
+    "the cabinet under the sink must have hinged doors (not drawers) for plumbing access; " +
+    "grill and cooktop away from windows; ergonomic counter height",
+  "Quarto casal":
+    "wardrobe doors with full clearance to open; the bench or ottoman at the foot of the bed kept well away from the wardrobe so its doors open freely; " +
+    "nightstands not blocking any door; clear circulation around the bed",
+  "Quarto solteiro":
+    "wardrobe and desk drawers with full clearance to open; nothing blocking the wardrobe doors; clear walking space",
+  "Closet":
+    "all wardrobe and cabinet doors and drawers with full clearance to open completely, nothing blocking them; " +
+    "upper storage at reachable height, no unreachable shelves stacked near the ceiling",
+  "Banheiro":
+    "the vanity cabinet under the sink MUST have hinged doors (not drawers) for plumbing access; mirror cabinet at reachable height",
+  "Lavanderia":
+    "the cabinet under the tank/sink must have hinged doors for plumbing access; upper cabinets at reachable height; clear access to the washing machine door",
+};
+
 function buildRenderPrompt(input: RenderInput): string {
   const roomEn = AMBIENTE_MAP[input.ambiente] ?? input.ambiente;
   const styleEn = ESTILO_MAP[input.estilo] ?? input.estilo;
@@ -220,6 +257,7 @@ function buildRenderPrompt(input: RenderInput): string {
     .slice(0, 10).map(generateVisualContext).filter(Boolean).join(", ");
   const dominantColor = hexToVisual(input.moveis[0]?.cor_hex) || "neutral warm wood tone";
   const layout = describeLayout(input.moveis, input.medidas);
+  const funcionalAmbiente = FUNCIONAL_POR_AMBIENTE[input.ambiente] ?? "";
 
   return [
     "professional interior architecture visualization, photorealistic render, award-winning completed room",
@@ -231,6 +269,9 @@ function buildRenderPrompt(input: RenderInput): string {
     `dominant color palette: ${dominantColor}, harmonious complementary tones throughout the entire space`,
     "Brazilian luxury marcenaria planejada, premium MDF melamina finish, crisp ABS edgebanding on all panels, aluminum profile handles, soft-close concealed hinges, impeccable joinery",
     "furniture dimensions and proportions must exactly match the specified measurements",
+    // Regras de funcionalidade/ergonomia — evita erros de marcenaria na cena
+    REGRAS_FUNCIONAIS_GERAL,
+    funcionalAmbiente,
     `lighting: ${lighting}`,
     decorStyle ? `style-appropriate decor: ${decorStyle}` : "",
     decorAmbiente ? `room accessories: ${decorAmbiente}` : "",
