@@ -216,9 +216,9 @@ const DECOR_BY_AMBIENTE: Record<string, string> = {
 const REGRAS_FUNCIONAIS_GERAL =
   "functional ergonomic cabinetmaking layout following real Brazilian marcenaria best practices: " +
   "tall built-in cabinets may and usually do extend full height all the way up to the ceiling for maximum storage; " +
-  "when a cabinet goes up to the ceiling, the uppermost section closest to the ceiling must be ONE SINGLE TALLER door " +
-  "(not a small separate high compartment or tiny stacked cabinet), so its contents stay reachable from standing " +
-  "without needing a stool, chair or ladder; avoid tiny isolated cabinets perched too high out of reach; " +
+  "when cabinets go up to the ceiling, the upper doors closest to the ceiling should simply be TALLER and longer " +
+  "(extending down far enough to be opened and reached from the floor), keeping the normal number of doors side by side; " +
+  "do NOT use small separate high compartments or tiny stacked cabinets that would require a stool, chair or ladder to reach; " +
   "every cabinet, wardrobe and room door must have full clearance to open completely, " +
   "NO plants, objects, furniture or decor blocking or standing in front of any door or drawer, " +
   "respect circulation space and door swing clearance between furniture pieces";
