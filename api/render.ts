@@ -334,55 +334,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ── Google Gemini Imagen 3 (fallback acessível) ─────────────────────────────
-  // Retorna a imagem como bytes base64 → devolvemos data URI (sem storage externo).
-  // pro    → imagen-3.0-generate-002 (qualidade máxima)
-  // schnell→ imagen-3.0-fast-generate-001 (preview rápido)
+  // ── Google Gemini (geração de imagem nativa via generateContent) ────────────
+  // Os modelos Imagen (:predict) foram descontinuados para novas contas; usamos
+  // a geração nativa do Gemini, que aceita aspectRatio e retorna a imagem inline.
+  // Devolvemos data URI (sem storage externo).
+  // pro    → gemini-3.1-flash-image (16:9, alta fidelidade, staging rico)
+  // schnell→ gemini-2.5-flash-image (preview)
   if (geminiKey) {
-    const model = mode === "schnell" ? "imagen-3.0-fast-generate-001" : "imagen-3.0-generate-002";
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${geminiKey.trim()}`;
+    const model = mode === "schnell" ? "gemini-2.5-flash-image" : "gemini-3.1-flash-image";
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`;
     try {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          instances: [{ prompt: prompt.slice(0, 4000) }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: "16:9",
-            personGeneration: "dont_allow",
+          contents: [{ parts: [{ text: prompt.slice(0, 4000) }] }],
+          generationConfig: {
+            responseModalities: ["IMAGE"],
+            imageConfig: { aspectRatio: "16:9" },
           },
         }),
       });
 
       if (!response.ok) {
         const err = await response.text();
-        const dica = response.status === 400 && /billed|billing|not enabled|permission/i.test(err)
-          ? " Imagen 3 requer conta Google AI com faturamento ativo (não está no tier gratuito)."
-          : response.status === 403
-            ? " Verifique a GEMINI_API_KEY em aistudio.google.com."
+        const dica = response.status === 403
+          ? " Verifique a GEMINI_API_KEY em aistudio.google.com."
+          : response.status === 429
+            ? " Cota da API Gemini excedida — aguarde ou aumente o limite no Google AI Studio."
             : "";
-        return res.status(502).json({ error: `Gemini Imagen (HTTP ${response.status}): ${err.slice(0, 200)}.${dica}` });
+        return res.status(502).json({ error: `Gemini (HTTP ${response.status}): ${err.slice(0, 200)}.${dica}` });
       }
 
       const data = (await response.json()) as {
-        predictions?: { bytesBase64Encoded?: string; mimeType?: string }[];
+        candidates?: { content?: { parts?: { inlineData?: { data?: string; mimeType?: string } }[] } }[];
       };
-      const pred = data.predictions?.[0];
-      if (!pred?.bytesBase64Encoded) {
-        return res.status(502).json({ error: "Gemini Imagen não retornou imagem (possível bloqueio de segurança do prompt)." });
+      const imgPart = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+      if (!imgPart?.inlineData?.data) {
+        return res.status(502).json({ error: "Gemini não retornou imagem (possível bloqueio de segurança do prompt)." });
       }
 
-      const mime = pred.mimeType ?? "image/png";
+      const mime = imgPart.inlineData.mimeType ?? "image/png";
       return res.json({
-        provider: "gemini-imagen",
+        provider: "gemini",
         status: "completed",
-        url: `data:${mime};base64,${pred.bytesBase64Encoded}`,
+        url: `data:${mime};base64,${imgPart.inlineData.data}`,
         mode,
         prompt,
       });
     } catch (e) {
-      return res.status(502).json({ error: `Gemini Imagen indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
+      return res.status(502).json({ error: `Gemini indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
     }
   }
 
