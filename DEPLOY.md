@@ -18,11 +18,12 @@ render arquitetônico); Gemini é o fallback acessível.
 
 | Variável | Onde obter | Observação |
 |---|---|---|
-| `FLUX_API_KEY` | fluxapi.ai | **Primário.** Render arquitetônico de alta fidelidade. 1 crédito por conjunto de 4 vistas. |
-| `GEMINI_API_KEY` | aistudio.google.com | **Fallback.** Imagen 3 requer conta Google AI com **faturamento ativo** (não roda no tier gratuito). Retorna a imagem como data URI. |
+| `FLUX_API_KEY` | fluxapi.ai | **Opcional/primário.** Render arquitetônico de alta fidelidade. 1 crédito por conjunto de 4 vistas. Deixe vazio para usar só o Gemini. |
+| `GEMINI_API_KEY` | aistudio.google.com/apikey | **Provider de imagem em uso.** Usa a geração nativa do Gemini (`gemini-3.1-flash-image` no modo pro, `gemini-2.5-flash-image` no preview), saída 16:9. Retorna a imagem como data URI. |
 
-> DALL-E foi removido. Se nenhuma das duas chaves estiver configurada, o render
-> retorna erro claro "Nenhuma API de render configurada".
+> DALL-E e Imagen (:predict) foram removidos — os modelos Imagen foram
+> descontinuados para contas novas. Se nenhuma chave (Flux/Gemini) estiver
+> configurada, o render retorna erro claro "Nenhuma API de render configurada".
 
 ## 3. Assistente IA e orçamento automático
 
