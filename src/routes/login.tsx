@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-ro
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/planne/Logo";
-import { supabase } from "@/lib/supabase";
+import { supabase, isConnectionError } from "@/lib/supabase";
 import { ArrowRight, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
@@ -48,7 +48,11 @@ function Login() {
         navigate({ to: "/app" });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro de autenticação");
+      if (isConnectionError(err)) {
+        setError("Não foi possível conectar ao servidor. O banco de dados pode estar iniciando ou temporariamente indisponível — aguarde 1-2 minutos e tente novamente.");
+      } else {
+        setError(err instanceof Error ? err.message : "Erro de autenticação");
+      }
     } finally {
       setLoading(false);
     }

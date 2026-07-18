@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/lib/theme";
+import { isConnectionError } from "@/lib/supabase";
 
 function NotFoundComponent() {
   return (
@@ -28,15 +29,21 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const semConexao = error?.message === "CONEXAO_INDISPONIVEL" || isConnectionError(error);
+
+  const titulo = semConexao ? "Servidor temporariamente indisponível" : "Algo deu errado";
+  const descricao = semConexao
+    ? "Não foi possível conectar ao banco de dados. Se você usa o plano gratuito do Supabase, o projeto pode ter sido pausado por inatividade — reative-o no painel do Supabase e aguarde 1-2 minutos. Depois clique em Tentar novamente."
+    : "Ocorreu um erro inesperado. Tente recarregar a página.";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Algo deu errado
+          {titulo}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Ocorreu um erro inesperado. Tente recarregar a página.
+          {descricao}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
