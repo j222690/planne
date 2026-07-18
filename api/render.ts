@@ -214,10 +214,11 @@ const DECOR_BY_AMBIENTE: Record<string, string> = {
 // objeto bloqueando porta, folga insuficiente para abrir portas, etc.).
 
 const REGRAS_FUNCIONAIS_GERAL =
-  "functional ergonomic cabinetmaking layout following real marcenaria best practices: " +
-  "upper wall cabinets mounted at ergonomic height reachable by a standing adult, " +
-  "NO extra cabinets stacked above the upper cabinets, no unreachable high storage near the ceiling, " +
-  "cabinet doors at practical realistic proportions (not excessively tall or oversized), " +
+  "functional ergonomic cabinetmaking layout following real Brazilian marcenaria best practices: " +
+  "tall built-in cabinets may and usually do extend full height all the way up to the ceiling for maximum storage; " +
+  "when a cabinet goes up to the ceiling, the uppermost section closest to the ceiling must be ONE SINGLE TALLER door " +
+  "(not a small separate high compartment or tiny stacked cabinet), so its contents stay reachable from standing " +
+  "without needing a stool, chair or ladder; avoid tiny isolated cabinets perched too high out of reach; " +
   "every cabinet, wardrobe and room door must have full clearance to open completely, " +
   "NO plants, objects, furniture or decor blocking or standing in front of any door or drawer, " +
   "respect circulation space and door swing clearance between furniture pieces";
