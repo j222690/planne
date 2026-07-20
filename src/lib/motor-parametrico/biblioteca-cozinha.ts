@@ -19,6 +19,7 @@ import type {
   FitaBorda,
 } from "./tipos";
 import { AREA_CHAPA_M2 } from "./tipos";
+import { regrasAcabamento } from "./regras-corte-comuns";
 
 // ─── DIMENSÕES PADRÃO ─────────────────────────────────────────────────────────
 
@@ -255,11 +256,13 @@ const cfgBase: ConfiguracaoModulo = {
   tem_cabideiro: false,
   tem_fundo: true,
   espessura_fundo_mm: 6,
-  tem_rodape: false,
+  tem_rodape: true,          // rodapé clipado nos pés reguláveis (padrão editável)
   altura_rodape_cm: 10,
   tem_pes_regulaveis: true,
   altura_pes_cm: 10,
-  tem_roda_teto: false,
+  tem_roda_teto: false,      // base não vai ao teto
+  tem_engrosso_tampo: true,  // tampo/bancada em dupla chapa (30mm)
+  tem_engrosso_frentes: true, // frentes aparentes em dupla chapa (30mm)
   tem_iluminacao_led: false,
   tem_espelho_interno: false,
   tem_ripado: false,
@@ -274,6 +277,11 @@ const cfgAereo: ConfiguracaoModulo = {
   num_portas: 2,
   num_prateleiras: 1,
   tem_pes_regulaveis: false,
+  tem_rodape: false,          // aéreo não tem rodapé
+  tem_roda_teto: true,        // moldura de roda-teto no topo (até o teto)
+  altura_roda_teto_cm: 5,
+  tem_engrosso_tampo: false,  // aéreo não tem tampo de bancada
+  tem_engrosso_frentes: true, // frentes visíveis em dupla chapa
 };
 
 // ─── FÁBRICA DE MÓDULOS ───────────────────────────────────────────────────────
@@ -299,7 +307,7 @@ function criarModuloBase(largura_cm: number): ModuloParametrico {
       permite_iluminacao_led: false,
       permite_ripado: false,
     },
-    regras_pecas: regrasCorpoBase,
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
     regras_ferragens: [
       ...regrasDobradica,
       ...regrasCorredica,
@@ -342,7 +350,7 @@ function criarModuloAereo(largura_cm: number, altura_cm = AEREO_ALTURA_CM): Modu
       permite_iluminacao_led: true,
       permite_ripado: false,
     },
-    regras_pecas: regrasCorpoBase,
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
     regras_ferragens: [
       ...regrasDobradica,
       ...regrasPuxador,

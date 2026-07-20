@@ -89,11 +89,14 @@ export function configPadrao(overrides: Partial<ConfiguracaoModulo> = {}): Confi
     tem_cabideiro: false,
     tem_fundo: true,
     espessura_fundo_mm: 6,
-    tem_rodape: false,
+    tem_rodape: true,           // rodapé clipado nos pés (padrão; aéreo sobrescreve p/ false)
     altura_rodape_cm: 10,
     tem_pes_regulaveis: true,
     altura_pes_cm: 10,
-    tem_roda_teto: false,
+    tem_roda_teto: false,       // módulos que vão ao teto sobrescrevem p/ true
+    altura_roda_teto_cm: 5,
+    tem_engrosso_tampo: false,  // só bancadas/tampos opt-in (evita dobrar topo de roupeiro)
+    tem_engrosso_frentes: true, // frentes aparentes em dupla chapa (30mm) por padrão
     tem_iluminacao_led: false,
     tem_espelho_interno: false,
     tem_ripado: false,

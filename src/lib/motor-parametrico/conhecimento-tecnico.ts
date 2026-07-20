@@ -134,6 +134,9 @@ export const BOAS_PRATICAS: BoaPratica[] = [
   { id: "BP-08", categoria: "estrutura", regra: "Porta de abrir até 50cm de largura; acima, usar correr ou dupla." },
   { id: "BP-09", categoria: "ferragem", regra: "Módulos > 150cm de largura: 6 pés reguláveis em vez de 4." },
   { id: "BP-10", categoria: "acabamento", regra: "Cuba/tanque sem fundo de MDF na zona molhada." },
+  { id: "BP-11", categoria: "estrutura", regra: "Rodapé clipado (padrão 10cm) encaixado nos pés reguláveis; só em módulos de piso, nunca em aéreos/parede." },
+  { id: "BP-12", categoria: "acabamento", regra: "Módulo que vai até o teto recebe moldura de roda-teto (arremate, padrão 5cm) para fechar o vão superior." },
+  { id: "BP-13", categoria: "estrutura", regra: "Engrosso de dupla chapa (15+15=30mm) em tampos de bancada e frentes aparentes; dobra a área de material da peça no corte." },
 ];
 
 /** Busca boas práticas por categoria. */

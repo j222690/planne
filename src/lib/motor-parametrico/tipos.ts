@@ -281,6 +281,12 @@ export interface ConfiguracaoModulo {
   altura_pes_cm: Centimetros;
   tem_roda_teto: boolean;
   altura_teto_cm?: Centimetros;
+  /** Altura da moldura de roda-teto (cm). Default 5cm quando tem_roda_teto. */
+  altura_roda_teto_cm?: Centimetros;
+  /** Engrosso de dupla chapa (15+15=30mm) no tampo/bancada. */
+  tem_engrosso_tampo?: boolean;
+  /** Engrosso de dupla chapa nas frentes aparentes (portas/gavetas). */
+  tem_engrosso_frentes?: boolean;
   tem_iluminacao_led: boolean;
   tem_espelho_interno: boolean;
   tem_ripado: boolean;

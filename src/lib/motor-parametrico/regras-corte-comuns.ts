@@ -119,7 +119,9 @@ export function regrasCorpo(opts: OpcoesCorpo = {}): RegraCorte[] {
     });
   }
 
-  return regras;
+  // Acabamentos (rodapé, roda-teto, engrosso) — gerados conforme os flags de
+  // config, então todo módulo construído com regrasCorpo já os conhece.
+  return [...regras, ...regrasAcabamento()];
 }
 
 // ─── REGRA DE PORTA ───────────────────────────────────────────────────────────
@@ -210,6 +212,105 @@ export function regrasGaveta(): RegraCorte[] {
       usa_material: "fundo",
     },
   ];
+}
+
+// ─── ACABAMENTOS: RODAPÉ, RODA-TETO, ENGROSSO (dupla chapa) ───────────────────
+// Regras de marcenaria centralizadas — geram peças reais no plano de corte e
+// no orçamento. Ativadas por flags de config, então a marcenaria pode ligar/
+// desligar por projeto no orçamento/desenho.
+
+const ALTURA_RODAPE_PADRAO_MM = 100;      // rodapé clipado 10cm
+const ALTURA_RODA_TETO_PADRAO_MM = 50;    // moldura de roda-teto 5cm
+
+/**
+ * Rodapé clipado (frente recuada, encaixado nos pés reguláveis).
+ * Só existe onde há pés — módulos de parede (aéreos, painéis, nichos) não têm
+ * pés, logo não têm rodapé, mesmo com tem_rodape default true.
+ */
+export function regraRodape(): RegraCorte {
+  return {
+    nome: "rodape",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_rodape && cfg.tem_pes_regulaveis,
+    calcular_largura_mm: (L) => L,
+    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_rodape_cm ?? 10) * 10 || ALTURA_RODAPE_PADRAO_MM,
+    calcular_quantidade: () => 1,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: fitaFrente,
+    usa_material: "corpo",
+    observacao: "Rodapé clipado (encaixe nos pés reguláveis)",
+  };
+}
+
+/** Moldura de roda-teto (acabamento decorativo no topo, até o teto). */
+export function regraMolduraRodaTeto(): RegraCorte {
+  return {
+    nome: "moldura_roda_teto",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_roda_teto,
+    calcular_largura_mm: (L) => L,
+    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_roda_teto_cm ?? 5) * 10 || ALTURA_RODA_TETO_PADRAO_MM,
+    calcular_quantidade: () => 1,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: (): FitaBorda => ({ esquerda: false, direita: false, topo: false, base: true }),
+    usa_material: "porta",
+    observacao: "Moldura de roda-teto (arremate decorativo até o teto)",
+  };
+}
+
+/**
+ * Engrosso de dupla chapa (15+15 = 30mm): 2ª chapa no tampo e/ou nas frentes
+ * aparentes. Cada peça duplicada adiciona sua área de material ao corte.
+ */
+export function regrasEngrosso(): RegraCorte[] {
+  return [
+    {
+      nome: "engrosso_tampo",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_engrosso_tampo === true,
+      calcular_largura_mm: (L) => L - 2 * ESP,
+      calcular_comprimento_mm: (_L, _A, P) => P,
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "2ª chapa do tampo (engrosso 30mm)",
+    },
+    {
+      nome: "engrosso_porta",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_portas > 0,
+      calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: semFita,
+      usa_material: "porta",
+      observacao: "2ª chapa da porta (frente 30mm)",
+    },
+    {
+      nome: "engrosso_frente_gaveta",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_gavetas > 0,
+      calcular_largura_mm: (L) => L - 4,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: semFita,
+      usa_material: "porta",
+      observacao: "2ª chapa da frente de gaveta (30mm)",
+    },
+  ];
+}
+
+/** Conjunto completo de acabamentos (rodapé + roda-teto + engrossos). */
+export function regrasAcabamento(): RegraCorte[] {
+  return [regraRodape(), regraMolduraRodaTeto(), ...regrasEngrosso()];
 }
 
 // ─── FERRAGENS COMUNS ─────────────────────────────────────────────────────────

@@ -116,6 +116,7 @@ export function gerarLayoutIlha(
       num_portas: largura <= 40 ? 1 : 2,
       // ilha dupla-face: sem fundo fechado, acesso pelos dois lados
       tem_fundo: false,
+      tem_engrosso_tampo: true,   // ilha tem bancada → tampo 30mm
     }),
     rotuloParede: "Ilha central",
   });

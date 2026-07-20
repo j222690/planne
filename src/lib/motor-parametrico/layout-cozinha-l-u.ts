@@ -115,6 +115,7 @@ function montarParede(
       tipo_porta: prefs.tipo_porta_base,
       ferragem: prefs.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
+      tem_engrosso_tampo: true,   // base de cozinha tem bancada → tampo 30mm
     }),
     ordemInicial,
   });
@@ -138,6 +139,8 @@ function montarParede(
         ferragem: prefs.ferragem,
         num_portas: largura <= 40 ? 1 : 2,
         tem_pes_regulaveis: false,
+        tem_rodape: false,        // aéreo não tem rodapé
+        tem_roda_teto: true,      // moldura de roda-teto no topo
       }),
       ordemInicial: ordemInicial + bases.length,
     });

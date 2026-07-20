@@ -119,6 +119,7 @@ export function gerarLayoutCozinhaLinear(
       tipo_porta: preferencias.tipo_porta_base,
       ferragem: preferencias.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
+      tem_engrosso_tampo: true,   // base de cozinha tem bancada → tampo 30mm
     }),
   });
 
@@ -139,6 +140,8 @@ export function gerarLayoutCozinhaLinear(
       ferragem: preferencias.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
       tem_pes_regulaveis: false,
+      tem_rodape: false,        // aéreo não tem rodapé
+      tem_roda_teto: true,      // moldura de roda-teto no topo (até o teto)
     }),
     ordemInicial: modulosBase.length,
   });

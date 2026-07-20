@@ -1,13 +1,318 @@
 // ARQUIVO GERADO por scripts/bundle-motor.mjs — NÃO EDITAR.
 // Edite src/server/motor-entry.ts e os módulos do motor; rode npm run build.
 
+// src/lib/motor-parametrico/regras-corte-comuns.ts
+var ESP = 15;
+var FUNDO = 6;
+var semFita = () => ({ esquerda: false, direita: false, topo: false, base: false });
+var fitaFrente = () => ({ esquerda: false, direita: false, topo: true, base: false });
+var fitaTotal = () => ({ esquerda: true, direita: true, topo: true, base: true });
+function regrasCorpo(opts = {}) {
+  const esp = opts.espessura_corpo ?? ESP;
+  const regras = [
+    {
+      nome: "lateral",
+      grupo: "corpo",
+      ativa_quando: () => true,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: () => 2,
+      espessura_mm: esp,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo"
+    },
+    {
+      nome: "teto",
+      grupo: "corpo",
+      ativa_quando: () => true,
+      calcular_largura_mm: (L) => L - 2 * esp,
+      calcular_comprimento_mm: (_L, _A, P) => P,
+      calcular_quantidade: () => 1,
+      espessura_mm: esp,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo"
+    },
+    {
+      nome: "base",
+      grupo: "corpo",
+      ativa_quando: () => true,
+      calcular_largura_mm: (L) => L - 2 * esp,
+      calcular_comprimento_mm: (_L, _A, P) => P,
+      calcular_quantidade: () => 1,
+      espessura_mm: esp,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo"
+    },
+    {
+      nome: "prateleira",
+      grupo: "corpo",
+      ativa_quando: (cfg) => cfg.num_prateleiras > 0,
+      calcular_largura_mm: (L, _A, _P, cfg) => cfg.num_divisorias > 0 ? Math.round((L - 2 * esp - esp) / 2) : L - 2 * esp,
+      calcular_comprimento_mm: (_L, _A, P) => P - FUNDO,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_prateleiras,
+      espessura_mm: esp,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo"
+    },
+    {
+      nome: "fundo",
+      grupo: "fundo",
+      ativa_quando: (cfg) => cfg.tem_fundo,
+      calcular_largura_mm: (L) => L - 2 * esp,
+      calcular_comprimento_mm: (_L, A) => A - 2 * esp,
+      calcular_quantidade: () => 1,
+      espessura_mm: FUNDO,
+      direcao_fio: "indiferente",
+      fita_borda: semFita,
+      usa_material: "fundo"
+    }
+  ];
+  if (opts.com_divisoria) {
+    regras.push({
+      nome: "divisoria_vertical",
+      grupo: "corpo",
+      ativa_quando: (cfg) => cfg.num_divisorias > 0,
+      calcular_largura_mm: (_L, _A, P) => P - FUNDO,
+      calcular_comprimento_mm: (_L, A) => A - 2 * esp,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_divisorias,
+      espessura_mm: esp,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo"
+    });
+  }
+  return [...regras, ...regrasAcabamento()];
+}
+function regraPortaDobradica() {
+  return {
+    nome: "porta",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "dobradica" || cfg.tipo_porta === "basculante"),
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_comprimento_mm: (_L, A) => A,
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: fitaTotal,
+    usa_material: "porta"
+  };
+}
+function regraPortaCorrer() {
+  return {
+    nome: "porta_correr",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "correr" || cfg.tipo_porta === "espelho"),
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1) + 20),
+    // sobreposição
+    calcular_comprimento_mm: (_L, A) => A,
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: 18,
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: fitaTotal,
+    usa_material: "porta"
+  };
+}
+function regrasGaveta() {
+  return [
+    {
+      nome: "frente_gaveta",
+      grupo: "gaveta",
+      ativa_quando: (cfg) => cfg.num_gavetas > 0,
+      calcular_largura_mm: (L) => L - 4,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaTotal,
+      usa_material: "porta"
+    },
+    {
+      nome: "lateral_gaveta",
+      grupo: "gaveta",
+      ativa_quando: (cfg) => cfg.num_gavetas > 0,
+      calcular_largura_mm: (_L, _A, P) => P - 2 * ESP,
+      calcular_comprimento_mm: () => 110,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas * 2,
+      espessura_mm: ESP,
+      direcao_fio: "indiferente",
+      fita_borda: semFita,
+      usa_material: "corpo"
+    },
+    {
+      nome: "traseira_gaveta",
+      grupo: "gaveta",
+      ativa_quando: (cfg) => cfg.num_gavetas > 0,
+      calcular_largura_mm: (L) => L - 2 * ESP - 26,
+      calcular_comprimento_mm: () => 110,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
+      espessura_mm: ESP,
+      direcao_fio: "indiferente",
+      fita_borda: semFita,
+      usa_material: "corpo"
+    },
+    {
+      nome: "fundo_gaveta",
+      grupo: "gaveta",
+      ativa_quando: (cfg) => cfg.num_gavetas > 0,
+      calcular_largura_mm: (L) => L - 2 * ESP - 26,
+      calcular_comprimento_mm: (_L, _A, P) => P - 2 * ESP,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
+      espessura_mm: FUNDO,
+      direcao_fio: "indiferente",
+      fita_borda: semFita,
+      usa_material: "fundo"
+    }
+  ];
+}
+var ALTURA_RODAPE_PADRAO_MM = 100;
+var ALTURA_RODA_TETO_PADRAO_MM = 50;
+function regraRodape() {
+  return {
+    nome: "rodape",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_rodape && cfg.tem_pes_regulaveis,
+    calcular_largura_mm: (L) => L,
+    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_rodape_cm ?? 10) * 10 || ALTURA_RODAPE_PADRAO_MM,
+    calcular_quantidade: () => 1,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: fitaFrente,
+    usa_material: "corpo",
+    observacao: "Rodap\xE9 clipado (encaixe nos p\xE9s regul\xE1veis)"
+  };
+}
+function regraMolduraRodaTeto() {
+  return {
+    nome: "moldura_roda_teto",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_roda_teto,
+    calcular_largura_mm: (L) => L,
+    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_roda_teto_cm ?? 5) * 10 || ALTURA_RODA_TETO_PADRAO_MM,
+    calcular_quantidade: () => 1,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: true }),
+    usa_material: "porta",
+    observacao: "Moldura de roda-teto (arremate decorativo at\xE9 o teto)"
+  };
+}
+function regrasEngrosso() {
+  return [
+    {
+      nome: "engrosso_tampo",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_engrosso_tampo === true,
+      calcular_largura_mm: (L) => L - 2 * ESP,
+      calcular_comprimento_mm: (_L, _A, P) => P,
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "2\xAA chapa do tampo (engrosso 30mm)"
+    },
+    {
+      nome: "engrosso_porta",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_portas > 0,
+      calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: semFita,
+      usa_material: "porta",
+      observacao: "2\xAA chapa da porta (frente 30mm)"
+    },
+    {
+      nome: "engrosso_frente_gaveta",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_gavetas > 0,
+      calcular_largura_mm: (L) => L - 4,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: semFita,
+      usa_material: "porta",
+      observacao: "2\xAA chapa da frente de gaveta (30mm)"
+    }
+  ];
+}
+function regrasAcabamento() {
+  return [regraRodape(), regraMolduraRodaTeto(), ...regrasEngrosso()];
+}
+function regraDobradicas() {
+  return {
+    tipo: "dobradica_35mm_110grau",
+    ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
+    calcular_quantidade: (_L, A, _P, cfg) => {
+      const porPorta = A > 2e3 ? 4 : A > 1500 ? 3 : 2;
+      return cfg.num_portas * porPorta;
+    },
+    descricao_tecnica: "2 dobradi\xE7as (\u2264150cm), 3 (\u2264200cm) ou 4 (>200cm) por porta"
+  };
+}
+function regraCorredicaGaveta() {
+  return {
+    tipo: "corredicao_tandem_400mm",
+    ativa_quando: (cfg) => cfg.num_gavetas > 0,
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
+    descricao_tecnica: "1 par de corredi\xE7as por gaveta"
+  };
+}
+function regraTrilhoCorrer() {
+  return {
+    tipo: "corredicao_lateral_porta",
+    ativa_quando: (cfg) => cfg.tipo_porta === "correr" || cfg.tipo_porta === "espelho",
+    calcular_quantidade: () => 1,
+    descricao_tecnica: "1 kit de trilho superior + inferior por m\xF3dulo de correr"
+  };
+}
+function regraCabideiro() {
+  return {
+    tipo: "cabideiro_simples",
+    ativa_quando: (cfg) => cfg.tem_cabideiro,
+    calcular_quantidade: () => 1,
+    descricao_tecnica: "1 barra cabideiro + 2 suportes por m\xF3dulo"
+  };
+}
+function regraPuxadores() {
+  return {
+    tipo: "puxador_alu_128mm",
+    ativa_quando: (cfg) => cfg.tipo_puxador !== "sem" && (cfg.num_portas > 0 || cfg.num_gavetas > 0),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas + cfg.num_gavetas,
+    descricao_tecnica: "1 puxador por porta + 1 por gaveta"
+  };
+}
+function regraMinifix() {
+  return {
+    tipo: "minifix_15mm",
+    ativa_quando: () => true,
+    calcular_quantidade: (_L, _A, _P, cfg) => 8 + cfg.num_prateleiras * 4 + cfg.num_gavetas * 4,
+    descricao_tecnica: "8 por corpo + 4 por prateleira + 4 por gaveta"
+  };
+}
+function regraPes() {
+  return {
+    tipo: "ajustador_pe_100mm",
+    ativa_quando: (cfg) => cfg.tem_pes_regulaveis,
+    calcular_quantidade: (L) => L > 1500 ? 6 : 4,
+    descricao_tecnica: "4 p\xE9s (\u2264150cm) ou 6 (>150cm)"
+  };
+}
+
 // src/lib/motor-parametrico/biblioteca-cozinha.ts
 var BASE_PROFUNDIDADE_CM = 55;
 var BASE_ALTURA_CM = 72;
 var AEREO_PROFUNDIDADE_CM = 33;
 var AEREO_ALTURA_CM = 40;
-var ESP = 15;
-var FUNDO = 6;
+var ESP2 = 15;
+var FUNDO2 = 6;
 var regrasCorpoBase = [
   {
     nome: "lateral",
@@ -16,7 +321,7 @@ var regrasCorpoBase = [
     calcular_largura_mm: (_L, _A, P) => P,
     calcular_comprimento_mm: (_L, A) => A,
     calcular_quantidade: () => 2,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "paralelo_comprimento",
     fita_borda: () => ({ esquerda: false, direita: false, topo: true, base: false }),
     usa_material: "corpo"
@@ -25,10 +330,10 @@ var regrasCorpoBase = [
     nome: "teto",
     grupo: "corpo",
     ativa_quando: () => true,
-    calcular_largura_mm: (L) => L - 2 * ESP,
+    calcular_largura_mm: (L) => L - 2 * ESP2,
     calcular_comprimento_mm: (_L, _A, P) => P,
     calcular_quantidade: () => 1,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "paralelo_largura",
     fita_borda: () => ({ esquerda: false, direita: false, topo: true, base: false }),
     usa_material: "corpo"
@@ -37,10 +342,10 @@ var regrasCorpoBase = [
     nome: "base",
     grupo: "corpo",
     ativa_quando: () => true,
-    calcular_largura_mm: (L) => L - 2 * ESP,
+    calcular_largura_mm: (L) => L - 2 * ESP2,
     calcular_comprimento_mm: (_L, _A, P) => P,
     calcular_quantidade: () => 1,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "paralelo_largura",
     fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: false }),
     usa_material: "corpo"
@@ -49,10 +354,10 @@ var regrasCorpoBase = [
     nome: "prateleira",
     grupo: "corpo",
     ativa_quando: (cfg) => cfg.num_prateleiras > 0,
-    calcular_largura_mm: (L) => L - 2 * ESP,
-    calcular_comprimento_mm: (_L, _A, P) => P - FUNDO,
+    calcular_largura_mm: (L) => L - 2 * ESP2,
+    calcular_comprimento_mm: (_L, _A, P) => P - FUNDO2,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_prateleiras,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "paralelo_largura",
     fita_borda: () => ({ esquerda: false, direita: false, topo: true, base: false }),
     usa_material: "corpo"
@@ -62,9 +367,9 @@ var regrasCorpoBase = [
     grupo: "detalhe",
     ativa_quando: () => true,
     calcular_largura_mm: () => 50,
-    calcular_comprimento_mm: (_L, A) => A - 2 * ESP,
+    calcular_comprimento_mm: (_L, A) => A - 2 * ESP2,
     calcular_quantidade: () => 4,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "indiferente",
     fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: false }),
     usa_material: "corpo",
@@ -74,10 +379,10 @@ var regrasCorpoBase = [
     nome: "fundo",
     grupo: "fundo",
     ativa_quando: (cfg) => cfg.tem_fundo,
-    calcular_largura_mm: (L) => L - 2 * ESP,
-    calcular_comprimento_mm: (_L, A) => A - 2 * ESP,
+    calcular_largura_mm: (L) => L - 2 * ESP2,
+    calcular_comprimento_mm: (_L, A) => A - 2 * ESP2,
     calcular_quantidade: () => 1,
-    espessura_mm: FUNDO,
+    espessura_mm: FUNDO2,
     direcao_fio: "indiferente",
     fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: false }),
     usa_material: "fundo"
@@ -89,7 +394,7 @@ var regrasCorpoBase = [
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
     calcular_comprimento_mm: (_L, A) => A,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "paralelo_comprimento",
     fita_borda: () => ({ esquerda: true, direita: true, topo: true, base: true }),
     usa_material: "porta"
@@ -101,7 +406,7 @@ var regrasCorpoBase = [
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
     calcular_comprimento_mm: (_L, A) => A,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "paralelo_comprimento",
     fita_borda: () => ({ esquerda: true, direita: true, topo: true, base: true }),
     usa_material: "porta"
@@ -111,10 +416,10 @@ var regrasCorpoBase = [
     nome: "frente_gaveta",
     grupo: "gaveta",
     ativa_quando: (cfg) => cfg.num_gavetas > 0,
-    calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP) / Math.max(cfg.num_gavetas, 1)),
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP2) / Math.max(cfg.num_gavetas, 1)),
     calcular_comprimento_mm: () => 160,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "indiferente",
     fita_borda: () => ({ esquerda: true, direita: true, topo: true, base: true }),
     usa_material: "porta"
@@ -123,10 +428,10 @@ var regrasCorpoBase = [
     nome: "lateral_gaveta",
     grupo: "gaveta",
     ativa_quando: (cfg) => cfg.num_gavetas > 0,
-    calcular_largura_mm: (_L, _A, P) => P - 2 * ESP,
+    calcular_largura_mm: (_L, _A, P) => P - 2 * ESP2,
     calcular_comprimento_mm: () => 110,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas * 2,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "indiferente",
     fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: false }),
     usa_material: "corpo"
@@ -135,10 +440,10 @@ var regrasCorpoBase = [
     nome: "traseira_gaveta",
     grupo: "gaveta",
     ativa_quando: (cfg) => cfg.num_gavetas > 0,
-    calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 2 * ESP,
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP2) / Math.max(cfg.num_gavetas, 1)) - 2 * ESP2,
     calcular_comprimento_mm: () => 110,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-    espessura_mm: ESP,
+    espessura_mm: ESP2,
     direcao_fio: "indiferente",
     fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: false }),
     usa_material: "corpo"
@@ -147,10 +452,10 @@ var regrasCorpoBase = [
     nome: "fundo_gaveta",
     grupo: "gaveta",
     ativa_quando: (cfg) => cfg.num_gavetas > 0,
-    calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 2 * ESP,
-    calcular_comprimento_mm: (_L, _A, P) => P - 2 * ESP,
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP2) / Math.max(cfg.num_gavetas, 1)) - 2 * ESP2,
+    calcular_comprimento_mm: (_L, _A, P) => P - 2 * ESP2,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-    espessura_mm: FUNDO,
+    espessura_mm: FUNDO2,
     direcao_fio: "indiferente",
     fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: false }),
     usa_material: "fundo"
@@ -219,11 +524,17 @@ var cfgBase = {
   tem_cabideiro: false,
   tem_fundo: true,
   espessura_fundo_mm: 6,
-  tem_rodape: false,
+  tem_rodape: true,
+  // rodapé clipado nos pés reguláveis (padrão editável)
   altura_rodape_cm: 10,
   tem_pes_regulaveis: true,
   altura_pes_cm: 10,
   tem_roda_teto: false,
+  // base não vai ao teto
+  tem_engrosso_tampo: true,
+  // tampo/bancada em dupla chapa (30mm)
+  tem_engrosso_frentes: true,
+  // frentes aparentes em dupla chapa (30mm)
   tem_iluminacao_led: false,
   tem_espelho_interno: false,
   tem_ripado: false,
@@ -236,7 +547,16 @@ var cfgAereo = {
   ...cfgBase,
   num_portas: 2,
   num_prateleiras: 1,
-  tem_pes_regulaveis: false
+  tem_pes_regulaveis: false,
+  tem_rodape: false,
+  // aéreo não tem rodapé
+  tem_roda_teto: true,
+  // moldura de roda-teto no topo (até o teto)
+  altura_roda_teto_cm: 5,
+  tem_engrosso_tampo: false,
+  // aéreo não tem tampo de bancada
+  tem_engrosso_frentes: true
+  // frentes visíveis em dupla chapa
 };
 function criarModuloBase(largura_cm) {
   return {
@@ -259,7 +579,7 @@ function criarModuloBase(largura_cm) {
       permite_iluminacao_led: false,
       permite_ripado: false
     },
-    regras_pecas: regrasCorpoBase,
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
     regras_ferragens: [
       ...regrasDobradica,
       ...regrasCorredica,
@@ -301,7 +621,7 @@ function criarModuloAereo(largura_cm, altura_cm = AEREO_ALTURA_CM) {
       permite_iluminacao_led: true,
       permite_ripado: false
     },
-    regras_pecas: regrasCorpoBase,
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
     regras_ferragens: [
       ...regrasDobradica,
       ...regrasPuxador,
@@ -784,11 +1104,18 @@ function configPadrao(overrides = {}) {
     tem_cabideiro: false,
     tem_fundo: true,
     espessura_fundo_mm: 6,
-    tem_rodape: false,
+    tem_rodape: true,
+    // rodapé clipado nos pés (padrão; aéreo sobrescreve p/ false)
     altura_rodape_cm: 10,
     tem_pes_regulaveis: true,
     altura_pes_cm: 10,
     tem_roda_teto: false,
+    // módulos que vão ao teto sobrescrevem p/ true
+    altura_roda_teto_cm: 5,
+    tem_engrosso_tampo: false,
+    // só bancadas/tampos opt-in (evita dobrar topo de roupeiro)
+    tem_engrosso_frentes: true,
+    // frentes aparentes em dupla chapa (30mm) por padrão
     tem_iluminacao_led: false,
     tem_espelho_interno: false,
     tem_ripado: false,
@@ -971,7 +1298,9 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     configDe: (largura) => configPadrao({
       tipo_porta: preferencias.tipo_porta_base,
       ferragem: preferencias.ferragem,
-      num_portas: largura <= 40 ? 1 : 2
+      num_portas: largura <= 40 ? 1 : 2,
+      tem_engrosso_tampo: true
+      // base de cozinha tem bancada → tampo 30mm
     })
   });
   const modulosAereo = instanciarModulos(largurasBases, {
@@ -989,7 +1318,11 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       tipo_porta: preferencias.tipo_porta_aereo,
       ferragem: preferencias.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
-      tem_pes_regulaveis: false
+      tem_pes_regulaveis: false,
+      tem_rodape: false,
+      // aéreo não tem rodapé
+      tem_roda_teto: true
+      // moldura de roda-teto no topo (até o teto)
     }),
     ordemInicial: modulosBase.length
   });
@@ -1096,7 +1429,9 @@ function montarParede(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, avi
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base,
       ferragem: prefs.ferragem,
-      num_portas: largura <= 40 ? 1 : 2
+      num_portas: largura <= 40 ? 1 : 2,
+      tem_engrosso_tampo: true
+      // base de cozinha tem bancada → tampo 30mm
     }),
     ordemInicial
   });
@@ -1117,7 +1452,11 @@ function montarParede(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, avi
         tipo_porta: prefs.tipo_porta_aereo,
         ferragem: prefs.ferragem,
         num_portas: largura <= 40 ? 1 : 2,
-        tem_pes_regulaveis: false
+        tem_pes_regulaveis: false,
+        tem_rodape: false,
+        // aéreo não tem rodapé
+        tem_roda_teto: true
+        // moldura de roda-teto no topo
       }),
       ordemInicial: ordemInicial + bases.length
     });
@@ -1255,7 +1594,9 @@ function gerarLayoutIlha(ambiente, prefs) {
       ferragem: prefs.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
       // ilha dupla-face: sem fundo fechado, acesso pelos dois lados
-      tem_fundo: false
+      tem_fundo: false,
+      tem_engrosso_tampo: true
+      // ilha tem bancada → tampo 30mm
     }),
     rotuloParede: "Ilha central"
   });
@@ -1277,233 +1618,6 @@ function gerarLayoutIlha(ambiente, prefs) {
     ],
     nome_padrao: `Cozinha com Ilha \u2014 ${ocupado}cm`
   });
-}
-
-// src/lib/motor-parametrico/regras-corte-comuns.ts
-var ESP2 = 15;
-var FUNDO2 = 6;
-var semFita = () => ({ esquerda: false, direita: false, topo: false, base: false });
-var fitaFrente = () => ({ esquerda: false, direita: false, topo: true, base: false });
-var fitaTotal = () => ({ esquerda: true, direita: true, topo: true, base: true });
-function regrasCorpo(opts = {}) {
-  const esp = opts.espessura_corpo ?? ESP2;
-  const regras = [
-    {
-      nome: "lateral",
-      grupo: "corpo",
-      ativa_quando: () => true,
-      calcular_largura_mm: (_L, _A, P) => P,
-      calcular_comprimento_mm: (_L, A) => A,
-      calcular_quantidade: () => 2,
-      espessura_mm: esp,
-      direcao_fio: "paralelo_comprimento",
-      fita_borda: fitaFrente,
-      usa_material: "corpo"
-    },
-    {
-      nome: "teto",
-      grupo: "corpo",
-      ativa_quando: () => true,
-      calcular_largura_mm: (L) => L - 2 * esp,
-      calcular_comprimento_mm: (_L, _A, P) => P,
-      calcular_quantidade: () => 1,
-      espessura_mm: esp,
-      direcao_fio: "paralelo_largura",
-      fita_borda: fitaFrente,
-      usa_material: "corpo"
-    },
-    {
-      nome: "base",
-      grupo: "corpo",
-      ativa_quando: () => true,
-      calcular_largura_mm: (L) => L - 2 * esp,
-      calcular_comprimento_mm: (_L, _A, P) => P,
-      calcular_quantidade: () => 1,
-      espessura_mm: esp,
-      direcao_fio: "paralelo_largura",
-      fita_borda: fitaFrente,
-      usa_material: "corpo"
-    },
-    {
-      nome: "prateleira",
-      grupo: "corpo",
-      ativa_quando: (cfg) => cfg.num_prateleiras > 0,
-      calcular_largura_mm: (L, _A, _P, cfg) => cfg.num_divisorias > 0 ? Math.round((L - 2 * esp - esp) / 2) : L - 2 * esp,
-      calcular_comprimento_mm: (_L, _A, P) => P - FUNDO2,
-      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_prateleiras,
-      espessura_mm: esp,
-      direcao_fio: "paralelo_largura",
-      fita_borda: fitaFrente,
-      usa_material: "corpo"
-    },
-    {
-      nome: "fundo",
-      grupo: "fundo",
-      ativa_quando: (cfg) => cfg.tem_fundo,
-      calcular_largura_mm: (L) => L - 2 * esp,
-      calcular_comprimento_mm: (_L, A) => A - 2 * esp,
-      calcular_quantidade: () => 1,
-      espessura_mm: FUNDO2,
-      direcao_fio: "indiferente",
-      fita_borda: semFita,
-      usa_material: "fundo"
-    }
-  ];
-  if (opts.com_divisoria) {
-    regras.push({
-      nome: "divisoria_vertical",
-      grupo: "corpo",
-      ativa_quando: (cfg) => cfg.num_divisorias > 0,
-      calcular_largura_mm: (_L, _A, P) => P - FUNDO2,
-      calcular_comprimento_mm: (_L, A) => A - 2 * esp,
-      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_divisorias,
-      espessura_mm: esp,
-      direcao_fio: "paralelo_comprimento",
-      fita_borda: fitaFrente,
-      usa_material: "corpo"
-    });
-  }
-  return regras;
-}
-function regraPortaDobradica() {
-  return {
-    nome: "porta",
-    grupo: "porta",
-    ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "dobradica" || cfg.tipo_porta === "basculante"),
-    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
-    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
-    espessura_mm: ESP2,
-    direcao_fio: "paralelo_comprimento",
-    fita_borda: fitaTotal,
-    usa_material: "porta"
-  };
-}
-function regraPortaCorrer() {
-  return {
-    nome: "porta_correr",
-    grupo: "porta",
-    ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "correr" || cfg.tipo_porta === "espelho"),
-    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1) + 20),
-    // sobreposição
-    calcular_comprimento_mm: (_L, A) => A,
-    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
-    espessura_mm: 18,
-    direcao_fio: "paralelo_comprimento",
-    fita_borda: fitaTotal,
-    usa_material: "porta"
-  };
-}
-function regrasGaveta() {
-  return [
-    {
-      nome: "frente_gaveta",
-      grupo: "gaveta",
-      ativa_quando: (cfg) => cfg.num_gavetas > 0,
-      calcular_largura_mm: (L) => L - 4,
-      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP2) / Math.max(cfg.num_gavetas, 1)) - 4,
-      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-      espessura_mm: ESP2,
-      direcao_fio: "paralelo_largura",
-      fita_borda: fitaTotal,
-      usa_material: "porta"
-    },
-    {
-      nome: "lateral_gaveta",
-      grupo: "gaveta",
-      ativa_quando: (cfg) => cfg.num_gavetas > 0,
-      calcular_largura_mm: (_L, _A, P) => P - 2 * ESP2,
-      calcular_comprimento_mm: () => 110,
-      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas * 2,
-      espessura_mm: ESP2,
-      direcao_fio: "indiferente",
-      fita_borda: semFita,
-      usa_material: "corpo"
-    },
-    {
-      nome: "traseira_gaveta",
-      grupo: "gaveta",
-      ativa_quando: (cfg) => cfg.num_gavetas > 0,
-      calcular_largura_mm: (L) => L - 2 * ESP2 - 26,
-      calcular_comprimento_mm: () => 110,
-      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-      espessura_mm: ESP2,
-      direcao_fio: "indiferente",
-      fita_borda: semFita,
-      usa_material: "corpo"
-    },
-    {
-      nome: "fundo_gaveta",
-      grupo: "gaveta",
-      ativa_quando: (cfg) => cfg.num_gavetas > 0,
-      calcular_largura_mm: (L) => L - 2 * ESP2 - 26,
-      calcular_comprimento_mm: (_L, _A, P) => P - 2 * ESP2,
-      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-      espessura_mm: FUNDO2,
-      direcao_fio: "indiferente",
-      fita_borda: semFita,
-      usa_material: "fundo"
-    }
-  ];
-}
-function regraDobradicas() {
-  return {
-    tipo: "dobradica_35mm_110grau",
-    ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
-    calcular_quantidade: (_L, A, _P, cfg) => {
-      const porPorta = A > 2e3 ? 4 : A > 1500 ? 3 : 2;
-      return cfg.num_portas * porPorta;
-    },
-    descricao_tecnica: "2 dobradi\xE7as (\u2264150cm), 3 (\u2264200cm) ou 4 (>200cm) por porta"
-  };
-}
-function regraCorredicaGaveta() {
-  return {
-    tipo: "corredicao_tandem_400mm",
-    ativa_quando: (cfg) => cfg.num_gavetas > 0,
-    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
-    descricao_tecnica: "1 par de corredi\xE7as por gaveta"
-  };
-}
-function regraTrilhoCorrer() {
-  return {
-    tipo: "corredicao_lateral_porta",
-    ativa_quando: (cfg) => cfg.tipo_porta === "correr" || cfg.tipo_porta === "espelho",
-    calcular_quantidade: () => 1,
-    descricao_tecnica: "1 kit de trilho superior + inferior por m\xF3dulo de correr"
-  };
-}
-function regraCabideiro() {
-  return {
-    tipo: "cabideiro_simples",
-    ativa_quando: (cfg) => cfg.tem_cabideiro,
-    calcular_quantidade: () => 1,
-    descricao_tecnica: "1 barra cabideiro + 2 suportes por m\xF3dulo"
-  };
-}
-function regraPuxadores() {
-  return {
-    tipo: "puxador_alu_128mm",
-    ativa_quando: (cfg) => cfg.tipo_puxador !== "sem" && (cfg.num_portas > 0 || cfg.num_gavetas > 0),
-    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas + cfg.num_gavetas,
-    descricao_tecnica: "1 puxador por porta + 1 por gaveta"
-  };
-}
-function regraMinifix() {
-  return {
-    tipo: "minifix_15mm",
-    ativa_quando: () => true,
-    calcular_quantidade: (_L, _A, _P, cfg) => 8 + cfg.num_prateleiras * 4 + cfg.num_gavetas * 4,
-    descricao_tecnica: "8 por corpo + 4 por prateleira + 4 por gaveta"
-  };
-}
-function regraPes() {
-  return {
-    tipo: "ajustador_pe_100mm",
-    ativa_quando: (cfg) => cfg.tem_pes_regulaveis,
-    calcular_quantidade: (L) => L > 1500 ? 6 : 4,
-    descricao_tecnica: "4 p\xE9s (\u2264150cm) ou 6 (>150cm)"
-  };
 }
 
 // src/lib/motor-parametrico/biblioteca-quarto.ts
@@ -1812,6 +1926,8 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
       num_prateleiras: 3,
       num_divisorias: 1,
       tem_cabideiro: true,
+      tem_roda_teto: true,
+      // roupeiro vai até o teto → moldura de roda-teto
       espessura_porta_mm: prefs.tipo_porta === "correr" || prefs.tipo_porta === "espelho" ? 18 : 15
     }),
     ordemInicial
@@ -4366,7 +4482,10 @@ var BOAS_PRATICAS = [
   { id: "BP-07", categoria: "montagem", regra: "Jun\xE7\xE3o de pe\xE7as com cavilha 8\xD730mm + minifix." },
   { id: "BP-08", categoria: "estrutura", regra: "Porta de abrir at\xE9 50cm de largura; acima, usar correr ou dupla." },
   { id: "BP-09", categoria: "ferragem", regra: "M\xF3dulos > 150cm de largura: 6 p\xE9s regul\xE1veis em vez de 4." },
-  { id: "BP-10", categoria: "acabamento", regra: "Cuba/tanque sem fundo de MDF na zona molhada." }
+  { id: "BP-10", categoria: "acabamento", regra: "Cuba/tanque sem fundo de MDF na zona molhada." },
+  { id: "BP-11", categoria: "estrutura", regra: "Rodap\xE9 clipado (padr\xE3o 10cm) encaixado nos p\xE9s regul\xE1veis; s\xF3 em m\xF3dulos de piso, nunca em a\xE9reos/parede." },
+  { id: "BP-12", categoria: "acabamento", regra: "M\xF3dulo que vai at\xE9 o teto recebe moldura de roda-teto (arremate, padr\xE3o 5cm) para fechar o v\xE3o superior." },
+  { id: "BP-13", categoria: "estrutura", regra: "Engrosso de dupla chapa (15+15=30mm) em tampos de bancada e frentes aparentes; dobra a \xE1rea de material da pe\xE7a no corte." }
 ];
 function consultarConhecimento(consulta) {
   const q = consulta.toLowerCase();

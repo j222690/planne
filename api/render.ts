@@ -269,6 +269,7 @@ function buildRenderPrompt(input: RenderInput): string {
     moveisList ? `custom built-in marcenaria furniture: ${moveisList}` : "",
     `dominant color palette: ${dominantColor}, harmonious complementary tones throughout the entire space`,
     "Brazilian luxury marcenaria planejada, premium MDF melamina finish, crisp ABS edgebanding on all panels, aluminum profile handles, soft-close concealed hinges, impeccable joinery",
+    "base cabinets sit on a recessed clipped toe-kick base (rodapé) over adjustable feet; tall cabinets finish at the ceiling with a crown-molding trim (roda-teto); countertops and visible fronts have a thick doubled 30mm edge (engrosso)",
     "furniture dimensions and proportions must exactly match the specified measurements",
     // Regras de funcionalidade/ergonomia — evita erros de marcenaria na cena
     REGRAS_FUNCIONAIS_GERAL,
