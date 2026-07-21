@@ -367,6 +367,69 @@ function criarModuloAereo(largura_cm: number, altura_cm = AEREO_ALTURA_CM): Modu
   };
 }
 
+// ─── TORRE DE FORNO (paneleiro/torre quente) ──────────────────────────────────
+
+export const TORRE_ALTURA_CM = 220;        // torre alta (forno + micro + armários)
+export const TORRE_PROFUNDIDADE_CM = 60;   // mais profunda p/ acomodar o forno
+
+/**
+ * Torre de forno: armário alto de piso ao teto com nichos para forno e micro-ondas
+ * (zona central aberta) + portas em cima e embaixo. Vai ao teto (roda-teto).
+ */
+function criarModuloTorreForno(largura_cm = 60): ModuloParametrico {
+  return {
+    id: `torre_forno_${largura_cm}`,
+    codigo: `torre_forno_${largura_cm}`,
+    nome: `Torre de Forno ${largura_cm}cm`,
+    versao: 1,
+    categorias: ["cozinha"],
+    tipo: "torre",
+    largura: { min_cm: largura_cm, max_cm: largura_cm, padrao_cm: largura_cm, passo_cm: 0 },
+    altura: { min_cm: TORRE_ALTURA_CM, max_cm: 240, padrao_cm: TORRE_ALTURA_CM, passo_cm: 0 },
+    profundidade: { min_cm: TORRE_PROFUNDIDADE_CM, max_cm: TORRE_PROFUNDIDADE_CM, padrao_cm: TORRE_PROFUNDIDADE_CM, passo_cm: 0 },
+    // 2 portas (armário superior + inferior); a zona central fica aberta p/ os
+    // eletrodomésticos. Prateleiras separam os nichos.
+    configuracao_padrao: {
+      ...cfgBase,
+      num_portas: 2,
+      num_prateleiras: 3,
+      tem_rodape: true,
+      tem_roda_teto: true,       // vai ao teto
+      tem_engrosso_tampo: false, // torre não tem bancada
+      tem_engrosso_frentes: true,
+    },
+    limites: {
+      num_portas: { min: 2, max: 2 },
+      num_gavetas: { min: 0, max: 2 },
+      num_prateleiras: { min: 2, max: 4 },
+      tipos_porta_validos: ["dobradica"],
+      permite_espelho: false,
+      permite_iluminacao_led: true,
+      permite_ripado: false,
+    },
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
+    regras_ferragens: [
+      ...regrasDobradica,
+      ...regrasPuxador,
+      ...regrasMinifix,
+      ...regrasPes,
+    ],
+    restricoes_placement: {
+      altura_piso_padrao_cm: 0,
+      folga_teto_min_cm: 0,
+      afastamento_lateral_cm: 0,
+      permite_sequencia: true,
+    },
+    norma_referencia: "Torre de forno: nichos de forno/micro-ondas com ventilação; forno afastado de janela",
+    altura_trabalho_cm: 90,
+    ativo: true,
+    publicado_em: "2026-07-21T00:00:00Z",
+  };
+}
+
+/** Template padrão de torre de forno (60cm). */
+export const MODULO_TORRE_FORNO: ModuloParametrico = criarModuloTorreForno(60);
+
 // ─── BIBLIOTECAS EXPORTADAS ───────────────────────────────────────────────────
 
 /** Módulos base padrão para cozinha linear (larguras em cm). */

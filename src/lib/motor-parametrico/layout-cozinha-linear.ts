@@ -20,12 +20,15 @@ import type {
 import {
   MODULOS_BASE_COZINHA,
   MODULOS_AEREOS_COZINHA,
+  MODULO_TORRE_FORNO,
   getTemplateBase,
   getTemplateAereo,
   BASE_ALTURA_CM,
   BASE_PROFUNDIDADE_CM,
   AEREO_ALTURA_CM,
   AEREO_PROFUNDIDADE_CM,
+  TORRE_ALTURA_CM,
+  TORRE_PROFUNDIDADE_CM,
 } from "./biblioteca-cozinha";
 import { validarProjeto, type ResultadoValidacao } from "./rule-engine";
 import { calcularMetricas } from "./pecas";
@@ -50,11 +53,15 @@ export interface PreferenciasCozinha {
   tipo_porta_base: "dobradica" | "correr";
   tipo_porta_aereo: "dobradica" | "basculante";
   versao_comercial: VersaoComercial;
+  /** Inclui torre de forno (paneleiro) quando houver espaço. Default: true. */
+  com_torre_forno?: boolean;
   criado_por?: string;
   empresa_id?: string;
   cliente_id?: string;
   nome?: string;
 }
+
+const TORRE_LARGURA_CM = 60;
 
 export interface ResultadoLayout {
   projeto: ProjetoFabricavel;
@@ -93,10 +100,17 @@ export function gerarLayoutCozinhaLinear(
 
   const larguraDisponivel = segmento.comprimento_cm;
 
-  // 3. Encaixe greedy
-  const largurasBases = encaixarModulos(larguraDisponivel);
+  // 2.5. Torre de forno: reserva 60cm num extremo quando há espaço para ela + ao
+  // menos ~1,5 módulo base. A torre vai do piso ao teto (sem aéreo acima dela).
+  const torreAtiva = preferencias.com_torre_forno !== false
+    && larguraDisponivel >= TORRE_LARGURA_CM + 90;
+  const offsetModulos = torreAtiva ? TORRE_LARGURA_CM : 0;
+  const larguraModulos = larguraDisponivel - offsetModulos;
+
+  // 3. Encaixe greedy (no espaço restante após a torre)
+  const largurasBases = encaixarModulos(larguraModulos);
   if (largurasBases.length === 0) {
-    avisos.push(`Segmento de ${larguraDisponivel}cm é insuficiente para um módulo mínimo (30cm).`);
+    avisos.push(`Segmento de ${larguraModulos}cm é insuficiente para um módulo mínimo (30cm).`);
   }
 
   // 4. Materiais
@@ -106,7 +120,7 @@ export function gerarLayoutCozinhaLinear(
   // 5. Instanciar bases
   const modulosBase = instanciarModulos(largurasBases, {
     parede: paredeId,
-    inicio_cm: segmento.inicio_cm,
+    inicio_cm: segmento.inicio_cm + offsetModulos,
     posicao_y_cm: 0,
     altura_cm: BASE_ALTURA_CM,
     profundidade_cm: BASE_PROFUNDIDADE_CM,
@@ -126,7 +140,7 @@ export function gerarLayoutCozinhaLinear(
   // 6. Instanciar aéreos (alinhados com bases)
   const modulosAereo = instanciarModulos(largurasBases, {
     parede: paredeId,
-    inicio_cm: segmento.inicio_cm,
+    inicio_cm: segmento.inicio_cm + offsetModulos,
     posicao_y_cm: AEREO_INICIO_Y_CM,
     altura_cm: AEREO_ALTURA_CM,
     profundidade_cm: AEREO_PROFUNDIDADE_CM,
@@ -146,7 +160,33 @@ export function gerarLayoutCozinhaLinear(
     ordemInicial: modulosBase.length,
   });
 
-  const modulos = [...modulosBase, ...modulosAereo];
+  // Instanciar a torre de forno no extremo reservado (piso ao teto)
+  const modulosTorre = torreAtiva
+    ? instanciarModulos([TORRE_LARGURA_CM], {
+        parede: paredeId,
+        inicio_cm: segmento.inicio_cm,
+        posicao_y_cm: 0,
+        altura_cm: TORRE_ALTURA_CM,
+        profundidade_cm: TORRE_PROFUNDIDADE_CM,
+        prefixo: "torre_forno",
+        materialCorpo,
+        materialFundo,
+        getTemplate: () => MODULO_TORRE_FORNO,
+        templateFallback: MODULO_TORRE_FORNO,
+        configDe: () => configPadrao({
+          tipo_porta: "dobradica",
+          ferragem: preferencias.ferragem,
+          num_portas: 2,
+          num_prateleiras: 3,
+          tem_roda_teto: true,       // vai ao teto
+          tem_engrosso_tampo: false, // torre não tem bancada
+        }),
+        rotuloParede: "Torre de forno",
+        ordemInicial: modulosBase.length + modulosAereo.length,
+      })
+    : [];
+
+  const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
 
   // 7. Aproveitamento
   const larguraOcupada = largurasBases.reduce((s, l) => s + l, 0);
@@ -178,6 +218,7 @@ export function gerarLayoutCozinhaLinear(
     observacoes_tecnicas: [
       `${largurasBases.length} módulos base (${larguraOcupada}cm linear)`,
       `${largurasBases.length} módulos aéreos alinhados`,
+      ...(torreAtiva ? [`1 torre de forno (${TORRE_LARGURA_CM}cm, piso ao teto)`] : []),
       `Aproveitamento da parede: ${aproveitamento}%`,
       ...avisos,
     ],

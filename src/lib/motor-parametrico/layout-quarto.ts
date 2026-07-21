@@ -88,7 +88,7 @@ function montarParedeRoupeiros(
       num_divisorias: 1,
       tem_cabideiro: true,
       tem_roda_teto: true,   // roupeiro vai até o teto → moldura de roda-teto
-      espessura_porta_mm: (prefs.tipo_porta === "correr" || prefs.tipo_porta === "espelho") ? 18 : 15,
+      espessura_porta_mm: 15,  // padrão 15mm (marcenaria BR usa pouco 18mm)
     }),
     ordemInicial,
   });

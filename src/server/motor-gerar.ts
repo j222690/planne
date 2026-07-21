@@ -78,6 +78,7 @@ interface RequestBody {
     com_superior?: boolean;
     com_painel?: boolean;
     com_gaveteiro?: boolean;
+    com_torre_forno?: boolean;
     // Override de acabamentos por projeto (a marcenaria liga/desliga na tela).
     // Default: todos ligados (usa os padrões do motor).
     acabamentos?: {
@@ -388,6 +389,7 @@ function gerarLayout(
         parede_principal: prefs.parede_principal,
         tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
         tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
+        com_torre_forno: prefs.com_torre_forno,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };
     }

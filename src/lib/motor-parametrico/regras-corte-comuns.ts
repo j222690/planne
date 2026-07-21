@@ -142,7 +142,7 @@ export function regraPortaDobradica(): RegraCorte {
   };
 }
 
-/** Porta de correr (roupeiros). */
+/** Porta de correr (roupeiros). Padrão 15mm (marcenaria BR usa pouco 18mm). */
 export function regraPortaCorrer(): RegraCorte {
   return {
     nome: "porta_correr",
@@ -151,7 +151,7 @@ export function regraPortaCorrer(): RegraCorte {
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L / Math.max(cfg.num_portas, 1)) + 20), // sobreposição
     calcular_comprimento_mm: (_L, A) => A,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
-    espessura_mm: 18,
+    espessura_mm: 15,
     direcao_fio: "paralelo_comprimento",
     fita_borda: fitaTotal,
     usa_material: "porta",
@@ -282,7 +282,12 @@ export function regrasEngrosso(): RegraCorte[] {
     {
       nome: "engrosso_porta",
       grupo: "detalhe",
-      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_portas > 0,
+      // Só em portas de abrir/basculante lisas. Correr/espelho já são 18mm e
+      // deslizam em trilho — não recebem engrosso.
+      ativa_quando: (cfg) =>
+        cfg.tem_engrosso_frentes === true &&
+        cfg.num_portas > 0 &&
+        (cfg.tipo_porta === "dobradica" || cfg.tipo_porta === "basculante"),
       calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
       calcular_comprimento_mm: (_L, A) => A,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,

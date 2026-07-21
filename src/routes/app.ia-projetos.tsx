@@ -1908,6 +1908,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const [acRodape, setAcRodape] = useState(true);
   const [acRodaTeto, setAcRodaTeto] = useState(true);
   const [acEngrosso, setAcEngrosso] = useState(true);
+  const [comTorreForno, setComTorreForno] = useState(true);
   const navigateMotor = useNavigate();
 
   const tipoLayoutMotor = AMBIENTE_TO_LAYOUT[wizard.form.ambiente];
@@ -1965,6 +1966,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             tipo_porta: motorTipoPorta,
             versao_comercial: "intermediaria",
             acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
+            com_torre_forno: comTorreForno,
           },
         }),
       });
@@ -1995,7 +1997,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, empresaParams]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno, empresaParams]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
@@ -2014,7 +2016,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     const t = setTimeout(() => { gerarMotor(); }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso]);
+  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno]);
 
   // Cria o orçamento formal a partir de uma das 3 versões reais do motor
   const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
@@ -2614,6 +2616,9 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                     ["Rodapé + pés reguláveis", acRodape, setAcRodape, "Rodapé clipado nos módulos de piso"],
                     ["Roda-teto (arremate)", acRodaTeto, setAcRodaTeto, "Moldura no topo dos armários que vão ao teto"],
                     ["Engrosso 30mm (dupla chapa)", acEngrosso, setAcEngrosso, "Tampos de bancada e frentes aparentes"],
+                    ...(wizard.form.ambiente === "Cozinha"
+                      ? [["Torre de forno", comTorreForno, setComTorreForno, "Paneleiro alto p/ forno e micro-ondas"] as const]
+                      : []),
                   ] as const).map(([label, val, setter, sub]) => (
                     <button key={label} type="button" onClick={() => setter(!val)}
                       className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border text-left transition-all ${val ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>

@@ -110,7 +110,7 @@ function regraPortaCorrer() {
     // sobreposição
     calcular_comprimento_mm: (_L, A) => A,
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
-    espessura_mm: 18,
+    espessura_mm: 15,
     direcao_fio: "paralelo_comprimento",
     fita_borda: fitaTotal,
     usa_material: "porta"
@@ -218,7 +218,9 @@ function regrasEngrosso() {
     {
       nome: "engrosso_porta",
       grupo: "detalhe",
-      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_portas > 0,
+      // Só em portas de abrir/basculante lisas. Correr/espelho já são 18mm e
+      // deslizam em trilho — não recebem engrosso.
+      ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_portas > 0 && (cfg.tipo_porta === "dobradica" || cfg.tipo_porta === "basculante"),
       calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
       calcular_comprimento_mm: (_L, A) => A,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
@@ -638,6 +640,61 @@ function criarModuloAereo(largura_cm, altura_cm = AEREO_ALTURA_CM) {
     publicado_em: "2026-06-04T00:00:00Z"
   };
 }
+var TORRE_ALTURA_CM = 220;
+var TORRE_PROFUNDIDADE_CM = 60;
+function criarModuloTorreForno(largura_cm = 60) {
+  return {
+    id: `torre_forno_${largura_cm}`,
+    codigo: `torre_forno_${largura_cm}`,
+    nome: `Torre de Forno ${largura_cm}cm`,
+    versao: 1,
+    categorias: ["cozinha"],
+    tipo: "torre",
+    largura: { min_cm: largura_cm, max_cm: largura_cm, padrao_cm: largura_cm, passo_cm: 0 },
+    altura: { min_cm: TORRE_ALTURA_CM, max_cm: 240, padrao_cm: TORRE_ALTURA_CM, passo_cm: 0 },
+    profundidade: { min_cm: TORRE_PROFUNDIDADE_CM, max_cm: TORRE_PROFUNDIDADE_CM, padrao_cm: TORRE_PROFUNDIDADE_CM, passo_cm: 0 },
+    // 2 portas (armário superior + inferior); a zona central fica aberta p/ os
+    // eletrodomésticos. Prateleiras separam os nichos.
+    configuracao_padrao: {
+      ...cfgBase,
+      num_portas: 2,
+      num_prateleiras: 3,
+      tem_rodape: true,
+      tem_roda_teto: true,
+      // vai ao teto
+      tem_engrosso_tampo: false,
+      // torre não tem bancada
+      tem_engrosso_frentes: true
+    },
+    limites: {
+      num_portas: { min: 2, max: 2 },
+      num_gavetas: { min: 0, max: 2 },
+      num_prateleiras: { min: 2, max: 4 },
+      tipos_porta_validos: ["dobradica"],
+      permite_espelho: false,
+      permite_iluminacao_led: true,
+      permite_ripado: false
+    },
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
+    regras_ferragens: [
+      ...regrasDobradica,
+      ...regrasPuxador,
+      ...regrasMinifix,
+      ...regrasPes
+    ],
+    restricoes_placement: {
+      altura_piso_padrao_cm: 0,
+      folga_teto_min_cm: 0,
+      afastamento_lateral_cm: 0,
+      permite_sequencia: true
+    },
+    norma_referencia: "Torre de forno: nichos de forno/micro-ondas com ventila\xE7\xE3o; forno afastado de janela",
+    altura_trabalho_cm: 90,
+    ativo: true,
+    publicado_em: "2026-07-21T00:00:00Z"
+  };
+}
+var MODULO_TORRE_FORNO = criarModuloTorreForno(60);
 var MODULOS_BASE_COZINHA = [
   criarModuloBase(30),
   criarModuloBase(40),
@@ -1262,6 +1319,7 @@ function montarProjeto(opcoes) {
 
 // src/lib/motor-parametrico/layout-cozinha-linear.ts
 var AEREO_INICIO_Y_CM = 150;
+var TORRE_LARGURA_CM = 60;
 function gerarLayoutCozinhaLinear(ambiente, preferencias) {
   const avisos = [];
   const paredeId = escolherParedePrincipal(ambiente, preferencias.parede_principal, avisos);
@@ -1278,15 +1336,18 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     };
   }
   const larguraDisponivel = segmento.comprimento_cm;
-  const largurasBases = encaixarModulos(larguraDisponivel);
+  const torreAtiva = preferencias.com_torre_forno !== false && larguraDisponivel >= TORRE_LARGURA_CM + 90;
+  const offsetModulos = torreAtiva ? TORRE_LARGURA_CM : 0;
+  const larguraModulos = larguraDisponivel - offsetModulos;
+  const largurasBases = encaixarModulos(larguraModulos);
   if (largurasBases.length === 0) {
-    avisos.push(`Segmento de ${larguraDisponivel}cm \xE9 insuficiente para um m\xF3dulo m\xEDnimo (30cm).`);
+    avisos.push(`Segmento de ${larguraModulos}cm \xE9 insuficiente para um m\xF3dulo m\xEDnimo (30cm).`);
   }
   const materialCorpo = criarMaterialPadrao(preferencias.cor_mdf_hex, 15);
   const materialFundo = criarMaterialPadrao(preferencias.cor_mdf_hex, 6);
   const modulosBase = instanciarModulos(largurasBases, {
     parede: paredeId,
-    inicio_cm: segmento.inicio_cm,
+    inicio_cm: segmento.inicio_cm + offsetModulos,
     posicao_y_cm: 0,
     altura_cm: BASE_ALTURA_CM,
     profundidade_cm: BASE_PROFUNDIDADE_CM,
@@ -1305,7 +1366,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
   });
   const modulosAereo = instanciarModulos(largurasBases, {
     parede: paredeId,
-    inicio_cm: segmento.inicio_cm,
+    inicio_cm: segmento.inicio_cm + offsetModulos,
     posicao_y_cm: AEREO_INICIO_Y_CM,
     altura_cm: AEREO_ALTURA_CM,
     profundidade_cm: AEREO_PROFUNDIDADE_CM,
@@ -1326,7 +1387,31 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     }),
     ordemInicial: modulosBase.length
   });
-  const modulos = [...modulosBase, ...modulosAereo];
+  const modulosTorre = torreAtiva ? instanciarModulos([TORRE_LARGURA_CM], {
+    parede: paredeId,
+    inicio_cm: segmento.inicio_cm,
+    posicao_y_cm: 0,
+    altura_cm: TORRE_ALTURA_CM,
+    profundidade_cm: TORRE_PROFUNDIDADE_CM,
+    prefixo: "torre_forno",
+    materialCorpo,
+    materialFundo,
+    getTemplate: () => MODULO_TORRE_FORNO,
+    templateFallback: MODULO_TORRE_FORNO,
+    configDe: () => configPadrao({
+      tipo_porta: "dobradica",
+      ferragem: preferencias.ferragem,
+      num_portas: 2,
+      num_prateleiras: 3,
+      tem_roda_teto: true,
+      // vai ao teto
+      tem_engrosso_tampo: false
+      // torre não tem bancada
+    }),
+    rotuloParede: "Torre de forno",
+    ordemInicial: modulosBase.length + modulosAereo.length
+  }) : [];
+  const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
   const larguraOcupada = largurasBases.reduce((s, l) => s + l, 0);
   const aproveitamento = larguraDisponivel > 0 ? Math.round(larguraOcupada / larguraDisponivel * 100) : 0;
   if (aproveitamento < 85 && largurasBases.length > 0) {
@@ -1351,6 +1436,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     observacoes_tecnicas: [
       `${largurasBases.length} m\xF3dulos base (${larguraOcupada}cm linear)`,
       `${largurasBases.length} m\xF3dulos a\xE9reos alinhados`,
+      ...torreAtiva ? [`1 torre de forno (${TORRE_LARGURA_CM}cm, piso ao teto)`] : [],
       `Aproveitamento da parede: ${aproveitamento}%`,
       ...avisos
     ],
@@ -1928,7 +2014,8 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
       tem_cabideiro: true,
       tem_roda_teto: true,
       // roupeiro vai até o teto → moldura de roda-teto
-      espessura_porta_mm: prefs.tipo_porta === "correr" || prefs.tipo_porta === "espelho" ? 18 : 15
+      espessura_porta_mm: 15
+      // padrão 15mm (marcenaria BR usa pouco 18mm)
     }),
     ordemInicial
   });
@@ -2382,7 +2469,7 @@ function gerarLayoutBanheiro(ambiente, prefs) {
         num_prateleiras: 2,
         tem_pes_regulaveis: false,
         tem_espelho_interno: true,
-        espessura_porta_mm: 18
+        espessura_porta_mm: 15
       }),
       ordemInicial: gabinetes.length
     });
@@ -4940,7 +5027,8 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
         ...comum,
         parede_principal: prefs.parede_principal,
         tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
-        tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica"
+        tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
+        com_torre_forno: prefs.com_torre_forno
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };
     }

@@ -132,7 +132,7 @@ export function gerarLayoutBanheiro(
         num_prateleiras: 2,
         tem_pes_regulaveis: false,
         tem_espelho_interno: true,
-        espessura_porta_mm: 18,
+        espessura_porta_mm: 15,
       }),
       ordemInicial: gabinetes.length,
     });
