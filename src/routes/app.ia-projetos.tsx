@@ -4,7 +4,7 @@ import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
   CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
-  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers, Plus,
+  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers, Plus, Check,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1904,6 +1904,10 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
   const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<"cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha">("cozinha_linear");
+  // Acabamentos editáveis por projeto (padrão: todos ligados)
+  const [acRodape, setAcRodape] = useState(true);
+  const [acRodaTeto, setAcRodaTeto] = useState(true);
+  const [acEngrosso, setAcEngrosso] = useState(true);
   const navigateMotor = useNavigate();
 
   const tipoLayoutMotor = AMBIENTE_TO_LAYOUT[wizard.form.ambiente];
@@ -1960,6 +1964,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             tipo_porta_aereo: "dobradica",
             tipo_porta: motorTipoPorta,
             versao_comercial: "intermediaria",
+            acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
           },
         }),
       });
@@ -1990,7 +1995,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, empresaParams]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, empresaParams]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
@@ -2009,7 +2014,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     const t = setTimeout(() => { gerarMotor(); }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha]);
+  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso]);
 
   // Cria o orçamento formal a partir de uma das 3 versões reais do motor
   const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
@@ -2600,6 +2605,29 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                   </div>
                 </div>
               )}
+
+              {/* Acabamentos — editáveis por projeto */}
+              <div>
+                <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Acabamentos deste projeto</div>
+                <div className="space-y-1.5">
+                  {([
+                    ["Rodapé + pés reguláveis", acRodape, setAcRodape, "Rodapé clipado nos módulos de piso"],
+                    ["Roda-teto (arremate)", acRodaTeto, setAcRodaTeto, "Moldura no topo dos armários que vão ao teto"],
+                    ["Engrosso 30mm (dupla chapa)", acEngrosso, setAcEngrosso, "Tampos de bancada e frentes aparentes"],
+                  ] as const).map(([label, val, setter, sub]) => (
+                    <button key={label} type="button" onClick={() => setter(!val)}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border text-left transition-all ${val ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                      <span className={`shrink-0 size-4 rounded border flex items-center justify-center ${val ? "bg-accent border-accent" : "border-border-strong"}`}>
+                        {val && <Check className="size-3 text-white" />}
+                      </span>
+                      <span className="flex flex-col">
+                        <span className="text-[12px] font-medium">{label}</span>
+                        <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <button
                 type="button"

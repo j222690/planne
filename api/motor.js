@@ -4776,6 +4776,29 @@ async function gerarHandler(req, res) {
         }
       }
     }
+    {
+      const ac = prefs.acabamentos ?? {};
+      const remover = /* @__PURE__ */ new Set();
+      if (ac.rodape === false) remover.add("rodape");
+      if (ac.roda_teto === false) remover.add("moldura_roda_teto");
+      if (ac.engrosso === false) {
+        remover.add("engrosso_tampo");
+        remover.add("engrosso_porta");
+        remover.add("engrosso_frente_gaveta");
+      }
+      if (remover.size > 0) {
+        for (const modulo of resultado.projeto.modulos) {
+          modulo.pecas = modulo.pecas.filter((p) => !remover.has(p.regra_nome));
+          if (ac.rodape === false) modulo.configuracao.tem_rodape = false;
+          if (ac.roda_teto === false) modulo.configuracao.tem_roda_teto = false;
+          if (ac.engrosso === false) {
+            modulo.configuracao.tem_engrosso_tampo = false;
+            modulo.configuracao.tem_engrosso_frentes = false;
+          }
+        }
+        resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
+      }
+    }
     const moveis_calc = projetoToMovelInput(resultado.projeto);
     const engenharia = gerarEngenharia(resultado.projeto);
     const orcamentos = gerarTresVersoes(resultado.projeto, cfgCusto);

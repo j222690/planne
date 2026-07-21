@@ -26,6 +26,7 @@ import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../lib/motor-paramet
 import { gerarLayoutSala } from "../lib/motor-parametrico/layout-sala";
 import { gerarLayoutEscritorio } from "../lib/motor-parametrico/layout-escritorio";
 import { projetoToMovelInput } from "../lib/motor-parametrico/adapters";
+import { calcularMetricas } from "../lib/motor-parametrico/pecas";
 import { criarAmbienteManual, calcularSegmentosLivres } from "../lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../lib/motor-parametrico/engenharia";
 import { gerarTresVersoes, CONFIG_CUSTO_PADRAO } from "../lib/motor-parametrico/orcamento-inteligente";
@@ -77,6 +78,13 @@ interface RequestBody {
     com_superior?: boolean;
     com_painel?: boolean;
     com_gaveteiro?: boolean;
+    // Override de acabamentos por projeto (a marcenaria liga/desliga na tela).
+    // Default: todos ligados (usa os padrões do motor).
+    acabamentos?: {
+      rodape?: boolean;
+      roda_teto?: boolean;
+      engrosso?: boolean;
+    };
     nome?: string;
     empresa_id?: string;
     cliente_id?: string;
@@ -173,6 +181,33 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
             preco_custo_chapa: novoPreco,
           };
         }
+      }
+    }
+
+    // 3.6: override de acabamentos por projeto. A marcenaria pode desligar
+    // rodapé, roda-teto ou engrosso nesta obra — removemos as peças e as flags,
+    // depois recalculamos as métricas para o corte/orçamento refletirem a escolha.
+    {
+      const ac = prefs.acabamentos ?? {};
+      const remover = new Set<string>();
+      if (ac.rodape === false) remover.add("rodape");
+      if (ac.roda_teto === false) remover.add("moldura_roda_teto");
+      if (ac.engrosso === false) {
+        remover.add("engrosso_tampo");
+        remover.add("engrosso_porta");
+        remover.add("engrosso_frente_gaveta");
+      }
+      if (remover.size > 0) {
+        for (const modulo of resultado.projeto.modulos) {
+          modulo.pecas = modulo.pecas.filter((p) => !remover.has(p.regra_nome));
+          if (ac.rodape === false) modulo.configuracao.tem_rodape = false;
+          if (ac.roda_teto === false) modulo.configuracao.tem_roda_teto = false;
+          if (ac.engrosso === false) {
+            modulo.configuracao.tem_engrosso_tampo = false;
+            modulo.configuracao.tem_engrosso_frentes = false;
+          }
+        }
+        resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
       }
     }
 
