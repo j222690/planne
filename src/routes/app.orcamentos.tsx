@@ -4,7 +4,7 @@ import {
   Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles,
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
   ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
-  MessageCircle, MessageSquare, Download, Bot, LayoutGrid,
+  MessageCircle, MessageSquare, Download, Bot, LayoutGrid, Scissors,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -234,12 +234,14 @@ const WALL_MOUNTED_Y: Record<string, number> = {
 };
 
 function WallVisualization({
-  moveis, plantaInfo, manualWalls, medW, medH,
+  moveis, plantaInfo, manualWalls, medW, medH, onSelectMovel, selectedId,
 }: {
   moveis: MovelConfig[];
   plantaInfo: PlantaInfo | null;
   manualWalls?: { id: string; comprimento_cm: number; porta?: boolean; janela?: boolean }[];
   medW: number; medH: number;
+  onSelectMovel?: (id: string) => void;
+  selectedId?: string | null;
 }) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [selWall, setSelWall] = useState<string | null>(null);
@@ -376,9 +378,10 @@ function WallVisualization({
             const portas = m.portas || 0;
             const isGlass = m.tipo_porta?.includes("vidro");
             const isMirror = m.tipo_porta?.includes("espelho");
+            const isSel = selectedId === m.id;
             return (
-              <g key={m.id}>
-                <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={stroke} strokeWidth={1} rx={1} />
+              <g key={m.id} onClick={() => onSelectMovel?.(m.id)} style={{ cursor: onSelectMovel ? "pointer" : "default" }}>
+                <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={isSel ? "#2563eb" : stroke} strokeWidth={isSel ? 2.2 : 1} rx={1} />
                 {/* Door splits */}
                 {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
                   <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={fy+fh}
@@ -492,6 +495,55 @@ interface VersaoConsolidada {
   itens: ItemMotorOrc[]; total: number; custo: number; margem: number;
 }
 type MotorVersoes = Record<"economica" | "intermediaria" | "premium", VersaoConsolidada>;
+
+// Plano de corte visualizável (chapa + peças encaixadas)
+type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string };
+type ChapaCorte = { numero_sequencial: number; largura_mm: number; comprimento_mm: number; pecas_alocadas: PecaAloc[]; comodo?: string };
+
+// ─── Visualização do plano de corte (mesmo sistema do preview 2D) ────────────
+function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
+  const [idx, setIdx] = useState(0);
+  if (!chapas.length) return null;
+  const ch = chapas[Math.min(idx, chapas.length - 1)];
+  const W = ch.largura_mm || 2750, H = ch.comprimento_mm || 1830;
+  const SVG_W = 640, pad = 8;
+  const scale = (SVG_W - pad * 2) / W;
+  const svgH = H * scale + pad * 2;
+  const cores = ["#c7d2fe", "#bbf7d0", "#fde68a", "#fbcfe8", "#a5f3fc", "#fed7aa", "#ddd6fe", "#bef264"];
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {chapas.map((c, i) => (
+          <button key={i} type="button" onClick={() => setIdx(i)}
+            className={`h-6 px-2 rounded text-[11px] border transition-colors ${i === idx ? "bg-accent/10 border-accent text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            {c.comodo ? `${c.comodo} · ` : ""}Chapa {c.numero_sequencial}
+          </button>
+        ))}
+        <span className="ml-auto text-[10.5px] text-muted-foreground">{W}×{H}mm · {ch.pecas_alocadas.length} peças</span>
+      </div>
+      <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
+        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} style={{ maxHeight: 360, display: "block" }}>
+          <rect x={pad} y={pad} width={W * scale} height={H * scale} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1.5} />
+          {ch.pecas_alocadas.map((p, i) => {
+            const x = pad + (p.x_mm ?? 0) * scale, y = pad + (p.y_mm ?? 0) * scale;
+            const w = p.largura_mm * scale, h = p.comprimento_mm * scale;
+            return (
+              <g key={i}>
+                <rect x={x} y={y} width={w} height={h} fill={cores[i % cores.length]} stroke="#475569" strokeWidth={0.6} />
+                {w > 24 && h > 11 && (
+                  <text x={x + w / 2} y={y + h / 2} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={Math.max(5, Math.min(8, w / 11))} fill="#1e293b">
+                    {Math.round(p.largura_mm)}×{Math.round(p.comprimento_mm)}{p.rotacionada ? " ↻" : ""}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
 
 function OrcamentoModal({ onClose, onSaved, editOrc }: {
   onClose: () => void; onSaved: () => void; editOrc?: Orc & { itens?: OrcItem[] };
@@ -624,6 +676,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
   // ─── Motor paramétrico: 3 versões consolidadas de todos os cômodos fabricáveis ──
   const [motorVersoes, setMotorVersoes] = useState<MotorVersoes | null>(null);
+  const [motorChapas, setMotorChapas] = useState<ChapaCorte[]>([]);
+  const [verCorte, setVerCorte] = useState(false);
   const [motorGerando, setMotorGerando] = useState(false);
 
   const gerarPeloMotor = async () => {
@@ -639,6 +693,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         intermediaria: { itens: [], total: 0, custo: 0, margem: 0 },
         premium: { itens: [], total: 0, custo: 0, margem: 0 },
       };
+      const chapasAcc: ChapaCorte[] = [];
       for (const c of suportados) {
         const res = await fetch("/api/motor?action=gerar", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -676,6 +731,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         if (!res.ok) throw new Error(`${c.nome}: ${(await res.json() as { error: string }).error}`);
         const data = await res.json() as {
           orcamentos: Record<string, { itens: ItemMotorOrc[]; analise_financeira: { custo_total: number; preco_venda: number; margem_desejada_pct: number } }>;
+          plano_corte?: { chapas?: ChapaCorte[] };
         };
         (["economica", "intermediaria", "premium"] as const).forEach((k) => {
           const ov = data.orcamentos[k];
@@ -684,8 +740,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
           acc[k].custo += ov.analise_financeira.custo_total;
           acc[k].margem = ov.analise_financeira.margem_desejada_pct;
         });
+        for (const ch of data.plano_corte?.chapas ?? []) chapasAcc.push({ ...ch, comodo: c.nome });
       }
       setMotorVersoes(acc);
+      setMotorChapas(chapasAcc);
       toast.success(`${suportados.length} cômodo(s) calculados pelo motor — 3 versões prontas.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
@@ -1184,6 +1242,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     })}
                   </div>
                 )}
+
+                {/* Plano de corte visualizado — chapa + cada peça */}
+                {motorChapas.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-accent/20">
+                    <button type="button" onClick={() => setVerCorte((v) => !v)}
+                      className="text-[12px] font-medium text-accent inline-flex items-center gap-1.5">
+                      <Scissors className="size-3.5" />
+                      {verCorte ? "Ocultar" : "Ver"} plano de corte ({motorChapas.length} chapa{motorChapas.length > 1 ? "s" : ""})
+                    </button>
+                    {verCorte && <div className="mt-2"><CutPlanVisualization chapas={motorChapas} /></div>}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1674,6 +1744,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   manualWalls={comodos.find((cc) => cc.nome === moveis[0]?.comodo_nome)?.paredes}
                   medW={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.largura) || medidas.largura}
                   medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
+                  selectedId={expandedMovel}
+                  onSelectMovel={(id) => setExpandedMovel(id)}
                 />
               </div>
             )}
