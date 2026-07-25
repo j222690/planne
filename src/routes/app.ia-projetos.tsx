@@ -282,7 +282,7 @@ function IAProjetoPage() {
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [plantasSalvas, setPlantasSalvas] = useState<Record<string, PlantaSalva>>({});
-  const [empresaParams, setEmpresaParams] = useState({ mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 300, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830 });
+  const [empresaParams, setEmpresaParams] = useState({ mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 300, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830, acab_rodape: true, acab_roda_teto: true, acab_engrosso: true, ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele" });
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const navigate = useNavigate();
 
@@ -309,6 +309,10 @@ function IAProjetoPage() {
         margem_padrao: Number(p.margem_padrao ?? 300),
         chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
         chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
+        acab_rodape: p.acab_rodape !== false,
+        acab_roda_teto: p.acab_roda_teto !== false,
+        acab_engrosso: p.acab_engrosso !== false,
+        ferragem_padrao: (p.ferragem_padrao as "nacional" | "blum" | "hafele") ?? "nacional",
       });
       if (p.plantas_baixas && typeof p.plantas_baixas === "object") {
         setPlantasSalvas(p.plantas_baixas as Record<string, PlantaSalva>);
@@ -1893,21 +1897,21 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   gerarListaCorte: () => void;
   criarOrdem: () => void;
   clientes: { id: string; nome: string }[];
-  empresaParams: { mdf_custo_chapa: number; mao_obra_hora: number; margem_padrao: number; chapa_largura_mm: number; chapa_comprimento_mm: number };
+  empresaParams: { mdf_custo_chapa: number; mao_obra_hora: number; margem_padrao: number; chapa_largura_mm: number; chapa_comprimento_mm: number; acab_rodape: boolean; acab_roda_teto: boolean; acab_engrosso: boolean; ferragem_padrao: "nacional" | "blum" | "hafele" };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const [motorAberto, setMotorAberto] = useState(false);
   const [motorLoading, setMotorLoading] = useState(false);
   const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
-  const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">("nacional");
+  const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">(empresaParams.ferragem_padrao);
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
   const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<"cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha">("cozinha_linear");
   // Acabamentos editáveis por projeto (padrão: todos ligados)
-  const [acRodape, setAcRodape] = useState(true);
-  const [acRodaTeto, setAcRodaTeto] = useState(true);
-  const [acEngrosso, setAcEngrosso] = useState(true);
+  const [acRodape, setAcRodape] = useState(empresaParams.acab_rodape);
+  const [acRodaTeto, setAcRodaTeto] = useState(empresaParams.acab_roda_teto);
+  const [acEngrosso, setAcEngrosso] = useState(empresaParams.acab_engrosso);
   const [comTorreForno, setComTorreForno] = useState(true);
   const [comCooktop, setComCooktop] = useState(true);
   const [tampoPedra, setTampoPedra] = useState(false);
@@ -2614,7 +2618,10 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
               {/* Acabamentos — editáveis por projeto */}
               <div>
-                <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Acabamentos deste projeto</div>
+                <div className="flex items-baseline justify-between mb-2">
+                  <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide">Acabamentos deste projeto</div>
+                  <span className="text-[10px] text-muted-foreground/70">herdado da empresa · edite só se precisar</span>
+                </div>
                 <div className="space-y-1.5">
                   {([
                     ["Rodapé + pés reguláveis", acRodape, setAcRodape, "Rodapé clipado nos módulos de piso"],

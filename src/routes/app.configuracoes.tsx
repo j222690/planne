@@ -81,6 +81,15 @@ function Configuracoes() {
     chapa_largura_mm: 2750, chapa_comprimento_mm: 1830,
   });
 
+  // Padrões de marcenaria — decididos UMA vez; todo projeto herda daqui, então a
+  // tela do projeto não pergunta isso toda vez (secretária cria sem decidir técnica).
+  const [padroes, setPadroes] = useState({
+    acab_rodape: true,
+    acab_roda_teto: true,
+    acab_engrosso: true,
+    ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele",
+  });
+
   const [fiscal, setFiscal] = useState({
     focus_nfe_token: "",
     focus_nfe_ambiente: "homologacao" as "homologacao" | "producao",
@@ -141,6 +150,12 @@ function Configuracoes() {
         chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
         chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
       });
+      setPadroes({
+        acab_rodape: p.acab_rodape !== false,
+        acab_roda_teto: p.acab_roda_teto !== false,
+        acab_engrosso: p.acab_engrosso !== false,
+        ferragem_padrao: (p.ferragem_padrao as "nacional" | "blum" | "hafele") ?? "nacional",
+      });
       setFiscal({
         focus_nfe_token: String(p.focus_nfe_token ?? ""),
         focus_nfe_ambiente: (p.focus_nfe_ambiente as "homologacao" | "producao") ?? "homologacao",
@@ -189,7 +204,7 @@ function Configuracoes() {
       telefone: form.telefone || null,
       email: form.email || null,
       cor_primaria: form.cor_primaria || null,
-      parametros: { ...params, ...fiscal, plantas_baixas: Object.keys(plantas).length > 0 ? plantas : undefined },
+      parametros: { ...params, ...padroes, ...fiscal, plantas_baixas: Object.keys(plantas).length > 0 ? plantas : undefined },
     }).eq("id", empresa.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -392,6 +407,43 @@ function Configuracoes() {
                   />
                 </label>
               ))}
+            </div>
+          </Surface>
+
+          {/* Padrões de marcenaria — herdados por todo projeto novo */}
+          <Surface>
+            <div className="text-[12.5px] font-semibold mb-1">Padrões de marcenaria</div>
+            <div className="text-[11px] text-muted-foreground mb-4">
+              Definido uma vez. Todo projeto novo já nasce assim — a tela do projeto não pergunta isso toda vez.
+            </div>
+            <div className="space-y-2.5">
+              {([
+                ["acab_rodape", "Rodapé + pés reguláveis", "Rodapé clipado nos módulos de piso"],
+                ["acab_roda_teto", "Roda-teto (arremate)", "Moldura no topo dos armários que vão ao teto"],
+                ["acab_engrosso", "Engrosso 30mm (dupla chapa)", "Tampos de bancada e frentes aparentes"],
+              ] as const).map(([key, label, sub]) => (
+                <button key={key} type="button"
+                  onClick={() => setPadroes((p) => ({ ...p, [key]: !p[key] }))}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border text-left transition-colors ${padroes[key] ? "border-primary bg-primary/5" : "border-border hover:bg-secondary"}`}>
+                  <span className={`shrink-0 size-4 rounded border flex items-center justify-center ${padroes[key] ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
+                    {padroes[key] && <span className="text-[10px] leading-none">✓</span>}
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="text-[12.5px] font-medium">{label}</span>
+                    <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                  </span>
+                </button>
+              ))}
+              <label className="block pt-1">
+                <div className="text-[11.5px] text-muted-foreground mb-1">Ferragem padrão</div>
+                <select value={padroes.ferragem_padrao}
+                  onChange={(e) => setPadroes((p) => ({ ...p, ferragem_padrao: e.target.value as typeof p.ferragem_padrao }))}
+                  className="input">
+                  <option value="nacional">Nacional</option>
+                  <option value="blum">Blum</option>
+                  <option value="hafele">Häfele</option>
+                </select>
+              </label>
             </div>
           </Surface>
 

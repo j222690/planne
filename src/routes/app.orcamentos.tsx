@@ -919,7 +919,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.18 }}
-        className="relative w-full max-w-2xl bg-surface border border-border rounded-lg shadow-xl my-4"
+        className="relative w-full max-w-4xl bg-surface border border-border rounded-lg shadow-xl my-4"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -1209,13 +1209,16 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       </button>
                       {isOpen && (
                         <div className="px-2.5 py-2">
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                             {filtered.map((template) => {
                               const sel = moveis.find((m) => m.tipo === template.tipo && m.comodo_nome === c.nome);
                               return (
                                 <button key={template.tipo} type="button" onClick={() => toggleMovel(template, c.nome)}
-                                  className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${sel ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-                                  {template.nome}
+                                  className={`flex items-center gap-2 text-[12.5px] px-3 py-2 rounded-md border text-left transition-colors ${sel ? "border-accent bg-accent/10 text-accent font-medium" : "border-border text-foreground hover:bg-secondary"}`}>
+                                  <span className={`shrink-0 size-4 rounded border flex items-center justify-center ${sel ? "bg-accent border-accent text-white" : "border-input"}`}>
+                                    {sel && <span className="text-[10px] leading-none">✓</span>}
+                                  </span>
+                                  <span className="truncate">{template.nome}</span>
                                 </button>
                               );
                             })}
