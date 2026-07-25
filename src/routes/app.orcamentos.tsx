@@ -234,16 +234,21 @@ const WALL_MOUNTED_Y: Record<string, number> = {
 };
 
 function WallVisualization({
-  moveis, plantaInfo, medW, medH,
+  moveis, plantaInfo, manualWalls, medW, medH,
 }: {
   moveis: MovelConfig[];
   plantaInfo: PlantaInfo | null;
+  manualWalls?: { id: string; comprimento_cm: number }[];
   medW: number; medH: number;
 }) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [selWall, setSelWall] = useState<string | null>(null);
 
-  const walls = plantaInfo?.paredes ?? [];
+  // Paredes: da planta baixa, ou as paredes manuais A–D do cômodo
+  const walls: Parede[] = plantaInfo?.paredes
+    ?? (manualWalls ?? []).filter((p) => p.comprimento_cm > 0).map((p) => ({
+      id: p.id, descricao: "", largura_cm: p.comprimento_cm, espaco_util_cm: p.comprimento_cm,
+    }));
   const activeWall = selWall ?? walls[0]?.id ?? null;
 
   const visible = activeWall
@@ -433,6 +438,9 @@ interface ComodoOrc {
   largura: number;
   profundidade: number;
   altura: number;
+  // Paredes com marcenaria (A, B, C, D) — comprimentos independentes. Opcional:
+  // se vazio, usa largura×profundidade como parede única (retângulo).
+  paredes?: { id: string; comprimento_cm: number }[];
   plantaB64: string | null;
   plantaNome: string | null;
   plantaInfo: PlantaInfo | null;
@@ -499,6 +507,22 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
   const updateComodo = (id: string, patch: Partial<ComodoOrc>) =>
     setComodos((prev) => prev.map((c) => c.id === id ? { ...c, ...patch } : c));
+
+  // Paredes A–D do cômodo (comprimentos independentes)
+  const addParede = (comodoId: string) =>
+    setComodos((prev) => prev.map((c) => {
+      if (c.id !== comodoId) return c;
+      const ps = c.paredes ?? [];
+      if (ps.length >= 4) return c;
+      const id = String.fromCharCode(65 + ps.length); // A, B, C, D
+      return { ...c, paredes: [...ps, { id, comprimento_cm: 0 }] };
+    }));
+  const updateParede = (comodoId: string, paredeId: string, comprimento_cm: number) =>
+    setComodos((prev) => prev.map((c) =>
+      c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, comprimento_cm } : p) } : c));
+  const removeParede = (comodoId: string, paredeId: string) =>
+    setComodos((prev) => prev.map((c) =>
+      c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).filter((p) => p.id !== paredeId) } : c));
 
   const removeComodo = (id: string) => {
     const c = comodos.find((x) => x.id === id);
@@ -706,12 +730,16 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     const TOWER = new Set(["torre", "despenseiro"]);
     let ajustou = 0;
     setMoveis((prev) => {
+      // agrupa por cômodo + parede (para respeitar comprimentos A–D diferentes)
       const grupos: Record<string, MovelConfig[]> = {};
-      for (const m of prev) (grupos[m.comodo_nome ?? "__"] ??= []).push(m);
+      for (const m of prev) (grupos[`${m.comodo_nome ?? "__"}|${m.parede_id ?? ""}`] ??= []).push(m);
       const out: MovelConfig[] = [];
       for (const [key, ms] of Object.entries(grupos)) {
-        const dim = (key !== "__" && comodosMedidas[key]) ? comodosMedidas[key] : medidas;
-        const paredeCm = Math.round((dim?.largura ?? 0) * 100);
+        const [comodoNome, paredeId] = key.split("|");
+        const comodo = comodos.find((c) => c.nome === comodoNome);
+        const paredeManual = comodo?.paredes?.find((p) => p.id === paredeId && p.comprimento_cm > 0);
+        const dim = (comodoNome !== "__" && comodosMedidas[comodoNome]) ? comodosMedidas[comodoNome] : medidas;
+        const paredeCm = paredeManual ? paredeManual.comprimento_cm : Math.round((dim?.largura ?? 0) * 100);
         const torresW = ms.filter((m) => TOWER.has(m.tipo)).reduce((s, m) => s + m.largura_cm, 0);
         const runW = paredeCm > 0 ? Math.max(60, paredeCm - torresW) : 0;
         for (const m of ms) {
@@ -1004,6 +1032,30 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       })}
                     </div>
                   )}
+
+                  {/* Paredes A–D (opcional) — para cômodos com paredes de tamanhos diferentes (L, U) */}
+                  {!c.plantaB64 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10.5px] text-muted-foreground">Paredes com marcenaria:</span>
+                      {(c.paredes ?? []).map((p) => (
+                        <span key={p.id} className="inline-flex items-center gap-1 h-6 pl-1.5 pr-1 rounded border border-border bg-secondary text-[11px]">
+                          <span className="font-medium">{p.id}</span>
+                          <input type="number" step="0.01" min="0" placeholder="m"
+                            value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
+                            onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
+                            className="w-11 h-5 rounded bg-background border border-border px-1 text-[11px] outline-none" />
+                          <button type="button" onClick={() => removeParede(c.id, p.id)}
+                            className="text-muted-foreground hover:text-destructive px-0.5">×</button>
+                        </span>
+                      ))}
+                      {(c.paredes?.length ?? 0) < 4 && (
+                        <button type="button" onClick={() => addParede(c.id)}
+                          className="h-6 px-2 rounded border border-dashed border-border text-[11px] text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
+                          <Plus className="size-3" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -1206,9 +1258,15 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     </button>
 
                     {expandedMovel === m.id && (() => {
-                      const paredeAtual = plantaInfo?.paredes.find((p) => p.id === m.parede_id);
+                      // Paredes: da planta (se houver) ou manuais (A–D) do cômodo
+                      const movelComodo = comodos.find((cc) => cc.nome === m.comodo_nome);
+                      const paredesManuais = (movelComodo?.paredes ?? []).filter((p) => p.comprimento_cm > 0);
+                      const wallOptions = (plantaInfo && plantaInfo.paredes.length > 0)
+                        ? plantaInfo.paredes.map((p) => ({ id: p.id, label: `Parede ${p.id} — ${p.espaco_util_cm}cm${p.obstaculos ? ` (${p.obstaculos})` : ""}`, espaco: p.espaco_util_cm }))
+                        : paredesManuais.map((p) => ({ id: p.id, label: `Parede ${p.id} — ${p.comprimento_cm}cm`, espaco: p.comprimento_cm }));
+                      const paredeSel = wallOptions.find((w) => w.id === m.parede_id);
                       const dimSrc = (m.comodo_nome && comodosMedidas[m.comodo_nome]) ? comodosMedidas[m.comodo_nome] : medidas;
-                      const limLargura = paredeAtual ? paredeAtual.espaco_util_cm - 15
+                      const limLargura = paredeSel ? paredeSel.espaco - 15
                         : plantaInfo ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm)) - 15
                         : dimSrc.largura > 0 ? Math.round(dimSrc.largura * 100) - 15 : null;
                       const limAltura = plantaInfo ? plantaInfo.altura_cm : dimSrc.altura > 0 ? Math.round(dimSrc.altura * 100) : null;
@@ -1227,23 +1285,23 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       return (
                       <div className="px-3 py-3 space-y-3 bg-surface">
                         {/* Nome + parede numa linha */}
-                        <div className={`grid gap-2 ${plantaInfo?.paredes.length ? "grid-cols-2" : "grid-cols-1"}`}>
+                        <div className={`grid gap-2 ${wallOptions.length ? "grid-cols-2" : "grid-cols-1"}`}>
                           <div>
                             <div className="text-[10.5px] text-muted-foreground mb-0.5">Nome no orçamento</div>
                             <input value={m.nome} onChange={(e) => updateMovel(m.id, { nome: e.target.value })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
-                          {plantaInfo && plantaInfo.paredes.length > 0 && (
+                          {wallOptions.length > 0 && (
                             <div>
                               <div className="text-[10.5px] text-muted-foreground mb-0.5">Parede</div>
                               <select value={m.parede_id ?? ""} onChange={(e) => {
                                 const pid = e.target.value;
-                                const parede = plantaInfo.paredes.find((p) => p.id === pid);
-                                updateMovel(m.id, { parede_id: pid || undefined, ...(parede ? { largura_cm: Math.max(10, parede.espaco_util_cm - 15) } : {}) });
+                                const w = wallOptions.find((x) => x.id === pid);
+                                updateMovel(m.id, { parede_id: pid || undefined, ...(w ? { largura_cm: Math.max(10, w.espaco - 15) } : {}) });
                               }} className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none text-foreground">
                                 <option value="">— Parede —</option>
-                                {plantaInfo.paredes.map((p) => (
-                                  <option key={p.id} value={p.id}>Parede {p.id} — {p.espaco_util_cm}cm{p.obstaculos ? ` (${p.obstaculos})` : ""}</option>
+                                {wallOptions.map((w) => (
+                                  <option key={w.id} value={w.id}>{w.label}</option>
                                 ))}
                               </select>
                             </div>
@@ -1543,6 +1601,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 <WallVisualization
                   moveis={moveis}
                   plantaInfo={plantaInfo}
+                  manualWalls={comodos.find((cc) => cc.nome === moveis[0]?.comodo_nome)?.paredes}
                   medW={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.largura) || medidas.largura}
                   medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
                 />
