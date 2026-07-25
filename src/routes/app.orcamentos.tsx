@@ -267,7 +267,12 @@ function WallVisualization({
   const laid = visible.map((m) => {
     const x = xAcc;
     xAcc += m.largura_cm + 2;
-    return { m, x, yFloor: WALL_MOUNTED_Y[m.tipo] ?? 0 };
+    // Armário superior de cozinha encosta no teto: base = teto − altura.
+    // Demais itens de parede mantêm a altura de montagem fixa (espelho, TV…).
+    const yFloor = m.tipo === "arm-sup"
+      ? Math.max(0, wallH - m.altura_cm)
+      : (WALL_MOUNTED_Y[m.tipo] ?? 0);
+    return { m, x, yFloor };
   });
 
   // 3D oblique helpers
