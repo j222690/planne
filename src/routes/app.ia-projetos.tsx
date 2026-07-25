@@ -1909,6 +1909,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const [acRodaTeto, setAcRodaTeto] = useState(true);
   const [acEngrosso, setAcEngrosso] = useState(true);
   const [comTorreForno, setComTorreForno] = useState(true);
+  const [comCooktop, setComCooktop] = useState(true);
+  const [tampoPedra, setTampoPedra] = useState(false);
   const navigateMotor = useNavigate();
 
   const tipoLayoutMotor = AMBIENTE_TO_LAYOUT[wizard.form.ambiente];
@@ -1967,6 +1969,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             versao_comercial: "intermediaria",
             acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
             com_torre_forno: comTorreForno,
+            com_cooktop: comCooktop,
+            tampo_pedra: tampoPedra,
           },
         }),
       });
@@ -1997,7 +2001,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno, empresaParams]);
+  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno, comCooktop, tampoPedra, empresaParams]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
@@ -2016,7 +2020,7 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
     const t = setTimeout(() => { gerarMotor(); }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno]);
+  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno, comCooktop, tampoPedra]);
 
   // Cria o orçamento formal a partir de uma das 3 versões reais do motor
   const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
@@ -2617,7 +2621,11 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                     ["Roda-teto (arremate)", acRodaTeto, setAcRodaTeto, "Moldura no topo dos armários que vão ao teto"],
                     ["Engrosso 30mm (dupla chapa)", acEngrosso, setAcEngrosso, "Tampos de bancada e frentes aparentes"],
                     ...(wizard.form.ambiente === "Cozinha"
-                      ? [["Torre de forno", comTorreForno, setComTorreForno, "Paneleiro alto p/ forno e micro-ondas"] as const]
+                      ? [
+                          ["Torre de forno", comTorreForno, setComTorreForno, "Paneleiro alto p/ forno e micro-ondas"] as const,
+                          ["Gabinete de cooktop", comCooktop, setComCooktop, "Módulo central com recorte de cooktop"] as const,
+                          ["Tampo de pedra", tampoPedra, setTampoPedra, "Granito/quartzo — desliga engrosso MDF, orça pedra à parte"] as const,
+                        ]
                       : []),
                   ] as const).map(([label, val, setter, sub]) => (
                     <button key={label} type="button" onClick={() => setter(!val)}

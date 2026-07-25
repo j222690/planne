@@ -269,7 +269,8 @@ export function regrasEngrosso(): RegraCorte[] {
     {
       nome: "engrosso_tampo",
       grupo: "detalhe",
-      ativa_quando: (cfg) => cfg.tem_engrosso_tampo === true,
+      // desligado quando o tampo é de pedra (granito/quartzo) — não há chapa MDF
+      ativa_quando: (cfg) => cfg.tem_engrosso_tampo === true && cfg.tampo_pedra !== true,
       calcular_largura_mm: (L) => L - 2 * ESP,
       calcular_comprimento_mm: (_L, _A, P) => P,
       calcular_quantidade: () => 1,
@@ -313,9 +314,57 @@ export function regrasEngrosso(): RegraCorte[] {
   ];
 }
 
-/** Conjunto completo de acabamentos (rodapé + roda-teto + engrossos). */
+/**
+ * Apoio central (testeira frontal) para prateleira com vão livre > 80cm.
+ * Como o padrão é sempre 15mm (não subimos para 18mm), reforçamos a prateleira
+ * longa com uma testeira colada na frente — resiste ao empeno sem chapa grossa.
+ */
+export function regraApoioCentralPrateleira(): RegraCorte {
+  return {
+    nome: "reforco_prateleira",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.num_prateleiras > 0,
+    calcular_largura_mm: (L) => L - 2 * ESP,
+    calcular_comprimento_mm: () => 60,   // testeira de 6cm
+    // só quando o vão interno passa de 80cm (senão quantidade 0 = sem peça)
+    calcular_quantidade: (L, _A, _P, cfg) => (L - 2 * ESP > 800 ? cfg.num_prateleiras : 0),
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: fitaFrente,
+    usa_material: "corpo",
+    observacao: "Testeira de reforço (prateleira com vão > 80cm)",
+  };
+}
+
+/**
+ * Reforço em volta de recorte de cuba/pia ou cooktop no tampo: 2 travessas
+ * (frente e fundo do recorte). Também sinaliza a usinagem do recorte.
+ */
+export function regraReforcoRecorte(): RegraCorte {
+  return {
+    nome: "reforco_recorte",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_recorte_cuba === true || cfg.tem_recorte_cooktop === true,
+    calcular_largura_mm: (L) => L - 2 * ESP,
+    calcular_comprimento_mm: () => 100,  // travessa de 10cm
+    calcular_quantidade: () => 2,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: semFita,
+    usa_material: "corpo",
+    observacao: "Travessa de reforço do recorte (cuba/cooktop)",
+  };
+}
+
+/** Conjunto completo de acabamentos (rodapé + roda-teto + engrossos + reforços). */
 export function regrasAcabamento(): RegraCorte[] {
-  return [regraRodape(), regraMolduraRodaTeto(), ...regrasEngrosso()];
+  return [
+    regraRodape(),
+    regraMolduraRodaTeto(),
+    ...regrasEngrosso(),
+    regraApoioCentralPrateleira(),
+    regraReforcoRecorte(),
+  ];
 }
 
 // ─── FERRAGENS COMUNS ─────────────────────────────────────────────────────────

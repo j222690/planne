@@ -205,7 +205,8 @@ function regrasEngrosso() {
     {
       nome: "engrosso_tampo",
       grupo: "detalhe",
-      ativa_quando: (cfg) => cfg.tem_engrosso_tampo === true,
+      // desligado quando o tampo é de pedra (granito/quartzo) — não há chapa MDF
+      ativa_quando: (cfg) => cfg.tem_engrosso_tampo === true && cfg.tampo_pedra !== true,
       calcular_largura_mm: (L) => L - 2 * ESP,
       calcular_comprimento_mm: (_L, _A, P) => P,
       calcular_quantidade: () => 1,
@@ -245,8 +246,47 @@ function regrasEngrosso() {
     }
   ];
 }
+function regraApoioCentralPrateleira() {
+  return {
+    nome: "reforco_prateleira",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.num_prateleiras > 0,
+    calcular_largura_mm: (L) => L - 2 * ESP,
+    calcular_comprimento_mm: () => 60,
+    // testeira de 6cm
+    // só quando o vão interno passa de 80cm (senão quantidade 0 = sem peça)
+    calcular_quantidade: (L, _A, _P, cfg) => L - 2 * ESP > 800 ? cfg.num_prateleiras : 0,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: fitaFrente,
+    usa_material: "corpo",
+    observacao: "Testeira de refor\xE7o (prateleira com v\xE3o > 80cm)"
+  };
+}
+function regraReforcoRecorte() {
+  return {
+    nome: "reforco_recorte",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_recorte_cuba === true || cfg.tem_recorte_cooktop === true,
+    calcular_largura_mm: (L) => L - 2 * ESP,
+    calcular_comprimento_mm: () => 100,
+    // travessa de 10cm
+    calcular_quantidade: () => 2,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: semFita,
+    usa_material: "corpo",
+    observacao: "Travessa de refor\xE7o do recorte (cuba/cooktop)"
+  };
+}
 function regrasAcabamento() {
-  return [regraRodape(), regraMolduraRodaTeto(), ...regrasEngrosso()];
+  return [
+    regraRodape(),
+    regraMolduraRodaTeto(),
+    ...regrasEngrosso(),
+    regraApoioCentralPrateleira(),
+    regraReforcoRecorte()
+  ];
 }
 function regraDobradicas() {
   return {
@@ -1360,8 +1400,10 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       tipo_porta: preferencias.tipo_porta_base,
       ferragem: preferencias.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
-      tem_engrosso_tampo: true
+      tem_engrosso_tampo: true,
       // base de cozinha tem bancada → tampo 30mm
+      tampo_pedra: preferencias.tampo_pedra
+      // se pedra, engrosso MDF é desligado
     })
   });
   const modulosAereo = instanciarModulos(largurasBases, {
@@ -1411,6 +1453,14 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     rotuloParede: "Torre de forno",
     ordemInicial: modulosBase.length + modulosAereo.length
   }) : [];
+  if (preferencias.com_cooktop !== false && modulosBase.length > 0) {
+    const idx = Math.floor(modulosBase.length / 2);
+    const m = modulosBase[idx];
+    m.configuracao = { ...m.configuracao, tem_recorte_cooktop: true };
+    const tpl = getTemplateBase(m.largura_cm) ?? MODULOS_BASE_COZINHA[4];
+    m.pecas = calcularPecas(m, tpl);
+    m.nome_display = `${m.nome_display} (cooktop)`;
+  }
   const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
   const larguraOcupada = largurasBases.reduce((s, l) => s + l, 0);
   const aproveitamento = larguraDisponivel > 0 ? Math.round(larguraOcupada / larguraDisponivel * 100) : 0;
@@ -1437,6 +1487,8 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       `${largurasBases.length} m\xF3dulos base (${larguraOcupada}cm linear)`,
       `${largurasBases.length} m\xF3dulos a\xE9reos alinhados`,
       ...torreAtiva ? [`1 torre de forno (${TORRE_LARGURA_CM}cm, piso ao teto)`] : [],
+      ...preferencias.com_cooktop !== false ? ["1 gabinete com recorte de cooktop"] : [],
+      ...preferencias.tampo_pedra ? [`Tampo em pedra (granito/quartzo) \u2014 or\xE7ar \xE0 parte: ~${(larguraOcupada / 100 * (BASE_PROFUNDIDADE_CM / 100)).toFixed(2)}m\xB2 de bancada`] : [],
       `Aproveitamento da parede: ${aproveitamento}%`,
       ...avisos
     ],
@@ -2446,7 +2498,9 @@ function gerarLayoutBanheiro(ambiente, prefs) {
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
-      tem_fundo: false
+      tem_fundo: false,
+      tem_recorte_cuba: true
+      // gabinete de pia/tanque → recorte + reforço
     })
   });
   let modulos = [...gabinetes];
@@ -2514,7 +2568,9 @@ function gerarLayoutLavanderia(ambiente, prefs) {
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
-      tem_fundo: false
+      tem_fundo: false,
+      tem_recorte_cuba: true
+      // gabinete de pia/tanque → recorte + reforço
     })
   });
   let modulos = [...gabinetes];
@@ -5028,7 +5084,9 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
         parede_principal: prefs.parede_principal,
         tipo_porta_base: prefs.tipo_porta_base ?? "dobradica",
         tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
-        com_torre_forno: prefs.com_torre_forno
+        com_torre_forno: prefs.com_torre_forno,
+        com_cooktop: prefs.com_cooktop,
+        tampo_pedra: prefs.tampo_pedra
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };
     }

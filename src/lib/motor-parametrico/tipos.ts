@@ -287,6 +287,12 @@ export interface ConfiguracaoModulo {
   tem_engrosso_tampo?: boolean;
   /** Engrosso de dupla chapa nas frentes aparentes (portas/gavetas). */
   tem_engrosso_frentes?: boolean;
+  /** Recorte de cuba/pia no tampo (com reforço em volta). */
+  tem_recorte_cuba?: boolean;
+  /** Recorte de cooktop no tampo (com reforço em volta). */
+  tem_recorte_cooktop?: boolean;
+  /** Tampo é de pedra (granito/quartzo), não MDF — desliga engrosso de tampo MDF. */
+  tampo_pedra?: boolean;
   tem_iluminacao_led: boolean;
   tem_espelho_interno: boolean;
   tem_ripado: boolean;

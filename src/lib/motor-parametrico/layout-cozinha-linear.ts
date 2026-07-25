@@ -31,7 +31,7 @@ import {
   TORRE_PROFUNDIDADE_CM,
 } from "./biblioteca-cozinha";
 import { validarProjeto, type ResultadoValidacao } from "./rule-engine";
-import { calcularMetricas } from "./pecas";
+import { calcularMetricas, calcularPecas } from "./pecas";
 import {
   criarMaterialPadrao,
   configPadrao,
@@ -55,6 +55,10 @@ export interface PreferenciasCozinha {
   versao_comercial: VersaoComercial;
   /** Inclui torre de forno (paneleiro) quando houver espaço. Default: true. */
   com_torre_forno?: boolean;
+  /** Marca um gabinete central com recorte de cooktop. Default: true. */
+  com_cooktop?: boolean;
+  /** Tampo de pedra (granito/quartzo) em vez de MDF. Default: false. */
+  tampo_pedra?: boolean;
   criado_por?: string;
   empresa_id?: string;
   cliente_id?: string;
@@ -134,6 +138,7 @@ export function gerarLayoutCozinhaLinear(
       ferragem: preferencias.ferragem,
       num_portas: largura <= 40 ? 1 : 2,
       tem_engrosso_tampo: true,   // base de cozinha tem bancada → tampo 30mm
+      tampo_pedra: preferencias.tampo_pedra,  // se pedra, engrosso MDF é desligado
     }),
   });
 
@@ -186,6 +191,17 @@ export function gerarLayoutCozinhaLinear(
       })
     : [];
 
+  // Cooktop: marca um gabinete base central com recorte + reforço e recalcula
+  // suas peças (adiciona as travessas de reforço do recorte no corte).
+  if (preferencias.com_cooktop !== false && modulosBase.length > 0) {
+    const idx = Math.floor(modulosBase.length / 2);
+    const m = modulosBase[idx];
+    m.configuracao = { ...m.configuracao, tem_recorte_cooktop: true };
+    const tpl = getTemplateBase(m.largura_cm) ?? MODULOS_BASE_COZINHA[4];
+    m.pecas = calcularPecas(m, tpl);
+    m.nome_display = `${m.nome_display} (cooktop)`;
+  }
+
   const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
 
   // 7. Aproveitamento
@@ -219,6 +235,10 @@ export function gerarLayoutCozinhaLinear(
       `${largurasBases.length} módulos base (${larguraOcupada}cm linear)`,
       `${largurasBases.length} módulos aéreos alinhados`,
       ...(torreAtiva ? [`1 torre de forno (${TORRE_LARGURA_CM}cm, piso ao teto)`] : []),
+      ...(preferencias.com_cooktop !== false ? ["1 gabinete com recorte de cooktop"] : []),
+      ...(preferencias.tampo_pedra
+        ? [`Tampo em pedra (granito/quartzo) — orçar à parte: ~${((larguraOcupada / 100) * (BASE_PROFUNDIDADE_CM / 100)).toFixed(2)}m² de bancada`]
+        : []),
       `Aproveitamento da parede: ${aproveitamento}%`,
       ...avisos,
     ],

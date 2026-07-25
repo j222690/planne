@@ -107,6 +107,7 @@ export function gerarLayoutBanheiro(
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
       tem_fundo: false,
+      tem_recorte_cuba: true,   // gabinete de pia/tanque → recorte + reforço
     }),
   });
 
@@ -191,6 +192,7 @@ export function gerarLayoutLavanderia(
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
       tem_fundo: false,
+      tem_recorte_cuba: true,   // gabinete de pia/tanque → recorte + reforço
     }),
   });
 
