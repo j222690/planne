@@ -475,6 +475,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [catalogo, setCatalogo] = useState<MatCatalog[]>([]);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
+  // Padrões da empresa (herdados de Configurações) — o motor usa estes
+  const [empresaParams, setEmpresaParams] = useState({
+    mdf_custo_chapa: 85, mao_obra_hora: 45, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830,
+    acab_rodape: true, acab_roda_teto: true, acab_engrosso: true,
+    ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele",
+  });
 
   // Configurar
   const [clienteId, setClienteId] = useState("");
@@ -610,14 +616,31 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
           body: JSON.stringify({
             action: "gerar",
             tipo_layout: COMODO_TO_LAYOUT[c.tipo],
+            // Custos e chapa reais da empresa (herdados de Configurações)
+            config_custo: (() => {
+              const f = (empresaParams.mao_obra_hora || 45) / 45;
+              return {
+                ...(Math.abs(f - 1) >= 0.01 ? {
+                  valor_hora_corte: 45 * f, valor_hora_bordagem: 40 * f, valor_hora_usinagem: 50 * f,
+                  valor_hora_montagem: 55 * f, valor_hora_acabamento: 60 * f, valor_hora_instalacao: 65 * f,
+                } : {}),
+                preco_chapa_mdf_15: empresaParams.mdf_custo_chapa,
+                preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
+                chapa_largura_mm: empresaParams.chapa_largura_mm,
+                chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
+              };
+            })(),
             medidas: {
               largura_cm: Math.round((c.largura || 4) * 100),
               profundidade_cm: Math.round((c.profundidade || 3) * 100),
               altura_cm: Math.round((c.altura || 2.7) * 100),
             },
             preferencias: {
-              parede_principal: "top", cor_mdf_hex: "#D9C7A8", ferragem: "nacional",
+              parede_principal: "top", cor_mdf_hex: "#D9C7A8",
+              ferragem: empresaParams.ferragem_padrao,
               tipo_porta_base: "dobradica", tipo_porta_aereo: "dobradica", versao_comercial: "intermediaria",
+              // Acabamentos padrão da empresa (rodapé, roda-teto, engrosso)
+              acabamentos: { rodape: empresaParams.acab_rodape, roda_teto: empresaParams.acab_roda_teto, engrosso: empresaParams.acab_engrosso },
             },
           }),
         });
@@ -665,6 +688,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       if (!empresa) return;
       const eid = (empresa as { id: string }).id;
       setEmpresaId(eid);
+      const p = (empresa as { parametros?: Record<string, unknown> }).parametros ?? {};
+      setEmpresaParams({
+        mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
+        mao_obra_hora: Number(p.mao_obra_hora ?? 45),
+        chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
+        chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
+        acab_rodape: p.acab_rodape !== false,
+        acab_roda_teto: p.acab_roda_teto !== false,
+        acab_engrosso: p.acab_engrosso !== false,
+        ferragem_padrao: (p.ferragem_padrao as "nacional" | "blum" | "hafele") ?? "nacional",
+      });
       const [c, m] = await Promise.all([getClientes(eid), getMateriais(eid)]);
       setClientes(c as { id: string; nome: string }[]);
       const raw = m as { id: string; nome: string; unidade: string; preco_custo: number; preco_venda: number }[];
@@ -1087,10 +1121,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[13px] font-semibold flex items-center gap-1.5">
-                      <Sparkles className="size-4 text-accent" /> Orçamento automático (motor paramétrico)
+                      <Sparkles className="size-4 text-accent" /> Gerar projeto e orçamento (recomendado)
                     </div>
                     <div className="text-[11.5px] text-muted-foreground mt-0.5">
-                      Gera o projeto fabricável e 3 versões com custos reais de engenharia, sem selecionar móveis um a um.
+                      Monta a marcenaria sob medida com o padrão da sua empresa e já calcula 3 versões — sem escolher móvel por móvel. Ajuste depois se precisar.
                     </div>
                   </div>
                   <button type="button" disabled={motorGerando} onClick={gerarPeloMotor}
