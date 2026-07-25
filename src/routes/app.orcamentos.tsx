@@ -4,7 +4,7 @@ import {
   Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles,
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
   ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
-  MessageCircle, MessageSquare, Download, Bot,
+  MessageCircle, MessageSquare, Download, Bot, LayoutGrid,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -250,8 +250,18 @@ function WallVisualization({
     ? moveis.filter((m) => !m.parede_id || m.parede_id === activeWall)
     : moveis;
 
+  // Cozinha: as corridas (inferior/superior/bancada) ficam EMPILHADAS na mesma
+  // faixa horizontal (não enfileiradas lado a lado); as torres ocupam largura
+  // própria ao lado. Assim a "largura da parede" não vira a soma de tudo.
+  const RUN_TIPOS = new Set(["arm-inf", "arm-sup", "bancada"]);
+  const TOWER_TIPOS = new Set(["torre", "despenseiro"]);
+  const runMaxW = visible.filter((m) => RUN_TIPOS.has(m.tipo)).reduce((mx, m) => Math.max(mx, m.largura_cm), 0);
+  const towersW = visible.filter((m) => TOWER_TIPOS.has(m.tipo)).reduce((s, m) => s + m.largura_cm, 0);
+  const seqTotal = visible.filter((m) => !RUN_TIPOS.has(m.tipo) && !TOWER_TIPOS.has(m.tipo)).reduce((s, m) => s + m.largura_cm + 2, 0);
+  const contentW = Math.max(runMaxW + towersW, seqTotal);
+
   const parede = walls.find((w) => w.id === activeWall);
-  const wallW = parede?.espaco_util_cm ?? (medW > 0 ? Math.round(medW * 100) : Math.max(200, visible.reduce((s, m) => s + m.largura_cm + 2, 0)));
+  const wallW = parede?.espaco_util_cm ?? (medW > 0 ? Math.round(medW * 100) : Math.max(200, contentW));
   const wallH = plantaInfo?.altura_cm ?? (medH > 0 ? Math.round(medH * 100) : 270);
 
   const SVG_W = 680, SVG_H = 360;
@@ -262,17 +272,29 @@ function WallVisualization({
   const ox = ML + (availW - wallPxW) / 2;
   const oy = MT + (availH - wallPxH);
 
-  // auto-layout left to right
-  let xAcc = 0;
+  // Layout posicional: corridas na faixa esquerda (empilhadas por altura —
+  // inferior no chão, bancada sobre ela, superior no teto); torres ao lado
+  // direito das corridas; demais itens em sequência.
+  const armInfAltura = visible.find((m) => m.tipo === "arm-inf")?.altura_cm ?? 85;
+  let towerX = runMaxW;
+  let seqX = 0;
   const laid = visible.map((m) => {
-    const x = xAcc;
-    xAcc += m.largura_cm + 2;
-    // Armário superior de cozinha encosta no teto: base = teto − altura.
-    // Demais itens de parede mantêm a altura de montagem fixa (espelho, TV…).
-    const yFloor = m.tipo === "arm-sup"
-      ? Math.max(0, wallH - m.altura_cm)
-      : (WALL_MOUNTED_Y[m.tipo] ?? 0);
-    return { m, x, yFloor };
+    if (TOWER_TIPOS.has(m.tipo)) {
+      const x = towerX;
+      towerX += m.largura_cm;
+      return { m, x, yFloor: 0 };
+    }
+    if (RUN_TIPOS.has(m.tipo)) {
+      const yFloor = m.tipo === "arm-sup"
+        ? Math.max(0, wallH - m.altura_cm)   // superior encosta no teto
+        : m.tipo === "bancada"
+          ? armInfAltura                     // bancada em cima do inferior
+          : 0;                               // inferior no chão
+      return { m, x: 0, yFloor };
+    }
+    const x = seqX;
+    seqX += m.largura_cm + 2;
+    return { m, x, yFloor: WALL_MOUNTED_Y[m.tipo] ?? 0 };
   });
 
   // 3D oblique helpers
@@ -675,6 +697,32 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
   const updateMovel = (id: string, updates: Partial<MovelConfig>) => {
     setMoveis((prev) => prev.map((m) => m.id === id ? { ...m, ...updates } : m));
+  };
+
+  // Redimensiona as corridas (inferior/superior/bancada) para PREENCHER a largura
+  // real da parede do cômodo, descontando as torres — encaixa sem furos.
+  const ajustarAParede = () => {
+    const RUN = new Set(["arm-inf", "arm-sup", "bancada"]);
+    const TOWER = new Set(["torre", "despenseiro"]);
+    let ajustou = 0;
+    setMoveis((prev) => {
+      const grupos: Record<string, MovelConfig[]> = {};
+      for (const m of prev) (grupos[m.comodo_nome ?? "__"] ??= []).push(m);
+      const out: MovelConfig[] = [];
+      for (const [key, ms] of Object.entries(grupos)) {
+        const dim = (key !== "__" && comodosMedidas[key]) ? comodosMedidas[key] : medidas;
+        const paredeCm = Math.round((dim?.largura ?? 0) * 100);
+        const torresW = ms.filter((m) => TOWER.has(m.tipo)).reduce((s, m) => s + m.largura_cm, 0);
+        const runW = paredeCm > 0 ? Math.max(60, paredeCm - torresW) : 0;
+        for (const m of ms) {
+          if (runW > 0 && RUN.has(m.tipo)) { out.push({ ...m, largura_cm: runW }); ajustou++; }
+          else out.push(m);
+        }
+      }
+      return out;
+    });
+    if (ajustou > 0) toast.success("Móveis ajustados à largura da parede");
+    else toast.error("Informe a largura do cômodo primeiro");
   };
 
   const handlePlantaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1485,12 +1533,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
             {/* Visualização da parede */}
             {moveis.length > 0 && (
               <div className="space-y-1">
-                <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Visualização</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Visualização</div>
+                  <button type="button" onClick={ajustarAParede}
+                    className="h-6 px-2.5 rounded text-[11px] border border-accent/40 text-accent hover:bg-accent/10 transition-colors inline-flex items-center gap-1">
+                    <LayoutGrid className="size-3" /> Encaixar na parede
+                  </button>
+                </div>
                 <WallVisualization
                   moveis={moveis}
                   plantaInfo={plantaInfo}
-                  medW={medidas.largura}
-                  medH={medidas.altura}
+                  medW={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.largura) || medidas.largura}
+                  medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
                 />
               </div>
             )}
