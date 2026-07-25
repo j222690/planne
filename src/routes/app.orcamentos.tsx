@@ -238,7 +238,7 @@ function WallVisualization({
 }: {
   moveis: MovelConfig[];
   plantaInfo: PlantaInfo | null;
-  manualWalls?: { id: string; comprimento_cm: number }[];
+  manualWalls?: { id: string; comprimento_cm: number; porta?: boolean; janela?: boolean }[];
   medW: number; medH: number;
 }) {
   const [view, setView] = useState<"2d" | "3d">("2d");
@@ -254,6 +254,9 @@ function WallVisualization({
   const visible = activeWall
     ? moveis.filter((m) => !m.parede_id || m.parede_id === activeWall)
     : moveis;
+
+  // Aberturas (porta/janela) da parede ativa — desenhadas no preview
+  const activeManual = (manualWalls ?? []).find((p) => p.id === activeWall);
 
   // Cozinha: as corridas (inferior/superior/bancada) ficam EMPILHADAS na mesma
   // faixa horizontal (não enfileiradas lado a lado); as torres ocupam largura
@@ -341,6 +344,28 @@ function WallVisualization({
           ))}
           {/* Floor */}
           <line x1={ox-8} y1={oy+wallPxH} x2={ox+wallPxW+8} y2={oy+wallPxH} stroke="#475569" strokeWidth={2.5} />
+
+          {/* Aberturas: porta (marrom, no chão) e janela (azul, meia altura) */}
+          {activeManual?.porta && (() => {
+            const dw = Math.min(90, wallW * 0.25) * scale, dh = Math.min(210, wallH * 0.85) * scale;
+            const dx = ox + wallPxW - dw - 6;
+            return (
+              <g>
+                <rect x={dx} y={oy + wallPxH - dh} width={dw} height={dh} fill="rgba(180,120,70,0.18)" stroke="#b47846" strokeWidth={1.2} strokeDasharray="4,2" rx={1} />
+                <text x={dx + dw / 2} y={oy + wallPxH - dh / 2} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#b47846">🚪</text>
+              </g>
+            );
+          })()}
+          {activeManual?.janela && (() => {
+            const ww = Math.min(120, wallW * 0.3) * scale, wh = Math.min(110, wallH * 0.4) * scale;
+            const wx = ox + 8, wy = oy + wallPxH - (100 + 110) * scale;
+            return (
+              <g>
+                <rect x={wx} y={wy} width={ww} height={wh} fill="rgba(56,160,220,0.15)" stroke="#38a0dc" strokeWidth={1.2} strokeDasharray="4,2" rx={1} />
+                <text x={wx + ww / 2} y={wy + wh / 2} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#38a0dc">🪟</text>
+              </g>
+            );
+          })()}
 
           {view==="2d" ? laid.map(({ m, x, yFloor }) => {
             const fw = m.largura_cm * scale;
@@ -440,7 +465,8 @@ interface ComodoOrc {
   altura: number;
   // Paredes com marcenaria (A, B, C, D) — comprimentos independentes. Opcional:
   // se vazio, usa largura×profundidade como parede única (retângulo).
-  paredes?: { id: string; comprimento_cm: number }[];
+  // porta/janela: aberturas na parede (o motor evita colocar armário em cima).
+  paredes?: { id: string; comprimento_cm: number; porta?: boolean; janela?: boolean }[];
   plantaB64: string | null;
   plantaNome: string | null;
   plantaInfo: PlantaInfo | null;
@@ -529,6 +555,9 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const removeParede = (comodoId: string, paredeId: string) =>
     setComodos((prev) => prev.map((c) =>
       c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).filter((p) => p.id !== paredeId) } : c));
+  const toggleAbertura = (comodoId: string, paredeId: string, tipo: "porta" | "janela") =>
+    setComodos((prev) => prev.map((c) =>
+      c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, [tipo]: !p[tipo] } : p) } : c));
 
   const removeComodo = (id: string) => {
     const c = comodos.find((x) => x.id === id);
@@ -1078,6 +1107,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
                             onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
                             className="w-11 h-5 rounded bg-background border border-border px-1 text-[11px] outline-none" />
+                          <button type="button" onClick={() => toggleAbertura(c.id, p.id, "porta")} title="Porta nesta parede"
+                            className={`px-0.5 rounded ${p.porta ? "opacity-100" : "opacity-30 hover:opacity-70"}`}>🚪</button>
+                          <button type="button" onClick={() => toggleAbertura(c.id, p.id, "janela")} title="Janela nesta parede"
+                            className={`px-0.5 rounded ${p.janela ? "opacity-100" : "opacity-30 hover:opacity-70"}`}>🪟</button>
                           <button type="button" onClick={() => removeParede(c.id, p.id)}
                             className="text-muted-foreground hover:text-destructive px-0.5">×</button>
                         </span>
