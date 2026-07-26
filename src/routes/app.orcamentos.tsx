@@ -1707,7 +1707,14 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         {/* Configuração do ripado */}
                         {m.tem_ripado && (() => {
                           const ripaLarg = m.ripa_largura_mm ?? 30;
-                          const numRipas = Math.floor((m.largura_cm * 10) / (ripaLarg * 2));
+                          // Começa e termina com ripa: W = n·ripa + (n-1)·espaço.
+                          // Alvo do espaço ≈ largura da ripa; ajusta n até o espaço
+                          // ficar >= 3mm e calcula o espaçamento EXATO para caber.
+                          const W = m.largura_cm * 10; // mm
+                          let numRipas = Math.max(2, Math.round((W + ripaLarg) / (2 * ripaLarg)));
+                          let espacoRipa = numRipas > 1 ? (W - numRipas * ripaLarg) / (numRipas - 1) : 0;
+                          while (espacoRipa < 3 && numRipas > 2) { numRipas -= 1; espacoRipa = (W - numRipas * ripaLarg) / (numRipas - 1); }
+                          espacoRipa = Math.max(0, Math.round(espacoRipa));
                           return (
                             <div className="pl-1 p-2 rounded-md border border-border bg-secondary/20 space-y-2">
                               <div className="text-[10.5px] text-muted-foreground font-medium">Configuração do ripado</div>
@@ -1736,7 +1743,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                                 </div>
                               </div>
                               <div className="text-[10px] text-muted-foreground">
-                                Espaçamento = largura da ripa · começa na lateral
+                                Começa e termina com ripa · espaçamento de <span className="text-foreground font-medium">{espacoRipa}mm</span> entre as ripas (calculado para caber exato)
                               </div>
                             </div>
                           );
