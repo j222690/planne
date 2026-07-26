@@ -92,9 +92,10 @@ type MovelConfig = {
   ripa_largura_mm?: number;
   parede_id?: string;
   comodo_nome?: string;
-  // Posição horizontal na parede (cm a partir da esquerda). Se ausente, usa o
-  // auto-layout. Definida quando o usuário arrasta o móvel no preview.
+  // Posição na parede (cm). x = a partir da esquerda; y = altura a partir do chão
+  // (base do móvel). Se ausente, usa o auto-layout. Definida ao arrastar no preview.
   pos_x_cm?: number;
+  pos_y_cm?: number;
   // Formato
   formato?: "retangular" | "L";
   arm2_largura_cm?: number;
@@ -245,12 +246,12 @@ function WallVisualization({
   medW: number; medH: number;
   onSelectMovel?: (id: string) => void;
   selectedId?: string | null;
-  onMoveMovel?: (id: string, x_cm: number) => void;
+  onMoveMovel?: (id: string, x_cm: number, y_cm: number) => void;
 }) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [selWall, setSelWall] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragRef = useRef<{ id: string; startClientX: number; startXcm: number; moved: boolean } | null>(null);
+  const dragRef = useRef<{ id: string; startClientX: number; startClientY: number; startXcm: number; startYcm: number; moved: boolean } | null>(null);
 
   // Paredes: da planta baixa, ou as paredes manuais A–D do cômodo.
   // Ignora paredes muito pequenas (< 100cm) — valor provavelmente errado, não
@@ -279,14 +280,11 @@ function WallVisualization({
   const contentW = Math.max(runMaxW + towersW, seqTotal);
 
   const parede = walls.find((w) => w.id === activeWall);
-  // Nunca deixa a parede menor que o conteúdo nem que 200cm — evita "parede de
-  // 6cm" que some no desenho e impede arrastar.
-  const wallW = Math.max(
-    parede?.espaco_util_cm ?? 0,
-    medW > 0 ? Math.round(medW * 100) : 0,
-    contentW,
-    200,
-  );
+  // Largura REAL da parede (não cresce com os móveis). Piso de 200cm só para o
+  // caso de nenhuma medida informada — evita a parede sumir. Se o móvel passar
+  // da parede, ele aparece como excesso (não empurra a parede).
+  const larguraReal = parede?.espaco_util_cm ?? (medW > 0 ? Math.round(medW * 100) : 0);
+  const wallW = larguraReal > 0 ? larguraReal : Math.max(200, contentW);
   const wallH = plantaInfo?.altura_cm ?? (medH > 0 ? Math.round(medH * 100) : 270);
 
   const SVG_W = 680, SVG_H = 360;
@@ -318,8 +316,12 @@ function WallVisualization({
     } else {
       x = seqX; seqX += m.largura_cm + 2; yFloor = WALL_MOUNTED_Y[m.tipo] ?? 0;
     }
-    // Posição manual (arrastada) sobrescreve o auto-layout, presa à parede
-    if (m.pos_x_cm != null) x = Math.max(0, Math.min(wallW - m.largura_cm, m.pos_x_cm));
+    // Posição manual (arrastada) sobrescreve o auto-layout
+    if (m.pos_x_cm != null) x = m.pos_x_cm;
+    if (m.pos_y_cm != null) yFloor = m.pos_y_cm;
+    // Preso ao quadro: nada sai da parede (horizontal E vertical)
+    x = Math.max(0, Math.min(Math.max(0, wallW - m.largura_cm), x));
+    yFloor = Math.max(0, Math.min(Math.max(0, wallH - m.altura_cm), yFloor));
     return { m, x, yFloor };
   });
 
@@ -339,19 +341,22 @@ function WallVisualization({
     const ratio = rect && rect.width ? SVG_W / rect.width : 1;
     return (dxClient * ratio) / scale;
   };
-  const onMovelDown = (e: React.PointerEvent, m: MovelConfig, curXcm: number) => {
+  const onMovelDown = (e: React.PointerEvent, m: MovelConfig, curXcm: number, curYcm: number) => {
     if (!onMoveMovel) return;
-    dragRef.current = { id: m.id, startClientX: e.clientX, startXcm: curXcm, moved: false };
+    dragRef.current = { id: m.id, startClientX: e.clientX, startClientY: e.clientY, startXcm: curXcm, startYcm: curYcm, moved: false };
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
   };
   const onSvgMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d || !onMoveMovel) return;
-    const dcm = cmFromClientDelta(e.clientX - d.startClientX);
-    if (Math.abs(dcm) > 1.5) d.moved = true;
+    const dx = cmFromClientDelta(e.clientX - d.startClientX);
+    const dyScreen = cmFromClientDelta(e.clientY - d.startClientY); // tela: baixo = +
+    if (Math.abs(dx) > 1.5 || Math.abs(dyScreen) > 1.5) d.moved = true;
     const mv = moveis.find((x) => x.id === d.id);
-    const newX = Math.max(0, Math.min(wallW - (mv?.largura_cm ?? 0), Math.round(d.startXcm + dcm)));
-    onMoveMovel(d.id, newX);
+    const newX = Math.max(0, Math.min(wallW - (mv?.largura_cm ?? 0), Math.round(d.startXcm + dx)));
+    // yFloor sobe quando a tela desce → subtrai o delta de tela
+    const newY = Math.max(0, Math.min(wallH - (mv?.altura_cm ?? 0), Math.round(d.startYcm - dyScreen)));
+    onMoveMovel(d.id, newX, newY);
   };
   const onSvgUp = () => {
     const d = dragRef.current;
@@ -427,9 +432,9 @@ function WallVisualization({
             const isSel = selectedId === m.id;
             return (
               <g key={m.id}
-                onPointerDown={(e) => onMovelDown(e, m, x)}
+                onPointerDown={(e) => onMovelDown(e, m, x, yFloor)}
                 onClick={() => { if (!onMoveMovel) onSelectMovel?.(m.id); }}
-                style={{ cursor: onMoveMovel ? "grab" : onSelectMovel ? "pointer" : "default" }}>
+                style={{ cursor: onMoveMovel ? "move" : onSelectMovel ? "pointer" : "default" }}>
                 <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={isSel ? "#2563eb" : stroke} strokeWidth={isSel ? 2.2 : 1} rx={1} />
                 {/* Door splits */}
                 {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
@@ -1558,9 +1563,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         : paredesManuais.map((p) => ({ id: p.id, label: `Parede ${p.id} — ${p.comprimento_cm}cm`, espaco: p.comprimento_cm }));
                       const paredeSel = wallOptions.find((w) => w.id === m.parede_id);
                       const dimSrc = (m.comodo_nome && comodosMedidas[m.comodo_nome]) ? comodosMedidas[m.comodo_nome] : medidas;
-                      const limLargura = paredeSel ? paredeSel.espaco - 15
-                        : plantaInfo ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm)) - 15
-                        : dimSrc.largura > 0 ? Math.round(dimSrc.largura * 100) - 15 : null;
+                      // Permite o móvel até o tamanho EXATO da parede (sem folga).
+                      const limLargura = paredeSel ? paredeSel.espaco
+                        : plantaInfo ? Math.max(...plantaInfo.paredes.map((p) => p.espaco_util_cm))
+                        : dimSrc.largura > 0 ? Math.round(dimSrc.largura * 100) : null;
                       const limAltura = plantaInfo ? plantaInfo.altura_cm : dimSrc.altura > 0 ? Math.round(dimSrc.altura * 100) : null;
                       const limProfundidade = plantaInfo ? plantaInfo.profundidade_cm : dimSrc.profundidade > 0 ? Math.round(dimSrc.profundidade * 100) : null;
 
@@ -1901,7 +1907,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
                       selectedId={expandedMovel}
                       onSelectMovel={(id) => setExpandedMovel(id)}
-                      onMoveMovel={(id, x) => updateMovel(id, { pos_x_cm: x })}
+                      onMoveMovel={(id, x, y) => updateMovel(id, { pos_x_cm: x, pos_y_cm: y })}
                     />
                   </div>
                 ) : (
