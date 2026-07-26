@@ -252,9 +252,11 @@ function WallVisualization({
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ id: string; startClientX: number; startXcm: number; moved: boolean } | null>(null);
 
-  // Paredes: da planta baixa, ou as paredes manuais A–D do cômodo
+  // Paredes: da planta baixa, ou as paredes manuais A–D do cômodo.
+  // Ignora paredes muito pequenas (< 100cm) — valor provavelmente errado, não
+  // deixa a parede sumir no preview.
   const walls: Parede[] = plantaInfo?.paredes
-    ?? (manualWalls ?? []).filter((p) => p.comprimento_cm > 0).map((p) => ({
+    ?? (manualWalls ?? []).filter((p) => p.comprimento_cm >= 100).map((p) => ({
       id: p.id, descricao: "", largura_cm: p.comprimento_cm, espaco_util_cm: p.comprimento_cm,
     }));
   const activeWall = selWall ?? walls[0]?.id ?? null;
@@ -277,7 +279,14 @@ function WallVisualization({
   const contentW = Math.max(runMaxW + towersW, seqTotal);
 
   const parede = walls.find((w) => w.id === activeWall);
-  const wallW = parede?.espaco_util_cm ?? (medW > 0 ? Math.round(medW * 100) : Math.max(200, contentW));
+  // Nunca deixa a parede menor que o conteúdo nem que 200cm — evita "parede de
+  // 6cm" que some no desenho e impede arrastar.
+  const wallW = Math.max(
+    parede?.espaco_util_cm ?? 0,
+    medW > 0 ? Math.round(medW * 100) : 0,
+    contentW,
+    200,
+  );
   const wallH = plantaInfo?.altura_cm ?? (medH > 0 ? Math.round(medH * 100) : 270);
 
   const SVG_W = 680, SVG_H = 360;
@@ -1131,7 +1140,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.18 }}
-        className="relative w-full max-w-4xl bg-surface border border-border rounded-lg shadow-xl my-4"
+        className="relative w-full max-w-6xl bg-surface border border-border rounded-lg shadow-xl my-4"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">

@@ -1364,95 +1364,107 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
   const avisos = [];
   const paredeId = escolherParedePrincipal(ambiente, preferencias.parede_principal, avisos);
   const parede = ambiente.paredes[paredeId];
-  let segmento = maiorSegmento(ambiente, paredeId);
-  if (!segmento) {
+  let segmentos = parede.segmentos_livres.filter(
+    (s) => s.comprimento_cm >= 60 && !s.bloqueado_por_janela_baixa
+  );
+  if (segmentos.length === 0) {
     avisos.push(`Nenhum segmento livre suficiente na parede ${paredeId}. Verifique aberturas.`);
-    segmento = {
+    segmentos = [{
       inicio_cm: 0,
       fim_cm: parede.comprimento_cm,
       comprimento_cm: parede.comprimento_cm,
       altura_util_cm: parede.altura_cm,
       bloqueado_por_janela_baixa: false
-    };
+    }];
   }
-  const larguraDisponivel = segmento.comprimento_cm;
-  const torreAtiva = preferencias.com_torre_forno !== false && larguraDisponivel >= TORRE_LARGURA_CM + 90;
-  const offsetModulos = torreAtiva ? TORRE_LARGURA_CM : 0;
-  const larguraModulos = larguraDisponivel - offsetModulos;
-  const largurasBases = encaixarModulos(larguraModulos);
-  if (largurasBases.length === 0) {
-    avisos.push(`Segmento de ${larguraModulos}cm \xE9 insuficiente para um m\xF3dulo m\xEDnimo (30cm).`);
-  }
+  const larguraDisponivel = segmentos.reduce((s, seg) => s + seg.comprimento_cm, 0);
+  const maiorSeg = segmentos.reduce((a, b) => b.comprimento_cm > a.comprimento_cm ? b : a);
   const materialCorpo = criarMaterialPadrao(preferencias.cor_mdf_hex, 15);
   const materialFundo = criarMaterialPadrao(preferencias.cor_mdf_hex, 6);
-  const modulosBase = instanciarModulos(largurasBases, {
-    parede: paredeId,
-    inicio_cm: segmento.inicio_cm + offsetModulos,
-    posicao_y_cm: 0,
-    altura_cm: BASE_ALTURA_CM,
-    profundidade_cm: BASE_PROFUNDIDADE_CM,
-    prefixo: "base",
-    materialCorpo,
-    materialFundo,
-    getTemplate: getTemplateBase,
-    templateFallback: MODULOS_BASE_COZINHA[4],
-    configDe: (largura) => configPadrao({
-      tipo_porta: preferencias.tipo_porta_base,
-      ferragem: preferencias.ferragem,
-      num_portas: largura <= 40 ? 1 : 2,
-      tem_engrosso_tampo: true,
-      // base de cozinha tem bancada → tampo 30mm
-      tampo_pedra: preferencias.tampo_pedra
-      // se pedra, engrosso MDF é desligado
-    })
-  });
-  const modulosAereo = instanciarModulos(largurasBases, {
-    parede: paredeId,
-    inicio_cm: segmento.inicio_cm + offsetModulos,
-    posicao_y_cm: AEREO_INICIO_Y_CM,
-    altura_cm: AEREO_ALTURA_CM,
-    profundidade_cm: AEREO_PROFUNDIDADE_CM,
-    prefixo: "aereo",
-    materialCorpo,
-    materialFundo,
-    getTemplate: getTemplateAereo,
-    templateFallback: MODULOS_AEREOS_COZINHA[4],
-    configDe: (largura) => configPadrao({
-      tipo_porta: preferencias.tipo_porta_aereo,
-      ferragem: preferencias.ferragem,
-      num_portas: largura <= 40 ? 1 : 2,
-      tem_pes_regulaveis: false,
-      tem_rodape: false,
-      // aéreo não tem rodapé
-      tem_roda_teto: true
-      // moldura de roda-teto no topo (até o teto)
-    }),
-    ordemInicial: modulosBase.length
-  });
-  const modulosTorre = torreAtiva ? instanciarModulos([TORRE_LARGURA_CM], {
-    parede: paredeId,
-    inicio_cm: segmento.inicio_cm,
-    posicao_y_cm: 0,
-    altura_cm: TORRE_ALTURA_CM,
-    profundidade_cm: TORRE_PROFUNDIDADE_CM,
-    prefixo: "torre_forno",
-    materialCorpo,
-    materialFundo,
-    getTemplate: () => MODULO_TORRE_FORNO,
-    templateFallback: MODULO_TORRE_FORNO,
-    configDe: () => configPadrao({
-      tipo_porta: "dobradica",
-      ferragem: preferencias.ferragem,
-      num_portas: 2,
-      num_prateleiras: 3,
-      tem_roda_teto: true,
-      // vai ao teto
-      tem_engrosso_tampo: false
-      // torre não tem bancada
-    }),
-    rotuloParede: "Torre de forno",
-    ordemInicial: modulosBase.length + modulosAereo.length
-  }) : [];
+  const modulosBase = [];
+  const modulosAereo = [];
+  const modulosTorre = [];
+  let larguraOcupada = 0;
+  let ordem = 0;
+  for (const seg of segmentos) {
+    const torreNesteSeg = preferencias.com_torre_forno !== false && seg === maiorSeg && seg.comprimento_cm >= TORRE_LARGURA_CM + 90;
+    const offset = torreNesteSeg ? TORRE_LARGURA_CM : 0;
+    const largurasBases = encaixarModulos(seg.comprimento_cm - offset);
+    if (largurasBases.length === 0) continue;
+    larguraOcupada += largurasBases.reduce((s, l) => s + l, 0);
+    const bases = instanciarModulos(largurasBases, {
+      parede: paredeId,
+      inicio_cm: seg.inicio_cm + offset,
+      posicao_y_cm: 0,
+      altura_cm: BASE_ALTURA_CM,
+      profundidade_cm: BASE_PROFUNDIDADE_CM,
+      prefixo: "base",
+      materialCorpo,
+      materialFundo,
+      getTemplate: getTemplateBase,
+      templateFallback: MODULOS_BASE_COZINHA[4],
+      configDe: (largura) => configPadrao({
+        tipo_porta: preferencias.tipo_porta_base,
+        ferragem: preferencias.ferragem,
+        num_portas: largura <= 40 ? 1 : 2,
+        tem_engrosso_tampo: true,
+        tampo_pedra: preferencias.tampo_pedra
+      }),
+      ordemInicial: ordem
+    });
+    ordem += bases.length;
+    const aereos = instanciarModulos(largurasBases, {
+      parede: paredeId,
+      inicio_cm: seg.inicio_cm + offset,
+      posicao_y_cm: AEREO_INICIO_Y_CM,
+      altura_cm: AEREO_ALTURA_CM,
+      profundidade_cm: AEREO_PROFUNDIDADE_CM,
+      prefixo: "aereo",
+      materialCorpo,
+      materialFundo,
+      getTemplate: getTemplateAereo,
+      templateFallback: MODULOS_AEREOS_COZINHA[4],
+      configDe: (largura) => configPadrao({
+        tipo_porta: preferencias.tipo_porta_aereo,
+        ferragem: preferencias.ferragem,
+        num_portas: largura <= 40 ? 1 : 2,
+        tem_pes_regulaveis: false,
+        tem_rodape: false,
+        tem_roda_teto: true
+      }),
+      ordemInicial: ordem
+    });
+    ordem += aereos.length;
+    modulosBase.push(...bases);
+    modulosAereo.push(...aereos);
+    if (torreNesteSeg) {
+      const torre = instanciarModulos([TORRE_LARGURA_CM], {
+        parede: paredeId,
+        inicio_cm: seg.inicio_cm,
+        posicao_y_cm: 0,
+        altura_cm: TORRE_ALTURA_CM,
+        profundidade_cm: TORRE_PROFUNDIDADE_CM,
+        prefixo: "torre_forno",
+        materialCorpo,
+        materialFundo,
+        getTemplate: () => MODULO_TORRE_FORNO,
+        templateFallback: MODULO_TORRE_FORNO,
+        configDe: () => configPadrao({
+          tipo_porta: "dobradica",
+          ferragem: preferencias.ferragem,
+          num_portas: 2,
+          num_prateleiras: 3,
+          tem_roda_teto: true,
+          tem_engrosso_tampo: false
+        }),
+        rotuloParede: "Torre de forno",
+        ordemInicial: ordem
+      });
+      ordem += torre.length;
+      modulosTorre.push(...torre);
+    }
+  }
+  const torreAtiva = modulosTorre.length > 0;
   if (preferencias.com_cooktop !== false && modulosBase.length > 0) {
     const idx = Math.floor(modulosBase.length / 2);
     const m = modulosBase[idx];
@@ -1462,9 +1474,8 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     m.nome_display = `${m.nome_display} (cooktop)`;
   }
   const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
-  const larguraOcupada = largurasBases.reduce((s, l) => s + l, 0);
   const aproveitamento = larguraDisponivel > 0 ? Math.round(larguraOcupada / larguraDisponivel * 100) : 0;
-  if (aproveitamento < 85 && largurasBases.length > 0) {
+  if (aproveitamento < 85 && modulosBase.length > 0) {
     avisos.push(
       `Aproveitamento de ${aproveitamento}% (${larguraOcupada}cm de ${larguraDisponivel}cm dispon\xEDveis). Sobra de ${larguraDisponivel - larguraOcupada}cm.`
     );
@@ -1484,8 +1495,8 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     metricas,
     estilo: "Moderno Minimalista",
     observacoes_tecnicas: [
-      `${largurasBases.length} m\xF3dulos base (${larguraOcupada}cm linear)`,
-      `${largurasBases.length} m\xF3dulos a\xE9reos alinhados`,
+      `${modulosBase.length} m\xF3dulos base (${larguraOcupada}cm linear)`,
+      `${modulosAereo.length} m\xF3dulos a\xE9reos alinhados`,
       ...torreAtiva ? [`1 torre de forno (${TORRE_LARGURA_CM}cm, piso ao teto)`] : [],
       ...preferencias.com_cooktop !== false ? ["1 gabinete com recorte de cooktop"] : [],
       ...preferencias.tampo_pedra ? [`Tampo em pedra (granito/quartzo) \u2014 or\xE7ar \xE0 parte: ~${(larguraOcupada / 100 * (BASE_PROFUNDIDADE_CM / 100)).toFixed(2)}m\xB2 de bancada`] : [],
@@ -1523,12 +1534,12 @@ function escolherParedePrincipal(ambiente, preferida, avisos) {
   }
   const paredes = ["top", "bottom", "left", "right"];
   let melhor = "top";
-  let melhorComp = 0;
+  let melhorTotal = 0;
   for (const pId of paredes) {
     const p = ambiente.paredes[pId];
-    const maxSeg = Math.max(0, ...p.segmentos_livres.map((s) => s.comprimento_cm));
-    if (maxSeg > melhorComp) {
-      melhorComp = maxSeg;
+    const total = p.segmentos_livres.filter((s) => s.comprimento_cm >= 60 && !s.bloqueado_por_janela_baixa).reduce((s, seg) => s + seg.comprimento_cm, 0);
+    if (total > melhorTotal) {
+      melhorTotal = total;
       melhor = pId;
     }
   }
