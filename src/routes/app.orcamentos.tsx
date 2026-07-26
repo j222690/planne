@@ -651,6 +651,37 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     setComodos((prev) => prev.map((c) =>
       c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, [tipo]: !p[tipo] } : p) } : c));
 
+  // Foto da parede (com folha A4 de referência) → estima medida + porta/janela
+  const [fotoAnalisando, setFotoAnalisando] = useState<string | null>(null);
+  const analisarFotoParede = async (comodoId: string, paredeId: string, file: File) => {
+    const b64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const key = `${comodoId}|${paredeId}`;
+    setFotoAnalisando(key);
+    try {
+      const res = await fetch("/api/analisar-foto", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imagem_b64: b64, referencia: "a4" }),
+      });
+      const r = await res.json() as { largura_cm: number; altura_cm: number; porta: boolean; janela: boolean; confianca: string; error?: string };
+      if (!res.ok) { toast.error(r.error ?? "Erro ao analisar a foto"); return; }
+      setComodos((prev) => prev.map((c) => c.id === comodoId ? {
+        ...c,
+        altura: c.altura || (r.altura_cm ? r.altura_cm / 100 : c.altura),
+        paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, comprimento_cm: r.largura_cm, porta: !!r.porta, janela: !!r.janela } : p),
+      } : c));
+      toast.success(`Parede ~${r.largura_cm}cm · confiança ${r.confianca}. Confira com trena antes de cortar.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao analisar a foto");
+    } finally {
+      setFotoAnalisando(null);
+    }
+  };
+
   const removeComodo = (id: string) => {
     const c = comodos.find((x) => x.id === id);
     setComodos((prev) => prev.filter((x) => x.id !== id));
@@ -739,7 +770,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "gerar",
-            tipo_layout: COMODO_TO_LAYOUT[c.tipo],
+            // Nº de paredes A–D define o formato da cozinha: 2 → L, 3+ → U
+            tipo_layout: (() => {
+              const base = COMODO_TO_LAYOUT[c.tipo];
+              if (base !== "cozinha_linear") return base;
+              const n = (c.paredes ?? []).filter((p) => p.comprimento_cm > 0).length;
+              return n >= 3 ? "cozinha_u" : n === 2 ? "cozinha_l" : "cozinha_linear";
+            })(),
             // Custos e chapa reais da empresa (herdados de Configurações)
             config_custo: (() => {
               const f = (empresaParams.mao_obra_hora || 45) / 45;
@@ -754,11 +791,16 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
               };
             })(),
-            medidas: {
-              largura_cm: Math.round((c.largura || 4) * 100),
-              profundidade_cm: Math.round((c.profundidade || 3) * 100),
-              altura_cm: Math.round((c.altura || 2.7) * 100),
-            },
+            // Paredes A–D (se definidas): a mais longa vira a largura da parede
+            // principal, a segunda a profundidade (alimenta layouts em L/U).
+            medidas: (() => {
+              const pm = (c.paredes ?? []).filter((p) => p.comprimento_cm > 0).sort((a, b) => b.comprimento_cm - a.comprimento_cm);
+              return {
+                largura_cm: pm[0]?.comprimento_cm ?? Math.round((c.largura || 4) * 100),
+                profundidade_cm: pm[1]?.comprimento_cm ?? Math.round((c.profundidade || 3) * 100),
+                altura_cm: Math.round((c.altura || 2.7) * 100),
+              };
+            })(),
             preferencias: {
               parede_principal: "top", cor_mdf_hex: "#D9C7A8",
               ferragem: empresaParams.ferragem_padrao,
@@ -1209,6 +1251,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             className={`px-0.5 rounded ${p.porta ? "opacity-100" : "opacity-30 hover:opacity-70"}`}>🚪</button>
                           <button type="button" onClick={() => toggleAbertura(c.id, p.id, "janela")} title="Janela nesta parede"
                             className={`px-0.5 rounded ${p.janela ? "opacity-100" : "opacity-30 hover:opacity-70"}`}>🪟</button>
+                          <label title="Foto desta parede com folha A4 (a IA estima a medida)"
+                            className={`px-0.5 cursor-pointer ${fotoAnalisando === `${c.id}|${p.id}` ? "opacity-100 animate-pulse" : "opacity-40 hover:opacity-80"}`}>
+                            📷
+                            <input type="file" accept="image/*" className="hidden"
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) analisarFotoParede(c.id, p.id, f); e.target.value = ""; }} />
+                          </label>
                           <button type="button" onClick={() => removeParede(c.id, p.id)}
                             className="text-muted-foreground hover:text-destructive px-0.5">×</button>
                         </span>

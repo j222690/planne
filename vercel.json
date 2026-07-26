@@ -8,6 +8,7 @@
     "api/calcular-orcamento.ts": { "maxDuration": 30 },
     "api/agent.ts": { "maxDuration": 60 },
     "api/analisar-planta.ts": { "maxDuration": 30 },
+    "api/analisar-foto.ts": { "maxDuration": 30 },
     "api/pdf-orcamento.ts": { "maxDuration": 30 },
     "api/lista-corte.ts": { "maxDuration": 30 },
     "api/vision.ts": { "maxDuration": 30 },
