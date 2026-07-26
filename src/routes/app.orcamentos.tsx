@@ -1263,12 +1263,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   {!c.plantaB64 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-[10.5px] text-muted-foreground">Tamanho de cada parede</div>
+                        <div className="text-[11px] font-medium text-muted-foreground">Tamanho de cada parede (metros)</div>
                         <div className="flex items-center gap-2">
-                          <input type="number" step="0.01" min="0.1" placeholder="Pé-direito m"
-                            value={c.altura || ""}
-                            onChange={(e) => updateComodo(c.id, { altura: Number(e.target.value) })}
-                            className="w-24 h-8 rounded-md border border-border bg-background px-2.5 text-[12.5px] outline-none" />
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-muted-foreground">Altura (pé-direito)</span>
+                            <div className="relative">
+                              <input type="number" step="0.01" min="0.1"
+                                value={c.altura || ""}
+                                onChange={(e) => updateComodo(c.id, { altura: Number(e.target.value) })}
+                                className="w-20 h-8 rounded-md border border-border bg-background pl-2.5 pr-6 text-[13px] outline-none" />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">m</span>
+                            </div>
+                          </div>
                           <button type="button" onClick={() => updateComodo(c.id, { usarFoto: !c.usarFoto })}
                             className={`h-8 px-2.5 rounded-md border text-[11.5px] inline-flex items-center gap-1 transition-colors ${c.usarFoto ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
                             <ImageUp className="size-3.5" /> Medir por foto
@@ -1278,14 +1284,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
                       {!c.usarFoto ? (
                         /* Digitar o tamanho de cada parede (m) */
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {(c.paredes ?? []).map((p) => (
-                            <span key={p.id} className="inline-flex items-center gap-1 h-8 pl-2 pr-1 rounded-md border border-border bg-background text-[12px]">
+                            <span key={p.id} className="inline-flex items-center gap-1.5 h-9 pl-2.5 pr-1.5 rounded-md border border-border bg-background text-[13px]">
                               <span className="font-medium text-muted-foreground">Parede {p.id}</span>
-                              <input type="number" step="0.01" min="0" placeholder="m"
-                                value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
-                                onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
-                                className="w-14 h-6 rounded bg-surface-2 border border-border px-1.5 text-[12px] outline-none" />
+                              <div className="relative">
+                                <input type="number" step="0.01" min="0" placeholder="0,00"
+                                  value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
+                                  onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
+                                  className="w-24 h-7 rounded bg-surface-2 border border-border pl-2 pr-6 text-[13px] outline-none" />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">m</span>
+                              </div>
                               {(c.paredes?.length ?? 0) > 1 && (
                                 <button type="button" onClick={() => removeParede(c.id, p.id)}
                                   className="text-muted-foreground hover:text-destructive px-0.5">×</button>
@@ -1294,8 +1303,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           ))}
                           {(c.paredes?.length ?? 0) < 4 && (
                             <button type="button" onClick={() => addParede(c.id)}
-                              className="h-8 px-2.5 rounded-md border border-dashed border-border text-[12px] text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
-                              <Plus className="size-3" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
+                              className="h-9 px-3 rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
+                              <Plus className="size-3.5" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
                             </button>
                           )}
                         </div>
