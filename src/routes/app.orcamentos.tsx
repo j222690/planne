@@ -519,6 +519,8 @@ interface ComodoOrc {
   // se vazio, usa largura×profundidade como parede única (retângulo).
   // porta/janela: aberturas na parede (o motor evita colocar armário em cima).
   paredes?: { id: string; comprimento_cm: number; porta?: boolean; janela?: boolean }[];
+  // Medir as paredes por foto (com folha A4) em vez de digitar.
+  usarFoto?: boolean;
   plantaB64: string | null;
   plantaNome: string | null;
   plantaInfo: PlantaInfo | null;
@@ -632,6 +634,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       return [...prev, {
         id: Math.random().toString(36).slice(2),
         nome, tipo, largura: 0, profundidade: 0, altura: 2.7,
+        paredes: [{ id: "A", comprimento_cm: 0 }],
         plantaB64: null, plantaNome: null, plantaInfo: null, analisando: false,
       }];
     });
@@ -642,23 +645,31 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     setComodos((prev) => prev.map((c) => c.id === id ? { ...c, ...patch } : c));
 
   // Paredes A–D do cômodo (comprimentos independentes)
-  const addParede = (comodoId: string) =>
+  // largura/profundidade do cômodo derivadas das paredes (a mais longa = largura,
+  // a 2ª = profundidade). Mantém o resto do sistema funcionando com o modelo antigo.
+  type ParedeC = { id: string; comprimento_cm: number; porta?: boolean; janela?: boolean };
+  const derivarDims = (paredes: ParedeC[]) => {
+    const s = [...paredes].filter((p) => p.comprimento_cm > 0).sort((a, b) => b.comprimento_cm - a.comprimento_cm);
+    return {
+      largura: s[0] ? +(s[0].comprimento_cm / 100).toFixed(2) : 0,
+      profundidade: s[1] ? +(s[1].comprimento_cm / 100).toFixed(2) : (s[0] ? 3 : 0),
+    };
+  };
+  const setParedes = (comodoId: string, updater: (ps: ParedeC[]) => ParedeC[]) =>
     setComodos((prev) => prev.map((c) => {
       if (c.id !== comodoId) return c;
-      const ps = c.paredes ?? [];
-      if (ps.length >= 4) return c;
-      const id = String.fromCharCode(65 + ps.length); // A, B, C, D
-      return { ...c, paredes: [...ps, { id, comprimento_cm: 0 }] };
+      const paredes = updater(c.paredes ?? []);
+      return { ...c, paredes, ...derivarDims(paredes) };
     }));
+
+  const addParede = (comodoId: string) =>
+    setParedes(comodoId, (ps) => ps.length >= 4 ? ps : [...ps, { id: String.fromCharCode(65 + ps.length), comprimento_cm: 0 }]);
   const updateParede = (comodoId: string, paredeId: string, comprimento_cm: number) =>
-    setComodos((prev) => prev.map((c) =>
-      c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, comprimento_cm } : p) } : c));
+    setParedes(comodoId, (ps) => ps.map((p) => p.id === paredeId ? { ...p, comprimento_cm } : p));
   const removeParede = (comodoId: string, paredeId: string) =>
-    setComodos((prev) => prev.map((c) =>
-      c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).filter((p) => p.id !== paredeId) } : c));
+    setParedes(comodoId, (ps) => ps.filter((p) => p.id !== paredeId));
   const toggleAbertura = (comodoId: string, paredeId: string, tipo: "porta" | "janela") =>
-    setComodos((prev) => prev.map((c) =>
-      c.id === comodoId ? { ...c, paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, [tipo]: !p[tipo] } : p) } : c));
+    setParedes(comodoId, (ps) => ps.map((p) => p.id === paredeId ? { ...p, [tipo]: !p[tipo] } : p));
 
   // Foto da parede (com folha A4 de referência) → estima medida + porta/janela
   const [fotoAnalisando, setFotoAnalisando] = useState<string | null>(null);
@@ -678,12 +689,22 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       });
       const r = await res.json() as { largura_cm: number; altura_cm: number; porta: boolean; janela: boolean; confianca: string; error?: string };
       if (!res.ok) { toast.error(r.error ?? "Erro ao analisar a foto"); return; }
-      setComodos((prev) => prev.map((c) => c.id === comodoId ? {
-        ...c,
-        altura: c.altura || (r.altura_cm ? r.altura_cm / 100 : c.altura),
-        paredes: (c.paredes ?? []).map((p) => p.id === paredeId ? { ...p, comprimento_cm: r.largura_cm, porta: !!r.porta, janela: !!r.janela } : p),
-      } : c));
-      toast.success(`Parede ~${r.largura_cm}cm · confiança ${r.confianca}. Confira com trena antes de cortar.`);
+      setComodos((prev) => prev.map((c) => {
+        if (c.id !== comodoId) return c;
+        const ps = c.paredes ?? [];
+        const dados = { comprimento_cm: r.largura_cm, porta: !!r.porta, janela: !!r.janela };
+        const existe = ps.some((p) => p.id === paredeId);
+        const paredes = existe
+          ? ps.map((p) => p.id === paredeId ? { ...p, ...dados } : p)
+          : [...ps, { id: paredeId, ...dados }];
+        return {
+          ...c,
+          altura: c.altura || (r.altura_cm ? r.altura_cm / 100 : c.altura),
+          paredes,
+          ...derivarDims(paredes),
+        };
+      }));
+      toast.success(`Parede ${paredeId} ~${r.largura_cm}cm · confiança ${r.confianca}. Confira com trena.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao analisar a foto");
     } finally {
@@ -729,7 +750,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   };
 
   /** Cômodo é válido se tem planta OU largura+profundidade. */
-  const comodoValido = (c: ComodoOrc) => !!c.plantaB64 || (c.largura > 0 && c.profundidade > 0);
+  const comodoValido = (c: ComodoOrc) => !!c.plantaB64 || (c.largura > 0 && c.altura > 0);
 
   // Planta analisada
   const [plantaInfo, setPlantaInfo] = useState<PlantaInfo | null>(null);
@@ -1238,52 +1259,66 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     </label>
                   )}
 
-                  {/* Medidas — só se não tiver planta */}
+                  {/* Medidas por parede — só se não tiver planta */}
                   {!c.plantaB64 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["largura", "profundidade", "altura"] as const).map((dim) => {
-                        const faltando = dim !== "altura" && !c[dim];
-                        return (
-                          <input key={dim} type="number" step="0.01" min="0.1"
-                            placeholder={dim === "largura" ? "Larg m *" : dim === "profundidade" ? "Prof m *" : "Alt m"}
-                            value={c[dim] || ""}
-                            onChange={(e) => updateComodo(c.id, { [dim]: Number(e.target.value) })}
-                            className={`w-full h-8 rounded-md border bg-background px-2.5 text-[12.5px] outline-none ${faltando ? "border-destructive/60 placeholder:text-destructive/60" : "border-border"}`} />
-                        );
-                      })}
-                    </div>
-                  )}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[10.5px] text-muted-foreground">Tamanho de cada parede</div>
+                        <div className="flex items-center gap-2">
+                          <input type="number" step="0.01" min="0.1" placeholder="Pé-direito m"
+                            value={c.altura || ""}
+                            onChange={(e) => updateComodo(c.id, { altura: Number(e.target.value) })}
+                            className="w-24 h-8 rounded-md border border-border bg-background px-2.5 text-[12.5px] outline-none" />
+                          <button type="button" onClick={() => updateComodo(c.id, { usarFoto: !c.usarFoto })}
+                            className={`h-8 px-2.5 rounded-md border text-[11.5px] inline-flex items-center gap-1 transition-colors ${c.usarFoto ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                            <ImageUp className="size-3.5" /> Medir por foto
+                          </button>
+                        </div>
+                      </div>
 
-                  {/* Paredes A–D (opcional) — para cômodos com paredes de tamanhos diferentes (L, U) */}
-                  {!c.plantaB64 && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10.5px] text-muted-foreground">Paredes com marcenaria:</span>
-                      {(c.paredes ?? []).map((p) => (
-                        <span key={p.id} className="inline-flex items-center gap-1 h-6 pl-1.5 pr-1 rounded border border-border bg-secondary text-[11px]">
-                          <span className="font-medium">{p.id}</span>
-                          <input type="number" step="0.01" min="0" placeholder="m"
-                            value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
-                            onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
-                            className="w-11 h-5 rounded bg-background border border-border px-1 text-[11px] outline-none" />
-                          <button type="button" onClick={() => toggleAbertura(c.id, p.id, "porta")} title="Porta nesta parede"
-                            className={`px-0.5 rounded ${p.porta ? "opacity-100" : "opacity-30 hover:opacity-70"}`}>🚪</button>
-                          <button type="button" onClick={() => toggleAbertura(c.id, p.id, "janela")} title="Janela nesta parede"
-                            className={`px-0.5 rounded ${p.janela ? "opacity-100" : "opacity-30 hover:opacity-70"}`}>🪟</button>
-                          <label title="Foto desta parede com folha A4 (a IA estima a medida)"
-                            className={`px-0.5 cursor-pointer ${fotoAnalisando === `${c.id}|${p.id}` ? "opacity-100 animate-pulse" : "opacity-40 hover:opacity-80"}`}>
-                            📷
-                            <input type="file" accept="image/*" className="hidden"
-                              onChange={(e) => { const f = e.target.files?.[0]; if (f) analisarFotoParede(c.id, p.id, f); e.target.value = ""; }} />
-                          </label>
-                          <button type="button" onClick={() => removeParede(c.id, p.id)}
-                            className="text-muted-foreground hover:text-destructive px-0.5">×</button>
-                        </span>
-                      ))}
-                      {(c.paredes?.length ?? 0) < 4 && (
-                        <button type="button" onClick={() => addParede(c.id)}
-                          className="h-6 px-2 rounded border border-dashed border-border text-[11px] text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
-                          <Plus className="size-3" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
-                        </button>
+                      {!c.usarFoto ? (
+                        /* Digitar o tamanho de cada parede (m) */
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {(c.paredes ?? []).map((p) => (
+                            <span key={p.id} className="inline-flex items-center gap-1 h-8 pl-2 pr-1 rounded-md border border-border bg-background text-[12px]">
+                              <span className="font-medium text-muted-foreground">Parede {p.id}</span>
+                              <input type="number" step="0.01" min="0" placeholder="m"
+                                value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
+                                onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
+                                className="w-14 h-6 rounded bg-surface-2 border border-border px-1.5 text-[12px] outline-none" />
+                              {(c.paredes?.length ?? 0) > 1 && (
+                                <button type="button" onClick={() => removeParede(c.id, p.id)}
+                                  className="text-muted-foreground hover:text-destructive px-0.5">×</button>
+                              )}
+                            </span>
+                          ))}
+                          {(c.paredes?.length ?? 0) < 4 && (
+                            <button type="button" onClick={() => addParede(c.id)}
+                              className="h-8 px-2.5 rounded-md border border-dashed border-border text-[12px] text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
+                              <Plus className="size-3" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        /* Slots de foto por parede (com folha A4) */
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(["A", "B", "C", "D"] as const).map((pid) => {
+                              const parede = (c.paredes ?? []).find((p) => p.id === pid);
+                              const analisando = fotoAnalisando === `${c.id}|${pid}`;
+                              return (
+                                <label key={pid} title="Subir ou tirar foto da parede (com folha A4)"
+                                  className={`h-8 px-2.5 rounded-md border text-[12px] inline-flex items-center gap-1.5 cursor-pointer transition-colors ${parede?.comprimento_cm ? "border-accent bg-accent/10 text-accent" : "border-dashed border-border text-muted-foreground hover:bg-secondary"} ${analisando ? "animate-pulse" : ""}`}>
+                                  {analisando ? <Loader2 className="size-3.5 animate-spin" /> : <ImageUp className="size-3.5" />}
+                                  Parede {pid}{parede?.comprimento_cm ? ` · ${parede.comprimento_cm}cm` : ""}
+                                  <input type="file" accept="image/*" capture="environment" className="hidden"
+                                    onChange={(e) => { const f = e.target.files?.[0]; if (f) analisarFotoParede(c.id, pid, f); e.target.value = ""; }} />
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">Cole uma folha A4 na parede como referência. É estimativa — confira com trena.</div>
+                        </div>
                       )}
                     </div>
                   )}
