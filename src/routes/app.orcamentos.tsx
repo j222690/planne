@@ -1161,7 +1161,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.18 }}
-        className="relative w-full max-w-6xl bg-surface border border-border rounded-lg shadow-xl my-4"
+        className="relative w-full max-w-7xl bg-surface border border-border rounded-lg shadow-xl my-4"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -1451,6 +1451,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               ← Voltar
             </button>
 
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_420px] gap-5 items-start">
+              <div className="space-y-4 min-w-0">
             {/* Seleção de móveis — todos os ambientes */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -1878,28 +1880,37 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               </div>
             )}
 
-            {/* Visualização da parede */}
-            {moveis.length > 0 && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Visualização</div>
-                  <button type="button" onClick={ajustarAParede}
-                    className="h-6 px-2.5 rounded text-[11px] border border-accent/40 text-accent hover:bg-accent/10 transition-colors inline-flex items-center gap-1">
-                    <LayoutGrid className="size-3" /> Encaixar na parede
-                  </button>
-                </div>
-                <WallVisualization
-                  moveis={moveis}
-                  plantaInfo={plantaInfo}
-                  manualWalls={comodos.find((cc) => cc.nome === moveis[0]?.comodo_nome)?.paredes}
-                  medW={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.largura) || medidas.largura}
-                  medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
-                  selectedId={expandedMovel}
-                  onSelectMovel={(id) => setExpandedMovel(id)}
-                  onMoveMovel={(id, x) => updateMovel(id, { pos_x_cm: x })}
-                />
+              </div>{/* /coluna esquerda */}
+
+              {/* Coluna direita: preview ao lado do card */}
+              <div className="lg:sticky lg:top-4">
+                {moveis.length > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider">Visualização</div>
+                      <button type="button" onClick={ajustarAParede}
+                        className="h-6 px-2.5 rounded text-[11px] border border-accent/40 text-accent hover:bg-accent/10 transition-colors inline-flex items-center gap-1">
+                        <LayoutGrid className="size-3" /> Encaixar na parede
+                      </button>
+                    </div>
+                    <WallVisualization
+                      moveis={moveis}
+                      plantaInfo={plantaInfo}
+                      manualWalls={comodos.find((cc) => cc.nome === moveis[0]?.comodo_nome)?.paredes}
+                      medW={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.largura) || medidas.largura}
+                      medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
+                      selectedId={expandedMovel}
+                      onSelectMovel={(id) => setExpandedMovel(id)}
+                      onMoveMovel={(id, x) => updateMovel(id, { pos_x_cm: x })}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-[12px] text-muted-foreground border border-dashed border-border rounded-lg p-10 text-center">
+                    Selecione móveis para ver a parede
+                  </div>
+                )}
               </div>
-            )}
+            </div>{/* /grid duas colunas */}
 
             <div className="flex items-center justify-between pt-2">
               <div className="text-[12px] text-muted-foreground">
