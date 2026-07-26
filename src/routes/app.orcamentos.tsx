@@ -1161,7 +1161,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.18 }}
-        className="relative w-full max-w-7xl bg-surface border border-border rounded-lg shadow-xl my-4"
+        className="relative w-full max-w-7xl bg-surface border border-border rounded-lg shadow-xl my-4 min-h-[72vh] flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -1196,7 +1196,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
         {/* ── FASE 1: CONFIGURAR ── */}
         {fase === "configurar" && (
-          <div className="p-5 space-y-4">
+          <div className="p-6 space-y-5 flex-1">
             {/* Cliente + Margem */}
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
@@ -1445,7 +1445,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
         {/* ── FASE 2: MÓVEIS ── */}
         {fase === "moveis" && (
-          <div className="p-5 space-y-4">
+          <div className="p-6 space-y-5 flex-1">
             <button type="button" onClick={() => setFase("configurar")}
               className="text-[12px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
               ← Voltar
