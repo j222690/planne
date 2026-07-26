@@ -92,6 +92,9 @@ type MovelConfig = {
   ripa_largura_mm?: number;
   parede_id?: string;
   comodo_nome?: string;
+  // Posição horizontal na parede (cm a partir da esquerda). Se ausente, usa o
+  // auto-layout. Definida quando o usuário arrasta o móvel no preview.
+  pos_x_cm?: number;
   // Formato
   formato?: "retangular" | "L";
   arm2_largura_cm?: number;
@@ -234,7 +237,7 @@ const WALL_MOUNTED_Y: Record<string, number> = {
 };
 
 function WallVisualization({
-  moveis, plantaInfo, manualWalls, medW, medH, onSelectMovel, selectedId,
+  moveis, plantaInfo, manualWalls, medW, medH, onSelectMovel, selectedId, onMoveMovel,
 }: {
   moveis: MovelConfig[];
   plantaInfo: PlantaInfo | null;
@@ -242,9 +245,12 @@ function WallVisualization({
   medW: number; medH: number;
   onSelectMovel?: (id: string) => void;
   selectedId?: string | null;
+  onMoveMovel?: (id: string, x_cm: number) => void;
 }) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [selWall, setSelWall] = useState<string | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragRef = useRef<{ id: string; startClientX: number; startXcm: number; moved: boolean } | null>(null);
 
   // Paredes: da planta baixa, ou as paredes manuais A–D do cômodo
   const walls: Parede[] = plantaInfo?.paredes
@@ -289,22 +295,23 @@ function WallVisualization({
   let towerX = runMaxW;
   let seqX = 0;
   const laid = visible.map((m) => {
+    let x: number;
+    let yFloor: number;
     if (TOWER_TIPOS.has(m.tipo)) {
-      const x = towerX;
-      towerX += m.largura_cm;
-      return { m, x, yFloor: 0 };
-    }
-    if (RUN_TIPOS.has(m.tipo)) {
-      const yFloor = m.tipo === "arm-sup"
+      x = towerX; towerX += m.largura_cm; yFloor = 0;
+    } else if (RUN_TIPOS.has(m.tipo)) {
+      x = 0;
+      yFloor = m.tipo === "arm-sup"
         ? Math.max(0, wallH - m.altura_cm)   // superior encosta no teto
         : m.tipo === "bancada"
           ? armInfAltura                     // bancada em cima do inferior
           : 0;                               // inferior no chão
-      return { m, x: 0, yFloor };
+    } else {
+      x = seqX; seqX += m.largura_cm + 2; yFloor = WALL_MOUNTED_Y[m.tipo] ?? 0;
     }
-    const x = seqX;
-    seqX += m.largura_cm + 2;
-    return { m, x, yFloor: WALL_MOUNTED_Y[m.tipo] ?? 0 };
+    // Posição manual (arrastada) sobrescreve o auto-layout, presa à parede
+    if (m.pos_x_cm != null) x = Math.max(0, Math.min(wallW - m.largura_cm, m.pos_x_cm));
+    return { m, x, yFloor };
   });
 
   // 3D oblique helpers
@@ -315,6 +322,32 @@ function WallVisualization({
   const LABEL_PORTA: Record<string, string> = {
     abrir:"◁", abrir_vidro:"◁⬜", abrir_espelho:"◁▣",
     correr:"↔", correr_vidro:"↔⬜", correr_espelho:"↔▣", sem:"",
+  };
+
+  // ── Arrastar móvel dentro da parede (preso aos limites) ──
+  const cmFromClientDelta = (dxClient: number) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    const ratio = rect && rect.width ? SVG_W / rect.width : 1;
+    return (dxClient * ratio) / scale;
+  };
+  const onMovelDown = (e: React.PointerEvent, m: MovelConfig, curXcm: number) => {
+    if (!onMoveMovel) return;
+    dragRef.current = { id: m.id, startClientX: e.clientX, startXcm: curXcm, moved: false };
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+  };
+  const onSvgMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d || !onMoveMovel) return;
+    const dcm = cmFromClientDelta(e.clientX - d.startClientX);
+    if (Math.abs(dcm) > 1.5) d.moved = true;
+    const mv = moveis.find((x) => x.id === d.id);
+    const newX = Math.max(0, Math.min(wallW - (mv?.largura_cm ?? 0), Math.round(d.startXcm + dcm)));
+    onMoveMovel(d.id, newX);
+  };
+  const onSvgUp = () => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (d && !d.moved) onSelectMovel?.(d.id); // clique sem arrastar = selecionar
   };
 
   return (
@@ -335,8 +368,12 @@ function WallVisualization({
         <span className="ml-auto text-[10.5px] text-muted-foreground">{wallW}cm L × {wallH}cm H</span>
       </div>
 
+      {onMoveMovel && view === "2d" && (
+        <div className="text-[10.5px] text-muted-foreground">Arraste os móveis para posicionar · clique para editar</div>
+      )}
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
-        <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 320, display:"block" }}>
+        <svg ref={svgRef} width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 320, display:"block", touchAction: onMoveMovel ? "none" : undefined }}
+          onPointerMove={onSvgMove} onPointerUp={onSvgUp} onPointerLeave={onSvgUp}>
           {/* Wall bg */}
           <rect x={ox} y={oy} width={wallPxW} height={wallPxH} fill="#f1f5f9" stroke="#94a3b8" strokeWidth={1.5} />
           {/* Grid 50cm */}
@@ -380,7 +417,10 @@ function WallVisualization({
             const isMirror = m.tipo_porta?.includes("espelho");
             const isSel = selectedId === m.id;
             return (
-              <g key={m.id} onClick={() => onSelectMovel?.(m.id)} style={{ cursor: onSelectMovel ? "pointer" : "default" }}>
+              <g key={m.id}
+                onPointerDown={(e) => onMovelDown(e, m, x)}
+                onClick={() => { if (!onMoveMovel) onSelectMovel?.(m.id); }}
+                style={{ cursor: onMoveMovel ? "grab" : onSelectMovel ? "pointer" : "default" }}>
                 <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={isSel ? "#2563eb" : stroke} strokeWidth={isSel ? 2.2 : 1} rx={1} />
                 {/* Door splits */}
                 {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
@@ -1746,6 +1786,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   medH={(moveis[0]?.comodo_nome && comodosMedidas[moveis[0].comodo_nome]?.altura) || medidas.altura}
                   selectedId={expandedMovel}
                   onSelectMovel={(id) => setExpandedMovel(id)}
+                  onMoveMovel={(id, x) => updateMovel(id, { pos_x_cm: x })}
                 />
               </div>
             )}
