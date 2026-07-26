@@ -79,8 +79,16 @@ export interface PlantaAnalisada {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  const body = req.body as { planta_b64?: string; imagem_b64?: string; ambiente?: string; modo?: string; referencia?: string };
+
+  // Modo FOTO: estima a medida de UMA parede por foto com objeto de referência
+  // (folha A4/régua) via Gemini vision. Consolidado aqui para respeitar o limite
+  // de 12 funções serverless do plano Hobby.
+  if (body.modo === "foto" || body.referencia) {
+    return analisarFotoParede(body, res);
+  }
+
   // Aceita tanto planta_b64 (novo) quanto imagem_b64 (legado) para compatibilidade
-  const body = req.body as { planta_b64?: string; imagem_b64?: string; ambiente?: string };
   const planta_b64 = body.planta_b64 ?? body.imagem_b64;
   const { ambiente } = body;
   if (!planta_b64) return res.status(400).json({ error: "Imagem da planta não fornecida" });
@@ -189,5 +197,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ ...result, ambiente_geometrico });
   } catch (e) {
     return res.status(500).json({ error: e instanceof Error ? e.message : "Erro ao analisar planta" });
+  }
+}
+
+// ─── Modo FOTO: medir uma parede por foto com objeto de referência (Gemini) ────
+
+const REFS_FOTO: Record<string, string> = {
+  a4: "uma folha de papel A4 (21cm de largura por 29,7cm de altura) colada/apoiada na parede",
+  regua: "uma régua de 30cm",
+  porta: "a folha de uma porta padrão (80cm de largura por 210cm de altura)",
+};
+
+async function analisarFotoParede(
+  body: { imagem_b64?: string; planta_b64?: string; referencia?: string },
+  res: VercelResponse,
+) {
+  const imagem_b64 = body.imagem_b64 ?? body.planta_b64;
+  const ref = REFS_FOTO[body.referencia ?? "a4"] ?? REFS_FOTO.a4;
+  if (!imagem_b64) return res.status(400).json({ error: "Foto da parede não fornecida (imagem_b64)." });
+
+  const geminiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
+  if (!geminiKey) return res.status(500).json({ error: "GEMINI_API_KEY não configurada" });
+
+  const prompt = `Você é um especialista em medição de ambientes para marcenaria.
+Na foto há ${ref} como REFERÊNCIA DE ESCALA. Use essa referência para estimar as
+medidas REAIS da parede principal visível na foto.
+
+Estime, em centímetros:
+- largura_cm: largura (horizontal) da parede visível
+- altura_cm: altura (pé-direito) da parede visível
+Detecte também:
+- porta: true se há uma porta nesta parede
+- janela: true se há uma janela nesta parede
+- confianca: "alta" | "media" | "baixa"
+- observacao: 1 frase curta se algo atrapalhou a medição
+
+Use SOMENTE a referência para calcular; se ela não estiver clara, confianca="baixa".
+Responda APENAS JSON válido, sem markdown:
+{"largura_cm":380,"altura_cm":270,"porta":false,"janela":true,"confianca":"media","observacao":""}`;
+
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: detectMime(imagem_b64), data: imagem_b64 } }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+        }),
+      },
+    );
+    if (!r.ok) return res.status(502).json({ error: `Gemini (HTTP ${r.status}): ${(await r.text()).slice(0, 200)}` });
+
+    const d = await r.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const txt = d.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
+    if (!txt) return res.status(502).json({ error: "Gemini não retornou análise (possível bloqueio da imagem)." });
+
+    const out = JSON.parse(txt) as { largura_cm: number; altura_cm: number; porta: boolean; janela: boolean; confianca: string; observacao?: string };
+    out.largura_cm = Math.max(50, Math.min(1500, Math.round(out.largura_cm || 0)));
+    out.altura_cm = Math.max(180, Math.min(400, Math.round(out.altura_cm || 270)));
+    return res.json(out);
+  } catch (e) {
+    return res.status(502).json({ error: `Falha ao analisar a foto: ${e instanceof Error ? e.message : "erro"}` });
   }
 }

@@ -672,9 +672,9 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     const key = `${comodoId}|${paredeId}`;
     setFotoAnalisando(key);
     try {
-      const res = await fetch("/api/analisar-foto", {
+      const res = await fetch("/api/analisar-planta", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagem_b64: b64, referencia: "a4" }),
+        body: JSON.stringify({ imagem_b64: b64, modo: "foto", referencia: "a4" }),
       });
       const r = await res.json() as { largura_cm: number; altura_cm: number; porta: boolean; janela: boolean; confianca: string; error?: string };
       if (!res.ok) { toast.error(r.error ?? "Erro ao analisar a foto"); return; }
