@@ -792,17 +792,26 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               };
             })(),
             // Paredes A–D (se definidas): a mais longa vira a largura da parede
-            // principal, a segunda a profundidade (alimenta layouts em L/U).
+            // principal, a segunda a profundidade (alimenta layouts em L/U). As
+            // aberturas (porta/janela) são mapeadas para os lados do ambiente —
+            // o motor bloqueia o segmento e NÃO coloca armário em cima.
             medidas: (() => {
+              const lados = ["top", "left", "right", "bottom"] as const;
               const pm = (c.paredes ?? []).filter((p) => p.comprimento_cm > 0).sort((a, b) => b.comprimento_cm - a.comprimento_cm);
+              const portaIdx = pm.findIndex((p) => p.porta);
+              const janelas = pm.map((p, i) => (p.janela ? lados[Math.min(i, 3)] : null)).filter((x): x is typeof lados[number] => !!x);
               return {
                 largura_cm: pm[0]?.comprimento_cm ?? Math.round((c.largura || 4) * 100),
                 profundidade_cm: pm[1]?.comprimento_cm ?? Math.round((c.profundidade || 3) * 100),
                 altura_cm: Math.round((c.altura || 2.7) * 100),
+                ...(portaIdx >= 0 ? { porta_parede: lados[Math.min(portaIdx, 3)] } : {}),
+                ...(janelas.length ? { janelas_paredes: janelas } : {}),
               };
             })(),
             preferencias: {
-              parede_principal: "top", cor_mdf_hex: "#D9C7A8",
+              // sem forçar a parede — o motor escolhe a de maior espaço livre,
+              // evitando naturalmente a parede que tem porta.
+              cor_mdf_hex: "#D9C7A8",
               ferragem: empresaParams.ferragem_padrao,
               tipo_porta_base: "dobradica", tipo_porta_aereo: "dobradica", versao_comercial: "intermediaria",
               // Acabamentos padrão da empresa (rodapé, roda-teto, engrosso)
