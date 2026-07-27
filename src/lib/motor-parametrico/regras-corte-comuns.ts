@@ -20,6 +20,14 @@ import type {
 const ESP: EspessuraMDF = 15;
 const FUNDO: EspessuraMDF = 6;
 
+const ALTURA_GAVETA_PADRAO_CM = 16;
+/** Altura (mm) de cada frente de gaveta, configurável por módulo. */
+const alturaGavetaMm = (cfg: { altura_gaveta_cm?: number }) =>
+  (cfg.altura_gaveta_cm ?? ALTURA_GAVETA_PADRAO_CM) * 10;
+/** Altura (mm) da pilha de gavetas — descontada da porta quando há ambos. */
+const zonaGavetasMm = (cfg: { num_gavetas: number; altura_gaveta_cm?: number }) =>
+  cfg.num_gavetas > 0 ? cfg.num_gavetas * alturaGavetaMm(cfg) : 0;
+
 const semFita = (): FitaBorda => ({ esquerda: false, direita: false, topo: false, base: false });
 const fitaFrente = (): FitaBorda => ({ esquerda: false, direita: false, topo: true, base: false });
 const fitaTotal = (): FitaBorda => ({ esquerda: true, direita: true, topo: true, base: true });
@@ -133,7 +141,8 @@ export function regraPortaDobradica(): RegraCorte {
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "dobradica" || cfg.tipo_porta === "basculante"),
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
+    // altura desconta a zona de gavetas (gaveta em baixo → porta menor)
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: ESP,
     direcao_fio: "paralelo_comprimento",
@@ -149,7 +158,7 @@ export function regraPortaCorrer(): RegraCorte {
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "correr" || cfg.tipo_porta === "espelho"),
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L / Math.max(cfg.num_portas, 1)) + 20), // sobreposição
-    calcular_comprimento_mm: (_L, A) => A,
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: 15,
     direcao_fio: "paralelo_comprimento",
@@ -168,7 +177,11 @@ export function regrasGaveta(): RegraCorte[] {
       grupo: "gaveta",
       ativa_quando: (cfg) => cfg.num_gavetas > 0,
       calcular_largura_mm: (L) => L - 4,
-      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      // altura configurável por gaveta; se não houver porta, gavetas preenchem o
+      // corpo (divide a altura útil); com porta, usa a altura definida da gaveta.
+      calcular_comprimento_mm: (_L, A, _P, cfg) => cfg.num_portas > 0
+        ? alturaGavetaMm(cfg) - 4
+        : Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
       espessura_mm: ESP,
       direcao_fio: "paralelo_largura",
@@ -340,7 +353,9 @@ export function regrasEngrosso(): RegraCorte[] {
       grupo: "detalhe",
       ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_gavetas > 0,
       calcular_largura_mm: (L) => L - 4,
-      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => (cfg.num_portas > 0
+        ? alturaGavetaMm(cfg)
+        : Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1))) - 4,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
       espessura_mm: ESP,
       direcao_fio: "paralelo_largura",

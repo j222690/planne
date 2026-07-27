@@ -82,6 +82,9 @@ type MovelConfig = {
   portas: number;
   tipo_porta: "abrir" | "abrir_vidro" | "abrir_espelho" | "correr" | "correr_vidro" | "correr_espelho" | "sem";
   gavetas: number;
+  // Altura de cada frente de gaveta (cm). undefined = automática (16cm com porta,
+  // ou divide a altura útil quando é só gaveta). Com porta, a porta desconta isso.
+  altura_gaveta_cm?: number;
   prateleiras: number;
   tem_fundo?: boolean;
   tem_rodape?: boolean;
@@ -505,6 +508,15 @@ function WallVisualization({
             const isGlass = m.tipo_porta?.includes("vidro");
             const isMirror = m.tipo_porta?.includes("espelho");
             const isSel = selectedId === m.id;
+            // Zona das gavetas (embaixo). Fixa = nº × altura; auto c/ porta = 16cm;
+            // auto só-gaveta = preenche o móvel. A porta ocupa só o que sobra em cima.
+            const g = m.gavetas || 0;
+            const altGavCm = m.altura_gaveta_cm ?? 16;
+            const gavZoneCm = g === 0 ? 0
+              : (portas > 0 || m.altura_gaveta_cm != null) ? Math.min(m.altura_cm, g * altGavCm)
+              : m.altura_cm;
+            const gavZoneH = gavZoneCm * scale;
+            const doorBottom = fy + fh - gavZoneH; // base da zona de portas
             return (
               <g key={m.id}
                 onPointerDown={(e) => onMovelDown(e, m, x, yFloor)}
@@ -520,17 +532,19 @@ function WallVisualization({
                   <rect x={fx} y={fy} width={fw} height={Math.min(10 * scale, fh * 0.15)}
                     fill="rgba(71,85,105,0.28)" stroke={stroke} strokeWidth={0.5} />
                 )}
-                {/* Door splits */}
+                {/* Door splits — só na zona das portas (acima das gavetas) */}
                 {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
-                  <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={fy+fh}
+                  <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={doorBottom}
                     stroke={stroke} strokeWidth={0.7} strokeDasharray="3,1.5" />
                 ))}
-                {/* Gavetas — desenhadas como faixas na base do móvel, com puxador */}
-                {(m.gavetas || 0) > 0 && (() => {
-                  const g = m.gavetas;
-                  const zoneH = Math.min(fh, g * 22 * scale); // ~22cm por gaveta
-                  const zoneY = fy + fh - zoneH;
-                  const dh = zoneH / g;
+                {/* Linha separando portas das gavetas */}
+                {portas > 0 && g > 0 && (
+                  <line x1={fx} y1={doorBottom} x2={fx+fw} y2={doorBottom} stroke={stroke} strokeWidth={1} />
+                )}
+                {/* Gavetas — faixas na base, com a altura definida, com puxador */}
+                {g > 0 && (() => {
+                  const zoneY = fy + fh - gavZoneH;
+                  const dh = gavZoneH / g;
                   return (
                     <g>
                       {Array.from({ length: g }).map((_, i) => {
@@ -688,9 +702,27 @@ function msgErro(e: unknown, fallback = "Ocorreu um erro. Tente novamente."): st
   if (/violates|constraint|invalid input|null value/.test(m)) return "Dados inválidos para salvar. Confira os campos e tente de novo.";
   if (/rate limit|quota|insufficient|429/.test(m)) return "Limite de uso atingido. Tente novamente mais tarde.";
   if (/not found|404/.test(m)) return "Recurso não encontrado.";
+  // Crash da função serverless (Vercel) — a função caiu sem responder.
+  if (/function_invocation_failed|function_invocation_timeout|invocation failed|body_not_a_string|no_response_from_function|502|503|504/.test(m))
+    return "O servidor falhou ao processar (a função caiu ou demorou demais). Tente novamente; se persistir, reduza o nº de móveis/cômodos por vez.";
+  // Resposta HTML (página de erro) em vez de JSON — normalmente crash/deploy.
+  if (/<!doctype|<html|a server error has occurred/.test(m))
+    return "O servidor retornou um erro inesperado. Tente novamente em alguns instantes.";
   if (/500|internal server/.test(m)) return "Erro interno do servidor. Tente novamente.";
   // Mensagens do motor e validações já vêm em português — mostra como estão.
   return raw;
+}
+
+// Lê o corpo de uma resposta não-ok e extrai a melhor mensagem possível:
+// campo `error` de JSON, senão o status. Nunca devolve HTML gigante.
+async function erroDaResposta(res: Response): Promise<string> {
+  const txt = await res.text().catch(() => "");
+  try {
+    const j = JSON.parse(txt) as { error?: string; message?: string };
+    if (j.error || j.message) return j.error ?? j.message ?? "";
+  } catch { /* não é JSON */ }
+  if (/<!doctype|<html|function_invocation/i.test(txt)) return `HTTP ${res.status} FUNCTION_INVOCATION_FAILED`;
+  return txt.slice(0, 200) || `HTTP ${res.status}`;
 }
 
 // Plano de corte visualizável (chapa + peças encaixadas)
@@ -1030,7 +1062,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
             },
           }),
         });
-        if (!res.ok) throw new Error(`${c.nome}: ${(await res.json() as { error: string }).error}`);
+        if (!res.ok) throw new Error(`${c.nome}: ${await erroDaResposta(res)}`);
         const data = await res.json() as {
           orcamentos: Record<string, { itens: ItemMotorOrc[]; analise_financeira: { custo_total: number; preco_venda: number; margem_desejada_pct: number } }>;
           plano_corte?: { chapas?: ChapaCorte[] };
@@ -1286,7 +1318,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error(await erroDaResposta(res));
       const data = await res.json();
       if (!data.itens?.length) throw new Error("A IA não retornou itens.");
       replace(data.itens);
@@ -1866,11 +1898,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         </div>
 
                         {/* Portas + Gavetas + Prateleiras numa linha */}
+                        {(() => { const soGaveta = m.gavetas > 0 && m.portas === 0; return (
+                        <div className="space-y-1.5">
                         <div className="grid grid-cols-4 gap-1.5">
                           <div>
                             <div className="text-[11.5px] text-muted-foreground mb-0.5">Portas</div>
                             <input type="number" min={0} max={20} value={m.portas}
-                              onChange={(e) => updateMovel(m.id, { portas: Number(e.target.value) })}
+                              onChange={(e) => { const portas = Number(e.target.value); updateMovel(m.id, { portas, ...(portas === 0 && m.gavetas > 0 ? { prateleiras: 0 } : {}) }); }}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                           <div className="col-span-1">
@@ -1890,16 +1924,44 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           <div>
                             <div className="text-[11.5px] text-muted-foreground mb-0.5">Gavetas</div>
                             <input type="number" min={0} max={20} value={m.gavetas}
-                              onChange={(e) => updateMovel(m.id, { gavetas: Number(e.target.value) })}
+                              onChange={(e) => { const gavetas = Number(e.target.value); updateMovel(m.id, { gavetas, ...(gavetas > 0 && m.portas === 0 ? { prateleiras: 0 } : {}) }); }}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                           <div>
-                            <div className="text-[11.5px] text-muted-foreground mb-0.5">Prat.</div>
-                            <input type="number" min={0} max={20} value={m.prateleiras}
+                            <div className={`text-[11.5px] mb-0.5 ${soGaveta ? "text-muted-foreground/50" : "text-muted-foreground"}`}>Prat.</div>
+                            <input type="number" min={0} max={20} value={soGaveta ? 0 : m.prateleiras} disabled={soGaveta}
+                              title={soGaveta ? "Gaveteiro (só gavetas) não tem prateleiras" : undefined}
                               onChange={(e) => updateMovel(m.id, { prateleiras: Number(e.target.value) })}
-                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+                              className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none disabled:opacity-40" />
                           </div>
                         </div>
+                        {/* Altura da gaveta: fixa (cm) ou automática (divide a altura) */}
+                        {m.gavetas > 0 && (
+                          <div className="flex items-center gap-2 text-[11.5px]">
+                            <span className="text-muted-foreground">Altura da gaveta:</span>
+                            <label className="inline-flex items-center gap-1 cursor-pointer">
+                              <input type="radio" name={`altgav-${m.id}`} checked={m.altura_gaveta_cm == null}
+                                onChange={() => updateMovel(m.id, { altura_gaveta_cm: undefined })} />
+                              <span>Automática {m.portas === 0 ? "(divide a altura)" : "(16cm)"}</span>
+                            </label>
+                            <label className="inline-flex items-center gap-1 cursor-pointer">
+                              <input type="radio" name={`altgav-${m.id}`} checked={m.altura_gaveta_cm != null}
+                                onChange={() => updateMovel(m.id, { altura_gaveta_cm: m.altura_gaveta_cm ?? 16 })} />
+                              <span>Fixa</span>
+                            </label>
+                            {m.altura_gaveta_cm != null && (
+                              <div className="relative">
+                                <input type="number" min={5} max={60} value={m.altura_gaveta_cm}
+                                  onChange={(e) => updateMovel(m.id, { altura_gaveta_cm: Number(e.target.value) })}
+                                  className="w-16 h-7 rounded border border-border bg-surface-2 pl-2 pr-6 text-[12px] outline-none" />
+                                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">cm</span>
+                              </div>
+                            )}
+                            {m.portas > 0 && <span className="text-muted-foreground/70">· a porta desconta essa altura</span>}
+                          </div>
+                        )}
+                        </div>
+                        ); })()}
 
                         {/* Opções básicas — checkboxes compactos */}
                         <div className="flex flex-wrap gap-x-3 gap-y-1.5">
@@ -2012,18 +2074,29 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                                 </div>
                               )}
                             </div>
-                            {/* Pés de madeira */}
+                            {/* Pés de madeira maciça — somam a altura ao móvel e ligam rodapé */}
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input type="checkbox" checked={m.pe_madeira ?? false}
-                                onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 15, ...(e.target.checked ? { tem_rodape: true } : {}) })}
+                                onChange={(e) => {
+                                  const peAlt = m.pe_altura_cm ?? 15;
+                                  if (e.target.checked) {
+                                    updateMovel(m.id, { pe_madeira: true, pe_altura_cm: peAlt, tem_rodape: true, altura_cm: m.altura_cm + peAlt });
+                                  } else {
+                                    updateMovel(m.id, { pe_madeira: false, altura_cm: Math.max(10, m.altura_cm - peAlt) });
+                                  }
+                                }}
                                 className="rounded" />
-                              <span className="text-[11.5px]">Pés de madeira maciça</span>
+                              <span className="text-[11.5px]">Pés de madeira maciça <span className="text-muted-foreground/70">(+ altura no móvel)</span></span>
                             </label>
                             {m.pe_madeira && (
-                              <div className="w-40 pl-5">
-                                <div className="text-[11px] text-muted-foreground mb-0.5">Altura dos pés (cm) · rodapé = +5cm</div>
+                              <div className="w-44 pl-5">
+                                <div className="text-[11px] text-muted-foreground mb-0.5">Altura dos pés (cm) · soma na altura</div>
                                 <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 15}
-                                  onChange={(e) => updateMovel(m.id, { pe_altura_cm: Number(e.target.value) })}
+                                  onChange={(e) => {
+                                    const novo = Number(e.target.value);
+                                    const delta = novo - (m.pe_altura_cm ?? 15);
+                                    updateMovel(m.id, { pe_altura_cm: novo, altura_cm: Math.max(10, m.altura_cm + delta) });
+                                  }}
                                   className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
                               </div>
                             )}

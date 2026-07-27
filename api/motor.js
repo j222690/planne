@@ -4,6 +4,9 @@
 // src/lib/motor-parametrico/regras-corte-comuns.ts
 var ESP = 15;
 var FUNDO = 6;
+var ALTURA_GAVETA_PADRAO_CM = 16;
+var alturaGavetaMm = (cfg) => (cfg.altura_gaveta_cm ?? ALTURA_GAVETA_PADRAO_CM) * 10;
+var zonaGavetasMm = (cfg) => cfg.num_gavetas > 0 ? cfg.num_gavetas * alturaGavetaMm(cfg) : 0;
 var semFita = () => ({ esquerda: false, direita: false, topo: false, base: false });
 var fitaFrente = () => ({ esquerda: false, direita: false, topo: true, base: false });
 var fitaTotal = () => ({ esquerda: true, direita: true, topo: true, base: true });
@@ -93,7 +96,8 @@ function regraPortaDobradica() {
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "dobradica" || cfg.tipo_porta === "basculante"),
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
+    // altura desconta a zona de gavetas (gaveta em baixo → porta menor)
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: ESP,
     direcao_fio: "paralelo_comprimento",
@@ -108,7 +112,7 @@ function regraPortaCorrer() {
     ativa_quando: (cfg) => cfg.num_portas > 0 && (cfg.tipo_porta === "correr" || cfg.tipo_porta === "espelho"),
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1) + 20),
     // sobreposição
-    calcular_comprimento_mm: (_L, A) => A,
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: 15,
     direcao_fio: "paralelo_comprimento",
@@ -123,7 +127,9 @@ function regrasGaveta() {
       grupo: "gaveta",
       ativa_quando: (cfg) => cfg.num_gavetas > 0,
       calcular_largura_mm: (L) => L - 4,
-      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      // altura configurável por gaveta; se não houver porta, gavetas preenchem o
+      // corpo (divide a altura útil); com porta, usa a altura definida da gaveta.
+      calcular_comprimento_mm: (_L, A, _P, cfg) => cfg.num_portas > 0 ? alturaGavetaMm(cfg) - 4 : Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
       espessura_mm: ESP,
       direcao_fio: "paralelo_largura",
@@ -270,7 +276,7 @@ function regrasEngrosso() {
       grupo: "detalhe",
       ativa_quando: (cfg) => cfg.tem_engrosso_frentes === true && cfg.num_gavetas > 0,
       calcular_largura_mm: (L) => L - 4,
-      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1)) - 4,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => (cfg.num_portas > 0 ? alturaGavetaMm(cfg) : Math.round((A - 2 * ESP) / Math.max(cfg.num_gavetas, 1))) - 4,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
       espessura_mm: ESP,
       direcao_fio: "paralelo_largura",
@@ -417,6 +423,9 @@ var AEREO_PROFUNDIDADE_CM = 33;
 var AEREO_ALTURA_CM = 40;
 var ESP2 = 15;
 var FUNDO2 = 6;
+var ALTURA_GAVETA_PADRAO_CM2 = 16;
+var alturaGavetaMm2 = (cfg) => (cfg.altura_gaveta_cm ?? ALTURA_GAVETA_PADRAO_CM2) * 10;
+var zonaGavetasMm2 = (cfg) => cfg.num_gavetas > 0 ? cfg.num_gavetas * alturaGavetaMm2(cfg) : 0;
 var regrasCorpoBase = [
   {
     nome: "lateral",
@@ -496,7 +505,8 @@ var regrasCorpoBase = [
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "dobradica",
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
+    // altura da porta desconta a zona de gavetas (gaveta em baixo → porta menor)
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm2(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: ESP2,
     direcao_fio: "paralelo_comprimento",
@@ -508,7 +518,7 @@ var regrasCorpoBase = [
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "correr",
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm2(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: ESP2,
     direcao_fio: "paralelo_comprimento",
@@ -521,7 +531,7 @@ var regrasCorpoBase = [
     grupo: "gaveta",
     ativa_quando: (cfg) => cfg.num_gavetas > 0,
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP2) / Math.max(cfg.num_gavetas, 1)),
-    calcular_comprimento_mm: () => 160,
+    calcular_comprimento_mm: (_L, _A, _P, cfg) => alturaGavetaMm2(cfg),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
     espessura_mm: ESP2,
     direcao_fio: "indiferente",

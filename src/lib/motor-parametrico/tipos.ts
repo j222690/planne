@@ -271,6 +271,12 @@ export interface ConfiguracaoModulo {
   num_portas: number;
   num_prateleiras: number;
   num_gavetas: number;
+  /**
+   * Altura de cada frente de gaveta (cm). Quando o módulo tem porta E gaveta,
+   * a zona de gavetas (num_gavetas × esta altura) é descontada da altura da
+   * porta — assim porta e gavetas não se sobrepõem na face. Default 16cm.
+   */
+  altura_gaveta_cm?: Centimetros;
   num_divisorias: number;
   tem_cabideiro: boolean;
   tem_fundo: boolean;

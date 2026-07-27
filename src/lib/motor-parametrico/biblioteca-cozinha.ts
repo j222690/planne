@@ -32,6 +32,17 @@ export const AEREO_ALTURA_ALTA_CM = 70;   // altura de aéreo alto
 const ESP: EspessuraMDF = 15;   // espessura do corpo
 const FUNDO: EspessuraMDF = 6;  // espessura do fundo
 
+const ALTURA_GAVETA_PADRAO_CM = 16;
+/** Altura (mm) de cada frente de gaveta, configurável por módulo. */
+const alturaGavetaMm = (cfg: ConfiguracaoModulo) =>
+  (cfg.altura_gaveta_cm ?? ALTURA_GAVETA_PADRAO_CM) * 10;
+/**
+ * Altura (mm) ocupada pela pilha de gavetas na face. Usada para descontar da
+ * porta quando o módulo tem porta E gaveta (não se sobrepõem verticalmente).
+ */
+const zonaGavetasMm = (cfg: ConfiguracaoModulo) =>
+  cfg.num_gavetas > 0 ? cfg.num_gavetas * alturaGavetaMm(cfg) : 0;
+
 // ─── REGRAS COMUNS ────────────────────────────────────────────────────────────
 
 const regrasCorpoBase: RegraCorte[] = [
@@ -113,7 +124,8 @@ const regrasCorpoBase: RegraCorte[] = [
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "dobradica",
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
+    // altura da porta desconta a zona de gavetas (gaveta em baixo → porta menor)
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: ESP,
     direcao_fio: "paralelo_comprimento",
@@ -125,7 +137,7 @@ const regrasCorpoBase: RegraCorte[] = [
     grupo: "porta",
     ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "correr",
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
-    calcular_comprimento_mm: (_L, A) => A,
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
     espessura_mm: ESP,
     direcao_fio: "paralelo_comprimento",
@@ -138,7 +150,7 @@ const regrasCorpoBase: RegraCorte[] = [
     grupo: "gaveta",
     ativa_quando: (cfg) => cfg.num_gavetas > 0,
     calcular_largura_mm: (L, _A, _P, cfg) => Math.round((L - 2 * ESP) / Math.max(cfg.num_gavetas, 1)),
-    calcular_comprimento_mm: () => 160,
+    calcular_comprimento_mm: (_L, _A, _P, cfg) => alturaGavetaMm(cfg),
     calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_gavetas,
     espessura_mm: ESP,
     direcao_fio: "indiferente",
