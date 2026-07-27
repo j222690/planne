@@ -337,7 +337,7 @@ function WallVisualization({
   const wallH = plantaInfo?.altura_cm ?? (medH > 0 ? Math.round(medH * 100) : 270);
 
   const SVG_W = 680, SVG_H = 360;
-  const ML = 28, MT = 28, MR = 12, MB = 28;
+  const ML = 34, MT = 30, MR = 14, MB = 34;
   const availW = SVG_W - ML - MR, availH = SVG_H - MT - MB;
   const scale = Math.min(availW / wallW, availH / wallH);
   const wallPxW = wallW * scale, wallPxH = wallH * scale;
@@ -550,15 +550,33 @@ function WallVisualization({
                 {/* Glass/mirror overlay */}
                 {isGlass && <rect x={fx+2} y={fy+2} width={fw-4} height={fh-4} fill="rgba(186,230,253,0.35)" stroke="#0284c7" strokeWidth={0.8} rx={1} />}
                 {isMirror && <rect x={fx+2} y={fy+2} width={fw-4} height={fh-4} fill="rgba(203,213,225,0.5)" stroke="#64748b" strokeWidth={0.8} rx={1} />}
-                {/* Label */}
-                {fw>16 && fh>10 && (
-                  <text x={fx+fw/2} y={fy+fh/2} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.max(11,Math.min(15,fw/6))} fill="#1e293b" fontWeight="600">
-                    {m.nome.length>13 ? m.nome.slice(0,12)+"…" : m.nome}
-                  </text>
-                )}
+                {/* Label — vertical (girado) quando o móvel é estreito e alto */}
+                {(() => {
+                  const cx = fx + fw / 2, cy = fy + fh / 2;
+                  const vertical = fh > fw * 1.25 && fw < 90;
+                  if (vertical) {
+                    if (fh < 24) return null;
+                    // texto sobe na vertical; tamanho pela LARGURA disponível
+                    const fs = Math.max(12, Math.min(22, fw / 3.2));
+                    const maxCh = Math.floor(fh / (fs * 0.62));
+                    const txt = m.nome.length > maxCh ? m.nome.slice(0, Math.max(1, maxCh - 1)) + "…" : m.nome;
+                    return (
+                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+                        transform={`rotate(-90 ${cx} ${cy})`}
+                        fontSize={fs} fill="#1e293b" fontWeight="700">{txt}</text>
+                    );
+                  }
+                  if (fw <= 16 || fh <= 10) return null;
+                  const fs = Math.max(12, Math.min(18, fw / 5));
+                  const maxCh = Math.floor(fw / (fs * 0.6));
+                  const txt = m.nome.length > maxCh ? m.nome.slice(0, Math.max(1, maxCh - 1)) + "…" : m.nome;
+                  return (
+                    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={fs} fill="#1e293b" fontWeight="700">{txt}</text>
+                  );
+                })()}
                 {/* Width below */}
-                <text x={fx+fw/2} y={oy+wallPxH+18} textAnchor="middle" fontSize={11} fontWeight="600" fill="#475569">{m.largura_cm}</text>
+                <text x={fx+fw/2} y={oy+wallPxH+20} textAnchor="middle" fontSize={13} fontWeight="700" fill="#334155">{m.largura_cm}</text>
               </g>
             );
           }) : laid.map(({ m, x, yFloor }) => {
@@ -594,9 +612,9 @@ function WallVisualization({
           })}
 
           {/* Dimensions */}
-          <text x={ox+wallPxW/2} y={oy-10} textAnchor="middle" fontSize={13} fontWeight="600" fill="#475569">{wallW}cm</text>
-          <text x={ox-16} y={oy+wallPxH/2} textAnchor="middle" fontSize={13} fontWeight="600" fill="#475569"
-            transform={`rotate(-90 ${ox-16} ${oy+wallPxH/2})`}>{wallH}cm</text>
+          <text x={ox+wallPxW/2} y={oy-11} textAnchor="middle" fontSize={16} fontWeight="700" fill="#334155">{wallW}cm</text>
+          <text x={ox-18} y={oy+wallPxH/2} textAnchor="middle" fontSize={16} fontWeight="700" fill="#334155"
+            transform={`rotate(-90 ${ox-18} ${oy+wallPxH/2})`}>{wallH}cm</text>
         </svg>
       </div>
 
@@ -763,16 +781,19 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
   const addComodo = (tipo: string) => {
     if (!tipo) return;
+    let nomeNovo = tipo;
     setComodos((prev) => {
       const mesmoTipo = prev.filter((c) => c.tipo === tipo).length;
-      const nome = mesmoTipo > 0 ? `${tipo} ${mesmoTipo + 1}` : tipo;
+      nomeNovo = mesmoTipo > 0 ? `${tipo} ${mesmoTipo + 1}` : tipo;
       return [...prev, {
         id: Math.random().toString(36).slice(2),
-        nome, tipo, largura: 0, profundidade: 0, altura: 2.7,
+        nome: nomeNovo, tipo, largura: 0, profundidade: 0, altura: 2.7,
         paredes: [{ id: "A", comprimento_cm: 0 }],
         plantaB64: null, plantaNome: null, plantaInfo: null, analisando: false,
       }];
     });
+    // Cômodo novo começa com a lista de móveis aberta.
+    setOpenAmbientes((prev) => new Set([...prev, nomeNovo]));
     setNovoComodoTipo("");
   };
 
@@ -1679,7 +1700,9 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     : templates;
                   if (filtered.length === 0) return null;
                   const selCount = templates.filter((t) => moveis.some((m) => m.tipo === t.tipo && m.comodo_nome === c.nome)).length;
-                  const isOpen = openAmbientes.has(c.nome) || selCount > 0 || searchMoveis.trim().length > 0;
+                  // Aberto se: buscando (mostra resultados) ou o usuário deixou aberto.
+                  // NÃO força abrir por ter seleção — senão não dá para recolher.
+                  const isOpen = searchMoveis.trim().length > 0 || openAmbientes.has(c.nome);
                   return (
                     <div key={c.id} className="rounded-lg border border-border overflow-hidden">
                       <button type="button" onClick={() => toggleAmbiente(c.nome)}
@@ -1693,7 +1716,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           {selCount > 0 && (
                             <span className="text-[11.5px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-medium">{selCount} sel.</span>
                           )}
-                          {isOpen ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
+                          {isOpen ? <ChevronUp className="size-4 text-foreground" /> : <ChevronDown className="size-4 text-foreground" />}
                         </div>
                       </button>
                       {isOpen && (
