@@ -2226,12 +2226,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               </div>
             </div>{/* /grid duas colunas */}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-3 mt-2 flex items-center justify-between bg-surface/95 backdrop-blur border-t border-border rounded-b-lg z-10">
               <div className="text-[12px] text-muted-foreground">
                 {moveis.length === 0 ? "Nenhum móvel selecionado" : `${moveis.length} móvel(is) configurado(s)`}
               </div>
               <button type="button" onClick={handleGerarIA} disabled={aiLoading || moveis.length === 0}
-                className="h-9 px-4 rounded-md bg-accent text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2">
+                className="h-10 px-5 rounded-md bg-accent text-white text-[14px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2 shadow-lg">
                 {aiLoading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
                 {aiLoading ? "Calculando..." : "Gerar Orçamento com IA"}
               </button>

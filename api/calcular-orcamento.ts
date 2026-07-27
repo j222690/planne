@@ -150,6 +150,10 @@ RESPONDA APENAS com JSON válido (sem markdown):
   "resumo": "Orçamento detalhado para [ambiente]: [lista dos móveis]. Total calculado com base nas dimensões fornecidas, incluindo ferragens automáticas conforme configuração de portas e gavetas."
 }`;
 
+// Dá folga à função (o caminho com IA/planta pode demorar). O caminho
+// determinístico retorna rápido; isso só evita corte prematuro em cold start.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -172,6 +176,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!materiais?.length) return res.status(400).json({ error: "Nenhum material fornecido" });
   if (!moveis?.length && !planta_b64) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
+
+  // Rede de segurança: rejeita medidas inválidas (0, negativas, NaN, Infinity)
+  // ANTES de calcular — evita divisões por zero / números não-finitos que podem
+  // derrubar a função. Mensagem clara em português para o usuário corrigir.
+  if (moveis?.length) {
+    const invalido = moveis.find((m) =>
+      ![m.largura_cm, m.profundidade_cm, m.altura_cm].every((v) => Number.isFinite(v) && v > 0));
+    if (invalido) {
+      return res.status(400).json({
+        error: `Móvel "${invalido.nome || "sem nome"}" tem medida inválida (largura, profundidade e altura devem ser maiores que zero).`,
+      });
+    }
+  }
 
   // Filtrar catálogo apenas aos materiais relevantes para os móveis configurados
   const temPortasAbrir = moveis?.some((m) => m.portas > 0 && (m.tipo_porta === "abrir" || m.tipo_porta === "abrir_vidro" || m.tipo_porta === "abrir_espelho"));
