@@ -262,8 +262,10 @@ function WallVisualization({
     }));
   const activeWall = selWall ?? walls[0]?.id ?? null;
 
+  // Cada móvel fica em UMA parede. Sem parede atribuída → assume a primeira (A),
+  // então ao trocar de parede o móvel não "segue" a parede ativa.
   const visible = activeWall
-    ? moveis.filter((m) => !m.parede_id || m.parede_id === activeWall)
+    ? moveis.filter((m) => (m.parede_id ?? walls[0]?.id) === activeWall)
     : moveis;
 
   // Aberturas (porta/janela) da parede ativa — desenhadas no preview
