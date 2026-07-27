@@ -449,6 +449,15 @@ function WallVisualization({
                 onClick={() => { if (!onMoveMovel) onSelectMovel?.(m.id); }}
                 style={{ cursor: onMoveMovel ? "move" : onSelectMovel ? "pointer" : "default" }}>
                 <rect x={fx} y={fy} width={fw} height={fh} fill={fill} stroke={isSel ? "#2563eb" : stroke} strokeWidth={isSel ? 2.2 : 1} rx={1} />
+                {/* Rodapé (faixa embaixo) e roda-teto (faixa em cima) — 10cm */}
+                {m.tem_rodape && (
+                  <rect x={fx} y={fy + fh - Math.min(10 * scale, fh * 0.15)} width={fw} height={Math.min(10 * scale, fh * 0.15)}
+                    fill="rgba(71,85,105,0.28)" stroke={stroke} strokeWidth={0.5} />
+                )}
+                {m.tem_roda_teto && (
+                  <rect x={fx} y={fy} width={fw} height={Math.min(10 * scale, fh * 0.15)}
+                    fill="rgba(71,85,105,0.28)" stroke={stroke} strokeWidth={0.5} />
+                )}
                 {/* Door splits */}
                 {portas > 1 && Array.from({length: portas-1}).map((_,i) => (
                   <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={fy+fh}
