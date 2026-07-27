@@ -124,58 +124,96 @@ type MatCatalog = {
 const MOVEIS_POR_AMBIENTE: Record<string, Omit<MovelConfig, "id">[]> = {
   "Quarto": [
     { tipo: "cabeceira", nome: "Cabeceira", largura_cm: 160, profundidade_cm: 5, altura_cm: 120, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0 },
+    { tipo: "cabeceira-nichos", nome: "Cabeceira c/ Nichos", largura_cm: 200, profundidade_cm: 15, altura_cm: 120, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 2 },
     { tipo: "roupeiro", nome: "Roupeiro", largura_cm: 200, profundidade_cm: 60, altura_cm: 230, portas: 4, tipo_porta: "abrir", gavetas: 2, prateleiras: 3 },
+    { tipo: "roupeiro-correr", nome: "Roupeiro de Correr", largura_cm: 250, profundidade_cm: 60, altura_cm: 250, portas: 3, tipo_porta: "correr", gavetas: 3, prateleiras: 4 },
+    { tipo: "guarda-roupa-canto", nome: "Guarda-roupa de Canto", largura_cm: 180, profundidade_cm: 60, altura_cm: 250, portas: 3, tipo_porta: "abrir", gavetas: 2, prateleiras: 4, formato: "L" },
     { tipo: "comoda", nome: "Cômoda", largura_cm: 120, profundidade_cm: 50, altura_cm: 80, portas: 0, tipo_porta: "sem", gavetas: 4, prateleiras: 0 },
     { tipo: "criado-mudo", nome: "Criado-mudo", largura_cm: 45, profundidade_cm: 40, altura_cm: 60, portas: 1, tipo_porta: "abrir", gavetas: 1, prateleiras: 0 },
     { tipo: "escrivaninha", nome: "Escrivaninha", largura_cm: 140, profundidade_cm: 65, altura_cm: 75, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 1 },
+    { tipo: "bancada-estudo", nome: "Bancada de Estudo", largura_cm: 120, profundidade_cm: 50, altura_cm: 75, portas: 0, tipo_porta: "sem", gavetas: 1, prateleiras: 2 },
     { tipo: "estante", nome: "Estante", largura_cm: 100, profundidade_cm: 35, altura_cm: 200, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
+    { tipo: "prateleiras-quarto", nome: "Prateleiras", largura_cm: 120, profundidade_cm: 30, altura_cm: 40, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 2 },
     { tipo: "ripado", nome: "Painel Ripado", largura_cm: 160, profundidade_cm: 5, altura_cm: 240, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0, tem_ripado: true, ripa_espessura_mm: 15, ripa_largura_mm: 30 },
   ],
   "Cozinha": [
     { tipo: "arm-sup", nome: "Armários Superiores", largura_cm: 300, profundidade_cm: 35, altura_cm: 70, portas: 6, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
     { tipo: "arm-inf", nome: "Armários Inferiores", largura_cm: 300, profundidade_cm: 60, altura_cm: 85, portas: 4, tipo_porta: "abrir", gavetas: 3, prateleiras: 0 },
+    { tipo: "balcao-gaveteiro", nome: "Balcão Gaveteiro", largura_cm: 80, profundidade_cm: 60, altura_cm: 85, portas: 0, tipo_porta: "sem", gavetas: 4, prateleiras: 0 },
+    { tipo: "balcao-pia", nome: "Balcão de Pia", largura_cm: 120, profundidade_cm: 60, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 0 },
+    { tipo: "balcao-cooktop", nome: "Balcão p/ Cooktop", largura_cm: 80, profundidade_cm: 60, altura_cm: 85, portas: 1, tipo_porta: "abrir", gavetas: 1, prateleiras: 0 },
     { tipo: "bancada", nome: "Bancada / Tampo", largura_cm: 300, profundidade_cm: 60, altura_cm: 5, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0 },
+    { tipo: "ilha", nome: "Ilha", largura_cm: 180, profundidade_cm: 90, altura_cm: 85, portas: 4, tipo_porta: "abrir", gavetas: 2, prateleiras: 0 },
     { tipo: "torre", nome: "Torre Forno / Micro", largura_cm: 70, profundidade_cm: 60, altura_cm: 230, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
+    { tipo: "torre-quente", nome: "Torre Quente (forno+micro)", largura_cm: 70, profundidade_cm: 60, altura_cm: 230, portas: 3, tipo_porta: "abrir", gavetas: 1, prateleiras: 1 },
     { tipo: "despenseiro", nome: "Despenseiro", largura_cm: 40, profundidade_cm: 60, altura_cm: 230, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 5 },
+    { tipo: "paneleiro", nome: "Paneleiro", largura_cm: 60, profundidade_cm: 60, altura_cm: 230, portas: 2, tipo_porta: "abrir", gavetas: 3, prateleiras: 2 },
+    { tipo: "adega-cozinha", nome: "Nicho Adega / Garrafas", largura_cm: 40, profundidade_cm: 35, altura_cm: 70, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 3 },
   ],
   "Sala": [
     { tipo: "rack", nome: "Rack", largura_cm: 200, profundidade_cm: 45, altura_cm: 50, portas: 2, tipo_porta: "correr", gavetas: 0, prateleiras: 2 },
+    { tipo: "rack-suspenso", nome: "Rack Suspenso", largura_cm: 180, profundidade_cm: 40, altura_cm: 40, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 1 },
     { tipo: "estante-sala", nome: "Estante", largura_cm: 150, profundidade_cm: 35, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
+    { tipo: "home-completo", nome: "Home Theater Completo", largura_cm: 300, profundidade_cm: 45, altura_cm: 240, portas: 4, tipo_porta: "abrir", gavetas: 2, prateleiras: 4 },
     { tipo: "buffet", nome: "Buffet / Aparador", largura_cm: 150, profundidade_cm: 45, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 2, prateleiras: 1 },
+    { tipo: "cristaleira", nome: "Cristaleira", largura_cm: 120, profundidade_cm: 40, altura_cm: 200, portas: 2, tipo_porta: "abrir_vidro", gavetas: 1, prateleiras: 4 },
+    { tipo: "estante-livros", nome: "Estante de Livros", largura_cm: 180, profundidade_cm: 30, altura_cm: 240, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 6 },
     { tipo: "painel-tv", nome: "Painel TV", largura_cm: 200, profundidade_cm: 5, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0, tem_ripado: true, ripa_espessura_mm: 15, ripa_largura_mm: 30 },
   ],
   "Escritório": [
     { tipo: "mesa-trab", nome: "Mesa de Trabalho", largura_cm: 160, profundidade_cm: 75, altura_cm: 75, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 0 },
+    { tipo: "mesa-l", nome: "Mesa em L", largura_cm: 180, profundidade_cm: 75, altura_cm: 75, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 0, formato: "L" },
     { tipo: "estante-escr", nome: "Estante / Prateleiras", largura_cm: 150, profundidade_cm: 35, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
     { tipo: "armario-escr", nome: "Armário", largura_cm: 100, profundidade_cm: 50, altura_cm: 200, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 3 },
+    { tipo: "armario-arquivo", nome: "Armário de Arquivo", largura_cm: 90, profundidade_cm: 50, altura_cm: 130, portas: 0, tipo_porta: "sem", gavetas: 4, prateleiras: 0 },
     { tipo: "gaveteiro", nome: "Gaveteiro", largura_cm: 40, profundidade_cm: 50, altura_cm: 70, portas: 0, tipo_porta: "sem", gavetas: 4, prateleiras: 0 },
+    { tipo: "credenza", nome: "Credenza / Balcão", largura_cm: 160, profundidade_cm: 45, altura_cm: 75, portas: 3, tipo_porta: "abrir", gavetas: 1, prateleiras: 1 },
+    { tipo: "painel-escr", nome: "Painel Ripado", largura_cm: 160, profundidade_cm: 5, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0, tem_ripado: true, ripa_espessura_mm: 15, ripa_largura_mm: 30 },
   ],
   "Closet": [
     { tipo: "prateleiras-cl", nome: "Prateleiras", largura_cm: 100, profundidade_cm: 45, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 6 },
     { tipo: "cabideiro", nome: "Cabideiro", largura_cm: 100, profundidade_cm: 55, altura_cm: 120, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 1 },
+    { tipo: "cabideiro-duplo", nome: "Cabideiro Duplo", largura_cm: 100, profundidade_cm: 55, altura_cm: 200, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 2 },
     { tipo: "gavetas-cl", nome: "Gaveteiro", largura_cm: 80, profundidade_cm: 55, altura_cm: 100, portas: 0, tipo_porta: "sem", gavetas: 4, prateleiras: 0 },
+    { tipo: "modulo-calcas", nome: "Módulo de Calças", largura_cm: 60, profundidade_cm: 55, altura_cm: 100, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
+    { tipo: "nicho-bolsas", nome: "Nichos p/ Bolsas", largura_cm: 90, profundidade_cm: 40, altura_cm: 120, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 4 },
+    { tipo: "ilha-closet", nome: "Ilha Central", largura_cm: 120, profundidade_cm: 60, altura_cm: 90, portas: 0, tipo_porta: "sem", gavetas: 6, prateleiras: 0 },
     { tipo: "sapateira", nome: "Sapateira", largura_cm: 100, profundidade_cm: 35, altura_cm: 60, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 3 },
   ],
   "Banheiro": [
     { tipo: "gabinete", nome: "Gabinete", largura_cm: 80, profundidade_cm: 45, altura_cm: 55, portas: 2, tipo_porta: "abrir", gavetas: 1, prateleiras: 0 },
+    { tipo: "gabinete-suspenso", nome: "Gabinete Suspenso", largura_cm: 100, profundidade_cm: 45, altura_cm: 40, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 0 },
     { tipo: "espelheira", nome: "Espelheira / Nicho", largura_cm: 80, profundidade_cm: 15, altura_cm: 60, portas: 1, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
+    { tipo: "armario-alto-ban", nome: "Armário Alto", largura_cm: 40, profundidade_cm: 30, altura_cm: 180, portas: 1, tipo_porta: "abrir", gavetas: 0, prateleiras: 4 },
     { tipo: "nicho-ban", nome: "Nicho Decorativo", largura_cm: 60, profundidade_cm: 15, altura_cm: 30, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 1 },
   ],
   "Área gourmet": [
     { tipo: "bancada-gourmet", nome: "Bancada", largura_cm: 200, profundidade_cm: 60, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 2, prateleiras: 0 },
     { tipo: "armario-gourmet", nome: "Armário", largura_cm: 150, profundidade_cm: 60, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
+    { tipo: "arm-sup-gourmet", nome: "Armários Superiores", largura_cm: 200, profundidade_cm: 35, altura_cm: 70, portas: 4, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
+    { tipo: "churrasqueira-mod", nome: "Módulo Churrasqueira", largura_cm: 100, profundidade_cm: 60, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 1 },
+    { tipo: "adega-gourmet", nome: "Adega / Cave", largura_cm: 60, profundidade_cm: 50, altura_cm: 120, portas: 1, tipo_porta: "abrir_vidro", gavetas: 0, prateleiras: 5 },
   ],
   "Lavanderia": [
     { tipo: "arm-lav", nome: "Armário", largura_cm: 100, profundidade_cm: 45, altura_cm: 200, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 3 },
     { tipo: "bancada-lav", nome: "Bancada", largura_cm: 150, profundidade_cm: 60, altura_cm: 85, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0 },
+    { tipo: "arm-sup-lav", nome: "Armário Superior", largura_cm: 120, profundidade_cm: 35, altura_cm: 70, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
+    { tipo: "torre-maquinas", nome: "Torre p/ Lava e Seca", largura_cm: 70, profundidade_cm: 65, altura_cm: 200, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 1 },
+    { tipo: "tanque-gab", nome: "Gabinete de Tanque", largura_cm: 60, profundidade_cm: 55, altura_cm: 85, portas: 1, tipo_porta: "abrir", gavetas: 0, prateleiras: 0 },
   ],
   "Garagem": [
     { tipo: "arm-gar", nome: "Armário de Garagem", largura_cm: 120, profundidade_cm: 50, altura_cm: 200, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 4 },
     { tipo: "bancada-gar", nome: "Bancada de Trabalho", largura_cm: 180, profundidade_cm: 70, altura_cm: 85, portas: 0, tipo_porta: "sem", gavetas: 2, prateleiras: 0 },
+    { tipo: "arm-ferramentas", nome: "Armário de Ferramentas", largura_cm: 100, profundidade_cm: 40, altura_cm: 200, portas: 2, tipo_porta: "abrir", gavetas: 3, prateleiras: 3 },
+    { tipo: "prateleiras-gar", nome: "Prateleiras Abertas", largura_cm: 150, profundidade_cm: 45, altura_cm: 200, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
   ],
   "Outro": [
     { tipo: "armario-gen", nome: "Armário", largura_cm: 120, profundidade_cm: 50, altura_cm: 200, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 3 },
     { tipo: "bancada-gen", nome: "Bancada / Balcão", largura_cm: 150, profundidade_cm: 60, altura_cm: 85, portas: 2, tipo_porta: "abrir", gavetas: 2, prateleiras: 0 },
+    { tipo: "estante-gen", nome: "Estante", largura_cm: 120, profundidade_cm: 35, altura_cm: 200, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 5 },
+    { tipo: "prateleiras-gen", nome: "Prateleiras", largura_cm: 100, profundidade_cm: 30, altura_cm: 40, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 2 },
+    { tipo: "gaveteiro-gen", nome: "Gaveteiro", largura_cm: 50, profundidade_cm: 50, altura_cm: 80, portas: 0, tipo_porta: "sem", gavetas: 4, prateleiras: 0 },
+    { tipo: "painel-gen", nome: "Painel Ripado", largura_cm: 150, profundidade_cm: 5, altura_cm: 220, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 0, tem_ripado: true, ripa_espessura_mm: 15, ripa_largura_mm: 30 },
   ],
 };
 
@@ -422,7 +460,7 @@ function WallVisualization({
         <div className="text-[11.5px] text-muted-foreground">Arraste os móveis para posicionar · clique para editar</div>
       )}
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
-        <svg ref={svgRef} width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 320, display:"block", touchAction: onMoveMovel ? "none" : undefined }}
+        <svg ref={svgRef} width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 460, display:"block", touchAction: onMoveMovel ? "none" : undefined }}
           onPointerMove={onSvgMove} onPointerUp={onSvgUp} onPointerLeave={onSvgUp}>
           {/* Wall bg */}
           <rect x={ox} y={oy} width={wallPxW} height={wallPxH} fill="#f1f5f9" stroke="#94a3b8" strokeWidth={1.5} />
@@ -441,7 +479,7 @@ function WallVisualization({
             return (
               <g>
                 <rect x={dx} y={oy + wallPxH - dh} width={dw} height={dh} fill="rgba(180,120,70,0.18)" stroke="#b47846" strokeWidth={1.2} strokeDasharray="4,2" rx={1} />
-                <text x={dx + dw / 2} y={oy + wallPxH - dh / 2} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#b47846">🚪</text>
+                <text x={dx + dw / 2} y={oy + wallPxH - dh / 2} textAnchor="middle" dominantBaseline="middle" fontSize={15} fill="#b47846">🚪</text>
               </g>
             );
           })()}
@@ -451,7 +489,7 @@ function WallVisualization({
             return (
               <g>
                 <rect x={wx} y={wy} width={ww} height={wh} fill="rgba(56,160,220,0.15)" stroke="#38a0dc" strokeWidth={1.2} strokeDasharray="4,2" rx={1} />
-                <text x={wx + ww / 2} y={wy + wh / 2} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#38a0dc">🪟</text>
+                <text x={wx + ww / 2} y={wy + wh / 2} textAnchor="middle" dominantBaseline="middle" fontSize={15} fill="#38a0dc">🪟</text>
               </g>
             );
           })()}
@@ -514,12 +552,12 @@ function WallVisualization({
                 {/* Label */}
                 {fw>16 && fh>10 && (
                   <text x={fx+fw/2} y={fy+fh/2} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.max(6.5,Math.min(9.5,fw/8))} fill="#1e293b" fontWeight="500">
+                    fontSize={Math.max(11,Math.min(15,fw/6))} fill="#1e293b" fontWeight="600">
                     {m.nome.length>13 ? m.nome.slice(0,12)+"…" : m.nome}
                   </text>
                 )}
                 {/* Width below */}
-                <text x={fx+fw/2} y={oy+wallPxH+15} textAnchor="middle" fontSize={6.5} fill="#64748b">{m.largura_cm}</text>
+                <text x={fx+fw/2} y={oy+wallPxH+18} textAnchor="middle" fontSize={11} fontWeight="600" fill="#475569">{m.largura_cm}</text>
               </g>
             );
           }) : laid.map(({ m, x, yFloor }) => {
@@ -555,9 +593,9 @@ function WallVisualization({
           })}
 
           {/* Dimensions */}
-          <text x={ox+wallPxW/2} y={oy-8} textAnchor="middle" fontSize={8.5} fill="#64748b">{wallW}cm</text>
-          <text x={ox-14} y={oy+wallPxH/2} textAnchor="middle" fontSize={8.5} fill="#64748b"
-            transform={`rotate(-90 ${ox-14} ${oy+wallPxH/2})`}>{wallH}cm</text>
+          <text x={ox+wallPxW/2} y={oy-10} textAnchor="middle" fontSize={13} fontWeight="600" fill="#475569">{wallW}cm</text>
+          <text x={ox-16} y={oy+wallPxH/2} textAnchor="middle" fontSize={13} fontWeight="600" fill="#475569"
+            transform={`rotate(-90 ${ox-16} ${oy+wallPxH/2})`}>{wallH}cm</text>
         </svg>
       </div>
 
@@ -565,8 +603,8 @@ function WallVisualization({
       {visible.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {visible.map((m) => (
-            <div key={m.id} className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
-              <div className="size-2.5 rounded-sm border" style={{ background: getMC(m.tipo)[0], borderColor: getMC(m.tipo)[1] }} />
+            <div key={m.id} className="flex items-center gap-1.5 text-[13px] text-foreground/80">
+              <div className="size-3 rounded-sm border" style={{ background: getMC(m.tipo)[0], borderColor: getMC(m.tipo)[1] }} />
               {m.nome} {m.largura_cm}×{m.altura_cm}cm
               {m.tipo_porta && m.tipo_porta !== "sem" && <span className="opacity-60">{LABEL_PORTA[m.tipo_porta]}</span>}
             </div>
@@ -714,6 +752,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   // Cômodos do orçamento (instâncias nomeadas, cada um com medida e/ou planta)
   const [comodos, setComodos] = useState<ComodoOrc[]>([]);
   const [novoComodoTipo, setNovoComodoTipo] = useState("");
+  // Cômodos recolhidos (só o cabeçalho) — deixa a tela menos populada.
+  const [comodosRecolhidos, setComodosRecolhidos] = useState<Set<string>>(new Set());
+  const toggleRecolher = (id: string) => setComodosRecolhidos((prev) => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
 
   const addComodo = (tipo: string) => {
     if (!tipo) return;
@@ -1079,6 +1124,20 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     setMoveis((prev) => prev.map((m) => m.id === id ? { ...m, ...updates } : m));
   };
 
+  // Cria um móvel personalizado (do zero) no cômodo — abre já expandido p/ editar.
+  const criarMovelCustom = (comodo_nome?: string) => {
+    const id = Math.random().toString(36).slice(2);
+    const novo: MovelConfig = {
+      id, tipo: `custom-${id}`, nome: "Móvel personalizado",
+      largura_cm: 100, profundidade_cm: 50, altura_cm: 200,
+      portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 3,
+      tem_fundo: true, comodo_nome,
+    };
+    setMoveis((prev) => [...prev, novo]);
+    setExpandedMovel(id);
+    toast.success("Móvel personalizado criado — ajuste as medidas abaixo.");
+  };
+
   // Redimensiona as corridas (inferior/superior/bancada) para PREENCHER a largura
   // real da parede do cômodo, descontando as torres — encaixa sem furos.
   const ajustarAParede = () => {
@@ -1342,16 +1401,29 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 </div>
               )}
 
-              {comodos.map((c) => (
+              {comodos.map((c) => {
+                const recolhido = comodosRecolhidos.has(c.id);
+                return (
                 <div key={c.id} className="rounded-lg border border-border bg-surface-2 p-3 space-y-2.5">
                   <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => toggleRecolher(c.id)}
+                      title={recolhido ? "Expandir cômodo" : "Recolher cômodo"}
+                      className="text-muted-foreground hover:text-foreground shrink-0">
+                      {recolhido ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                    </button>
                     <input value={c.nome} onChange={(e) => updateComodo(c.id, { nome: e.target.value })}
                       className="flex-1 h-8 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium outline-none"
                       placeholder="Nome do cômodo" />
+                    {recolhido && (
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {c.plantaB64 ? "planta" : (c.paredes ?? []).filter((p) => p.comprimento_cm > 0).length > 0 ? `${(c.paredes ?? []).filter((p) => p.comprimento_cm > 0).length} parede(s)` : "sem medidas"}
+                      </span>
+                    )}
                     <span className="text-[11px] px-1.5 py-1 rounded bg-accent/10 text-accent font-medium shrink-0">{c.tipo}</span>
                     <button type="button" onClick={() => removeComodo(c.id)}
                       className="text-muted-foreground hover:text-destructive shrink-0"><X className="size-4" /></button>
                   </div>
+                  {!recolhido && (<>
 
                   {/* Planta do cômodo */}
                   {c.plantaNome ? (
@@ -1445,8 +1517,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       )}
                     </div>
                   )}
+                  </>)}
                 </div>
-              ))}
+                );
+              })}
 
               {/* Adicionar cômodo */}
               <div className="flex items-center gap-2">
@@ -1565,7 +1639,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               ← Voltar
             </button>
 
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_420px] gap-5 items-start">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_540px] gap-5 items-start">
               <div className="space-y-4 min-w-0">
             {/* Seleção de móveis — todos os ambientes */}
             <div className="space-y-2">
@@ -1625,6 +1699,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                                 </button>
                               );
                             })}
+                            <button type="button" onClick={() => criarMovelCustom(c.nome)}
+                              className="flex items-center gap-2 text-[12.5px] px-3 py-2 rounded-md border border-dashed border-accent/50 text-accent hover:bg-accent/10 text-left transition-colors">
+                              <Plus className="size-4 shrink-0" />
+                              <span className="truncate">Criar móvel</span>
+                            </button>
                           </div>
                         </div>
                       )}
