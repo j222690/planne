@@ -5,6 +5,7 @@ import {
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
   ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
   MessageCircle, MessageSquare, Download, Bot, LayoutGrid, Scissors, Lock,
+  ChevronsUpDown, ChevronsDownUp,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -1392,7 +1393,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <Label>Cômodos do projeto *</Label>
-                <span className="text-[11px] text-muted-foreground">{comodos.length} cômodo(s)</span>
+                <div className="flex items-center gap-2">
+                  {comodos.length > 1 && (
+                    <button type="button"
+                      onClick={() => setComodosRecolhidos((prev) => prev.size === comodos.length ? new Set() : new Set(comodos.map((c) => c.id)))}
+                      className="text-[12px] text-accent hover:underline inline-flex items-center gap-1">
+                      {comodosRecolhidos.size === comodos.length
+                        ? <><ChevronsUpDown className="size-3.5" /> Expandir todos</>
+                        : <><ChevronsDownUp className="size-3.5" /> Recolher todos</>}
+                    </button>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">{comodos.length} cômodo(s)</span>
+                </div>
               </div>
 
               {comodos.length === 0 && (
@@ -1404,42 +1416,42 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               {comodos.map((c) => {
                 const recolhido = comodosRecolhidos.has(c.id);
                 return (
-                <div key={c.id} className="rounded-lg border border-border bg-surface-2 p-3 space-y-2.5">
+                <div key={c.id} className={`rounded-lg border border-border bg-surface-2 ${recolhido ? "p-2" : "p-3 space-y-2.5"}`}>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={() => toggleRecolher(c.id)}
                       title={recolhido ? "Expandir cômodo" : "Recolher cômodo"}
-                      className="text-muted-foreground hover:text-foreground shrink-0">
-                      {recolhido ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                      className="shrink-0 size-9 rounded-md border border-border bg-background hover:bg-secondary hover:border-border-strong flex items-center justify-center text-foreground transition-colors">
+                      {recolhido ? <ChevronDown className="size-5" /> : <ChevronUp className="size-5" />}
                     </button>
                     <input value={c.nome} onChange={(e) => updateComodo(c.id, { nome: e.target.value })}
-                      className="flex-1 h-8 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium outline-none"
+                      className="flex-1 h-9 rounded-md border border-border bg-background px-3 text-[14px] font-medium outline-none"
                       placeholder="Nome do cômodo" />
                     {recolhido && (
-                      <span className="text-[11px] text-muted-foreground shrink-0">
+                      <span className="text-[12px] text-muted-foreground shrink-0 hidden sm:inline">
                         {c.plantaB64 ? "planta" : (c.paredes ?? []).filter((p) => p.comprimento_cm > 0).length > 0 ? `${(c.paredes ?? []).filter((p) => p.comprimento_cm > 0).length} parede(s)` : "sem medidas"}
                       </span>
                     )}
-                    <span className="text-[11px] px-1.5 py-1 rounded bg-accent/10 text-accent font-medium shrink-0">{c.tipo}</span>
-                    <button type="button" onClick={() => removeComodo(c.id)}
-                      className="text-muted-foreground hover:text-destructive shrink-0"><X className="size-4" /></button>
+                    <span className="text-[12px] px-2 py-1 rounded bg-accent/10 text-accent font-medium shrink-0">{c.tipo}</span>
+                    <button type="button" onClick={() => removeComodo(c.id)} title="Remover cômodo"
+                      className="shrink-0 size-9 rounded-md border border-transparent hover:border-destructive/40 hover:bg-destructive/5 text-muted-foreground hover:text-destructive flex items-center justify-center transition-colors"><Trash2 className="size-5" /></button>
                   </div>
                   {!recolhido && (<>
 
                   {/* Planta do cômodo */}
                   {c.plantaNome ? (
-                    <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[12px] text-emerald-700 dark:text-emerald-400">
-                      <ImageUp className="size-3.5" /> <span className="truncate">{c.plantaNome}</span>
+                    <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[13px] text-emerald-700 dark:text-emerald-400">
+                      <ImageUp className="size-5 shrink-0" /> <span className="truncate">{c.plantaNome}</span>
                       {c.analisando
-                        ? <span className="text-[11.5px] ml-auto flex items-center gap-1 shrink-0"><Loader2 className="size-3 animate-spin" /> Analisando...</span>
+                        ? <span className="text-[12px] ml-auto flex items-center gap-1 shrink-0"><Loader2 className="size-4 animate-spin" /> Analisando...</span>
                         : c.plantaInfo
-                          ? <span className="text-[11.5px] ml-auto shrink-0">✓ {(c.plantaInfo.largura_cm / 100).toFixed(1)}×{(c.plantaInfo.profundidade_cm / 100).toFixed(1)}m</span>
+                          ? <span className="text-[12px] ml-auto shrink-0">✓ {(c.plantaInfo.largura_cm / 100).toFixed(1)}×{(c.plantaInfo.profundidade_cm / 100).toFixed(1)}m</span>
                           : null}
                       <button type="button" onClick={() => updateComodo(c.id, { plantaB64: null, plantaNome: null, plantaInfo: null })}
-                        className="text-[11.5px] text-destructive hover:opacity-70 shrink-0 ml-1">remover</button>
+                        className="text-[12px] text-destructive hover:opacity-70 shrink-0 ml-1">remover</button>
                     </div>
                   ) : (
-                    <label className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-dashed border-border text-[12px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer">
-                      <ImageUp className="size-3.5" /> Planta deste cômodo (IA extrai as medidas)
+                    <label className="flex items-center gap-2 h-10 px-3 rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer">
+                      <ImageUp className="size-5 shrink-0" /> Planta deste cômodo <span className="text-muted-foreground/70">(IA extrai as medidas)</span>
                       <input type="file" accept="image/*" className="hidden"
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) analisarPlantaComodo(c.id, f); e.target.value = ""; }} />
                     </label>
@@ -1462,8 +1474,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             </div>
                           </div>
                           <button type="button" onClick={() => updateComodo(c.id, { usarFoto: !c.usarFoto })}
-                            className={`h-8 px-2.5 rounded-md border text-[11.5px] inline-flex items-center gap-1 transition-colors ${c.usarFoto ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-                            <ImageUp className="size-3.5" /> Medir por foto
+                            className={`h-9 px-3 rounded-md border text-[13px] inline-flex items-center gap-1.5 transition-colors ${c.usarFoto ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                            <ImageUp className="size-4" /> Medir por foto
                           </button>
                         </div>
                       </div>
@@ -1472,25 +1484,25 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         /* Digitar o tamanho de cada parede (m) */
                         <div className="flex items-center gap-2 flex-wrap">
                           {(c.paredes ?? []).map((p) => (
-                            <span key={p.id} className="inline-flex items-center gap-1.5 h-9 pl-2.5 pr-1.5 rounded-md border border-border bg-background text-[13px]">
-                              <span className="font-medium text-muted-foreground">Parede {p.id}</span>
+                            <span key={p.id} className="inline-flex items-center gap-2 h-10 pl-3 pr-2 rounded-md border border-border bg-background text-[13px]">
+                              <span className="font-semibold text-foreground">Parede {p.id}</span>
                               <div className="relative">
                                 <input type="number" step="0.01" min="0" placeholder="0,00"
                                   value={p.comprimento_cm ? p.comprimento_cm / 100 : ""}
                                   onChange={(e) => updateParede(c.id, p.id, Math.round(Number(e.target.value) * 100))}
-                                  className="w-24 h-7 rounded bg-surface-2 border border-border pl-2 pr-6 text-[13px] outline-none" />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">m</span>
+                                  className="w-24 h-8 rounded bg-surface-2 border border-border pl-2.5 pr-7 text-[14px] outline-none" />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground pointer-events-none">m</span>
                               </div>
                               {(c.paredes?.length ?? 0) > 1 && (
-                                <button type="button" onClick={() => removeParede(c.id, p.id)}
-                                  className="text-muted-foreground hover:text-destructive px-0.5">×</button>
+                                <button type="button" onClick={() => removeParede(c.id, p.id)} title="Remover parede"
+                                  className="text-muted-foreground hover:text-destructive"><X className="size-4" /></button>
                               )}
                             </span>
                           ))}
                           {(c.paredes?.length ?? 0) < 4 && (
                             <button type="button" onClick={() => addParede(c.id)}
-                              className="h-9 px-3 rounded-md border border-dashed border-border text-[13px] text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
-                              <Plus className="size-3.5" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
+                              className="h-10 px-3.5 rounded-md border border-dashed border-accent/50 text-[13px] text-accent hover:bg-accent/10 inline-flex items-center gap-1.5">
+                              <Plus className="size-4" /> Parede {String.fromCharCode(65 + (c.paredes?.length ?? 0))}
                             </button>
                           )}
                         </div>
@@ -1525,13 +1537,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               {/* Adicionar cômodo */}
               <div className="flex items-center gap-2">
                 <select value={novoComodoTipo} onChange={(e) => setNovoComodoTipo(e.target.value)}
-                  className="flex-1 h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground">
+                  className="flex-1 h-11 rounded-md border border-border bg-surface-2 px-3 text-[14px] outline-none text-foreground">
                   <option value="">Escolher tipo de cômodo...</option>
                   {Object.keys(MOVEIS_POR_AMBIENTE).map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <button type="button" onClick={() => addComodo(novoComodoTipo)} disabled={!novoComodoTipo}
-                  className="h-9 px-3 rounded-md border border-border text-[13px] font-medium hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1.5">
-                  <Plus className="size-3.5" /> Adicionar
+                  className="h-11 px-4 rounded-md border border-accent/50 bg-accent/10 text-accent text-[14px] font-medium hover:bg-accent/20 disabled:opacity-40 disabled:bg-transparent disabled:border-border disabled:text-muted-foreground inline-flex items-center gap-1.5">
+                  <Plus className="size-4" /> Adicionar
                 </button>
               </div>
             </div>
