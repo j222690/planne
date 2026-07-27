@@ -170,35 +170,69 @@ function regrasGaveta() {
 }
 var ALTURA_RODAPE_PADRAO_MM = 100;
 var ALTURA_RODA_TETO_PADRAO_MM = 50;
-function regraRodape() {
-  return {
-    nome: "rodape",
-    grupo: "detalhe",
-    ativa_quando: (cfg) => cfg.tem_rodape && cfg.tem_pes_regulaveis,
-    calcular_largura_mm: (L) => L,
-    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_rodape_cm ?? 10) * 10 || ALTURA_RODAPE_PADRAO_MM,
-    calcular_quantidade: () => 1,
-    espessura_mm: ESP,
-    direcao_fio: "paralelo_largura",
-    fita_borda: fitaFrente,
-    usa_material: "corpo",
-    observacao: "Rodap\xE9 clipado (encaixe nos p\xE9s regul\xE1veis)"
-  };
+function regrasRodape() {
+  const altura = (cfg) => (cfg.altura_rodape_cm ?? 10) * 10 || ALTURA_RODAPE_PADRAO_MM;
+  const ativa = (cfg) => cfg.tem_rodape && cfg.tem_pes_regulaveis;
+  return [
+    {
+      nome: "rodape_frente",
+      grupo: "detalhe",
+      ativa_quando: ativa,
+      calcular_largura_mm: (L) => L,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Rodap\xE9 \u2014 frente (largura do m\xF3vel)"
+    },
+    {
+      nome: "rodape_lateral",
+      grupo: "detalhe",
+      ativa_quando: ativa,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 2,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Rodap\xE9 \u2014 2 laterais (profundidade do m\xF3vel)"
+    }
+  ];
 }
-function regraMolduraRodaTeto() {
-  return {
-    nome: "moldura_roda_teto",
-    grupo: "detalhe",
-    ativa_quando: (cfg) => cfg.tem_roda_teto,
-    calcular_largura_mm: (L) => L,
-    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_roda_teto_cm ?? 5) * 10 || ALTURA_RODA_TETO_PADRAO_MM,
-    calcular_quantidade: () => 1,
-    espessura_mm: ESP,
-    direcao_fio: "paralelo_largura",
-    fita_borda: () => ({ esquerda: false, direita: false, topo: false, base: true }),
-    usa_material: "porta",
-    observacao: "Moldura de roda-teto (arremate decorativo at\xE9 o teto)"
-  };
+function regrasRodaTeto() {
+  const altura = (cfg) => (cfg.altura_roda_teto_cm ?? 10) * 10 || ALTURA_RODA_TETO_PADRAO_MM;
+  const fitaBase = () => ({ esquerda: false, direita: false, topo: false, base: true });
+  return [
+    {
+      nome: "roda_teto_frente",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_roda_teto,
+      calcular_largura_mm: (L) => L,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaBase,
+      usa_material: "porta",
+      observacao: "Roda-teto \u2014 frente (largura do m\xF3vel)"
+    },
+    {
+      nome: "roda_teto_lateral",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_roda_teto,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 2,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaBase,
+      usa_material: "porta",
+      observacao: "Roda-teto \u2014 2 laterais (profundidade do m\xF3vel)"
+    }
+  ];
 }
 function regrasEngrosso() {
   return [
@@ -309,8 +343,8 @@ function regraReforcoRecorte() {
 }
 function regrasAcabamento() {
   return [
-    regraRodape(),
-    regraMolduraRodaTeto(),
+    ...regrasRodape(),
+    ...regrasRodaTeto(),
     ...regrasEngrosso(),
     regraApoioCentralPrateleira(),
     regraReforcoRecorte()

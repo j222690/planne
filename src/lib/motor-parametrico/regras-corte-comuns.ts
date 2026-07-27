@@ -223,41 +223,78 @@ const ALTURA_RODAPE_PADRAO_MM = 100;      // rodapé clipado 10cm
 const ALTURA_RODA_TETO_PADRAO_MM = 50;    // moldura de roda-teto 5cm
 
 /**
- * Rodapé clipado (frente recuada, encaixado nos pés reguláveis).
- * Só existe onde há pés — módulos de parede (aéreos, painéis, nichos) não têm
- * pés, logo não têm rodapé, mesmo com tem_rodape default true.
+ * Rodapé (frame em U): sempre 3 ripas — 1 frente (largura = largura do móvel) +
+ * 2 laterais (largura = profundidade do móvel), todas com a altura do rodapé
+ * (10cm padrão). Só onde há pés — aéreos/painéis/nichos não têm.
  */
-export function regraRodape(): RegraCorte {
-  return {
-    nome: "rodape",
-    grupo: "detalhe",
-    ativa_quando: (cfg) => cfg.tem_rodape && cfg.tem_pes_regulaveis,
-    calcular_largura_mm: (L) => L,
-    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_rodape_cm ?? 10) * 10 || ALTURA_RODAPE_PADRAO_MM,
-    calcular_quantidade: () => 1,
-    espessura_mm: ESP,
-    direcao_fio: "paralelo_largura",
-    fita_borda: fitaFrente,
-    usa_material: "corpo",
-    observacao: "Rodapé clipado (encaixe nos pés reguláveis)",
-  };
+export function regrasRodape(): RegraCorte[] {
+  const altura = (cfg: { altura_rodape_cm?: number }) => (cfg.altura_rodape_cm ?? 10) * 10 || ALTURA_RODAPE_PADRAO_MM;
+  const ativa = (cfg: { tem_rodape: boolean; tem_pes_regulaveis: boolean }) => cfg.tem_rodape && cfg.tem_pes_regulaveis;
+  return [
+    {
+      nome: "rodape_frente",
+      grupo: "detalhe",
+      ativa_quando: ativa,
+      calcular_largura_mm: (L) => L,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Rodapé — frente (largura do móvel)",
+    },
+    {
+      nome: "rodape_lateral",
+      grupo: "detalhe",
+      ativa_quando: ativa,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 2,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Rodapé — 2 laterais (profundidade do móvel)",
+    },
+  ];
 }
 
-/** Moldura de roda-teto (acabamento decorativo no topo, até o teto). */
-export function regraMolduraRodaTeto(): RegraCorte {
-  return {
-    nome: "moldura_roda_teto",
-    grupo: "detalhe",
-    ativa_quando: (cfg) => cfg.tem_roda_teto,
-    calcular_largura_mm: (L) => L,
-    calcular_comprimento_mm: (_L, _A, _P, cfg) => (cfg.altura_roda_teto_cm ?? 5) * 10 || ALTURA_RODA_TETO_PADRAO_MM,
-    calcular_quantidade: () => 1,
-    espessura_mm: ESP,
-    direcao_fio: "paralelo_largura",
-    fita_borda: (): FitaBorda => ({ esquerda: false, direita: false, topo: false, base: true }),
-    usa_material: "porta",
-    observacao: "Moldura de roda-teto (arremate decorativo até o teto)",
-  };
+/**
+ * Roda-teto (frame em U): 3 ripas — 1 frente (largura do móvel) + 2 laterais
+ * (profundidade do móvel), com a altura do roda-teto (10cm padrão).
+ */
+export function regrasRodaTeto(): RegraCorte[] {
+  const altura = (cfg: { altura_roda_teto_cm?: number }) => (cfg.altura_roda_teto_cm ?? 10) * 10 || ALTURA_RODA_TETO_PADRAO_MM;
+  const fitaBase = (): FitaBorda => ({ esquerda: false, direita: false, topo: false, base: true });
+  return [
+    {
+      nome: "roda_teto_frente",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_roda_teto,
+      calcular_largura_mm: (L) => L,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaBase,
+      usa_material: "porta",
+      observacao: "Roda-teto — frente (largura do móvel)",
+    },
+    {
+      nome: "roda_teto_lateral",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.tem_roda_teto,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, _A, _P, cfg) => altura(cfg),
+      calcular_quantidade: () => 2,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaBase,
+      usa_material: "porta",
+      observacao: "Roda-teto — 2 laterais (profundidade do móvel)",
+    },
+  ];
 }
 
 /**
@@ -387,8 +424,8 @@ export function regraReforcoRecorte(): RegraCorte {
 /** Conjunto completo de acabamentos (rodapé + roda-teto + engrossos + reforços). */
 export function regrasAcabamento(): RegraCorte[] {
   return [
-    regraRodape(),
-    regraMolduraRodaTeto(),
+    ...regrasRodape(),
+    ...regrasRodaTeto(),
     ...regrasEngrosso(),
     regraApoioCentralPrateleira(),
     regraReforcoRecorte(),

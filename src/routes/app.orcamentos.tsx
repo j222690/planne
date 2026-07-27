@@ -587,6 +587,23 @@ interface VersaoConsolidada {
 }
 type MotorVersoes = Record<"economica" | "intermediaria" | "premium", VersaoConsolidada>;
 
+// Traduz mensagens de erro (fetch/Supabase/API) para português amigável.
+function msgErro(e: unknown, fallback = "Ocorreu um erro. Tente novamente."): string {
+  const raw = e instanceof Error ? e.message : typeof e === "string" ? e : (e as { message?: string })?.message ?? "";
+  const m = raw.toLowerCase();
+  if (!raw) return fallback;
+  if (/failed to fetch|networkerror|network error|load failed|err_|fetch failed/.test(m)) return "Não foi possível conectar ao servidor. Tente novamente em alguns instantes.";
+  if (/timeout|timed out|deadline/.test(m)) return "O servidor demorou para responder. Tente de novo.";
+  if (/duplicate key|already exists|unique constraint/.test(m)) return "Esse registro já existe.";
+  if (/permission denied|row-level security|not authoriz|unauthorized|forbidden|403/.test(m)) return "Você não tem permissão para esta ação.";
+  if (/violates|constraint|invalid input|null value/.test(m)) return "Dados inválidos para salvar. Confira os campos e tente de novo.";
+  if (/rate limit|quota|insufficient|429/.test(m)) return "Limite de uso atingido. Tente novamente mais tarde.";
+  if (/not found|404/.test(m)) return "Recurso não encontrado.";
+  if (/500|internal server/.test(m)) return "Erro interno do servidor. Tente novamente.";
+  // Mensagens do motor e validações já vêm em português — mostra como estão.
+  return raw;
+}
+
 // Plano de corte visualizável (chapa + peças encaixadas)
 type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string };
 type ChapaCorte = { numero_sequencial: number; largura_mm: number; comprimento_mm: number; pecas_alocadas: PecaAloc[]; comodo?: string };
@@ -746,7 +763,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       }));
       toast.success(`Parede ${paredeId} ~${r.largura_cm}cm · confiança ${r.confianca}. Confira com trena.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao analisar a foto");
+      toast.error(msgErro(e, "Erro ao analisar a foto"));
     } finally {
       setFotoAnalisando(null);
     }
@@ -907,7 +924,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       setMotorChapas(chapasAcc);
       toast.success(`${suportados.length} cômodo(s) calculados pelo motor — 3 versões prontas.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
+      toast.error(msgErro(e, "Erro no motor paramétrico"));
     } finally {
       setMotorGerando(false);
     }
@@ -1141,7 +1158,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       setFase("revisar");
       toast.success(`${data.itens.length} itens calculados pela IA!`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao calcular orçamento");
+      toast.error(msgErro(e, "Erro ao calcular orçamento"));
     } finally {
       setAiLoading(false);
     }
@@ -1183,7 +1200,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       onSaved();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+      toast.error(msgErro(e, "Erro ao salvar"));
     }
   };
 
@@ -2822,7 +2839,7 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
       if (!res.ok) throw new Error(await res.text());
       setListaCorte(await res.json() as ListaCorteResult);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao gerar plano de corte");
+      toast.error(msgErro(e, "Erro ao gerar plano de corte"));
       setShowCorte(false);
     } finally {
       setListaCorteLoading(false);
