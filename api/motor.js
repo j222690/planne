@@ -1209,10 +1209,22 @@ function dividirEmSegmentos(baseId, moduloId, regraNome, largura, comprimento, e
   const dim = comprimento > MAX_PECA_MM ? comprimento : largura;
   const isComprimento = comprimento > MAX_PECA_MM;
   const numSeg = Math.ceil(dim / MAX_PECA_MM);
-  const segSize = Math.ceil(dim / numSeg);
-  return Array.from({ length: numSeg }, (_, i) => {
-    const segLarg = isComprimento ? largura : Math.min(segSize, largura - i * segSize);
-    const segComp = isComprimento ? Math.min(segSize, comprimento - i * segSize) : comprimento;
+  const nPrat = cfg.num_prateleiras ?? 0;
+  let tamanhos;
+  let emendaEscondida = false;
+  if (isComprimento && numSeg === 2 && nPrat > 0) {
+    const espPrat = dim / (nPrat + 1);
+    const alinhado = Math.floor(MAX_PECA_MM / espPrat) * espPrat;
+    const primeiro = alinhado >= 300 && dim - alinhado >= 300 ? Math.round(alinhado) : Math.ceil(dim / 2);
+    tamanhos = [primeiro, dim - primeiro];
+    emendaEscondida = primeiro !== Math.ceil(dim / 2);
+  } else {
+    const segSize = Math.ceil(dim / numSeg);
+    tamanhos = Array.from({ length: numSeg }, (_, i) => Math.min(segSize, dim - i * segSize));
+  }
+  return tamanhos.map((sz, i) => {
+    const segLarg = isComprimento ? largura : sz;
+    const segComp = isComprimento ? sz : comprimento;
     return {
       id: `${baseId}_seg${i}`,
       modulo_instanciado_id: moduloId,
@@ -1226,11 +1238,11 @@ function dividirEmSegmentos(baseId, moduloId, regraNome, largura, comprimento, e
       direcao_fio: regra.direcao_fio,
       fita_borda: regra.fita_borda(cfg),
       quantidade: 1,
-      etiqueta_producao: `${regraNome.toUpperCase()} (seg ${i + 1}/${numSeg}) \u2014 ${instancia.nome_display}`,
+      etiqueta_producao: `${regraNome.toUpperCase()} (seg ${i + 1}/${tamanhos.length}) \u2014 ${instancia.nome_display}`,
       segmento_de: baseId,
       numero_segmento: i + 1,
-      total_segmentos: numSeg,
-      observacao_uniao: "Jun\xE7\xE3o com 2 cavilhas 8\xD730mm + minifix 15mm",
+      total_segmentos: tamanhos.length,
+      observacao_uniao: emendaEscondida ? "Emenda escondida atr\xE1s de prateleira \xB7 jun\xE7\xE3o 2 cavilhas 8\xD730mm + minifix" : "Jun\xE7\xE3o com 2 cavilhas 8\xD730mm + minifix 15mm",
       status: "pendente"
     };
   });

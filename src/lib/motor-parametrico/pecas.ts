@@ -228,11 +228,27 @@ function dividirEmSegmentos(
   const dim = comprimento > MAX_PECA ? comprimento : largura;
   const isComprimento = comprimento > MAX_PECA;
   const numSeg = Math.ceil(dim / MAX_PECA);
-  const segSize = Math.ceil(dim / numSeg);
 
-  return Array.from({ length: numSeg }, (_, i) => {
-    const segLarg = isComprimento ? largura : Math.min(segSize, largura - i * segSize);
-    const segComp = isComprimento ? Math.min(segSize, comprimento - i * segSize) : comprimento;
+  // Tamanhos dos segmentos. Por padrão iguais; mas se a divisão for no
+  // COMPRIMENTO (peça alta, ex.: lateral) e houver prateleiras, tenta pôr a
+  // EMENDA na altura de uma prateleira — assim a junção fica escondida atrás dela.
+  const nPrat = cfg.num_prateleiras ?? 0;
+  let tamanhos: number[];
+  let emendaEscondida = false;
+  if (isComprimento && numSeg === 2 && nPrat > 0) {
+    const espPrat = dim / (nPrat + 1); // espaçamento entre prateleiras
+    const alinhado = Math.floor(MAX_PECA / espPrat) * espPrat; // prateleira mais alta que cabe na chapa
+    const primeiro = alinhado >= 300 && dim - alinhado >= 300 ? Math.round(alinhado) : Math.ceil(dim / 2);
+    tamanhos = [primeiro, dim - primeiro];
+    emendaEscondida = primeiro !== Math.ceil(dim / 2);
+  } else {
+    const segSize = Math.ceil(dim / numSeg);
+    tamanhos = Array.from({ length: numSeg }, (_, i) => Math.min(segSize, dim - i * segSize));
+  }
+
+  return tamanhos.map((sz, i) => {
+    const segLarg = isComprimento ? largura : sz;
+    const segComp = isComprimento ? sz : comprimento;
     return {
       id: `${baseId}_seg${i}`,
       modulo_instanciado_id: moduloId,
@@ -246,11 +262,13 @@ function dividirEmSegmentos(
       direcao_fio: regra.direcao_fio,
       fita_borda: regra.fita_borda(cfg),
       quantidade: 1,
-      etiqueta_producao: `${regraNome.toUpperCase()} (seg ${i + 1}/${numSeg}) — ${instancia.nome_display}`,
+      etiqueta_producao: `${regraNome.toUpperCase()} (seg ${i + 1}/${tamanhos.length}) — ${instancia.nome_display}`,
       segmento_de: baseId,
       numero_segmento: i + 1,
-      total_segmentos: numSeg,
-      observacao_uniao: "Junção com 2 cavilhas 8×30mm + minifix 15mm",
+      total_segmentos: tamanhos.length,
+      observacao_uniao: emendaEscondida
+        ? "Emenda escondida atrás de prateleira · junção 2 cavilhas 8×30mm + minifix"
+        : "Junção com 2 cavilhas 8×30mm + minifix 15mm",
       status: "pendente" as const,
     };
   });
