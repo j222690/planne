@@ -4,7 +4,7 @@ import {
   Plus, Filter, Loader2, AlertCircle, X, Trash2, Sparkles,
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
   ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
-  MessageCircle, MessageSquare, Download, Bot, LayoutGrid, Scissors,
+  MessageCircle, MessageSquare, Download, Bot, LayoutGrid, Scissors, Lock,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -239,6 +239,7 @@ const WALL_MOUNTED_Y: Record<string, number> = {
 
 function WallVisualization({
   moveis, plantaInfo, manualWalls, medW, medH, onSelectMovel, selectedId, onMoveMovel,
+  activeWallProp, onSetWall, travadas, onTravar, onDestravar,
 }: {
   moveis: MovelConfig[];
   plantaInfo: PlantaInfo | null;
@@ -247,6 +248,11 @@ function WallVisualization({
   onSelectMovel?: (id: string) => void;
   selectedId?: string | null;
   onMoveMovel?: (id: string, x_cm: number, y_cm: number) => void;
+  activeWallProp?: string;
+  onSetWall?: (id: string) => void;
+  travadas?: string[];
+  onTravar?: () => void;
+  onDestravar?: (id: string) => void;
 }) {
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [selWall, setSelWall] = useState<string | null>(null);
@@ -260,12 +266,14 @@ function WallVisualization({
     ?? (manualWalls ?? []).filter((p) => p.comprimento_cm >= 100).map((p) => ({
       id: p.id, descricao: "", largura_cm: p.comprimento_cm, espaco_util_cm: p.comprimento_cm,
     }));
-  const activeWall = selWall ?? walls[0]?.id ?? null;
+  // Parede ativa vem do pai (fluxo de travar parede); senão usa a seleção local.
+  const activeWall = activeWallProp ?? selWall ?? walls[0]?.id ?? null;
+  const setWall = onSetWall ?? setSelWall;
 
-  // Cada móvel fica em UMA parede. Sem parede atribuída → assume a primeira (A),
-  // então ao trocar de parede o móvel não "segue" a parede ativa.
+  // Móveis em edição (sem parede) pertencem à parede ATIVA (WIP); os já
+  // atribuídos ficam só na sua. Ao travar, viram atribuídos e somem da edição.
   const visible = activeWall
-    ? moveis.filter((m) => (m.parede_id ?? walls[0]?.id) === activeWall)
+    ? moveis.filter((m) => (m.parede_id ?? activeWall) === activeWall)
     : moveis;
 
   // Aberturas (porta/janela) da parede ativa — desenhadas no preview
@@ -388,12 +396,25 @@ function WallVisualization({
             {v.toUpperCase()}
           </button>
         ))}
-        {walls.length > 1 && walls.map((w) => (
-          <button key={w.id} type="button" onClick={() => setSelWall(w.id)}
-            className={`h-6 px-2 rounded text-[11px] border transition-colors ${activeWall===w.id?"bg-accent/20 border-accent text-accent":"border-border text-muted-foreground hover:bg-secondary"}`}>
-            Parede {w.id} — {w.espaco_util_cm}cm
+        {walls.length > 1 && walls.map((w) => {
+          const travada = travadas?.includes(w.id);
+          return (
+            <button key={w.id} type="button"
+              onClick={() => (travada && onDestravar) ? onDestravar(w.id) : setWall(w.id)}
+              title={travada ? "Parede travada — clique para editar de novo" : undefined}
+              className={`h-6 px-2 rounded text-[11px] border transition-colors inline-flex items-center gap-1 ${activeWall===w.id?"bg-accent/20 border-accent text-accent":travada?"border-emerald-500/40 text-emerald-500":"border-border text-muted-foreground hover:bg-secondary"}`}>
+              {travada && <Lock className="size-2.5" />}
+              Parede {w.id} — {w.espaco_util_cm}cm
+            </button>
+          );
+        })}
+        {onTravar && (
+          <button type="button" onClick={onTravar}
+            className="h-6 px-2.5 rounded text-[11px] border border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10 transition-colors inline-flex items-center gap-1"
+            title="Travar esta parede: fixa os móveis nela e limpa para a próxima">
+            <Lock className="size-3" /> Travar parede {activeWall}
           </button>
-        ))}
+        )}
         <span className="ml-auto text-[11.5px] text-muted-foreground">{wallW}cm L × {wallH}cm H</span>
       </div>
 
@@ -827,6 +848,27 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   // Móveis
   const [moveis, setMoveis] = useState<MovelConfig[]>([]);
   const [expandedMovel, setExpandedMovel] = useState<string | null>(null);
+  // Fluxo por parede: parede em edição + paredes já travadas (finalizadas)
+  const [paredeAtiva, setParedeAtiva] = useState<string>("A");
+  const [paredesTravadas, setParedesTravadas] = useState<string[]>([]);
+
+  // Trava a parede atual: fixa os móveis em edição nela e avança para a próxima.
+  const travarParede = () => {
+    const emEdicao = moveis.filter((m) => !m.parede_id);
+    if (emEdicao.length === 0) { toast.error("Adicione móveis a esta parede antes de travar."); return; }
+    setMoveis((prev) => prev.map((m) => m.parede_id ? m : { ...m, parede_id: paredeAtiva }));
+    const novasTravadas = [...new Set([...paredesTravadas, paredeAtiva])];
+    setParedesTravadas(novasTravadas);
+    const paredesComodo = (comodos.find((c) => c.nome === moveis[0]?.comodo_nome)?.paredes ?? [{ id: "A" }, { id: "B" }]).map((p) => p.id);
+    const prox = paredesComodo.find((w) => !novasTravadas.includes(w));
+    setParedeAtiva(prox ?? paredeAtiva);
+    setExpandedMovel(null);
+    toast.success(`Parede ${paredeAtiva} travada${prox ? ` · agora a parede ${prox}` : " · todas as paredes prontas"}.`);
+  };
+  const destravarParede = (id: string) => {
+    setParedesTravadas((t) => t.filter((w) => w !== id));
+    setParedeAtiva(id);
+  };
 
   const [aiLoading, setAiLoading] = useState(false);
   const plantaRef = useRef<HTMLInputElement>(null);
@@ -1591,12 +1633,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
             {/* Configuração de cada móvel selecionado */}
             {moveis.length > 0 && (
               <div className="space-y-2">
-                <Label>Configure cada móvel:</Label>
+                <Label>Configure cada móvel — Parede {paredeAtiva}:</Label>
                 <div className="text-[11px] text-muted-foreground flex items-center gap-1 -mt-1 mb-1">
                   <Info className="size-3" />
                   Corrediças e dobradiças são calculadas automaticamente com base nas portas
                 </div>
-                {moveis.map((m) => (
+                {moveis.filter((m) => (m.parede_id ?? paredeAtiva) === paredeAtiva).map((m) => (
                   <div key={m.id} className="border border-border rounded-md overflow-hidden">
                     <button
                       type="button"
@@ -1978,6 +2020,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       selectedId={expandedMovel}
                       onSelectMovel={(id) => setExpandedMovel(id)}
                       onMoveMovel={(id, x, y) => updateMovel(id, { pos_x_cm: x, pos_y_cm: y })}
+                      activeWallProp={paredeAtiva}
+                      onSetWall={setParedeAtiva}
+                      travadas={paredesTravadas}
+                      onTravar={travarParede}
+                      onDestravar={destravarParede}
                     />
                   </div>
                 ) : (
