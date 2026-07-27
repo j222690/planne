@@ -1844,7 +1844,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             {/* Pés de madeira */}
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input type="checkbox" checked={m.pe_madeira ?? false}
-                                onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 15 })}
+                                onChange={(e) => updateMovel(m.id, { pe_madeira: e.target.checked, pe_altura_cm: m.pe_altura_cm ?? 15, ...(e.target.checked ? { tem_rodape: true } : {}) })}
                                 className="rounded" />
                               <span className="text-[11.5px]">Pés de madeira maciça</span>
                             </label>
