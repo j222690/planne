@@ -461,7 +461,7 @@ function WallVisualization({
         <div className="text-[11.5px] text-muted-foreground">Arraste os móveis para posicionar · clique para editar</div>
       )}
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
-        <svg ref={svgRef} width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 460, display:"block", touchAction: onMoveMovel ? "none" : undefined }}
+        <svg ref={svgRef} width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 690, display:"block", touchAction: onMoveMovel ? "none" : undefined }}
           onPointerMove={onSvgMove} onPointerUp={onSvgUp} onPointerLeave={onSvgUp}>
           {/* Wall bg */}
           <rect x={ox} y={oy} width={wallPxW} height={wallPxH} fill="#f1f5f9" stroke="#94a3b8" strokeWidth={1.5} />
@@ -1356,7 +1356,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.18 }}
-        className="relative w-full max-w-7xl bg-surface border border-border rounded-lg shadow-xl my-4 min-h-[72vh] flex flex-col"
+        className="relative w-full max-w-[1500px] bg-surface border border-border rounded-lg shadow-xl my-4 min-h-[72vh] flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -1672,7 +1672,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               ← Voltar
             </button>
 
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_540px] gap-5 items-start">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_810px] gap-5 items-start">
               <div className="space-y-4 min-w-0">
             {/* Seleção de móveis — todos os ambientes */}
             <div className="space-y-2">
