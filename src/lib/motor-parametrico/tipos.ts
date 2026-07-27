@@ -293,6 +293,10 @@ export interface ConfiguracaoModulo {
   tem_recorte_cooktop?: boolean;
   /** Tampo é de pedra (granito/quartzo), não MDF — desliga engrosso de tampo MDF. */
   tampo_pedra?: boolean;
+  /** Engrosso na lateral esquerda aparente (2ª chapa de 15mm = 30mm). */
+  engrosso_lat_esq?: boolean;
+  /** Engrosso na lateral direita aparente. */
+  engrosso_lat_dir?: boolean;
   tem_iluminacao_led: boolean;
   tem_espelho_interno: boolean;
   tem_ripado: boolean;

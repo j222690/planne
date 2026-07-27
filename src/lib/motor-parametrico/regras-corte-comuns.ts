@@ -311,6 +311,34 @@ export function regrasEngrosso(): RegraCorte[] {
       usa_material: "porta",
       observacao: "2ª chapa da frente de gaveta (30mm)",
     },
+    // Engrosso das laterais APARENTES (2ª chapa de 15mm = 30mm). Só nas pontas
+    // expostas do corrido; laterais internas (com módulo ao lado) ficam 15mm.
+    {
+      nome: "engrosso_lateral_esq",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.engrosso_lat_esq === true,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "2ª chapa da lateral esquerda aparente (30mm)",
+    },
+    {
+      nome: "engrosso_lateral_dir",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.engrosso_lat_dir === true,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "2ª chapa da lateral direita aparente (30mm)",
+    },
   ];
 }
 

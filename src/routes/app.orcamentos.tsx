@@ -379,11 +379,11 @@ function WallVisualization({
             Parede {w.id} — {w.espaco_util_cm}cm
           </button>
         ))}
-        <span className="ml-auto text-[10.5px] text-muted-foreground">{wallW}cm L × {wallH}cm H</span>
+        <span className="ml-auto text-[11.5px] text-muted-foreground">{wallW}cm L × {wallH}cm H</span>
       </div>
 
       {onMoveMovel && view === "2d" && (
-        <div className="text-[10.5px] text-muted-foreground">Arraste os móveis para posicionar · clique para editar</div>
+        <div className="text-[11.5px] text-muted-foreground">Arraste os móveis para posicionar · clique para editar</div>
       )}
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
         <svg ref={svgRef} width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ maxHeight: 320, display:"block", touchAction: onMoveMovel ? "none" : undefined }}
@@ -498,7 +498,7 @@ function WallVisualization({
       {visible.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {visible.map((m) => (
-            <div key={m.id} className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+            <div key={m.id} className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
               <div className="size-2.5 rounded-sm border" style={{ background: getMC(m.tipo)[0], borderColor: getMC(m.tipo)[1] }} />
               {m.nome} {m.largura_cm}×{m.altura_cm}cm
               {m.tipo_porta && m.tipo_porta !== "sem" && <span className="opacity-60">{LABEL_PORTA[m.tipo_porta]}</span>}
@@ -575,7 +575,7 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
             {c.comodo ? `${c.comodo} · ` : ""}Chapa {c.numero_sequencial}
           </button>
         ))}
-        <span className="ml-auto text-[10.5px] text-muted-foreground">{W}×{H}mm · {ch.pecas_alocadas.length} peças</span>
+        <span className="ml-auto text-[11.5px] text-muted-foreground">{W}×{H}mm · {ch.pecas_alocadas.length} peças</span>
       </div>
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} style={{ maxHeight: 360, display: "block" }}>
@@ -1239,7 +1239,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     <input value={c.nome} onChange={(e) => updateComodo(c.id, { nome: e.target.value })}
                       className="flex-1 h-8 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium outline-none"
                       placeholder="Nome do cômodo" />
-                    <span className="text-[10px] px-1.5 py-1 rounded bg-accent/10 text-accent font-medium shrink-0">{c.tipo}</span>
+                    <span className="text-[11px] px-1.5 py-1 rounded bg-accent/10 text-accent font-medium shrink-0">{c.tipo}</span>
                     <button type="button" onClick={() => removeComodo(c.id)}
                       className="text-muted-foreground hover:text-destructive shrink-0"><X className="size-4" /></button>
                   </div>
@@ -1249,12 +1249,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-emerald-500/40 bg-emerald-500/5 text-[12px] text-emerald-700 dark:text-emerald-400">
                       <ImageUp className="size-3.5" /> <span className="truncate">{c.plantaNome}</span>
                       {c.analisando
-                        ? <span className="text-[10.5px] ml-auto flex items-center gap-1 shrink-0"><Loader2 className="size-3 animate-spin" /> Analisando...</span>
+                        ? <span className="text-[11.5px] ml-auto flex items-center gap-1 shrink-0"><Loader2 className="size-3 animate-spin" /> Analisando...</span>
                         : c.plantaInfo
-                          ? <span className="text-[10.5px] ml-auto shrink-0">✓ {(c.plantaInfo.largura_cm / 100).toFixed(1)}×{(c.plantaInfo.profundidade_cm / 100).toFixed(1)}m</span>
+                          ? <span className="text-[11.5px] ml-auto shrink-0">✓ {(c.plantaInfo.largura_cm / 100).toFixed(1)}×{(c.plantaInfo.profundidade_cm / 100).toFixed(1)}m</span>
                           : null}
                       <button type="button" onClick={() => updateComodo(c.id, { plantaB64: null, plantaNome: null, plantaInfo: null })}
-                        className="text-[10.5px] text-destructive hover:opacity-70 shrink-0 ml-1">remover</button>
+                        className="text-[11.5px] text-destructive hover:opacity-70 shrink-0 ml-1">remover</button>
                     </div>
                   ) : (
                     <label className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-dashed border-border text-[12px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer">
@@ -1331,7 +1331,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                               );
                             })}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">Cole uma folha A4 na parede como referência. É estimativa — confira com trena.</div>
+                          <div className="text-[11px] text-muted-foreground">Cole uma folha A4 na parede como referência. É estimativa — confira com trena.</div>
                         </div>
                       )}
                     </div>
@@ -1387,7 +1387,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         <div key={k} className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/10" : "border-border bg-surface-2"}`}>
                           <div className="text-[11px] text-muted-foreground">{label}</div>
                           <div className="text-[15px] font-bold mt-0.5">R$ {v.total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                          <div className="text-[10.5px] text-muted-foreground mt-0.5">custo R$ {v.custo.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} · {v.itens.length} itens</div>
+                          <div className="text-[11.5px] text-muted-foreground mt-0.5">custo R$ {v.custo.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} · {v.itens.length} itens</div>
                           <button type="button" onClick={() => usarVersaoMotor(k)}
                             className={`mt-2 h-7 rounded-md text-[11.5px] font-medium ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}>
                             Usar esta versão
@@ -1491,12 +1491,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         className="w-full flex items-center justify-between px-3 py-2 bg-secondary/30 hover:bg-secondary/50 transition-colors text-left">
                         <span className="text-[12.5px] font-medium flex items-center gap-2">
                           {c.nome}
-                          {c.plantaB64 && <span className="text-[10px] text-emerald-600 dark:text-emerald-400">planta</span>}
-                          <span className="text-[10.5px] text-muted-foreground">{c.largura > 0 ? `${c.largura}×${c.profundidade}m` : ""}</span>
+                          {c.plantaB64 && <span className="text-[11px] text-emerald-600 dark:text-emerald-400">planta</span>}
+                          <span className="text-[11.5px] text-muted-foreground">{c.largura > 0 ? `${c.largura}×${c.profundidade}m` : ""}</span>
                         </span>
                         <div className="flex items-center gap-2">
                           {selCount > 0 && (
-                            <span className="text-[10.5px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-medium">{selCount} sel.</span>
+                            <span className="text-[11.5px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-medium">{selCount} sel.</span>
                           )}
                           {isOpen ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
                         </div>
@@ -1510,7 +1510,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                                 <button key={template.tipo} type="button" onClick={() => toggleMovel(template, c.nome)}
                                   className={`flex items-center gap-2 text-[12.5px] px-3 py-2 rounded-md border text-left transition-colors ${sel ? "border-accent bg-accent/10 text-accent font-medium" : "border-border text-foreground hover:bg-secondary"}`}>
                                   <span className={`shrink-0 size-4 rounded border flex items-center justify-center ${sel ? "bg-accent border-accent text-white" : "border-input"}`}>
-                                    {sel && <span className="text-[10px] leading-none">✓</span>}
+                                    {sel && <span className="text-[11px] leading-none">✓</span>}
                                   </span>
                                   <span className="truncate">{template.nome}</span>
                                 </button>
@@ -1543,7 +1543,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       <div className="flex items-center gap-2 min-w-0">
                         <span>{m.nome}</span>
                         {m.comodo_nome && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-normal shrink-0">{m.comodo_nome}</span>
+                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-normal shrink-0">{m.comodo_nome}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-[11.5px] text-muted-foreground font-normal">
@@ -1585,13 +1585,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         {/* Nome + parede numa linha */}
                         <div className={`grid gap-2 ${wallOptions.length ? "grid-cols-2" : "grid-cols-1"}`}>
                           <div>
-                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Nome no orçamento</div>
+                            <div className="text-[11.5px] text-muted-foreground mb-0.5">Nome no orçamento</div>
                             <input value={m.nome} onChange={(e) => updateMovel(m.id, { nome: e.target.value })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                           {wallOptions.length > 0 && (
                             <div>
-                              <div className="text-[10.5px] text-muted-foreground mb-0.5">Parede</div>
+                              <div className="text-[11.5px] text-muted-foreground mb-0.5">Parede</div>
                               <select value={m.parede_id ?? ""} onChange={(e) => {
                                 const pid = e.target.value;
                                 const w = wallOptions.find((x) => x.id === pid);
@@ -1619,7 +1619,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
                         {/* Dimensões */}
                         <div>
-                          <div className="text-[10.5px] text-muted-foreground mb-0.5">Dimensões (cm)</div>
+                          <div className="text-[11.5px] text-muted-foreground mb-0.5">Dimensões (cm)</div>
                           <div className="grid grid-cols-3 gap-1.5">
                             {(["largura_cm", "profundidade_cm", "altura_cm"] as const).map((dim) => {
                               const lim = dim === "largura_cm" ? limLargura : dim === "altura_cm" ? limAltura : limProfundidade;
@@ -1627,7 +1627,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                               const vazio = !m[dim] || m[dim] === 0;
                               return (
                                 <div key={dim}>
-                                  <div className={`text-[9.5px] mb-0.5 truncate ${vazio ? "text-destructive" : "text-muted-foreground"}`}>
+                                  <div className={`text-[11px] mb-0.5 truncate ${vazio ? "text-destructive" : "text-muted-foreground"}`}>
                                     {dim === "largura_cm" ? "Largura" : dim === "profundidade_cm" ? "Profund." : "Altura"}
                                     {lim ? <span className="opacity-60"> ≤{lim}</span> : ""}
                                     {vazio && " *"}
@@ -1645,13 +1645,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         {/* Portas + Gavetas + Prateleiras numa linha */}
                         <div className="grid grid-cols-4 gap-1.5">
                           <div>
-                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Portas</div>
+                            <div className="text-[11.5px] text-muted-foreground mb-0.5">Portas</div>
                             <input type="number" min={0} max={20} value={m.portas}
                               onChange={(e) => updateMovel(m.id, { portas: Number(e.target.value) })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                           <div className="col-span-1">
-                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Tipo</div>
+                            <div className="text-[11.5px] text-muted-foreground mb-0.5">Tipo</div>
                             <select value={m.tipo_porta} disabled={m.portas === 0}
                               onChange={(e) => updateMovel(m.id, { tipo_porta: e.target.value as MovelConfig["tipo_porta"] })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none text-foreground disabled:opacity-40">
@@ -1665,13 +1665,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             </select>
                           </div>
                           <div>
-                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Gavetas</div>
+                            <div className="text-[11.5px] text-muted-foreground mb-0.5">Gavetas</div>
                             <input type="number" min={0} max={20} value={m.gavetas}
                               onChange={(e) => updateMovel(m.id, { gavetas: Number(e.target.value) })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
                           </div>
                           <div>
-                            <div className="text-[10.5px] text-muted-foreground mb-0.5">Prat.</div>
+                            <div className="text-[11.5px] text-muted-foreground mb-0.5">Prat.</div>
                             <input type="number" min={0} max={20} value={m.prateleiras}
                               onChange={(e) => updateMovel(m.id, { prateleiras: Number(e.target.value) })}
                               className="w-full h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
@@ -1717,10 +1717,10 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           espacoRipa = Math.max(0, Math.round(espacoRipa));
                           return (
                             <div className="pl-1 p-2 rounded-md border border-border bg-secondary/20 space-y-2">
-                              <div className="text-[10.5px] text-muted-foreground font-medium">Configuração do ripado</div>
+                              <div className="text-[11.5px] text-muted-foreground font-medium">Configuração do ripado</div>
                               <div className="grid grid-cols-3 gap-2">
                                 <div>
-                                  <div className="text-[9.5px] text-muted-foreground mb-0.5">Espessura</div>
+                                  <div className="text-[11px] text-muted-foreground mb-0.5">Espessura</div>
                                   <div className="flex gap-1">
                                     {([6, 15] as const).map((esp) => (
                                       <button key={esp} type="button"
@@ -1732,17 +1732,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                                   </div>
                                 </div>
                                 <div>
-                                  <div className="text-[9.5px] text-muted-foreground mb-0.5">Largura da ripa (mm)</div>
+                                  <div className="text-[11px] text-muted-foreground mb-0.5">Largura da ripa (mm)</div>
                                   <input type="number" min={10} max={200} value={m.ripa_largura_mm ?? 30}
                                     onChange={(e) => updateMovel(m.id, { ripa_largura_mm: Number(e.target.value) })}
                                     className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
                                 </div>
                                 <div className="flex flex-col justify-end">
-                                  <div className="text-[9.5px] text-muted-foreground mb-0.5">Quantidade</div>
+                                  <div className="text-[11px] text-muted-foreground mb-0.5">Quantidade</div>
                                   <div className="h-7 flex items-center text-[12px] font-medium text-accent">{numRipas} ripas</div>
                                 </div>
                               </div>
-                              <div className="text-[10px] text-muted-foreground">
+                              <div className="text-[11px] text-muted-foreground">
                                 Começa e termina com ripa · espaçamento de <span className="text-foreground font-medium">{espacoRipa}mm</span> entre as ripas (calculado para caber exato)
                               </div>
                             </div>
@@ -1753,12 +1753,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                         <details open={temAvancado}>
                           <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground list-none flex items-center gap-1">
                             <ChevronDown className="size-3" /> Opções avançadas
-                            {temAvancado && <span className="text-accent text-[10px]"> • ativo</span>}
+                            {temAvancado && <span className="text-accent text-[11px]"> • ativo</span>}
                           </summary>
                           <div className="mt-2 space-y-2.5 pl-1">
                             {/* Formato */}
                             <div>
-                              <div className="text-[10.5px] text-muted-foreground mb-1">Formato</div>
+                              <div className="text-[11.5px] text-muted-foreground mb-1">Formato</div>
                               <div className="flex gap-1.5">
                                 {(["retangular", "L"] as const).map((fmt) => (
                                   <button key={fmt} type="button"
@@ -1770,17 +1770,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                               </div>
                               {(m.formato ?? "retangular") === "L" && (
                                 <div className="mt-2 p-2 rounded border border-border bg-secondary/30 space-y-2">
-                                  <div className="text-[10px] text-muted-foreground">Braço A (principal): {m.largura_cm}×{m.profundidade_cm}cm — configurado acima</div>
-                                  <div className="text-[10px] font-medium text-muted-foreground">Braço B:</div>
+                                  <div className="text-[11px] text-muted-foreground">Braço A (principal): {m.largura_cm}×{m.profundidade_cm}cm — configurado acima</div>
+                                  <div className="text-[11px] font-medium text-muted-foreground">Braço B:</div>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                      <div className="text-[9.5px] text-muted-foreground mb-0.5">Largura (cm)</div>
+                                      <div className="text-[11px] text-muted-foreground mb-0.5">Largura (cm)</div>
                                       <input type="number" min={10} value={m.arm2_largura_cm ?? 80}
                                         onChange={(e) => updateMovel(m.id, { arm2_largura_cm: Number(e.target.value) })}
                                         className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
                                     </div>
                                     <div>
-                                      <div className="text-[9.5px] text-muted-foreground mb-0.5">Profundidade (cm)</div>
+                                      <div className="text-[11px] text-muted-foreground mb-0.5">Profundidade (cm)</div>
                                       <input type="number" min={10} value={m.arm2_profundidade_cm ?? m.profundidade_cm}
                                         onChange={(e) => updateMovel(m.id, { arm2_profundidade_cm: Number(e.target.value) })}
                                         className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
@@ -1798,7 +1798,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             </label>
                             {m.pe_madeira && (
                               <div className="w-40 pl-5">
-                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura dos pés (cm) · rodapé = +5cm</div>
+                                <div className="text-[11px] text-muted-foreground mb-0.5">Altura dos pés (cm) · rodapé = +5cm</div>
                                 <input type="number" min={5} max={100} value={m.pe_altura_cm ?? 15}
                                   onChange={(e) => updateMovel(m.id, { pe_altura_cm: Number(e.target.value) })}
                                   className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none" />
@@ -1820,7 +1820,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             </label>
                             {m.tem_roda_teto && (
                               <div className="w-40 pl-5">
-                                <div className="text-[10px] text-muted-foreground mb-0.5">Altura do teto (cm) · móvel = teto−10cm</div>
+                                <div className="text-[11px] text-muted-foreground mb-0.5">Altura do teto (cm) · móvel = teto−10cm</div>
                                 <input type="number" min={200} max={400} value={m.altura_teto_cm ?? 270}
                                   onChange={(e) => updateMovel(m.id, {
                                     altura_teto_cm: Number(e.target.value),
@@ -1837,8 +1837,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground list-none flex items-center gap-1">
                             <ChevronDown className="size-3" /> Materiais específicos
                             {temMatsEscolhidos
-                              ? <span className="text-accent text-[10px]"> • personalizados</span>
-                              : <span className="text-[10px] opacity-60"> — IA escolhe automaticamente</span>}
+                              ? <span className="text-accent text-[11px]"> • personalizados</span>
+                              : <span className="text-[11px] opacity-60"> — IA escolhe automaticamente</span>}
                           </summary>
                           <div className="mt-2 space-y-1.5 pl-1">
                             <MatSelect label="MDF caixa (interior)" value={m.mdf_caixa_id}
@@ -1874,7 +1874,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
                         {/* Detalhes livres */}
                         <div>
-                          <div className="text-[10.5px] text-muted-foreground mb-0.5">Detalhes / Extras <span className="opacity-60">(opcional)</span></div>
+                          <div className="text-[11.5px] text-muted-foreground mb-0.5">Detalhes / Extras <span className="opacity-60">(opcional)</span></div>
                           <textarea rows={2} value={m.detalhes ?? ""}
                             onChange={(e) => updateMovel(m.id, { detalhes: e.target.value || undefined })}
                             placeholder="Ex: painel ripado, espelho interno, nicho com LED..."
@@ -1991,7 +1991,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   <input {...register("mao_de_obra")} type="number" step="0.01" min="0"
                     placeholder="0,00"
                     className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none" />
-                  <div className="text-[10.5px] text-muted-foreground mt-0.5">Cobrado separadamente — não entra na margem</div>
+                  <div className="text-[11.5px] text-muted-foreground mt-0.5">Cobrado separadamente — não entra na margem</div>
                 </div>
                 <div className="text-[12.5px] space-y-1 pt-5">
                   <div className="flex justify-between text-muted-foreground">
@@ -2102,7 +2102,7 @@ function ItemTable({ fields, itens, register, remove }: {
                       <input {...register(`itens.${idx}.descricao`)} placeholder="Descrição"
                         className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[11.5px] outline-none focus:border-border-strong" />
                       {linha?.justificativa && (
-                        <div className="text-[10px] text-muted-foreground mt-0.5 px-1 flex items-start gap-0.5">
+                        <div className="text-[11px] text-muted-foreground mt-0.5 px-1 flex items-start gap-0.5">
                           <Info className="size-2.5 mt-0.5 shrink-0" />
                           <span>{linha.justificativa}</span>
                         </div>
@@ -2368,7 +2368,7 @@ function SheetVisualization({ chapas }: { chapas: ChapaMaterial[] }) {
       {allMoveis.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           {allMoveis.map((n) => (
-            <div key={n} className="flex items-center gap-1 text-[10px] text-foreground">
+            <div key={n} className="flex items-center gap-1 text-[11px] text-foreground">
               <div className="size-2.5 rounded-sm shrink-0" style={{ backgroundColor: colorMap.get(n) }} />
               {n}
             </div>
@@ -2377,7 +2377,7 @@ function SheetVisualization({ chapas }: { chapas: ChapaMaterial[] }) {
       )}
       {chapas.filter(c => c.layouts?.length).map((c) => (
         <div key={c.material}>
-          <div className="text-[10.5px] text-muted-foreground mb-1.5 font-medium">{c.material}</div>
+          <div className="text-[11.5px] text-muted-foreground mb-1.5 font-medium">{c.material}</div>
           <div className="flex flex-wrap gap-3">
             {(c.layouts ?? []).map(({ sheet_index, placed }) => (
               <div key={sheet_index} className="border border-border rounded overflow-hidden shrink-0">
@@ -2913,7 +2913,7 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                             <td className="py-1.5 pr-2">
                               <div>{it.descricao}</div>
                               {it.justificativa && (
-                                <div className="text-[10.5px] text-muted-foreground mt-0.5 flex items-start gap-0.5">
+                                <div className="text-[11.5px] text-muted-foreground mt-0.5 flex items-start gap-0.5">
                                   <Info className="size-2.5 mt-0.5 shrink-0" />
                                   <span>{it.justificativa}</span>
                                 </div>
@@ -2951,7 +2951,7 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                 }
                 return Object.entries(byRoom).map(([room, items]) => (
                   <div key={room} className="mb-2 last:mb-0">
-                    {room && <div className="text-[10.5px] text-accent font-medium mb-0.5">{room}</div>}
+                    {room && <div className="text-[11.5px] text-accent font-medium mb-0.5">{room}</div>}
                     <div className="space-y-0.5">
                       {items.map((m) => (
                         <div key={m.id} className="flex items-baseline justify-between text-[12.5px] py-0.5 border-b border-border/50 last:border-0">
@@ -3013,7 +3013,7 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                   )}
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11.5px] min-w-[600px]">
-                      <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                      <thead className="text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
                         <tr>
                           <th className="text-left py-1.5 px-1">Móvel</th>
                           <th className="text-left py-1.5 px-1">Peça</th>
@@ -3029,11 +3029,11 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                           <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-secondary/20">
                             <td className="py-1 px-1 text-muted-foreground truncate max-w-[90px]">{p.movel}</td>
                             <td className="py-1 px-1 font-medium">{p.peca}</td>
-                            <td className="py-1 px-1 text-muted-foreground text-[10.5px]">{p.material}</td>
+                            <td className="py-1 px-1 text-muted-foreground text-[11.5px]">{p.material}</td>
                             <td className="py-1 px-1 text-right tabular-nums">{p.largura_mm}</td>
                             <td className="py-1 px-1 text-right tabular-nums">{p.comprimento_mm}</td>
                             <td className="py-1 px-1 text-center">{p.quantidade}</td>
-                            <td className="py-1 px-1 text-center text-[10px] font-mono text-muted-foreground">
+                            <td className="py-1 px-1 text-center text-[11px] font-mono text-muted-foreground">
                               {[p.fita_t && "T", p.fita_b && "B", p.fita_l && "L", p.fita_r && "R"].filter(Boolean).join("") || "—"}
                             </td>
                           </tr>
@@ -3078,7 +3078,7 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                       {fiscalDados.nfe_ambiente === "homologacao" && <span className="ml-1 text-amber-600">(homologação)</span>}
                     </span>
                     {fiscalDados.nfe_chave && (
-                      <div className="font-mono text-[10px] text-muted-foreground mt-0.5 truncate">{fiscalDados.nfe_chave}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">{fiscalDados.nfe_chave}</div>
                     )}
                   </div>
                 </div>
@@ -3353,7 +3353,7 @@ function MatSelect({ label, value, options, onChange }: {
 
   return (
     <div className="relative">
-      <div className="text-[10.5px] text-muted-foreground mb-0.5">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-0.5">{label}</div>
       <button
         ref={btnRef}
         type="button"

@@ -243,6 +243,34 @@ function regrasEngrosso() {
       fita_borda: semFita,
       usa_material: "porta",
       observacao: "2\xAA chapa da frente de gaveta (30mm)"
+    },
+    // Engrosso das laterais APARENTES (2ª chapa de 15mm = 30mm). Só nas pontas
+    // expostas do corrido; laterais internas (com módulo ao lado) ficam 15mm.
+    {
+      nome: "engrosso_lateral_esq",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.engrosso_lat_esq === true,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "2\xAA chapa da lateral esquerda aparente (30mm)"
+    },
+    {
+      nome: "engrosso_lateral_dir",
+      grupo: "detalhe",
+      ativa_quando: (cfg) => cfg.engrosso_lat_dir === true,
+      calcular_largura_mm: (_L, _A, P) => P,
+      calcular_comprimento_mm: (_L, A) => A,
+      calcular_quantidade: () => 1,
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "2\xAA chapa da lateral direita aparente (30mm)"
     }
   ];
 }
@@ -1413,6 +1441,13 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       ordemInicial: ordem
     });
     ordem += bases.length;
+    if (bases.length > 0) {
+      const first = bases[0], last = bases[bases.length - 1];
+      first.configuracao = { ...first.configuracao, engrosso_lat_esq: true };
+      first.pecas = calcularPecas(first, getTemplateBase(first.largura_cm) ?? MODULOS_BASE_COZINHA[4]);
+      last.configuracao = { ...last.configuracao, engrosso_lat_dir: true };
+      last.pecas = calcularPecas(last, getTemplateBase(last.largura_cm) ?? MODULOS_BASE_COZINHA[4]);
+    }
     const aereos = instanciarModulos(largurasBases, {
       parede: paredeId,
       inicio_cm: seg.inicio_cm + offset,

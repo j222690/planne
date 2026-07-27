@@ -147,6 +147,16 @@ export function gerarLayoutCozinhaLinear(
     });
     ordem += bases.length;
 
+    // Laterais aparentes: a 1ª base (ponta esquerda) e a última (ponta direita)
+    // do corrido levam engrosso; as internas (com módulo ao lado) ficam 15mm.
+    if (bases.length > 0) {
+      const first = bases[0], last = bases[bases.length - 1];
+      first.configuracao = { ...first.configuracao, engrosso_lat_esq: true };
+      first.pecas = calcularPecas(first, getTemplateBase(first.largura_cm) ?? MODULOS_BASE_COZINHA[4]);
+      last.configuracao = { ...last.configuracao, engrosso_lat_dir: true };
+      last.pecas = calcularPecas(last, getTemplateBase(last.largura_cm) ?? MODULOS_BASE_COZINHA[4]);
+    }
+
     const aereos = instanciarModulos(largurasBases, {
       parede: paredeId,
       inicio_cm: seg.inicio_cm + offset,
