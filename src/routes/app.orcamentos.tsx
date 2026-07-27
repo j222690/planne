@@ -865,9 +865,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     setExpandedMovel(null);
     toast.success(`Parede ${paredeAtiva} travada${prox ? ` · agora a parede ${prox}` : " · todas as paredes prontas"}.`);
   };
+  // Destrava a parede: reabre para edição e volta os móveis dela para o estado
+  // "em edição" (sem parede_id), para poder ajustar e travar de novo.
   const destravarParede = (id: string) => {
     setParedesTravadas((t) => t.filter((w) => w !== id));
+    setMoveis((prev) => prev.map((m) => m.parede_id === id ? { ...m, parede_id: undefined } : m));
     setParedeAtiva(id);
+    toast(`Parede ${id} destravada — pode ajustar os móveis.`);
   };
 
   const [aiLoading, setAiLoading] = useState(false);
