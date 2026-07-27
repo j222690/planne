@@ -346,6 +346,13 @@ function WallVisualization({
     dragRef.current = { id: m.id, startClientX: e.clientX, startClientY: e.clientY, startXcm: curXcm, startYcm: curYcm, moved: false };
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
   };
+  // Verifica se um retângulo (x,yFloor,w,h em cm) invade outro móvel visível
+  const invade = (id: string, nx: number, ny: number, w: number, h: number) =>
+    laid.some(({ m: om, x: ox2, yFloor: oy2 }) =>
+      om.id !== id &&
+      nx < ox2 + om.largura_cm && nx + w > ox2 &&
+      ny < oy2 + om.altura_cm && ny + h > oy2);
+
   const onSvgMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d || !onMoveMovel) return;
@@ -353,10 +360,16 @@ function WallVisualization({
     const dyScreen = cmFromClientDelta(e.clientY - d.startClientY); // tela: baixo = +
     if (Math.abs(dx) > 1.5 || Math.abs(dyScreen) > 1.5) d.moved = true;
     const mv = moveis.find((x) => x.id === d.id);
-    const newX = Math.max(0, Math.min(wallW - (mv?.largura_cm ?? 0), Math.round(d.startXcm + dx)));
+    const w = mv?.largura_cm ?? 0, h = mv?.altura_cm ?? 0;
+    const cur = laid.find((l) => l.m.id === d.id);
+    const curX = cur?.x ?? d.startXcm, curY = cur?.yFloor ?? d.startYcm;
+    const newX = Math.max(0, Math.min(wallW - w, Math.round(d.startXcm + dx)));
     // yFloor sobe quando a tela desce → subtrai o delta de tela
-    const newY = Math.max(0, Math.min(wallH - (mv?.altura_cm ?? 0), Math.round(d.startYcm - dyScreen)));
-    onMoveMovel(d.id, newX, newY);
+    const newY = Math.max(0, Math.min(wallH - h, Math.round(d.startYcm - dyScreen)));
+    // Não deixa um móvel subir por cima do outro: bloqueia o eixo que colide.
+    const ax = invade(d.id, newX, curY, w, h) ? curX : newX;
+    const ay = invade(d.id, ax, newY, w, h) ? curY : newY;
+    onMoveMovel(d.id, ax, ay);
   };
   const onSvgUp = () => {
     const d = dragRef.current;
@@ -441,6 +454,28 @@ function WallVisualization({
                   <line key={i} x1={fx+fw/portas*(i+1)} y1={fy} x2={fx+fw/portas*(i+1)} y2={fy+fh}
                     stroke={stroke} strokeWidth={0.7} strokeDasharray="3,1.5" />
                 ))}
+                {/* Gavetas — desenhadas como faixas na base do móvel, com puxador */}
+                {(m.gavetas || 0) > 0 && (() => {
+                  const g = m.gavetas;
+                  const zoneH = Math.min(fh, g * 22 * scale); // ~22cm por gaveta
+                  const zoneY = fy + fh - zoneH;
+                  const dh = zoneH / g;
+                  return (
+                    <g>
+                      {Array.from({ length: g }).map((_, i) => {
+                        const gy = zoneY + i * dh;
+                        return (
+                          <g key={i}>
+                            <rect x={fx + 1} y={gy + 0.5} width={fw - 2} height={dh - 1}
+                              fill="rgba(99,102,241,0.18)" stroke={stroke} strokeWidth={0.7} />
+                            <line x1={fx + fw / 2 - 9} y1={gy + dh / 2} x2={fx + fw / 2 + 9} y2={gy + dh / 2}
+                              stroke={stroke} strokeWidth={1.2} strokeLinecap="round" />
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })()}
                 {/* Glass/mirror overlay */}
                 {isGlass && <rect x={fx+2} y={fy+2} width={fw-4} height={fh-4} fill="rgba(186,230,253,0.35)" stroke="#0284c7" strokeWidth={0.8} rx={1} />}
                 {isMirror && <rect x={fx+2} y={fy+2} width={fw-4} height={fh-4} fill="rgba(203,213,225,0.5)" stroke="#64748b" strokeWidth={0.8} rx={1} />}
