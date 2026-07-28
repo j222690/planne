@@ -727,7 +727,7 @@ async function erroDaResposta(res: Response): Promise<string> {
 }
 
 // Plano de corte visualizável (chapa + peças encaixadas)
-type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string };
+type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string; peca_id?: string };
 type ChapaCorte = {
   numero_sequencial: number; largura_mm: number; comprimento_mm: number;
   pecas_alocadas: PecaAloc[]; comodo?: string;
@@ -736,13 +736,40 @@ type ChapaCorte = {
   material?: { espessura_mm?: number; nome_display?: string };
 };
 
-// Extrai um nome curto e legível da etiqueta de produção ("FUNDO_GAVETA (seg 1/2)
-// — Armários Inferiores" -> "Fundo gaveta").
-function nomePeca(etiqueta?: string): string {
-  if (!etiqueta) return "Peça";
-  let s = etiqueta.split("—")[0].trim().replace(/\(seg[^)]*\)/i, "").trim();
-  s = s.replace(/_/g, " ").toLowerCase();
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "Peça";
+// Apelido de marceneiro para o tipo de móvel (fala como na oficina).
+function apelidoMovel(movel: string): string {
+  const m = movel.toLowerCase();
+  if (/superior|a[eé]reo/.test(m)) return "aéreo";
+  if (/inferior|balc[aã]o de pia|balc[aã]o/.test(m)) return "balcão";
+  if (/torre/.test(m)) return "torre";
+  if (/paneleir/.test(m)) return "paneleiro";
+  if (/despens/.test(m)) return "despenseiro";
+  if (/bancada|tampo/.test(m)) return "bancada";
+  if (/gavete/.test(m)) return "gaveteiro";
+  if (/roupeir|guarda/.test(m)) return "roupeiro";
+  return movel;
+}
+
+// Constrói o nome descritivo da peça a partir da etiqueta + posição.
+// Ex.: "LATERAL — Armários Superiores" (cópia #1) -> "Lateral dir. do aéreo".
+function nomePeca(p: PecaAloc): { nome: string; movel: string } {
+  const et = p.etiqueta ?? "";
+  const [rawTipo0, movelRaw = ""] = et.split("—").map((s) => s.trim());
+  const rawTipo = rawTipo0 ?? "";
+  const seg = rawTipo.match(/seg\s*(\d+)\s*\/\s*(\d+)/i);
+  let tipo = rawTipo.replace(/\(seg[^)]*\)/i, "").replace(/_/g, " ").trim().toLowerCase();
+  if (!tipo) return { nome: "Peça", movel: "" };
+  const idx = parseInt((p.peca_id ?? "").split("#")[1] ?? "-1", 10);
+  // lado esq./dir. para peças que vêm em par (laterais); nº para múltiplas.
+  let sufixo = "";
+  if (/lateral/.test(tipo) && !/esq|dir/.test(tipo)) sufixo = idx === 0 ? " esq." : idx === 1 ? " dir." : "";
+  else if (/porta|gaveta|prateleira|frente/.test(tipo) && idx >= 0) sufixo = ` ${idx + 1}`;
+  tipo = tipo.replace(/\besq\b/, "esq.").replace(/\bdir\b/, "dir.");
+  const tipoCap = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+  const movel = movelRaw ? apelidoMovel(movelRaw) : "";
+  const segTxt = seg ? ` (parte ${seg[1]}/${seg[2]})` : "";
+  const nome = movel ? `${tipoCap}${sufixo} do ${movel}${segTxt}` : `${tipoCap}${sufixo}${segTxt}`;
+  return { nome, movel };
 }
 
 // ─── Visualização do plano de corte (mesmo sistema do preview 2D) ────────────
@@ -792,26 +819,26 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
           {ch.pecas_alocadas.map((p, i) => {
             const x = pad + (p.x_mm ?? 0) * scale, y = pad + (p.y_mm ?? 0) * scale;
             const w = p.largura_mm * scale, h = p.comprimento_mm * scale;
-            const nome = nomePeca(p.etiqueta);
+            const { nome } = nomePeca(p);
             const cx = x + w / 2, cy = y + h / 2;
             const fs = Math.max(5.5, Math.min(9, w / 10));
+            // trunca o nome ao que cabe na largura da peça
+            const maxCh = Math.max(4, Math.floor(w / (fs * 0.52)));
+            const nomeFit = nome.length > maxCh ? nome.slice(0, maxCh - 1) + "…" : nome;
+            const dims = `${Math.round(p.largura_mm)}×${Math.round(p.comprimento_mm)}${p.rotacionada ? " ↻" : ""}`;
             return (
               <g key={i}>
                 <rect x={x} y={y} width={w} height={h} fill={cores[i % cores.length]} stroke="#475569" strokeWidth={0.6} />
-                {w > 30 && h > 22 ? (
+                {w > 34 && h > 24 ? (
                   <>
                     <text x={cx} y={cy - fs * 0.55} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={fs} fontWeight="600" fill="#0f172a">{nome}</text>
+                      fontSize={fs} fontWeight="600" fill="#0f172a">{nomeFit}</text>
                     <text x={cx} y={cy + fs * 0.7} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={fs * 0.85} fill="#475569">
-                      {Math.round(p.largura_mm)}×{Math.round(p.comprimento_mm)}{p.rotacionada ? " ↻" : ""}
-                    </text>
+                      fontSize={fs * 0.82} fill="#475569">{dims}</text>
                   </>
                 ) : w > 20 && h > 10 ? (
                   <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.max(5, Math.min(7.5, w / 12))} fill="#1e293b">
-                    {Math.round(p.largura_mm)}×{Math.round(p.comprimento_mm)}
-                  </text>
+                    fontSize={Math.max(5, Math.min(7.5, w / 12))} fill="#1e293b">{dims}</text>
                 ) : null}
               </g>
             );
