@@ -313,7 +313,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "GET") return statusHandler(req, res);
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const body = req.body as Partial<RenderInput> & { moveis_nomes?: string[] };
+  const body = req.body as Partial<RenderInput> & {
+    moveis_nomes?: string[];
+    // Imagem-guia (preview 2D/3D do projeto, base64 com ou sem prefixo data:) —
+    // usada como DIREÇÃO exata do layout no Gemini. + materiais especificados.
+    guia_b64?: string;
+    materiais_txt?: string;
+  };
 
   // Compatibilidade com chamadas antigas (moveis_nomes)
   const moveis: MovelInput[] = body.moveis
@@ -342,6 +348,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const prompt = buildRenderPrompt(input);
   const fluxCfg = FLUX_CONFIGS[mode];
+
+  // ── Render GUIADO por imagem (preview do projeto) via Gemini nativo ──────────
+  // O Gemini aceita imagem + texto na mesma chamada: passamos o preview como
+  // referência EXATA do layout e escrevemos os materiais (trilho, chapa, cor,
+  // ferragem). É o caminho mais fiel ao projeto — tem prioridade quando há guia.
+  const guiaRaw = body.guia_b64;
+  const guiaData = guiaRaw ? guiaRaw.replace(/^data:[^;]+;base64,/, "") : null;
+  const guiaMime = guiaRaw?.startsWith("data:")
+    ? guiaRaw.slice(5, guiaRaw.indexOf(";")) : "image/png";
+
+  if (guiaData && geminiKey) {
+    const model = "gemini-2.5-flash-image";
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`;
+    const promptGuia = [
+      "You are given a reference image: a 2D/3D schematic of a Brazilian planned-furniture (marcenaria) project on a wall.",
+      "Recreate this EXACT layout as a photorealistic interior render — keep every cabinet, door, drawer, shelf and module in the SAME position, count and proportion as in the reference. Do not add or remove furniture.",
+      prompt,
+      body.materiais_txt ? `Specified materials and hardware to depict: ${body.materiais_txt.slice(0, 400)}` : "",
+    ].filter(Boolean).join(". ").slice(0, 4000);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ inlineData: { mimeType: guiaMime, data: guiaData } }, { text: promptGuia }] }],
+          generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "16:9" } },
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        return res.status(502).json({ error: `Gemini guia (HTTP ${response.status}): ${err.slice(0, 200)}` });
+      }
+      const data = (await response.json()) as {
+        candidates?: { content?: { parts?: { inlineData?: { data?: string; mimeType?: string } }[] } }[];
+      };
+      const imgPart = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+      if (!imgPart?.inlineData?.data) {
+        return res.status(502).json({ error: "Gemini não retornou imagem a partir do guia (possível bloqueio de segurança)." });
+      }
+      const mime = imgPart.inlineData.mimeType ?? "image/png";
+      return res.json({
+        provider: "gemini", status: "completed", mode,
+        url: `data:${mime};base64,${imgPart.inlineData.data}`, prompt: promptGuia,
+      });
+    } catch (e) {
+      return res.status(502).json({ error: `Gemini (guia) indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
+    }
+  }
 
   // ── FluxAPI.ai (Kontext Pro/Max) ────────────────────────────────────────────
   if (fluxKey) {
@@ -391,10 +445,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Os modelos Imagen (:predict) foram descontinuados para novas contas; usamos
   // a geração nativa do Gemini, que aceita aspectRatio e retorna a imagem inline.
   // Devolvemos data URI (sem storage externo).
-  // pro    → gemini-3.1-flash-image (16:9, alta fidelidade, staging rico)
-  // schnell→ gemini-2.5-flash-image (preview)
+  // Modelo de imagem nativa do Gemini ("Nano Banana"). O antigo
+  // gemini-3.1-flash-image não existe — usamos gemini-2.5-flash-image.
   if (geminiKey) {
-    const model = mode === "schnell" ? "gemini-2.5-flash-image" : "gemini-3.1-flash-image";
+    const model = "gemini-2.5-flash-image";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`;
     try {
       const response = await fetch(endpoint, {
