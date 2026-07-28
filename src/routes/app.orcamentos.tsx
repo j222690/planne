@@ -1793,6 +1793,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   const analise = analisarMovel({
                     largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
                     portas: m.portas, tipo_porta: m.tipo_porta, gavetas: m.gavetas, prateleiras: m.prateleiras,
+                    ambiente: comodos.find((c) => c.nome === m.comodo_nome)?.tipo ?? m.comodo_nome,
+                    tem_fundo: m.tem_fundo,
                   });
                   const temAlerta = analise.nivel === "atencao" || analise.nivel === "critico";
                   return (
@@ -2268,6 +2270,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
               const resumo = resumirProjeto(moveis.map((m) => ({
                 largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
                 portas: m.portas, tipo_porta: m.tipo_porta, gavetas: m.gavetas, prateleiras: m.prateleiras,
+                ambiente: comodos.find((c) => c.nome === m.comodo_nome)?.tipo ?? m.comodo_nome,
+                tem_fundo: m.tem_fundo,
               })));
               return (
                 <div className="rounded-lg border border-border bg-surface-2/50 p-3 space-y-2">

@@ -33,7 +33,15 @@ export interface MovelParaAnalise {
   prateleiras: number;
   espessura_corpo_mm?: EspessuraMDF;
   espessura_porta_mm?: EspessuraMDF;
+  /** Nome/tipo do cômodo (para detectar área úmida). Ex.: "Cozinha", "Banheiro". */
+  ambiente?: string;
+  /** Tem fundo estrutural? (default: assume que sim). */
+  tem_fundo?: boolean;
 }
+
+/** Ambientes com umidade — pedem material resistente (hidrófugo/MDP). */
+const ehAreaUmida = (ambiente?: string) =>
+  !!ambiente && /banheiro|cozinha|lavanderia|gourmet|área de servi|area de servi/i.test(ambiente);
 
 export type SeveridadeAchado = "info" | "atencao" | "critico";
 
@@ -191,6 +199,26 @@ export function analisarMovel(m: MovelParaAnalise): AnaliseMovel {
       titulo: "Corrediça",
       detalhe: `${corr.replace(/_/g, " ")} para ${m.profundidade_cm}cm de profundidade (${m.gavetas} gaveta${m.gavetas > 1 ? "s" : ""}).`,
       fonte: "ESPECS_FERRAGEM",
+    });
+  }
+
+  // ── Material para área úmida (hidrófugo / MDP) ──
+  if (ehAreaUmida(m.ambiente)) {
+    achados.push({
+      severidade: "atencao",
+      titulo: "Área úmida",
+      detalhe: `${m.ambiente}: prefira MDF hidrófugo (RUC/Ultra) ou MDP — o MDF comum incha e empena com a umidade. Zona molhada (sob cuba/tanque): sem fundo de MDF.`,
+      fonte: "atom_05_mdf_hidrofugo_ruc_ultra_linhas_resistentes_a_umidade_por_fabricante_linha_ruc",
+    });
+  }
+
+  // ── Fundo estrutural (trava o esquadro) ──
+  if (m.tem_fundo === false && (m.largura_cm > 100 || m.altura_cm > 180)) {
+    achados.push({
+      severidade: "atencao",
+      titulo: "Sem fundo estrutural",
+      detalhe: `Móvel grande sem fundo tende a perder o esquadro (torcer) com o tempo — o fundo trava o corpo em 90°. Considere incluir fundo 6mm.`,
+      fonte: "atom_03_fundo_do_movel_funcao_estrutural_travamento_tra",
     });
   }
 

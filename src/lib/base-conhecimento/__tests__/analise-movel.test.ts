@@ -36,6 +36,16 @@ describe("analisarMovel", () => {
     expect(a.achados.some((x) => x.titulo === "Prateleira pode envergar")).toBe(true);
   });
 
+  test("móvel em área úmida sugere material resistente", () => {
+    const a = analisarMovel({ ...base, ambiente: "Banheiro" });
+    expect(a.achados.some((x) => x.titulo === "Área úmida")).toBe(true);
+  });
+
+  test("móvel grande sem fundo avisa perda de esquadro", () => {
+    const a = analisarMovel({ largura_cm: 200, profundidade_cm: 60, altura_cm: 230, portas: 4, tipo_porta: "abrir", gavetas: 0, prateleiras: 3, tem_fundo: false });
+    expect(a.achados.some((x) => x.titulo === "Sem fundo estrutural")).toBe(true);
+  });
+
   test("gaveta recomenda corrediça por profundidade", () => {
     const a = analisarMovel({ ...base, portas: 0, tipo_porta: "sem", prateleiras: 0, gavetas: 4, profundidade_cm: 50 });
     expect(a.achados.some((x) => x.titulo === "Corrediça")).toBe(true);
