@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { analisarMovel, type MovelParaAnalise } from "../analise-movel";
+import { analisarMovel, resumirProjeto, type MovelParaAnalise } from "../analise-movel";
 
 const base: MovelParaAnalise = {
   largura_cm: 80, profundidade_cm: 35, altura_cm: 70,
@@ -54,5 +54,31 @@ describe("analisarMovel", () => {
   test("móvel simples e pequeno não gera atenção crítica", () => {
     const a = analisarMovel({ largura_cm: 40, profundidade_cm: 35, altura_cm: 60, portas: 1, tipo_porta: "abrir", gavetas: 0, prateleiras: 1 });
     expect(a.nivel).not.toBe("critico");
+  });
+});
+
+describe("resumirProjeto", () => {
+  test("soma peso e conta alertas de todos os móveis", () => {
+    const r = resumirProjeto([
+      { largura_cm: 100, profundidade_cm: 60, altura_cm: 250, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 4 },
+      { largura_cm: 80, profundidade_cm: 35, altura_cm: 70, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 2 },
+    ]);
+    expect(r.num_moveis).toBe(2);
+    expect(r.peso_total_kg).toBeGreaterThan(0);
+    expect(r.maior_dimensao_cm).toBe(250);
+  });
+
+  test("peça alta (>200cm) gera nota de acesso/transporte", () => {
+    const r = resumirProjeto([
+      { largura_cm: 100, profundidade_cm: 60, altura_cm: 250, portas: 2, tipo_porta: "abrir", gavetas: 0, prateleiras: 4 },
+    ]);
+    expect(r.notas.some((n) => n.titulo === "Acesso / transporte")).toBe(true);
+  });
+
+  test("projeto pequeno não gera notas de transporte/peso", () => {
+    const r = resumirProjeto([
+      { largura_cm: 60, profundidade_cm: 35, altura_cm: 70, portas: 1, tipo_porta: "abrir", gavetas: 0, prateleiras: 1 },
+    ]);
+    expect(r.notas.length).toBe(0);
   });
 });

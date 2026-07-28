@@ -19,7 +19,7 @@ import {
   upsertOrdemProducao, upsertLancamento,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
-import { analisarMovel } from "@/lib/base-conhecimento/analise-movel";
+import { analisarMovel, resumirProjeto } from "@/lib/base-conhecimento/analise-movel";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -2262,6 +2262,33 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 )}
               </div>
             </div>{/* /grid duas colunas */}
+
+            {/* Resumo técnico do projeto (Base de Conhecimento) */}
+            {moveis.length > 0 && (() => {
+              const resumo = resumirProjeto(moveis.map((m) => ({
+                largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
+                portas: m.portas, tipo_porta: m.tipo_porta, gavetas: m.gavetas, prateleiras: m.prateleiras,
+              })));
+              return (
+                <div className="rounded-lg border border-border bg-surface-2/50 p-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+                    <span className="font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Resumo técnico</span>
+                    <span title="Peso estimado total (MDF)">⚖ <strong>{resumo.peso_total_kg}kg</strong></span>
+                    <span>📦 {resumo.num_moveis} móvel(is)</span>
+                    <span title="Maior dimensão de peça">📏 até {resumo.maior_dimensao_cm}cm</span>
+                    <span className={resumo.alertas > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}>
+                      {resumo.alertas > 0 ? `⚠ ${resumo.alertas} ponto(s) de atenção` : "✓ sem alertas"}
+                    </span>
+                  </div>
+                  {resumo.notas.map((n, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[11.5px] text-muted-foreground">
+                      <span className="mt-1 size-1.5 rounded-full shrink-0 bg-sky-500" />
+                      <span><span className="font-medium">{n.titulo}:</span> {n.detalhe}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-3 mt-2 flex items-center justify-between bg-surface/95 backdrop-blur border-t border-border rounded-b-lg z-10">
               <div className="text-[12px] text-muted-foreground">

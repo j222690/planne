@@ -202,3 +202,52 @@ export function analisarMovel(m: MovelParaAnalise): AnaliseMovel {
 
   return { peso_kg: peso, achados, nivel };
 }
+
+// ─── RESUMO DO PROJETO (agrega todos os móveis) ──────────────────────────────
+
+// Porta de elevador de referência 0,80×2,00m (base, módulo Transporte): uma peça
+// acima disso não passa em pé pela rota interna → içar ou desmontar.
+const ALTURA_ACESSO_CM = 200;
+
+export interface ResumoProjeto {
+  peso_total_kg: number;
+  num_moveis: number;
+  alertas: number;      // achados de atenção + crítico somados
+  maior_dimensao_cm: number;
+  notas: AchadoMovel[]; // avisos de nível de projeto (transporte, peso)
+}
+
+/** Agrega a análise de todos os móveis num panorama técnico do projeto. */
+export function resumirProjeto(moveis: MovelParaAnalise[]): ResumoProjeto {
+  let peso = 0, alertas = 0, maior = 0;
+  for (const m of moveis) {
+    const a = analisarMovel(m);
+    peso += a.peso_kg;
+    alertas += a.achados.filter((x) => x.severidade !== "info").length;
+    maior = Math.max(maior, m.altura_cm, m.largura_cm);
+  }
+  const notas: AchadoMovel[] = [];
+  if (maior > ALTURA_ACESSO_CM) {
+    notas.push({
+      severidade: "info",
+      titulo: "Acesso / transporte",
+      detalhe: `Há peça de ${Math.round(maior)}cm — pode não passar em pé por porta/elevador (ref. 0,80×2,00m). Verifique o acesso; talvez precise desmontar ou içar.`,
+      fonte: "atom_10_dimensoes_padrao_de_elevador_predial_e_por",
+    });
+  }
+  if (peso > 200) {
+    notas.push({
+      severidade: "info",
+      titulo: "Peso do projeto",
+      detalhe: `~${Math.round(peso)}kg no total — planeje pessoal/equipamento para a montagem (peças pesadas embaixo na carga).`,
+      fonte: "atom_10_acondicionamento_e_organizacao_de_carga_di",
+    });
+  }
+  return {
+    peso_total_kg: Math.round(peso),
+    num_moveis: moveis.length,
+    alertas,
+    maior_dimensao_cm: Math.round(maior),
+    notas,
+  };
+}
