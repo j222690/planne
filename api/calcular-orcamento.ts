@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { calcularOrcamento } from "./_calc";
 import type { MovelInput as CalcMovelInput } from "./_calc";
+import { REGRAS_BASE_MARCENARIA } from "./_regras-base";
 
 function detectMime(b64: string): string {
   if (b64.startsWith("/9j")) return "image/jpeg";
@@ -268,7 +269,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     body: JSON.stringify({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: SYSTEM },
+        { role: "system", content: `${SYSTEM}\n\n${REGRAS_BASE_MARCENARIA}` },
         {
           role: "user",
           content: [
