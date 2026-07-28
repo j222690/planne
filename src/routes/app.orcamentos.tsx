@@ -3618,6 +3618,23 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                   return groupHeader + itemRows;
                 }).join("");
                 const logoHtml = logoUrl ? `<img src="${logoUrl}" style="height:48px;object-fit:contain;margin-bottom:8px" /><br>` : "";
+                // Ficha técnica (Base de Conhecimento): peso e acesso/transporte.
+                const resumoTec = (moveisCfg && moveisCfg.length)
+                  ? resumirProjeto(moveisCfg.map((m) => ({
+                      largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
+                      portas: m.portas, tipo_porta: m.tipo_porta, gavetas: m.gavetas, prateleiras: m.prateleiras,
+                      tem_fundo: m.tem_fundo,
+                    })))
+                  : null;
+                const fichaHtml = resumoTec ? `
+                  <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#666;margin:28px 0 8px">Ficha técnica</h2>
+                  <div style="font-size:12px;color:#333;display:flex;flex-wrap:wrap;gap:18px">
+                    <span>Peso estimado: <strong>~${resumoTec.peso_total_kg}kg</strong></span>
+                    <span>Móveis: <strong>${resumoTec.num_moveis}</strong></span>
+                    <span>Maior peça: <strong>${resumoTec.maior_dimensao_cm}cm</strong></span>
+                  </div>
+                  ${resumoTec.notas.map((n) => `<div style="font-size:11px;color:#777;margin-top:6px">• ${n.titulo}: ${n.detalhe}</div>`).join("")}
+                ` : "";
                 printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
                   <title>Orçamento ${orc.numero ?? ""}</title>
                   <style>
@@ -3641,6 +3658,7 @@ ${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçame
                     <tbody>${rows}</tbody>
                     <tfoot><tr><td colspan="3" style="text-align:right">Total</td><td style="text-align:right">R$ ${totalItens.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr></tfoot>
                   </table>
+                  ${fichaHtml}
                   <div class="footer">Documento gerado pelo Planne ERP · ${new Date().toLocaleDateString("pt-BR")}</div>
                   <script>window.onload=()=>window.print()</script></body></html>`);
                 printWin.document.close();
