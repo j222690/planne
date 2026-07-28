@@ -23,13 +23,17 @@ import type {
   Janela,
   Centimetros,
 } from "./tipos";
+// Fonte única das normas ergonômicas: a Base de Conhecimento (conhecimento-tecnico).
+import { NORMAS } from "./conhecimento-tecnico";
 
 // ─── PARÂMETROS NORMATIVOS ────────────────────────────────────────────────────
 
-/** Circulação mínima absoluta em cozinha (NBR / ergonomia). Abaixo disso: reprova. */
-export const CIRCULACAO_MINIMA_CM: Centimetros = 80;
+/** Circulação mínima absoluta em cozinha (NBR / ergonomia). Abaixo disso: reprova.
+ *  Vem da base (NORMAS.circulacao_minima) — não duplicar o número aqui. */
+export const CIRCULACAO_MINIMA_CM: Centimetros = NORMAS.circulacao_minima.valor;
 
-/** Circulação confortável recomendada. Entre mínima e esta: alerta. */
+/** Circulação confortável p/ bancada única. Entre mínima e esta: alerta.
+ *  (NORMAS.circulacao_ideal = 120cm é para corredor DUPLO/ilha — usado no consultor.) */
 export const CIRCULACAO_CONFORTAVEL_CM: Centimetros = 90;
 
 /** Largura mínima de um módulo padrão. */

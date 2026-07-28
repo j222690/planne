@@ -879,8 +879,107 @@ function getTemplateAereo(largura_cm) {
   return MODULOS_AEREOS_COZINHA.find((m) => m.largura.padrao_cm === largura_cm);
 }
 
+// src/lib/motor-parametrico/conhecimento-tecnico.ts
+var ESPECS_MDF = {
+  3: { espessura_mm: 3, usos: ["fundo de gaveta leve", "costas de quadro"], vao_max_prateleira_cm: 0, densidade_kg_m3: 750 },
+  6: { espessura_mm: 6, usos: ["fundo de arm\xE1rio", "fundo de gaveta", "costas"], vao_max_prateleira_cm: 0, densidade_kg_m3: 730 },
+  9: { espessura_mm: 9, usos: ["fundo refor\xE7ado", "divis\xF3ria leve"], vao_max_prateleira_cm: 40, densidade_kg_m3: 720 },
+  12: { espessura_mm: 12, usos: ["prateleira leve", "divis\xF3ria"], vao_max_prateleira_cm: 60, densidade_kg_m3: 710 },
+  15: { espessura_mm: 15, usos: ["estrutura padr\xE3o", "corpo", "porta", "prateleira"], vao_max_prateleira_cm: 80, densidade_kg_m3: 700 },
+  18: { espessura_mm: 18, usos: ["porta grande", "prateleira longa", "tampo", "estrutura premium"], vao_max_prateleira_cm: 100, densidade_kg_m3: 700 },
+  25: { espessura_mm: 25, usos: ["tampo de bancada", "nicho estrutural", "mesa"], vao_max_prateleira_cm: 120, densidade_kg_m3: 690 }
+};
+function espessuraParaVao(vao_cm) {
+  if (vao_cm <= 60) return 15;
+  if (vao_cm <= 80) return 15;
+  if (vao_cm <= 100) return 18;
+  return 25;
+}
+function pesoPeca(largura_mm, comprimento_mm, espessura_mm) {
+  const volume_m3 = largura_mm / 1e3 * (comprimento_mm / 1e3) * (espessura_mm / 1e3);
+  const densidade = ESPECS_MDF[espessura_mm]?.densidade_kg_m3 ?? 700;
+  return Math.round(volume_m3 * densidade * 100) / 100;
+}
+var ESPECS_FERRAGEM = {
+  dobradica_35mm_110grau: { tipo: "dobradica_35mm_110grau", nome: "Dobradi\xE7a 35mm 110\xB0", aplicacao: "porta de abrir padr\xE3o", capacidade_kg: 8 },
+  dobradica_35mm_165grau: { tipo: "dobradica_35mm_165grau", nome: "Dobradi\xE7a 35mm 165\xB0", aplicacao: "porta de canto / abertura ampla", capacidade_kg: 8 },
+  dobradica_push_open: { tipo: "dobradica_push_open", nome: "Dobradi\xE7a Push-Open", aplicacao: "porta sem puxador (toque)", capacidade_kg: 7 },
+  corredicao_tandem_300mm: { tipo: "corredicao_tandem_300mm", nome: "Corredi\xE7a Tandem 300mm", aplicacao: "gaveta rasa", capacidade_kg: 30 },
+  corredicao_tandem_400mm: { tipo: "corredicao_tandem_400mm", nome: "Corredi\xE7a Tandem 400mm", aplicacao: "gaveta m\xE9dia", capacidade_kg: 30 },
+  corredicao_tandem_500mm: { tipo: "corredicao_tandem_500mm", nome: "Corredi\xE7a Tandem 500mm", aplicacao: "gaveta profunda", capacidade_kg: 40 },
+  corredicao_lateral_porta: { tipo: "corredicao_lateral_porta", nome: "Trilho de Correr", aplicacao: "porta de correr de roupeiro" },
+  cabideiro_simples: { tipo: "cabideiro_simples", nome: "Cabideiro", aplicacao: "barra de cabide em roupeiro" },
+  amortecedor_soft_close: { tipo: "amortecedor_soft_close", nome: "Soft-Close", aplicacao: "amortecimento de fechamento" }
+};
+function corredicaParaProfundidade(profundidade_cm) {
+  if (profundidade_cm <= 35) return "corredicao_tandem_300mm";
+  if (profundidade_cm <= 45) return "corredicao_tandem_400mm";
+  return "corredicao_tandem_500mm";
+}
+var NORMAS = {
+  altura_bancada_cozinha: { codigo: "ERG-COZ-01", descricao: "Altura de bancada de cozinha", valor: 90, unidade: "cm" },
+  altura_bancada_banheiro: { codigo: "ERG-BAN-01", descricao: "Altura de bancada de banheiro", valor: 85, unidade: "cm" },
+  circulacao_minima: { codigo: "NBR-CIRC-01", descricao: "Circula\xE7\xE3o m\xEDnima entre m\xF3veis", valor: 80, unidade: "cm" },
+  circulacao_ideal: { codigo: "ERG-CIRC-02", descricao: "Circula\xE7\xE3o ideal entre bancadas", valor: 120, unidade: "cm" },
+  altura_aereo_piso: { codigo: "ERG-COZ-02", descricao: "Altura do piso \xE0 base do a\xE9reo", valor: 150, unidade: "cm" },
+  profundidade_aereo: { codigo: "ERG-COZ-03", descricao: "Profundidade de arm\xE1rio a\xE9reo", valor: 33, unidade: "cm" },
+  profundidade_base_cozinha: { codigo: "ERG-COZ-04", descricao: "Profundidade de gabinete base", valor: 55, unidade: "cm" },
+  altura_cabideiro_camisa: { codigo: "ERG-ROUP-01", descricao: "Altura de cabideiro (camisas)", valor: 160, unidade: "cm" },
+  altura_cabideiro_vestido: { codigo: "ERG-ROUP-02", descricao: "Altura de cabideiro (vestidos longos)", valor: 180, unidade: "cm" },
+  profundidade_roupeiro: { codigo: "ERG-ROUP-03", descricao: "Profundidade de roupeiro", valor: 60, unidade: "cm" },
+  vao_porta_max: { codigo: "TEC-PORT-01", descricao: "Largura m\xE1xima de porta de abrir", valor: 50, unidade: "cm" },
+  peitoril_janela_min: { codigo: "ERG-JAN-01", descricao: "Peitoril m\xEDnimo p/ gabinete base", valor: 90, unidade: "cm" }
+};
+var BOAS_PRATICAS = [
+  { id: "BP-01", categoria: "estrutura", regra: "Fundo 6mm encaixado em rebaixo de 4mm nas laterais." },
+  { id: "BP-02", categoria: "estrutura", regra: "Engrosso frontal de 50mm nas laterais para batida de portas." },
+  { id: "BP-03", categoria: "estrutura", regra: "Prateleira com v\xE3o > 80cm exige MDF 18mm ou apoio central." },
+  { id: "BP-04", categoria: "acabamento", regra: "Fita de borda em todas as bordas aparentes (frontais)." },
+  { id: "BP-05", categoria: "ferragem", regra: "M\xEDnimo 2 dobradi\xE7as por porta; +1 a cada 60cm de altura." },
+  { id: "BP-06", categoria: "ferragem", regra: "Corredi\xE7a dimensionada para a profundidade real da gaveta." },
+  { id: "BP-07", categoria: "montagem", regra: "Jun\xE7\xE3o de pe\xE7as com cavilha 8\xD730mm + minifix." },
+  { id: "BP-08", categoria: "estrutura", regra: "Porta de abrir at\xE9 50cm de largura; acima, usar correr ou dupla." },
+  { id: "BP-09", categoria: "ferragem", regra: "M\xF3dulos > 150cm de largura: 6 p\xE9s regul\xE1veis em vez de 4." },
+  { id: "BP-10", categoria: "acabamento", regra: "Cuba/tanque sem fundo de MDF na zona molhada." },
+  { id: "BP-11", categoria: "estrutura", regra: "Rodap\xE9 clipado (padr\xE3o 10cm) encaixado nos p\xE9s regul\xE1veis; s\xF3 em m\xF3dulos de piso, nunca em a\xE9reos/parede." },
+  { id: "BP-12", categoria: "acabamento", regra: "M\xF3dulo que vai at\xE9 o teto recebe moldura de roda-teto (arremate, padr\xE3o 5cm) para fechar o v\xE3o superior." },
+  { id: "BP-13", categoria: "estrutura", regra: "Engrosso de dupla chapa (15+15=30mm) em tampos de bancada e frentes aparentes; dobra a \xE1rea de material da pe\xE7a no corte." }
+];
+function consultarConhecimento(consulta) {
+  const q = consulta.toLowerCase();
+  const respostas = [];
+  for (const [chave, n] of Object.entries(NORMAS)) {
+    if (chave.includes(q) || n.descricao.toLowerCase().includes(q)) {
+      respostas.push({ encontrado: true, topico: n.descricao, conteudo: `${n.valor}${n.unidade}`, referencia: n.codigo });
+    }
+  }
+  if (/mdf|espessura|chapa|prateleira/.test(q)) {
+    for (const espec of Object.values(ESPECS_MDF)) {
+      respostas.push({
+        encontrado: true,
+        topico: `MDF ${espec.espessura_mm}mm`,
+        conteudo: `Usos: ${espec.usos.join(", ")}. V\xE3o m\xE1x prateleira: ${espec.vao_max_prateleira_cm || "n/a"}cm.`
+      });
+    }
+  }
+  if (/ferragem|dobrad|corredi|cabideiro|trilho/.test(q)) {
+    for (const espec of Object.values(ESPECS_FERRAGEM)) {
+      if (espec) respostas.push({ encontrado: true, topico: espec.nome, conteudo: espec.aplicacao });
+    }
+  }
+  for (const bp of BOAS_PRATICAS) {
+    if (bp.regra.toLowerCase().includes(q)) {
+      respostas.push({ encontrado: true, topico: `Boa pr\xE1tica ${bp.id}`, conteudo: bp.regra, referencia: bp.id });
+    }
+  }
+  if (respostas.length === 0) {
+    respostas.push({ encontrado: false, topico: consulta, conteudo: "Sem entrada espec\xEDfica na base de conhecimento." });
+  }
+  return respostas;
+}
+
 // src/lib/motor-parametrico/rule-engine.ts
-var CIRCULACAO_MINIMA_CM = 80;
+var CIRCULACAO_MINIMA_CM = NORMAS.circulacao_minima.valor;
 var CIRCULACAO_CONFORTAVEL_CM = 90;
 var LARGURA_MODULO_MIN_CM = 30;
 var LARGURA_MODULO_MAX_CM = 90;
@@ -4699,105 +4798,6 @@ function proximoDiaUtil(data) {
     d.setDate(d.getDate() + 1);
   }
   return d;
-}
-
-// src/lib/motor-parametrico/conhecimento-tecnico.ts
-var ESPECS_MDF = {
-  3: { espessura_mm: 3, usos: ["fundo de gaveta leve", "costas de quadro"], vao_max_prateleira_cm: 0, densidade_kg_m3: 750 },
-  6: { espessura_mm: 6, usos: ["fundo de arm\xE1rio", "fundo de gaveta", "costas"], vao_max_prateleira_cm: 0, densidade_kg_m3: 730 },
-  9: { espessura_mm: 9, usos: ["fundo refor\xE7ado", "divis\xF3ria leve"], vao_max_prateleira_cm: 40, densidade_kg_m3: 720 },
-  12: { espessura_mm: 12, usos: ["prateleira leve", "divis\xF3ria"], vao_max_prateleira_cm: 60, densidade_kg_m3: 710 },
-  15: { espessura_mm: 15, usos: ["estrutura padr\xE3o", "corpo", "porta", "prateleira"], vao_max_prateleira_cm: 80, densidade_kg_m3: 700 },
-  18: { espessura_mm: 18, usos: ["porta grande", "prateleira longa", "tampo", "estrutura premium"], vao_max_prateleira_cm: 100, densidade_kg_m3: 700 },
-  25: { espessura_mm: 25, usos: ["tampo de bancada", "nicho estrutural", "mesa"], vao_max_prateleira_cm: 120, densidade_kg_m3: 690 }
-};
-function espessuraParaVao(vao_cm) {
-  if (vao_cm <= 60) return 15;
-  if (vao_cm <= 80) return 15;
-  if (vao_cm <= 100) return 18;
-  return 25;
-}
-function pesoPeca(largura_mm, comprimento_mm, espessura_mm) {
-  const volume_m3 = largura_mm / 1e3 * (comprimento_mm / 1e3) * (espessura_mm / 1e3);
-  const densidade = ESPECS_MDF[espessura_mm]?.densidade_kg_m3 ?? 700;
-  return Math.round(volume_m3 * densidade * 100) / 100;
-}
-var ESPECS_FERRAGEM = {
-  dobradica_35mm_110grau: { tipo: "dobradica_35mm_110grau", nome: "Dobradi\xE7a 35mm 110\xB0", aplicacao: "porta de abrir padr\xE3o", capacidade_kg: 8 },
-  dobradica_35mm_165grau: { tipo: "dobradica_35mm_165grau", nome: "Dobradi\xE7a 35mm 165\xB0", aplicacao: "porta de canto / abertura ampla", capacidade_kg: 8 },
-  dobradica_push_open: { tipo: "dobradica_push_open", nome: "Dobradi\xE7a Push-Open", aplicacao: "porta sem puxador (toque)", capacidade_kg: 7 },
-  corredicao_tandem_300mm: { tipo: "corredicao_tandem_300mm", nome: "Corredi\xE7a Tandem 300mm", aplicacao: "gaveta rasa", capacidade_kg: 30 },
-  corredicao_tandem_400mm: { tipo: "corredicao_tandem_400mm", nome: "Corredi\xE7a Tandem 400mm", aplicacao: "gaveta m\xE9dia", capacidade_kg: 30 },
-  corredicao_tandem_500mm: { tipo: "corredicao_tandem_500mm", nome: "Corredi\xE7a Tandem 500mm", aplicacao: "gaveta profunda", capacidade_kg: 40 },
-  corredicao_lateral_porta: { tipo: "corredicao_lateral_porta", nome: "Trilho de Correr", aplicacao: "porta de correr de roupeiro" },
-  cabideiro_simples: { tipo: "cabideiro_simples", nome: "Cabideiro", aplicacao: "barra de cabide em roupeiro" },
-  amortecedor_soft_close: { tipo: "amortecedor_soft_close", nome: "Soft-Close", aplicacao: "amortecimento de fechamento" }
-};
-function corredicaParaProfundidade(profundidade_cm) {
-  if (profundidade_cm <= 35) return "corredicao_tandem_300mm";
-  if (profundidade_cm <= 45) return "corredicao_tandem_400mm";
-  return "corredicao_tandem_500mm";
-}
-var NORMAS = {
-  altura_bancada_cozinha: { codigo: "ERG-COZ-01", descricao: "Altura de bancada de cozinha", valor: 90, unidade: "cm" },
-  altura_bancada_banheiro: { codigo: "ERG-BAN-01", descricao: "Altura de bancada de banheiro", valor: 85, unidade: "cm" },
-  circulacao_minima: { codigo: "NBR-CIRC-01", descricao: "Circula\xE7\xE3o m\xEDnima entre m\xF3veis", valor: 80, unidade: "cm" },
-  circulacao_ideal: { codigo: "ERG-CIRC-02", descricao: "Circula\xE7\xE3o ideal entre bancadas", valor: 120, unidade: "cm" },
-  altura_aereo_piso: { codigo: "ERG-COZ-02", descricao: "Altura do piso \xE0 base do a\xE9reo", valor: 150, unidade: "cm" },
-  profundidade_aereo: { codigo: "ERG-COZ-03", descricao: "Profundidade de arm\xE1rio a\xE9reo", valor: 33, unidade: "cm" },
-  profundidade_base_cozinha: { codigo: "ERG-COZ-04", descricao: "Profundidade de gabinete base", valor: 55, unidade: "cm" },
-  altura_cabideiro_camisa: { codigo: "ERG-ROUP-01", descricao: "Altura de cabideiro (camisas)", valor: 160, unidade: "cm" },
-  altura_cabideiro_vestido: { codigo: "ERG-ROUP-02", descricao: "Altura de cabideiro (vestidos longos)", valor: 180, unidade: "cm" },
-  profundidade_roupeiro: { codigo: "ERG-ROUP-03", descricao: "Profundidade de roupeiro", valor: 60, unidade: "cm" },
-  vao_porta_max: { codigo: "TEC-PORT-01", descricao: "Largura m\xE1xima de porta de abrir", valor: 50, unidade: "cm" },
-  peitoril_janela_min: { codigo: "ERG-JAN-01", descricao: "Peitoril m\xEDnimo p/ gabinete base", valor: 90, unidade: "cm" }
-};
-var BOAS_PRATICAS = [
-  { id: "BP-01", categoria: "estrutura", regra: "Fundo 6mm encaixado em rebaixo de 4mm nas laterais." },
-  { id: "BP-02", categoria: "estrutura", regra: "Engrosso frontal de 50mm nas laterais para batida de portas." },
-  { id: "BP-03", categoria: "estrutura", regra: "Prateleira com v\xE3o > 80cm exige MDF 18mm ou apoio central." },
-  { id: "BP-04", categoria: "acabamento", regra: "Fita de borda em todas as bordas aparentes (frontais)." },
-  { id: "BP-05", categoria: "ferragem", regra: "M\xEDnimo 2 dobradi\xE7as por porta; +1 a cada 60cm de altura." },
-  { id: "BP-06", categoria: "ferragem", regra: "Corredi\xE7a dimensionada para a profundidade real da gaveta." },
-  { id: "BP-07", categoria: "montagem", regra: "Jun\xE7\xE3o de pe\xE7as com cavilha 8\xD730mm + minifix." },
-  { id: "BP-08", categoria: "estrutura", regra: "Porta de abrir at\xE9 50cm de largura; acima, usar correr ou dupla." },
-  { id: "BP-09", categoria: "ferragem", regra: "M\xF3dulos > 150cm de largura: 6 p\xE9s regul\xE1veis em vez de 4." },
-  { id: "BP-10", categoria: "acabamento", regra: "Cuba/tanque sem fundo de MDF na zona molhada." },
-  { id: "BP-11", categoria: "estrutura", regra: "Rodap\xE9 clipado (padr\xE3o 10cm) encaixado nos p\xE9s regul\xE1veis; s\xF3 em m\xF3dulos de piso, nunca em a\xE9reos/parede." },
-  { id: "BP-12", categoria: "acabamento", regra: "M\xF3dulo que vai at\xE9 o teto recebe moldura de roda-teto (arremate, padr\xE3o 5cm) para fechar o v\xE3o superior." },
-  { id: "BP-13", categoria: "estrutura", regra: "Engrosso de dupla chapa (15+15=30mm) em tampos de bancada e frentes aparentes; dobra a \xE1rea de material da pe\xE7a no corte." }
-];
-function consultarConhecimento(consulta) {
-  const q = consulta.toLowerCase();
-  const respostas = [];
-  for (const [chave, n] of Object.entries(NORMAS)) {
-    if (chave.includes(q) || n.descricao.toLowerCase().includes(q)) {
-      respostas.push({ encontrado: true, topico: n.descricao, conteudo: `${n.valor}${n.unidade}`, referencia: n.codigo });
-    }
-  }
-  if (/mdf|espessura|chapa|prateleira/.test(q)) {
-    for (const espec of Object.values(ESPECS_MDF)) {
-      respostas.push({
-        encontrado: true,
-        topico: `MDF ${espec.espessura_mm}mm`,
-        conteudo: `Usos: ${espec.usos.join(", ")}. V\xE3o m\xE1x prateleira: ${espec.vao_max_prateleira_cm || "n/a"}cm.`
-      });
-    }
-  }
-  if (/ferragem|dobrad|corredi|cabideiro|trilho/.test(q)) {
-    for (const espec of Object.values(ESPECS_FERRAGEM)) {
-      if (espec) respostas.push({ encontrado: true, topico: espec.nome, conteudo: espec.aplicacao });
-    }
-  }
-  for (const bp of BOAS_PRATICAS) {
-    if (bp.regra.toLowerCase().includes(q)) {
-      respostas.push({ encontrado: true, topico: `Boa pr\xE1tica ${bp.id}`, conteudo: bp.regra, referencia: bp.id });
-    }
-  }
-  if (respostas.length === 0) {
-    respostas.push({ encontrado: false, topico: consulta, conteudo: "Sem entrada espec\xEDfica na base de conhecimento." });
-  }
-  return respostas;
 }
 
 // src/lib/base-conhecimento/pesos.ts
