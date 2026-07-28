@@ -1,71 +1,84 @@
 import { describe, test, expect } from "vitest";
-import { consolidarFundos } from "../pecas";
+import { consolidarCorrido } from "../pecas";
 import type { ModuloInstanciado, Peca, Material } from "../tipos";
 
 const mat: Material = {
-  id: "fundo6", codigo: "f6", nome_display: "MDF 6mm Branco", espessura_mm: 6,
+  id: "m", codigo: "m", nome_display: "MDF 15mm Branco", espessura_mm: 15,
   largura_chapa_mm: 2750, comprimento_chapa_mm: 1850, area_chapa_m2: 5, cor_hex: "#fff",
-  acabamento: "melamina", preco_custo_chapa: 40, preco_venda_chapa: 0,
+  acabamento: "melamina", preco_custo_chapa: 85, preco_venda_chapa: 0,
 };
 
-function fundo(id: string, largura_mm: number, comprimento_mm: number): Peca {
+function peca(id: string, regra: string, largura_mm: number, comprimento_mm: number, esp = 15): Peca {
   return {
-    id, modulo_instanciado_id: id, regra_nome: "fundo",
-    largura_mm, comprimento_mm, espessura_mm: 6,
+    id, modulo_instanciado_id: id, regra_nome: regra,
+    largura_mm, comprimento_mm, espessura_mm: esp as Peca["espessura_mm"],
     largura_final_mm: largura_mm - 4, comprimento_final_mm: comprimento_mm - 4,
     material: mat, direcao_fio: "indiferente",
     fita_borda: { esquerda: false, direita: false, topo: false, base: false },
-    quantidade: 1, etiqueta_producao: "FUNDO", status: "pendente",
+    quantidade: 1, etiqueta_producao: regra.toUpperCase(), status: "pendente",
   };
 }
 
-function modulo(id: string, x_cm: number, y_cm: number, altura_cm: number, larguraFundo: number, altFundo: number): ModuloInstanciado {
+// gabinete base de 60cm: 2 laterais (P×A), teto, base (Lint×P), fundo (Lint×Ai 6mm)
+function modBase(id: string, x_cm: number): ModuloInstanciado {
+  const P = 550, A = 720, Lint = 570;
   return {
     id, modulo_template_id: "t", modulo_template_codigo: "base", modulo_template_versao: 1,
-    largura_cm: 60, altura_cm, profundidade_cm: 55, parede: "top",
-    posicao_x_cm: x_cm, posicao_y_cm: y_cm,
+    largura_cm: 60, altura_cm: 72, profundidade_cm: 55, parede: "top",
+    posicao_x_cm: x_cm, posicao_y_cm: 0,
     configuracao: {} as ModuloInstanciado["configuracao"],
-    material_corpo: mat, pecas: [fundo(`${id}_f`, larguraFundo, altFundo)],
-    ferragens: [], nome_display: "Gabinete Base 60cm", ordem: 0,
+    material_corpo: mat, nome_display: "Gabinete Base 60cm", ferragens: [], ordem: 0,
+    pecas: [
+      peca(`${id}_l0`, "lateral", P, A),
+      peca(`${id}_l1`, "lateral", P, A),
+      peca(`${id}_teto`, "teto", Lint, P),
+      peca(`${id}_base`, "base", Lint, P),
+      peca(`${id}_fundo`, "fundo", Lint, A - 30, 6),
+      peca(`${id}_porta`, "porta_dobradica", 300, A, 15),
+    ],
   };
 }
 
-const contaFundos = (mods: ModuloInstanciado[]) =>
-  mods.flatMap((m) => m.pecas).filter((p) => p.regra_nome === "fundo").length;
-const areaFundos = (mods: ModuloInstanciado[]) =>
-  mods.flatMap((m) => m.pecas).filter((p) => p.regra_nome === "fundo")
-    .reduce((s, p) => s + p.largura_mm * p.comprimento_mm, 0);
+const conta = (mods: ModuloInstanciado[], regra: string) =>
+  mods.flatMap((m) => m.pecas).filter((p) => p.regra_nome === regra).length;
 
-describe("consolidarFundos", () => {
-  test("corrido de 5 módulos base vira 1 fundo (não passa da chapa)", () => {
-    // 5 × 570mm = 2850mm > 2730 útil → na verdade divide em 2. Use 4 × 570 = 2280 < 2730.
-    const mods = [0, 60, 120, 180].map((x, i) => modulo(`b${i}`, x, 0, 72, 570, 690));
-    const areaAntes = areaFundos(mods);
-    consolidarFundos(mods, 2750, 1850);
-    expect(contaFundos(mods)).toBe(1); // 2280mm cabe numa chapa
-    expect(areaFundos(mods)).toBe(areaAntes); // área preservada
+describe("consolidarCorrido — corpo do corrido", () => {
+  test("4 gabinetes: laterais viram 2 Lateral + 3 Divisória", () => {
+    const mods = [0, 60, 120, 180].map((x, i) => modBase(`b${i}`, x));
+    consolidarCorrido(mods, 2750, 1850);
+    expect(conta(mods, "lateral")).toBe(2);     // pontas
+    expect(conta(mods, "divisoria")).toBe(3);   // N−1 internas
   });
 
-  test("divide o fundo grande quando passa da chapa", () => {
-    // 6 × 570 = 3420mm > 2730 útil → 2 partes
-    const mods = [0, 60, 120, 180, 240, 300].map((x, i) => modulo(`b${i}`, x, 0, 72, 570, 690));
-    consolidarFundos(mods, 2750, 1850);
-    expect(contaFundos(mods)).toBe(2);
+  test("teto e base viram contínuos (menos peças)", () => {
+    const mods = [0, 60, 120, 180].map((x, i) => modBase(`b${i}`, x));
+    consolidarCorrido(mods, 2750, 1850);
+    // 4×60cm = 240cm de vão < 273cm → 1 peça de teto e 1 de base
+    expect(conta(mods, "teto")).toBe(1);
+    expect(conta(mods, "base")).toBe(1);
+    expect(conta(mods, "fundo")).toBe(1);
   });
 
-  test("não mistura base com aéreo (faixas de altura diferentes)", () => {
-    const base = [0, 60].map((x, i) => modulo(`b${i}`, x, 0, 72, 570, 690));
-    const aereo = [0, 60].map((x, i) => modulo(`a${i}`, x, 150, 40, 570, 370));
-    const mods = [...base, ...aereo];
-    consolidarFundos(mods, 2750, 1850);
-    // base vira 1 fundo, aéreo vira 1 fundo = 2 no total
-    expect(contaFundos(mods)).toBe(2);
+  test("portas continuam por vão (não mexe)", () => {
+    const mods = [0, 60, 120, 180].map((x, i) => modBase(`b${i}`, x));
+    const antes = conta(mods, "porta_dobradica");
+    consolidarCorrido(mods, 2750, 1850);
+    expect(conta(mods, "porta_dobradica")).toBe(antes);
   });
 
-  test("módulo único não é alterado", () => {
-    const mods = [modulo("solo", 0, 0, 230, 570, 2170)];
-    consolidarFundos(mods, 2750, 1850);
-    expect(contaFundos(mods)).toBe(1);
-    expect(mods[0].pecas.find((p) => p.regra_nome === "fundo")?.largura_mm).toBe(570);
+  test("corrido largo divide teto/base ao passar da chapa", () => {
+    const mods = [0, 60, 120, 180, 240, 300].map((x, i) => modBase(`b${i}`, x));
+    // 6×60 = 360cm externo → vão ~357cm > 273 → 2 partes
+    consolidarCorrido(mods, 2750, 1850);
+    expect(conta(mods, "teto")).toBe(2);
+    expect(conta(mods, "lateral")).toBe(2);
+    expect(conta(mods, "divisoria")).toBe(5); // 6−1
+  });
+
+  test("módulo único (torre) não é alterado", () => {
+    const mods = [modBase("solo", 0)];
+    consolidarCorrido(mods, 2750, 1850);
+    expect(conta(mods, "lateral")).toBe(2);
+    expect(conta(mods, "divisoria")).toBe(0);
   });
 });

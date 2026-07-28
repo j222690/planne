@@ -202,30 +202,41 @@ export function calcularMetricas(modulos: ModuloInstanciado[]): MetricasProjeto 
   };
 }
 
-// ─── CONSOLIDAÇÃO DE FUNDOS POR CORRIDO ───────────────────────────────────────
+// ─── CONSOLIDAÇÃO DO CORPO POR CORRIDO ────────────────────────────────────────
+
+const ESP_CORRIDO_MM = 15;
 
 /**
- * Junta os fundos de um CORRIDO num painel único, em vez de um fundo por módulo.
- * Regra da marcenaria (pedido do Victor): um móvel grande (ex.: aéreo de 300cm)
- * leva UM fundo grande; só divide em partes se o fundo passar do tamanho da
- * chapa. Menos peças, menos emendas, corpo mais rígido.
+ * Consolida o corpo de um CORRIDO como caixaria contínua, em vez de caixotes
+ * independentes (pedido do Victor). Para cada corrido de 2+ módulos:
+ *  - FUNDO: um painel só, dividido apenas se passar da chapa.
+ *  - LATERAIS: as duas pontas ficam "Lateral"; as internas viram UMA "Divisória"
+ *    por vão compartilhada (antes eram 2 por junta) — cai o nº de peças e o custo.
+ *  - TETO e BASE: painéis contínuos ao longo do corrido, divididos só se passarem
+ *    da chapa.
+ * Portas, gavetas, prateleiras e engrossos ficam por vão (não mudam).
  *
- * Agrupa por corrido = mesma parede + mesma faixa (base/aéreo) + mesma altura,
- * contíguos. Muta os módulos (remove fundos individuais, adiciona o consolidado
- * num módulo do corrido) — então engenharia, orçamento e corte ficam coerentes.
+ * Agrupa por corrido = mesma parede + faixa (base/aéreo) + mesma altura. Muta os
+ * módulos (concentra as peças consolidadas no 1º), então engenharia, orçamento e
+ * corte ficam coerentes.
  */
-export function consolidarFundos(
+export function consolidarCorrido(
   modulos: ModuloInstanciado[],
   chapaLarguraMm = 2750,
   chapaComprimentoMm = 1850,
 ): void {
-  const MARGEM = 20; // refilo de borda
+  const MARGEM = 20;
   const maxW = chapaLarguraMm - MARGEM;
   const maxH = chapaComprimentoMm - MARGEM;
+  const splitLargura = (total: number): number[] => {
+    const n = Math.max(1, Math.ceil(total / maxW));
+    const cada = Math.ceil(total / n);
+    return Array.from({ length: n }, (_, i) => Math.min(cada, total - i * cada)).filter((w) => w > 0);
+  };
 
   const grupos = new Map<string, ModuloInstanciado[]>();
   for (const m of modulos) {
-    if (!m.pecas.some((p) => p.regra_nome === "fundo")) continue;
+    if (!m.pecas.some((p) => p.regra_nome === "lateral" || p.regra_nome === "fundo" || p.regra_nome === "teto")) continue;
     const faixa = m.posicao_y_cm >= 100 ? "aereo" : "base";
     const chave = `${m.parede}|${faixa}|${m.altura_cm}`;
     const g = grupos.get(chave) ?? [];
@@ -234,49 +245,69 @@ export function consolidarFundos(
   }
 
   for (const mods of grupos.values()) {
-    if (mods.length < 2) continue; // 1 módulo = já é um fundo só
+    if (mods.length < 2) continue; // 1 módulo = já é caixaria única
     mods.sort((a, b) => a.posicao_x_cm - b.posicao_x_cm);
-
-    let larguraTotal = 0;
-    let altura = 0;
-    let template: Peca | null = null;
-    for (const m of mods) {
-      const fundo = m.pecas.find((p) => p.regra_nome === "fundo");
-      if (!fundo) continue;
-      larguraTotal += fundo.largura_mm * fundo.quantidade;
-      altura = Math.max(altura, fundo.comprimento_mm);
-      template ??= fundo;
-    }
-    // Se a altura do fundo já passa da chapa, não consolida (evita split 2D).
-    if (!template || altura > maxH) continue;
-
-    // Remove os fundos individuais do corrido.
-    for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "fundo");
-
-    // Fundo grande, dividido no comprimento SÓ se passar da chapa.
-    const nPartes = Math.max(1, Math.ceil(larguraTotal / maxW));
-    const larguraParte = Math.ceil(larguraTotal / nPartes);
-    const nome = mods[0].nome_display;
     const alvo = mods[0];
-    for (let i = 0; i < nPartes; i++) {
-      const w = Math.min(larguraParte, larguraTotal - i * larguraParte);
-      if (w <= 0) break;
-      const sufixo = nPartes > 1 ? ` (parte ${i + 1}/${nPartes})` : " (corrido)";
+    const nome = alvo.nome_display;
+    const N = mods.length;
+    // Vão livre do corrido (entre as duas laterais das pontas).
+    const larguraExterna = mods.reduce((s, m) => s + m.largura_cm * 10, 0);
+    const vaoLivre = larguraExterna - 2 * ESP_CORRIDO_MM;
+
+    const empurrar = (base: Peca, extra: Partial<Peca>, i: number, prefixo: string) => {
+      const w = (extra.largura_mm ?? base.largura_mm)!;
+      const c = (extra.comprimento_mm ?? base.comprimento_mm)!;
       alvo.pecas.push({
-        ...template,
-        id: `${alvo.id}_fundo_corrido_${i}`,
+        ...base, ...extra,
+        id: `${alvo.id}_${prefixo}_${i}`,
         modulo_instanciado_id: alvo.id,
-        largura_mm: w,
-        comprimento_mm: altura,
-        largura_final_mm: w - TOLERANCIA,
-        comprimento_final_mm: altura - TOLERANCIA,
         quantidade: 1,
-        etiqueta_producao: `FUNDO — ${nome}${sufixo}`,
-        ...(nPartes > 1 ? { numero_segmento: i + 1, total_segmentos: nPartes } : {}),
+        largura_final_mm: w - TOLERANCIA,
+        comprimento_final_mm: c - TOLERANCIA,
+      });
+    };
+
+    // ── FUNDO contínuo ──
+    const fundoTpl = mods.flatMap((m) => m.pecas).find((p) => p.regra_nome === "fundo");
+    if (fundoTpl && fundoTpl.comprimento_mm <= maxH) {
+      for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "fundo");
+      const partes = splitLargura(vaoLivre);
+      partes.forEach((w, i) => {
+        const sfx = partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : " (corrido)";
+        empurrar(fundoTpl, { largura_mm: w, comprimento_mm: fundoTpl.comprimento_mm, etiqueta_producao: `FUNDO — ${nome}${sfx}` }, i, "fundo_corrido");
+      });
+    }
+
+    // ── LATERAIS → 2 Lateral (pontas) + (N−1) Divisória (internas) ──
+    const latTpl = mods.flatMap((m) => m.pecas).find((p) => p.regra_nome === "lateral");
+    if (latTpl) {
+      for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "lateral");
+      const totalPaineis = N + 1; // 2 pontas + (N−1) divisórias
+      for (let i = 0; i < totalPaineis; i++) {
+        const ehPonta = i === 0 || i === totalPaineis - 1;
+        empurrar(latTpl, {
+          regra_nome: ehPonta ? "lateral" : "divisoria",
+          etiqueta_producao: `${ehPonta ? "LATERAL" : "DIVISÓRIA"} — ${nome}`,
+        }, i, ehPonta ? "lateral" : "divisoria");
+      }
+    }
+
+    // ── TETO e BASE contínuos ──
+    for (const tipo of ["teto", "base"] as const) {
+      const tpl = mods.flatMap((m) => m.pecas).find((p) => p.regra_nome === tipo);
+      if (!tpl) continue;
+      for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== tipo);
+      const partes = splitLargura(vaoLivre);
+      partes.forEach((w, i) => {
+        const sfx = partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : " (corrido)";
+        empurrar(tpl, { largura_mm: w, comprimento_mm: tpl.comprimento_mm, etiqueta_producao: `${tipo.toUpperCase()} — ${nome}${sfx}` }, i, `${tipo}_corrido`);
       });
     }
   }
 }
+
+/** @deprecated use consolidarCorrido — mantido para compatibilidade. */
+export const consolidarFundos = consolidarCorrido;
 
 // ─── HELPERS INTERNOS ─────────────────────────────────────────────────────────
 

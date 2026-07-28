@@ -1350,13 +1350,19 @@ function calcularMetricas(modulos) {
     calculado_em: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
-function consolidarFundos(modulos, chapaLarguraMm = 2750, chapaComprimentoMm = 1850) {
+var ESP_CORRIDO_MM = 15;
+function consolidarCorrido(modulos, chapaLarguraMm = 2750, chapaComprimentoMm = 1850) {
   const MARGEM = 20;
   const maxW = chapaLarguraMm - MARGEM;
   const maxH = chapaComprimentoMm - MARGEM;
+  const splitLargura = (total) => {
+    const n = Math.max(1, Math.ceil(total / maxW));
+    const cada = Math.ceil(total / n);
+    return Array.from({ length: n }, (_, i) => Math.min(cada, total - i * cada)).filter((w) => w > 0);
+  };
   const grupos = /* @__PURE__ */ new Map();
   for (const m of modulos) {
-    if (!m.pecas.some((p) => p.regra_nome === "fundo")) continue;
+    if (!m.pecas.some((p) => p.regra_nome === "lateral" || p.regra_nome === "fundo" || p.regra_nome === "teto")) continue;
     const faixa = m.posicao_y_cm >= 100 ? "aereo" : "base";
     const chave = `${m.parede}|${faixa}|${m.altura_cm}`;
     const g = grupos.get(chave) ?? [];
@@ -1366,37 +1372,53 @@ function consolidarFundos(modulos, chapaLarguraMm = 2750, chapaComprimentoMm = 1
   for (const mods of grupos.values()) {
     if (mods.length < 2) continue;
     mods.sort((a, b) => a.posicao_x_cm - b.posicao_x_cm);
-    let larguraTotal = 0;
-    let altura = 0;
-    let template = null;
-    for (const m of mods) {
-      const fundo = m.pecas.find((p) => p.regra_nome === "fundo");
-      if (!fundo) continue;
-      larguraTotal += fundo.largura_mm * fundo.quantidade;
-      altura = Math.max(altura, fundo.comprimento_mm);
-      template ??= fundo;
-    }
-    if (!template || altura > maxH) continue;
-    for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "fundo");
-    const nPartes = Math.max(1, Math.ceil(larguraTotal / maxW));
-    const larguraParte = Math.ceil(larguraTotal / nPartes);
-    const nome = mods[0].nome_display;
     const alvo = mods[0];
-    for (let i = 0; i < nPartes; i++) {
-      const w = Math.min(larguraParte, larguraTotal - i * larguraParte);
-      if (w <= 0) break;
-      const sufixo = nPartes > 1 ? ` (parte ${i + 1}/${nPartes})` : " (corrido)";
+    const nome = alvo.nome_display;
+    const N = mods.length;
+    const larguraExterna = mods.reduce((s, m) => s + m.largura_cm * 10, 0);
+    const vaoLivre = larguraExterna - 2 * ESP_CORRIDO_MM;
+    const empurrar = (base, extra, i, prefixo) => {
+      const w = extra.largura_mm ?? base.largura_mm;
+      const c = extra.comprimento_mm ?? base.comprimento_mm;
       alvo.pecas.push({
-        ...template,
-        id: `${alvo.id}_fundo_corrido_${i}`,
+        ...base,
+        ...extra,
+        id: `${alvo.id}_${prefixo}_${i}`,
         modulo_instanciado_id: alvo.id,
-        largura_mm: w,
-        comprimento_mm: altura,
-        largura_final_mm: w - TOLERANCIA_SERRA_MM,
-        comprimento_final_mm: altura - TOLERANCIA_SERRA_MM,
         quantidade: 1,
-        etiqueta_producao: `FUNDO \u2014 ${nome}${sufixo}`,
-        ...nPartes > 1 ? { numero_segmento: i + 1, total_segmentos: nPartes } : {}
+        largura_final_mm: w - TOLERANCIA_SERRA_MM,
+        comprimento_final_mm: c - TOLERANCIA_SERRA_MM
+      });
+    };
+    const fundoTpl = mods.flatMap((m) => m.pecas).find((p) => p.regra_nome === "fundo");
+    if (fundoTpl && fundoTpl.comprimento_mm <= maxH) {
+      for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "fundo");
+      const partes = splitLargura(vaoLivre);
+      partes.forEach((w, i) => {
+        const sfx = partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : " (corrido)";
+        empurrar(fundoTpl, { largura_mm: w, comprimento_mm: fundoTpl.comprimento_mm, etiqueta_producao: `FUNDO \u2014 ${nome}${sfx}` }, i, "fundo_corrido");
+      });
+    }
+    const latTpl = mods.flatMap((m) => m.pecas).find((p) => p.regra_nome === "lateral");
+    if (latTpl) {
+      for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "lateral");
+      const totalPaineis = N + 1;
+      for (let i = 0; i < totalPaineis; i++) {
+        const ehPonta = i === 0 || i === totalPaineis - 1;
+        empurrar(latTpl, {
+          regra_nome: ehPonta ? "lateral" : "divisoria",
+          etiqueta_producao: `${ehPonta ? "LATERAL" : "DIVIS\xD3RIA"} \u2014 ${nome}`
+        }, i, ehPonta ? "lateral" : "divisoria");
+      }
+    }
+    for (const tipo of ["teto", "base"]) {
+      const tpl = mods.flatMap((m) => m.pecas).find((p) => p.regra_nome === tipo);
+      if (!tpl) continue;
+      for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== tipo);
+      const partes = splitLargura(vaoLivre);
+      partes.forEach((w, i) => {
+        const sfx = partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : " (corrido)";
+        empurrar(tpl, { largura_mm: w, comprimento_mm: tpl.comprimento_mm, etiqueta_producao: `${tipo.toUpperCase()} \u2014 ${nome}${sfx}` }, i, `${tipo}_corrido`);
       });
     }
   }
@@ -5174,7 +5196,7 @@ async function gerarHandler(req, res) {
         resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
       }
     }
-    consolidarFundos(resultado.projeto.modulos, cfgCusto.chapa_largura_mm, cfgCusto.chapa_comprimento_mm);
+    consolidarCorrido(resultado.projeto.modulos, cfgCusto.chapa_largura_mm, cfgCusto.chapa_comprimento_mm);
     resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
     const moveis_calc = projetoToMovelInput(resultado.projeto);
     const engenharia = gerarEngenharia(resultado.projeto);
