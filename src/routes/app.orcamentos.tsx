@@ -821,22 +821,41 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
             const w = p.largura_mm * scale, h = p.comprimento_mm * scale;
             const { nome } = nomePeca(p);
             const cx = x + w / 2, cy = y + h / 2;
-            const fs = Math.max(5.5, Math.min(9, w / 10));
-            // trunca o nome ao que cabe na largura da peça
-            const maxCh = Math.max(4, Math.floor(w / (fs * 0.52)));
-            const nomeFit = nome.length > maxCh ? nome.slice(0, maxCh - 1) + "…" : nome;
             const dims = `${Math.round(p.largura_mm)}×${Math.round(p.comprimento_mm)}${p.rotacionada ? " ↻" : ""}`;
+            // Quebra o nome em linhas que cabem na largura; reduz a fonte até o
+            // nome inteiro + as medidas caberem na altura da peça (nada cortado).
+            const wrap = (fs: number) => {
+              const maxCh = Math.max(5, Math.floor(w / (fs * 0.56)));
+              const linhas: string[] = [];
+              let cur = "";
+              for (const wd of nome.split(" ")) {
+                const t = cur ? `${cur} ${wd}` : wd;
+                if (t.length <= maxCh) cur = t;
+                else { if (cur) linhas.push(cur); cur = wd.length > maxCh ? wd.slice(0, maxCh) : wd; }
+              }
+              if (cur) linhas.push(cur);
+              return linhas;
+            };
+            let fs = Math.min(9, w / 9);
+            let linhas = wrap(fs);
+            while (fs > 4.5 && (linhas.length + 1) * (fs * 1.18) > h - 3) { fs -= 0.5; linhas = wrap(fs); }
+            const lh = fs * 1.18;
+            const totalH = (linhas.length + 1) * lh;
+            const startY = cy - totalH / 2 + lh / 2;
+            const cabe = w > 22 && h > 14 && (linhas.length + 1) * (fs * 1.18) <= h;
             return (
               <g key={i}>
                 <rect x={x} y={y} width={w} height={h} fill={cores[i % cores.length]} stroke="#475569" strokeWidth={0.6} />
-                {w > 34 && h > 24 ? (
+                {cabe ? (
                   <>
-                    <text x={cx} y={cy - fs * 0.55} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={fs} fontWeight="600" fill="#0f172a">{nomeFit}</text>
-                    <text x={cx} y={cy + fs * 0.7} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={fs * 0.82} fill="#475569">{dims}</text>
+                    {linhas.map((ln, k) => (
+                      <text key={k} x={cx} y={startY + k * lh} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={fs} fontWeight="600" fill="#0f172a">{ln}</text>
+                    ))}
+                    <text x={cx} y={startY + linhas.length * lh} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={fs * 0.85} fill="#475569">{dims}</text>
                   </>
-                ) : w > 20 && h > 10 ? (
+                ) : w > 18 && h > 9 ? (
                   <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
                     fontSize={Math.max(5, Math.min(7.5, w / 12))} fill="#1e293b">{dims}</text>
                 ) : null}

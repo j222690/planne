@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/planne/AppShell";
 import { CommandSearch } from "@/components/planne/CommandSearch";
 import { supabase, isConnectionError } from "@/lib/supabase";
-import { garantirEmpresa } from "@/lib/db";
+import { garantirEmpresa, garantirPerfil } from "@/lib/db";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async () => {
@@ -13,6 +13,8 @@ export const Route = createFileRoute("/app")({
     // Garante que a marcenaria tenha empresa (fallback do trigger SQL de onboarding)
     let empresa: unknown = null;
     try { empresa = await garantirEmpresa(); } catch { /* trigger SQL é o caminho principal */ }
+    // Garante o perfil do usuário — sem ele, criar cliente/orçamento falha (FK).
+    try { await garantirPerfil(); } catch { /* fallback; trigger SQL é o principal */ }
 
     // Sem empresa pode ser onboarding pendente OU backend fora do ar. getSession
     // lê do cache (não bate na rede), então validamos a conexão com getUser (que

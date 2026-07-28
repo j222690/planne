@@ -472,6 +472,39 @@ export async function garantirEmpresa() {
   return getEmpresaAtual();
 }
 
+/**
+ * Garante que o usuário logado tenha um registro em `perfis`.
+ * A tabela `clientes.created_by` (e outras) referencia `perfis(id)`, então sem
+ * perfil o usuário não consegue criar cliente/orçamento (erro 409 de FK). O
+ * trigger SQL de onboarding é o caminho principal; isto é o fallback que roda no
+ * login, evitando que uma conta sem perfil fique travada.
+ */
+export async function garantirPerfil() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
+  const uid = session.user.id;
+
+  const { data: existente } = await supabase
+    .from("perfis").select("id").eq("id", uid).maybeSingle();
+  if (existente) return existente;
+
+  let empresaId: string | null = null;
+  try {
+    const emp = await getEmpresaAtual();
+    empresaId = (emp as { id?: string } | null)?.id ?? null;
+  } catch { /* empresa pode ainda não existir */ }
+
+  const meta = session.user.user_metadata as { nome?: string; name?: string } | undefined;
+  const nome = meta?.nome?.trim() || meta?.name?.trim()
+    || session.user.email?.split("@")[0] || "Usuário";
+
+  const { error } = await supabase.from("perfis").upsert({
+    id: uid, empresa_id: empresaId, email: session.user.email, nome, cargo: null,
+  }, { onConflict: "id" });
+  if (error) return null; // RLS/trigger é o caminho principal
+  return { id: uid };
+}
+
 // ─── Billing: planos e assinaturas ─────────────────────────────────────────────
 
 export interface Plano {
