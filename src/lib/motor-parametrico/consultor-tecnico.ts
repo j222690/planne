@@ -19,12 +19,14 @@ import type {
 } from "./tipos";
 import {
   NORMAS,
-  numDobradicasPorPorta,
   corredicaParaProfundidade,
   espessuraParaVao,
   pesoPeca,
 } from "./conhecimento-tecnico";
 import { comprimentoLivre, paredesPorComprimento, saoAdjacentes } from "./layout-shared";
+// Base de Conhecimento (Camadas 2/3): números e validações rastreáveis à fonte.
+import { dobradicasPorAlturaMm, larguraFolhaExcede, LARGURA_MAX_FOLHA_MM } from "../base-conhecimento/parametros";
+import { pesoPorta, validarDobradicas } from "../base-conhecimento/pesos";
 
 // ─── RECOMENDAÇÃO DE LAYOUT ───────────────────────────────────────────────────
 
@@ -233,9 +235,11 @@ function analisarModulo(m: ModuloInstanciado): RecomendacaoTecnica[] {
     }
   }
 
-  // Dobradiças por altura
+  // Dobradiças: nº pela regra da base (por altura) + validação por PESO real.
   if (cfg.num_portas > 0 && cfg.tipo_porta === "dobradica") {
-    const recomendado = numDobradicasPorPorta(m.altura_cm);
+    const altura_mm = m.altura_cm * 10;
+    const larguraFolha_mm = (m.largura_cm / Math.max(cfg.num_portas, 1)) * 10;
+    const recomendado = dobradicasPorAlturaMm(altura_mm);
     recs.push({
       severidade: "info",
       modulo_id: m.id,
@@ -243,6 +247,30 @@ function analisarModulo(m: ModuloInstanciado): RecomendacaoTecnica[] {
       detalhe: `${recomendado} dobradiças por porta para ${m.altura_cm}cm de altura.`,
       referencia: "BP-05",
     });
+
+    // Entende PESO: valida se o nº recomendado aguenta o peso da folha.
+    const peso = pesoPorta(larguraFolha_mm, altura_mm, cfg.espessura_porta_mm);
+    const v = validarDobradicas(peso, altura_mm, recomendado);
+    if (!v.ok) {
+      recs.push({
+        severidade: v.severidade === "critico" ? "atencao" : "sugestao",
+        modulo_id: m.id,
+        titulo: "Carga da porta x dobradiças",
+        detalhe: v.mensagem,
+        referencia: "BP-05",
+      });
+    }
+
+    // Largura de folha estrutural (folha larga "cai" com o tempo).
+    if (larguraFolhaExcede(larguraFolha_mm)) {
+      recs.push({
+        severidade: "sugestao",
+        modulo_id: m.id,
+        titulo: "Folha de porta larga",
+        detalhe: `Folha de ${Math.round(larguraFolha_mm)}mm excede ${LARGURA_MAX_FOLHA_MM.valor}mm — tende a deformar. Divida em mais folhas ou use porta de correr.`,
+        referencia: "BP-08",
+      });
+    }
   }
 
   // Porta larga demais para abrir

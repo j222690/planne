@@ -4692,12 +4692,6 @@ var ESPECS_FERRAGEM = {
   cabideiro_simples: { tipo: "cabideiro_simples", nome: "Cabideiro", aplicacao: "barra de cabide em roupeiro" },
   amortecedor_soft_close: { tipo: "amortecedor_soft_close", nome: "Soft-Close", aplicacao: "amortecimento de fechamento" }
 };
-function numDobradicasPorPorta(altura_cm) {
-  if (altura_cm <= 90) return 2;
-  if (altura_cm <= 150) return 3;
-  if (altura_cm <= 200) return 4;
-  return 5;
-}
 function corredicaParaProfundidade(profundidade_cm) {
   if (profundidade_cm <= 35) return "corredicao_tandem_300mm";
   if (profundidade_cm <= 45) return "corredicao_tandem_400mm";
@@ -4763,6 +4757,72 @@ function consultarConhecimento(consulta) {
     respostas.push({ encontrado: false, topico: consulta, conteudo: "Sem entrada espec\xEDfica na base de conhecimento." });
   }
   return respostas;
+}
+
+// src/lib/base-conhecimento/parametros.ts
+var A_DOBR_ALTURA = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_regra_de_quantidade_p";
+var A_DOBR_PESO = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_capacidade_de_carga_p";
+var DOBRADICAS_POR_ALTURA = {
+  valor: [
+    { ate_mm: 600, qtd: 2 },
+    { ate_mm: 2e3, qtd: 3 },
+    { ate_mm: 2400, qtd: 4 },
+    { ate_mm: Infinity, qtd: 5 }
+  ],
+  unidade: "un por porta",
+  fonteAtomo: A_DOBR_ALTURA,
+  obs: "2 at\xE9 600mm, 3 at\xE9 2000mm, 4 at\xE9 2400mm, 5 acima. Portas com mola: m\xEDn. 3."
+};
+function dobradicasPorAlturaMm(altura_mm) {
+  const faixa = DOBRADICAS_POR_ALTURA.valor.find((f) => altura_mm <= f.ate_mm);
+  return faixa?.qtd ?? 5;
+}
+var DOBRADICAS_POR_PESO = {
+  valor: [
+    { ate_kg: 22, qtd: 5 },
+    { ate_kg: 27, qtd: 6 },
+    { ate_kg: 32, qtd: 7 }
+  ],
+  unidade: "un por porta",
+  fonteAtomo: A_DOBR_PESO,
+  obs: "Cat\xE1logo de portas elevat\xF3rias/pesadas, testado a 80.000 ciclos."
+};
+function dobradicasPorPesoKg(peso_kg) {
+  if (peso_kg < 22) return null;
+  const faixa = DOBRADICAS_POR_PESO.valor.find((f) => peso_kg <= f.ate_kg);
+  return faixa?.qtd ?? 7;
+}
+var A_LARG_FOLHA = "atom_04_largura_maxima_recomendada_por_folha_limite_pratico_de_largura_por_folha_em_m";
+var LARGURA_MAX_FOLHA_MM = {
+  valor: 600,
+  unidade: "mm",
+  fonteAtomo: A_LARG_FOLHA,
+  obs: "Acima de ~600mm: usar porta de correr ou dividir em mais folhas. Confort\xE1vel 400\u2013500mm."
+};
+function larguraFolhaExcede(largura_mm) {
+  return largura_mm > LARGURA_MAX_FOLHA_MM.valor;
+}
+
+// src/lib/base-conhecimento/pesos.ts
+function pesoPorta(largura_mm, altura_mm, espessura_mm = 15) {
+  return pesoPeca(largura_mm, altura_mm, espessura_mm);
+}
+function validarDobradicas(peso_kg, altura_mm, num_dobradicas) {
+  const capUnit = ESPECS_FERRAGEM.dobradica_35mm_110grau?.capacidade_kg ?? 8;
+  const capacidade = capUnit * num_dobradicas;
+  const porAltura = dobradicasPorAlturaMm(altura_mm);
+  const porPeso = dobradicasPorPesoKg(peso_kg);
+  const recomendada = Math.max(porAltura, porPeso ?? 0, Math.ceil(peso_kg / capUnit));
+  const ok = capacidade >= peso_kg && num_dobradicas >= porAltura;
+  const severidade = capacidade < peso_kg ? "critico" : !ok ? "atencao" : "ok";
+  return {
+    ok,
+    peso_kg,
+    capacidade_kg: capacidade,
+    severidade,
+    quantidade_recomendada: recomendada,
+    mensagem: ok ? `${num_dobradicas} dobradi\xE7as suportam ${peso_kg}kg (capacidade ${capacidade}kg).` : `Porta de ${peso_kg}kg / ${Math.round(altura_mm / 10)}cm: use ${recomendada} dobradi\xE7as (atual ${num_dobradicas}, capacidade ${capacidade}kg).`
+  };
 }
 
 // src/lib/motor-parametrico/consultor-tecnico.ts
@@ -4892,7 +4952,9 @@ function analisarModulo(m) {
     }
   }
   if (cfg.num_portas > 0 && cfg.tipo_porta === "dobradica") {
-    const recomendado = numDobradicasPorPorta(m.altura_cm);
+    const altura_mm = m.altura_cm * 10;
+    const larguraFolha_mm = m.largura_cm / Math.max(cfg.num_portas, 1) * 10;
+    const recomendado = dobradicasPorAlturaMm(altura_mm);
     recs.push({
       severidade: "info",
       modulo_id: m.id,
@@ -4900,6 +4962,26 @@ function analisarModulo(m) {
       detalhe: `${recomendado} dobradi\xE7as por porta para ${m.altura_cm}cm de altura.`,
       referencia: "BP-05"
     });
+    const peso = pesoPorta(larguraFolha_mm, altura_mm, cfg.espessura_porta_mm);
+    const v = validarDobradicas(peso, altura_mm, recomendado);
+    if (!v.ok) {
+      recs.push({
+        severidade: v.severidade === "critico" ? "atencao" : "sugestao",
+        modulo_id: m.id,
+        titulo: "Carga da porta x dobradi\xE7as",
+        detalhe: v.mensagem,
+        referencia: "BP-05"
+      });
+    }
+    if (larguraFolhaExcede(larguraFolha_mm)) {
+      recs.push({
+        severidade: "sugestao",
+        modulo_id: m.id,
+        titulo: "Folha de porta larga",
+        detalhe: `Folha de ${Math.round(larguraFolha_mm)}mm excede ${LARGURA_MAX_FOLHA_MM.valor}mm \u2014 tende a deformar. Divida em mais folhas ou use porta de correr.`,
+        referencia: "BP-08"
+      });
+    }
   }
   if (cfg.num_portas > 0 && cfg.tipo_porta === "dobradica") {
     const larguraPorta = m.largura_cm / cfg.num_portas;
