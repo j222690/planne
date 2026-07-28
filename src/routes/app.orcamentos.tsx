@@ -728,7 +728,22 @@ async function erroDaResposta(res: Response): Promise<string> {
 
 // Plano de corte visualizável (chapa + peças encaixadas)
 type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string };
-type ChapaCorte = { numero_sequencial: number; largura_mm: number; comprimento_mm: number; pecas_alocadas: PecaAloc[]; comodo?: string };
+type ChapaCorte = {
+  numero_sequencial: number; largura_mm: number; comprimento_mm: number;
+  pecas_alocadas: PecaAloc[]; comodo?: string;
+  // Material da chapa — todas as peças dela têm a MESMA espessura (o nesting
+  // agrupa por espessura, então fundo 6mm nunca cai numa chapa de 15mm).
+  material?: { espessura_mm?: number; nome_display?: string };
+};
+
+// Extrai um nome curto e legível da etiqueta de produção ("FUNDO_GAVETA (seg 1/2)
+// — Armários Inferiores" -> "Fundo gaveta").
+function nomePeca(etiqueta?: string): string {
+  if (!etiqueta) return "Peça";
+  let s = etiqueta.split("—")[0].trim().replace(/\(seg[^)]*\)/i, "").trim();
+  s = s.replace(/_/g, " ").toLowerCase();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "Peça";
+}
 
 // ─── Visualização do plano de corte (mesmo sistema do preview 2D) ────────────
 function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
@@ -740,32 +755,64 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
   const scale = (SVG_W - pad * 2) / W;
   const svgH = H * scale + pad * 2;
   const cores = ["#c7d2fe", "#bbf7d0", "#fde68a", "#fbcfe8", "#a5f3fc", "#fed7aa", "#ddd6fe", "#bef264"];
+  const espCh = (c: ChapaCorte) => c.material?.espessura_mm;
+  const espessuraAtual = espCh(ch);
+  const materialAtual = ch.material?.nome_display;
+  // Chapas de 6mm (fundos) são um MUNDO à parte — cor de destaque no seletor.
+  const corEsp = (e?: number) => e && e <= 6 ? "amber" : "accent";
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 flex-wrap">
-        {chapas.map((c, i) => (
-          <button key={i} type="button" onClick={() => setIdx(i)}
-            className={`h-6 px-2 rounded text-[11px] border transition-colors ${i === idx ? "bg-accent/10 border-accent text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-            {c.comodo ? `${c.comodo} · ` : ""}Chapa {c.numero_sequencial}
-          </button>
-        ))}
-        <span className="ml-auto text-[11.5px] text-muted-foreground">{W}×{H}mm · {ch.pecas_alocadas.length} peças</span>
+        {chapas.map((c, i) => {
+          const e = espCh(c);
+          const sel = i === idx;
+          const amber = corEsp(e) === "amber";
+          return (
+            <button key={i} type="button" onClick={() => setIdx(i)}
+              className={`h-6 px-2 rounded text-[11px] border transition-colors ${sel
+                ? (amber ? "bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400" : "bg-accent/10 border-accent text-accent")
+                : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              {c.comodo ? `${c.comodo} · ` : ""}Chapa {c.numero_sequencial}{e ? ` · ${e}mm` : ""}
+            </button>
+          );
+        })}
+        <span className="ml-auto text-[11.5px] text-muted-foreground">
+          {materialAtual ? `${materialAtual} · ` : ""}{W}×{H}mm · {ch.pecas_alocadas.length} peças
+        </span>
       </div>
+      {espessuraAtual != null && (
+        <div className="text-[11px] text-muted-foreground">
+          Cada chapa corta uma só espessura — <strong>{espessuraAtual}mm</strong> nesta.
+          {espessuraAtual <= 6 ? " (fundos de armário e de gaveta)" : " (corpo, portas, frentes, laterais)"}
+        </div>
+      )}
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
-        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} style={{ maxHeight: 360, display: "block" }}>
+        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} style={{ maxHeight: 420, display: "block" }}>
           <rect x={pad} y={pad} width={W * scale} height={H * scale} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1.5} />
           {ch.pecas_alocadas.map((p, i) => {
             const x = pad + (p.x_mm ?? 0) * scale, y = pad + (p.y_mm ?? 0) * scale;
             const w = p.largura_mm * scale, h = p.comprimento_mm * scale;
+            const nome = nomePeca(p.etiqueta);
+            const cx = x + w / 2, cy = y + h / 2;
+            const fs = Math.max(5.5, Math.min(9, w / 10));
             return (
               <g key={i}>
                 <rect x={x} y={y} width={w} height={h} fill={cores[i % cores.length]} stroke="#475569" strokeWidth={0.6} />
-                {w > 24 && h > 11 && (
-                  <text x={x + w / 2} y={y + h / 2} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.max(5, Math.min(8, w / 11))} fill="#1e293b">
-                    {Math.round(p.largura_mm)}×{Math.round(p.comprimento_mm)}{p.rotacionada ? " ↻" : ""}
+                {w > 30 && h > 22 ? (
+                  <>
+                    <text x={cx} y={cy - fs * 0.55} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={fs} fontWeight="600" fill="#0f172a">{nome}</text>
+                    <text x={cx} y={cy + fs * 0.7} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={fs * 0.85} fill="#475569">
+                      {Math.round(p.largura_mm)}×{Math.round(p.comprimento_mm)}{p.rotacionada ? " ↻" : ""}
+                    </text>
+                  </>
+                ) : w > 20 && h > 10 ? (
+                  <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={Math.max(5, Math.min(7.5, w / 12))} fill="#1e293b">
+                    {Math.round(p.largura_mm)}×{Math.round(p.comprimento_mm)}
                   </text>
-                )}
+                ) : null}
               </g>
             );
           })}
