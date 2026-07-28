@@ -202,6 +202,82 @@ export function calcularMetricas(modulos: ModuloInstanciado[]): MetricasProjeto 
   };
 }
 
+// ─── CONSOLIDAÇÃO DE FUNDOS POR CORRIDO ───────────────────────────────────────
+
+/**
+ * Junta os fundos de um CORRIDO num painel único, em vez de um fundo por módulo.
+ * Regra da marcenaria (pedido do Victor): um móvel grande (ex.: aéreo de 300cm)
+ * leva UM fundo grande; só divide em partes se o fundo passar do tamanho da
+ * chapa. Menos peças, menos emendas, corpo mais rígido.
+ *
+ * Agrupa por corrido = mesma parede + mesma faixa (base/aéreo) + mesma altura,
+ * contíguos. Muta os módulos (remove fundos individuais, adiciona o consolidado
+ * num módulo do corrido) — então engenharia, orçamento e corte ficam coerentes.
+ */
+export function consolidarFundos(
+  modulos: ModuloInstanciado[],
+  chapaLarguraMm = 2750,
+  chapaComprimentoMm = 1850,
+): void {
+  const MARGEM = 20; // refilo de borda
+  const maxW = chapaLarguraMm - MARGEM;
+  const maxH = chapaComprimentoMm - MARGEM;
+
+  const grupos = new Map<string, ModuloInstanciado[]>();
+  for (const m of modulos) {
+    if (!m.pecas.some((p) => p.regra_nome === "fundo")) continue;
+    const faixa = m.posicao_y_cm >= 100 ? "aereo" : "base";
+    const chave = `${m.parede}|${faixa}|${m.altura_cm}`;
+    const g = grupos.get(chave) ?? [];
+    g.push(m);
+    grupos.set(chave, g);
+  }
+
+  for (const mods of grupos.values()) {
+    if (mods.length < 2) continue; // 1 módulo = já é um fundo só
+    mods.sort((a, b) => a.posicao_x_cm - b.posicao_x_cm);
+
+    let larguraTotal = 0;
+    let altura = 0;
+    let template: Peca | null = null;
+    for (const m of mods) {
+      const fundo = m.pecas.find((p) => p.regra_nome === "fundo");
+      if (!fundo) continue;
+      larguraTotal += fundo.largura_mm * fundo.quantidade;
+      altura = Math.max(altura, fundo.comprimento_mm);
+      template ??= fundo;
+    }
+    // Se a altura do fundo já passa da chapa, não consolida (evita split 2D).
+    if (!template || altura > maxH) continue;
+
+    // Remove os fundos individuais do corrido.
+    for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "fundo");
+
+    // Fundo grande, dividido no comprimento SÓ se passar da chapa.
+    const nPartes = Math.max(1, Math.ceil(larguraTotal / maxW));
+    const larguraParte = Math.ceil(larguraTotal / nPartes);
+    const nome = mods[0].nome_display;
+    const alvo = mods[0];
+    for (let i = 0; i < nPartes; i++) {
+      const w = Math.min(larguraParte, larguraTotal - i * larguraParte);
+      if (w <= 0) break;
+      const sufixo = nPartes > 1 ? ` (parte ${i + 1}/${nPartes})` : " (corrido)";
+      alvo.pecas.push({
+        ...template,
+        id: `${alvo.id}_fundo_corrido_${i}`,
+        modulo_instanciado_id: alvo.id,
+        largura_mm: w,
+        comprimento_mm: altura,
+        largura_final_mm: w - TOLERANCIA,
+        comprimento_final_mm: altura - TOLERANCIA,
+        quantidade: 1,
+        etiqueta_producao: `FUNDO — ${nome}${sufixo}`,
+        ...(nPartes > 1 ? { numero_segmento: i + 1, total_segmentos: nPartes } : {}),
+      });
+    }
+  }
+}
+
 // ─── HELPERS INTERNOS ─────────────────────────────────────────────────────────
 
 function selecionarMaterial(

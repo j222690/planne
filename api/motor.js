@@ -1350,6 +1350,57 @@ function calcularMetricas(modulos) {
     calculado_em: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
+function consolidarFundos(modulos, chapaLarguraMm = 2750, chapaComprimentoMm = 1850) {
+  const MARGEM = 20;
+  const maxW = chapaLarguraMm - MARGEM;
+  const maxH = chapaComprimentoMm - MARGEM;
+  const grupos = /* @__PURE__ */ new Map();
+  for (const m of modulos) {
+    if (!m.pecas.some((p) => p.regra_nome === "fundo")) continue;
+    const faixa = m.posicao_y_cm >= 100 ? "aereo" : "base";
+    const chave = `${m.parede}|${faixa}|${m.altura_cm}`;
+    const g = grupos.get(chave) ?? [];
+    g.push(m);
+    grupos.set(chave, g);
+  }
+  for (const mods of grupos.values()) {
+    if (mods.length < 2) continue;
+    mods.sort((a, b) => a.posicao_x_cm - b.posicao_x_cm);
+    let larguraTotal = 0;
+    let altura = 0;
+    let template = null;
+    for (const m of mods) {
+      const fundo = m.pecas.find((p) => p.regra_nome === "fundo");
+      if (!fundo) continue;
+      larguraTotal += fundo.largura_mm * fundo.quantidade;
+      altura = Math.max(altura, fundo.comprimento_mm);
+      template ??= fundo;
+    }
+    if (!template || altura > maxH) continue;
+    for (const m of mods) m.pecas = m.pecas.filter((p) => p.regra_nome !== "fundo");
+    const nPartes = Math.max(1, Math.ceil(larguraTotal / maxW));
+    const larguraParte = Math.ceil(larguraTotal / nPartes);
+    const nome = mods[0].nome_display;
+    const alvo = mods[0];
+    for (let i = 0; i < nPartes; i++) {
+      const w = Math.min(larguraParte, larguraTotal - i * larguraParte);
+      if (w <= 0) break;
+      const sufixo = nPartes > 1 ? ` (parte ${i + 1}/${nPartes})` : " (corrido)";
+      alvo.pecas.push({
+        ...template,
+        id: `${alvo.id}_fundo_corrido_${i}`,
+        modulo_instanciado_id: alvo.id,
+        largura_mm: w,
+        comprimento_mm: altura,
+        largura_final_mm: w - TOLERANCIA_SERRA_MM,
+        comprimento_final_mm: altura - TOLERANCIA_SERRA_MM,
+        quantidade: 1,
+        etiqueta_producao: `FUNDO \u2014 ${nome}${sufixo}`,
+        ...nPartes > 1 ? { numero_segmento: i + 1, total_segmentos: nPartes } : {}
+      });
+    }
+  }
+}
 function selecionarMaterial(tipo, instancia) {
   if (tipo === "porta" && instancia.material_porta) return instancia.material_porta;
   if (tipo === "fundo" && instancia.material_fundo) return instancia.material_fundo;
@@ -5123,6 +5174,8 @@ async function gerarHandler(req, res) {
         resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
       }
     }
+    consolidarFundos(resultado.projeto.modulos, cfgCusto.chapa_largura_mm, cfgCusto.chapa_comprimento_mm);
+    resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
     const moveis_calc = projetoToMovelInput(resultado.projeto);
     const engenharia = gerarEngenharia(resultado.projeto);
     const orcamentos = gerarTresVersoes(resultado.projeto, cfgCusto);

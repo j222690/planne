@@ -26,7 +26,7 @@ import { gerarLayoutBanheiro, gerarLayoutLavanderia } from "../lib/motor-paramet
 import { gerarLayoutSala } from "../lib/motor-parametrico/layout-sala";
 import { gerarLayoutEscritorio } from "../lib/motor-parametrico/layout-escritorio";
 import { projetoToMovelInput } from "../lib/motor-parametrico/adapters";
-import { calcularMetricas } from "../lib/motor-parametrico/pecas";
+import { calcularMetricas, consolidarFundos } from "../lib/motor-parametrico/pecas";
 import { criarAmbienteManual, calcularSegmentosLivres } from "../lib/motor-parametrico/ambiente";
 import { gerarEngenharia } from "../lib/motor-parametrico/engenharia";
 import { gerarTresVersoes, CONFIG_CUSTO_PADRAO } from "../lib/motor-parametrico/orcamento-inteligente";
@@ -213,6 +213,12 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
         resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
       }
     }
+
+    // 3b. Consolida os fundos por corrido: um fundo grande por móvel (ex.: aéreo
+    // de 300cm), dividido só se passar do tamanho da chapa. Antes da engenharia/
+    // orçamento/corte para tudo ficar coerente.
+    consolidarFundos(resultado.projeto.modulos, cfgCusto.chapa_largura_mm, cfgCusto.chapa_comprimento_mm);
+    resultado.projeto.metricas = calcularMetricas(resultado.projeto.modulos);
 
     // 4. Gerar MovelInput[] para compatibilidade com calcular-orcamento
     const moveis_calc = projetoToMovelInput(resultado.projeto);
