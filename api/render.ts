@@ -260,7 +260,7 @@ function buildRenderPrompt(input: RenderInput): string {
   const layout = describeLayout(input.moveis, input.medidas);
   const funcionalAmbiente = FUNCIONAL_POR_AMBIENTE[input.ambiente] ?? "";
 
-  return [
+  const partes = [
     "professional interior architecture visualization, photorealistic render, award-winning completed room",
     `${styleEn} ${roomEn}`,
     "fully furnished and decorated, ready to live in, no empty or unfinished areas in the room",
@@ -283,7 +283,17 @@ function buildRenderPrompt(input: RenderInput): string {
     "Architectural Digest magazine quality, sharp focus throughout, cinematic composition",
     "no people, no text overlays, no watermarks, no unfinished walls, complete flooring visible",
     input.descricao ? input.descricao.slice(0, 200) : "",
-  ].filter(Boolean).join(", ");
+  ].filter(Boolean);
+
+  const full = partes.join(", ");
+  // FluxAPI limita o prompt a 3000 caracteres. Corta no último separador antes
+  // do limite, preservando o começo (ambiente, layout, móveis e regras de
+  // marcenaria vêm primeiro; caem só as tags finais de qualidade/decoração).
+  const LIMITE = 2900;
+  if (full.length <= LIMITE) return full;
+  const corte = full.slice(0, LIMITE);
+  const sep = corte.lastIndexOf(", ");
+  return sep > LIMITE * 0.6 ? corte.slice(0, sep) : corte;
 }
 
 // ─── FluxAPI.ai configs (serviço usado: api.fluxapi.ai, auth Bearer) ────────────
