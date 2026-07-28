@@ -176,6 +176,32 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
+/**
+ * Rasteriza um <svg> (o layout 2D) em PNG data-URI, para mandar como imagem-guia
+ * do render (o Gemini usa como direção exata do layout).
+ */
+async function svgParaPngDataUri(svg: SVGSVGElement, maxW = 1000): Promise<string | null> {
+  try {
+    const xml = new XMLSerializer().serializeToString(svg);
+    const vb = svg.viewBox.baseVal;
+    const w = vb?.width || svg.clientWidth || 800;
+    const h = vb?.height || svg.clientHeight || 600;
+    const scale = Math.min(1.5, maxW / w);
+    const src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
+    const img = new Image();
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = src; });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png");
+  } catch { return null; }
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function DropZone({
@@ -517,6 +543,21 @@ function IAProjetoPage() {
       x_pct: m.x_pct, y_pct: m.y_pct, parede: m.parede, tipo_elemento: m.tipo_elemento,
     }));
 
+    // Imagem-guia: o layout 2D vira PNG e vai como DIREÇÃO exata para o Gemini.
+    let guia_b64: string | undefined;
+    try {
+      const svg = document.getElementById("layout-2d-guia") as SVGSVGElement | null;
+      if (svg) guia_b64 = (await svgParaPngDataUri(svg)) ?? undefined;
+    } catch { /* sem guia → cai no render por texto */ }
+
+    // Materiais/ferragens do projeto (trilho, chapa, puxador...) para o render.
+    const materiais_txt = [
+      "corpo e portas em MDF melamínico",
+      "puxadores perfil de alumínio embutido, dobradiças de caneco soft-close, corrediças telescópicas (trilho) soft-close",
+      "rodapé recuado sobre pés, roda-teto de arremate no topo, engrosso de 30mm em tampos e frentes aparentes, fundo MDF 6mm",
+      wizard.form.descricao ? wizard.form.descricao.slice(0, 160) : "",
+    ].filter(Boolean).join(", ");
+
     // Polling de um job até concluir → resolve com a URL (ou null em falha).
     const pollRenderJob = (jobId: string): Promise<string | null> => new Promise((resolve) => {
       let attempts = 0;
@@ -547,6 +588,8 @@ function IAProjetoPage() {
             moveis: moveisPayload,
             descricao: wizard.analise!.resumo,
             descricao_comercial: wizard.analise!.descricao_comercial,
+            guia_b64,
+            materiais_txt,
           }),
         });
         if (!res.ok) return null;
@@ -1310,7 +1353,7 @@ function WallElevationSection({ wizard }: { wizard: WizardState }) {
       </div>
 
       <div className="bg-secondary/20 rounded-lg border border-border overflow-hidden">
-        <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ maxHeight: 310 }}>
+        <svg id="layout-2d-guia" viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ maxHeight: 310 }}>
           {/* Chão */}
           <line x1={ML} y1={MT + drawH} x2={ML + drawW} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
           {/* Teto (tracejado) */}

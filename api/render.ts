@@ -308,6 +308,9 @@ const FLUX_CONFIGS = {
 
 // ─── Handler ───────────────────────────────────────────────────────────────────
 
+// Render guiado (Gemini) é síncrono e pode levar ~30s — dá folga à função.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET → consulta de status do job (consolidado de render-status)
   if (req.method === "GET") return statusHandler(req, res);
