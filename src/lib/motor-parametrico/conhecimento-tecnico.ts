@@ -11,6 +11,7 @@
  */
 
 import type { EspessuraMDF, TipoFerragem, TipoModulo } from "./tipos";
+import { dobradicasPorAlturaMm } from "../base-conhecimento/parametros";
 
 // ─── ESPECIFICAÇÃO DE MDF/MDP ─────────────────────────────────────────────────
 
@@ -71,14 +72,12 @@ export const ESPECS_FERRAGEM: Partial<Record<TipoFerragem, EspecFerragem>> = {
 };
 
 /**
- * Recomenda o número de dobradiças por porta segundo altura e peso.
- * Regra de mercado: 2 (≤90cm), 3 (≤150cm), 4 (≤200cm), 5 (>200cm).
+ * Recomenda o número de dobradiças por porta segundo a altura (cm).
+ * Delega à Base de Conhecimento (Camada 3) para manter fonte única — a regra
+ * vive em `base-conhecimento/parametros.ts` (por altura em mm).
  */
 export function numDobradicasPorPorta(altura_cm: number): number {
-  if (altura_cm <= 90) return 2;
-  if (altura_cm <= 150) return 3;
-  if (altura_cm <= 200) return 4;
-  return 5;
+  return dobradicasPorAlturaMm(altura_cm * 10);
 }
 
 /**

@@ -20,6 +20,7 @@ import type {
 } from "./tipos";
 import { AREA_CHAPA_M2 } from "./tipos";
 import { regrasAcabamento } from "./regras-corte-comuns";
+import { dobradicasPorAlturaMm } from "../base-conhecimento/parametros";
 
 // ─── DIMENSÕES PADRÃO ─────────────────────────────────────────────────────────
 
@@ -201,8 +202,8 @@ const regrasDobradica: RegraFerragem[] = [
   {
     tipo: "dobradica_35mm_110grau",
     ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
-    calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * (A > 1500 ? 3 : 2),
-    descricao_tecnica: "2 dobradiças por porta (≤150cm) ou 3 (>150cm)",
+    calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * dobradicasPorAlturaMm(A),
+    descricao_tecnica: "Nº de dobradiças por altura (base): 2 ≤90cm, 3 ≤200cm, 4 ≤240cm, 5 acima",
   },
 ];
 

@@ -1,6 +1,50 @@
 // ARQUIVO GERADO por scripts/bundle-motor.mjs — NÃO EDITAR.
 // Edite src/server/motor-entry.ts e os módulos do motor; rode npm run build.
 
+// src/lib/base-conhecimento/parametros.ts
+var A_DOBR_ALTURA = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_regra_de_quantidade_p";
+var A_DOBR_PESO = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_capacidade_de_carga_p";
+var DOBRADICAS_POR_ALTURA = {
+  valor: [
+    { ate_mm: 900, qtd: 2 },
+    { ate_mm: 2e3, qtd: 3 },
+    { ate_mm: 2400, qtd: 4 },
+    { ate_mm: Infinity, qtd: 5 }
+  ],
+  unidade: "un por porta",
+  fonteAtomo: A_DOBR_ALTURA,
+  obs: "2 at\xE9 900mm (a\xE9reos), 3 at\xE9 2000mm, 4 at\xE9 2400mm, 5 acima. Portas com mola: m\xEDn. 3."
+};
+function dobradicasPorAlturaMm(altura_mm) {
+  const faixa = DOBRADICAS_POR_ALTURA.valor.find((f) => altura_mm <= f.ate_mm);
+  return faixa?.qtd ?? 5;
+}
+var DOBRADICAS_POR_PESO = {
+  valor: [
+    { ate_kg: 22, qtd: 5 },
+    { ate_kg: 27, qtd: 6 },
+    { ate_kg: 32, qtd: 7 }
+  ],
+  unidade: "un por porta",
+  fonteAtomo: A_DOBR_PESO,
+  obs: "Cat\xE1logo de portas elevat\xF3rias/pesadas, testado a 80.000 ciclos."
+};
+function dobradicasPorPesoKg(peso_kg) {
+  if (peso_kg < 22) return null;
+  const faixa = DOBRADICAS_POR_PESO.valor.find((f) => peso_kg <= f.ate_kg);
+  return faixa?.qtd ?? 7;
+}
+var A_LARG_FOLHA = "atom_04_largura_maxima_recomendada_por_folha_limite_pratico_de_largura_por_folha_em_m";
+var LARGURA_MAX_FOLHA_MM = {
+  valor: 600,
+  unidade: "mm",
+  fonteAtomo: A_LARG_FOLHA,
+  obs: "Acima de ~600mm: usar porta de correr ou dividir em mais folhas. Confort\xE1vel 400\u2013500mm."
+};
+function larguraFolhaExcede(largura_mm) {
+  return largura_mm > LARGURA_MAX_FOLHA_MM.valor;
+}
+
 // src/lib/motor-parametrico/regras-corte-comuns.ts
 var ESP = 15;
 var FUNDO = 6;
@@ -360,11 +404,8 @@ function regraDobradicas() {
   return {
     tipo: "dobradica_35mm_110grau",
     ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
-    calcular_quantidade: (_L, A, _P, cfg) => {
-      const porPorta = A > 2e3 ? 4 : A > 1500 ? 3 : 2;
-      return cfg.num_portas * porPorta;
-    },
-    descricao_tecnica: "2 dobradi\xE7as (\u2264150cm), 3 (\u2264200cm) ou 4 (>200cm) por porta"
+    calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * dobradicasPorAlturaMm(A),
+    descricao_tecnica: "N\xBA de dobradi\xE7as por altura (base): 2 \u226490cm, 3 \u2264200cm, 4 \u2264240cm, 5 acima"
   };
 }
 function regraCorredicaGaveta() {
@@ -579,8 +620,8 @@ var regrasDobradica = [
   {
     tipo: "dobradica_35mm_110grau",
     ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
-    calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * (A > 1500 ? 3 : 2),
-    descricao_tecnica: "2 dobradi\xE7as por porta (\u2264150cm) ou 3 (>150cm)"
+    calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * dobradicasPorAlturaMm(A),
+    descricao_tecnica: "N\xBA de dobradi\xE7as por altura (base): 2 \u226490cm, 3 \u2264200cm, 4 \u2264240cm, 5 acima"
   }
 ];
 var regrasCorredica = [
@@ -4757,50 +4798,6 @@ function consultarConhecimento(consulta) {
     respostas.push({ encontrado: false, topico: consulta, conteudo: "Sem entrada espec\xEDfica na base de conhecimento." });
   }
   return respostas;
-}
-
-// src/lib/base-conhecimento/parametros.ts
-var A_DOBR_ALTURA = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_regra_de_quantidade_p";
-var A_DOBR_PESO = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_capacidade_de_carga_p";
-var DOBRADICAS_POR_ALTURA = {
-  valor: [
-    { ate_mm: 600, qtd: 2 },
-    { ate_mm: 2e3, qtd: 3 },
-    { ate_mm: 2400, qtd: 4 },
-    { ate_mm: Infinity, qtd: 5 }
-  ],
-  unidade: "un por porta",
-  fonteAtomo: A_DOBR_ALTURA,
-  obs: "2 at\xE9 600mm, 3 at\xE9 2000mm, 4 at\xE9 2400mm, 5 acima. Portas com mola: m\xEDn. 3."
-};
-function dobradicasPorAlturaMm(altura_mm) {
-  const faixa = DOBRADICAS_POR_ALTURA.valor.find((f) => altura_mm <= f.ate_mm);
-  return faixa?.qtd ?? 5;
-}
-var DOBRADICAS_POR_PESO = {
-  valor: [
-    { ate_kg: 22, qtd: 5 },
-    { ate_kg: 27, qtd: 6 },
-    { ate_kg: 32, qtd: 7 }
-  ],
-  unidade: "un por porta",
-  fonteAtomo: A_DOBR_PESO,
-  obs: "Cat\xE1logo de portas elevat\xF3rias/pesadas, testado a 80.000 ciclos."
-};
-function dobradicasPorPesoKg(peso_kg) {
-  if (peso_kg < 22) return null;
-  const faixa = DOBRADICAS_POR_PESO.valor.find((f) => peso_kg <= f.ate_kg);
-  return faixa?.qtd ?? 7;
-}
-var A_LARG_FOLHA = "atom_04_largura_maxima_recomendada_por_folha_limite_pratico_de_largura_por_folha_em_m";
-var LARGURA_MAX_FOLHA_MM = {
-  valor: 600,
-  unidade: "mm",
-  fonteAtomo: A_LARG_FOLHA,
-  obs: "Acima de ~600mm: usar porta de correr ou dividir em mais folhas. Confort\xE1vel 400\u2013500mm."
-};
-function larguraFolhaExcede(largura_mm) {
-  return largura_mm > LARGURA_MAX_FOLHA_MM.valor;
 }
 
 // src/lib/base-conhecimento/pesos.ts

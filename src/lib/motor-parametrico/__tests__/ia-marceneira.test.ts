@@ -51,11 +51,11 @@ describe("conhecimento-tecnico — MDF", () => {
 });
 
 describe("conhecimento-tecnico — ferragens", () => {
-  test("numDobradicasPorPorta segue a regra de altura", () => {
-    expect(numDobradicasPorPorta(80)).toBe(2);
-    expect(numDobradicasPorPorta(150)).toBe(3);
-    expect(numDobradicasPorPorta(200)).toBe(4);
-    expect(numDobradicasPorPorta(250)).toBe(5);
+  test("numDobradicasPorPorta segue a regra da base (por altura)", () => {
+    expect(numDobradicasPorPorta(80)).toBe(2);   // ≤90cm
+    expect(numDobradicasPorPorta(150)).toBe(3);  // ≤200cm
+    expect(numDobradicasPorPorta(200)).toBe(3);  // ≤200cm (base: 3, não 4)
+    expect(numDobradicasPorPorta(250)).toBe(5);  // >240cm
   });
 
   test("corredicaParaProfundidade escolhe pelo tamanho", () => {

@@ -30,17 +30,22 @@ const A_DOBR_ALTURA = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de
 const A_DOBR_PESO = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_capacidade_de_carga_p";
 const A_DOBR_ESP = "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_faixas_de_espessura_d";
 
-/** Faixas de nº de dobradiças por ALTURA da folha (mm). Fonte: base (EN 1935 / catálogos). */
+/**
+ * Faixas de nº de dobradiças por ALTURA da folha (mm). Fonte: base (EN 1935 /
+ * catálogos): "2 até ~600mm, 3 de ~900–2000mm, 4 acima de 2000mm, 5 em ~2400mm".
+ * A faixa 600–900mm fica em aberto na fonte; adotamos 2 até 900mm para casar com
+ * a prática de armários aéreos (que usam 2), e 3 daí até 2000mm.
+ */
 export const DOBRADICAS_POR_ALTURA: Param<{ ate_mm: number; qtd: number }[]> = {
   valor: [
-    { ate_mm: 600, qtd: 2 },
+    { ate_mm: 900, qtd: 2 },
     { ate_mm: 2000, qtd: 3 },
     { ate_mm: 2400, qtd: 4 },
     { ate_mm: Infinity, qtd: 5 },
   ],
   unidade: "un por porta",
   fonteAtomo: A_DOBR_ALTURA,
-  obs: "2 até 600mm, 3 até 2000mm, 4 até 2400mm, 5 acima. Portas com mola: mín. 3.",
+  obs: "2 até 900mm (aéreos), 3 até 2000mm, 4 até 2400mm, 5 acima. Portas com mola: mín. 3.",
 };
 
 /** Nº de dobradiças recomendado para uma porta de dada altura (mm). */

@@ -18,8 +18,9 @@ import {
 } from "../pesos";
 
 describe("Camada 3 — parâmetros da base", () => {
-  test("dobradiças por altura seguem a faixa da base", () => {
-    expect(dobradicasPorAlturaMm(500)).toBe(2);   // ≤600
+  test("dobradiças por altura seguem a faixa da base (zona 600-900 = 2)", () => {
+    expect(dobradicasPorAlturaMm(700)).toBe(2);   // aéreo ≤900
+    expect(dobradicasPorAlturaMm(1200)).toBe(3);  // médio-alto ≤2000
     expect(dobradicasPorAlturaMm(1800)).toBe(3);  // ≤2000
     expect(dobradicasPorAlturaMm(2300)).toBe(4);  // ≤2400
     expect(dobradicasPorAlturaMm(2600)).toBe(5);  // >2400

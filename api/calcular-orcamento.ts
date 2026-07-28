@@ -56,9 +56,10 @@ function moveisToParagraph(moveis: MovelConfig[], catalogo: CatItem[]): string {
     const corrGav = findMat(m.corrediça_gaveta_id);
     const puxador = findMat(m.puxador_id);
 
-    const dobQtd = m.portas > 0 && m.tipo_porta === "abrir"
-      ? m.portas * (m.altura_cm > 150 ? 3 : 2)
-      : 0;
+    // Nº de dobradiças pela regra da Base de Conhecimento (parametros.ts →
+    // DOBRADICAS_POR_ALTURA): 2 ≤90cm, 3 ≤200cm, 4 ≤240cm, 5 acima.
+    const dobPorPorta = m.altura_cm <= 90 ? 2 : m.altura_cm <= 200 ? 3 : m.altura_cm <= 240 ? 4 : 5;
+    const dobQtd = m.portas > 0 && m.tipo_porta === "abrir" ? m.portas * dobPorPorta : 0;
     const corrPtPares = m.portas > 0 && m.tipo_porta === "correr"
       ? Math.ceil(m.portas / 2)
       : 0;
@@ -117,7 +118,7 @@ REGRAS DE CÁLCULO:
 - Espessura padrão da caixa (estrutura): MDF 15mm — use sempre como padrão salvo especificação contrária.
 - Fundo traseiro padrão: MDF 6mm Branco TX — sempre incluir quando "Fundo traseiro: SIM".
 - Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.04m² (chapa padrão 2750×1830mm). Arredonde para cima. Para peças longas (> 269cm), aplique o método de segmentos acima.
-- Dobradiças: 2 por porta altura ≤150cm, 3 por porta altura >150cm. USE OBRIGATORIAMENTE se tipo_porta = "abrir".
+- Dobradiças (regra da base): 2 por porta ≤90cm, 3 por porta ≤200cm, 4 por porta ≤240cm, 5 acima. USE OBRIGATORIAMENTE se tipo_porta = "abrir".
 - Corrediça de porta de correr: 1 par de corrediça + 1 trilho por par de folhas. USE OBRIGATORIAMENTE se tipo_porta = "correr".
 - Corrediça de gaveta: 1 par por gaveta. OBRIGATÓRIO se gavetas > 0.
 - Puxadores: 1 por porta + 1 por gaveta.

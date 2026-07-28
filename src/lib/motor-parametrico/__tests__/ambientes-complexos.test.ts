@@ -293,7 +293,7 @@ describe("biblioteca-quarto — regras de corte", () => {
     expect(laterais[0].comprimento_mm).toBe(2500); // altura 250cm
   });
 
-  test("roupeiro alto (250cm) usa 4 dobradiças por porta", () => {
+  test("roupeiro alto (250cm) usa 5 dobradiças por porta (base)", () => {
     const tpl = getTemplateRoupeiro(80)!;
     const inst: ModuloInstanciado = {
       id: "test", modulo_template_id: tpl.id, modulo_template_codigo: tpl.codigo,
@@ -305,7 +305,7 @@ describe("biblioteca-quarto — regras de corte", () => {
     };
     const ferr = calcularFerragens(inst, tpl);
     const dob = ferr.find((f) => f.tipo === "dobradica_35mm_110grau");
-    expect(dob?.quantidade).toBe(8); // 2 portas × 4 dobradiças (>200cm)
+    expect(dob?.quantidade).toBe(10); // 2 portas × 5 dobradiças (>240cm, regra da base)
   });
 });
 

@@ -16,6 +16,8 @@ import type {
   FitaBorda,
   EspessuraMDF,
 } from "./tipos";
+// Base de Conhecimento (Camada 3): nº de dobradiças por altura, rastreável à fonte.
+import { dobradicasPorAlturaMm } from "../base-conhecimento/parametros";
 
 const ESP: EspessuraMDF = 15;
 const FUNDO: EspessuraMDF = 6;
@@ -454,11 +456,8 @@ export function regraDobradicas(): RegraFerragem {
   return {
     tipo: "dobradica_35mm_110grau",
     ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
-    calcular_quantidade: (_L, A, _P, cfg) => {
-      const porPorta = A > 2000 ? 4 : A > 1500 ? 3 : 2;
-      return cfg.num_portas * porPorta;
-    },
-    descricao_tecnica: "2 dobradiças (≤150cm), 3 (≤200cm) ou 4 (>200cm) por porta",
+    calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * dobradicasPorAlturaMm(A),
+    descricao_tecnica: "Nº de dobradiças por altura (base): 2 ≤90cm, 3 ≤200cm, 4 ≤240cm, 5 acima",
   };
 }
 

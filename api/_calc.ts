@@ -79,6 +79,19 @@ const SHEET_AREA = 2.750 * 1.830; // m²
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function cm2mm(v: number) { return Math.round(v * 10); }
 
+/**
+ * Nº de dobradiças por porta segundo a altura (cm).
+ * Regra da Base de Conhecimento (src/lib/base-conhecimento/parametros.ts →
+ * DOBRADICAS_POR_ALTURA): 2 até 90cm, 3 até 200cm, 4 até 240cm, 5 acima.
+ * Duplicado aqui porque api/ é bundle serverless separado (não importa de src).
+ */
+function dobradicasPorAltura(altura_cm: number): number {
+  if (altura_cm <= 90) return 2;
+  if (altura_cm <= 200) return 3;
+  if (altura_cm <= 240) return 4;
+  return 5;
+}
+
 function findCat(catalogo: CatItem[], matcher: (n: CatItem) => boolean): CatItem | undefined {
   return catalogo.find((c) => { try { return matcher(c); } catch { return false; } });
 }
@@ -355,13 +368,14 @@ export function calcularOrcamento(moveis: MovelInput[], catalogo: CatItem[], mar
 
     // ── Dobradiças ────────────────────────────────────────────────────────────
     if (m.portas > 0 && tp === "abrir") {
-      const dobQtd = m.portas * (alt > 150 ? 3 : 2);
+      const dobPorPorta = dobradicasPorAltura(alt);
+      const dobQtd = m.portas * dobPorPorta;
       const dob = m.dobradica_id
         ? find(c => c.id === m.dobradica_id)
         : find(c => /dobrad/i.test(c.nome));
 
       if (dob) {
-        addItem({ movel: m.nome, material_id: dob.id, descricao: `${dob.nome} — ${m.nome}`, justificativa: `${m.portas} porta(s) × ${alt > 150 ? 3 : 2} dobradiças = ${dobQtd} un.`, quantidade: dobQtd, unidade: dob.unidade, preco_custo: dob.preco_custo });
+        addItem({ movel: m.nome, material_id: dob.id, descricao: `${dob.nome} — ${m.nome}`, justificativa: `${m.portas} porta(s) × ${dobPorPorta} dobradiças = ${dobQtd} un.`, quantidade: dobQtd, unidade: dob.unidade, preco_custo: dob.preco_custo });
       }
     }
 
