@@ -41,6 +41,16 @@ describe("analisarMovel", () => {
     expect(a.achados.some((x) => x.titulo === "Corrediça")).toBe(true);
   });
 
+  test("prateleiras demais em pouca altura = muito juntas", () => {
+    const a = analisarMovel({ largura_cm: 60, profundidade_cm: 30, altura_cm: 100, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 6 });
+    expect(a.achados.some((x) => x.titulo === "Prateleiras muito juntas")).toBe(true);
+  });
+
+  test("poucas prateleiras em muita altura = espaçadas", () => {
+    const a = analisarMovel({ largura_cm: 60, profundidade_cm: 30, altura_cm: 240, portas: 0, tipo_porta: "sem", gavetas: 0, prateleiras: 2 });
+    expect(a.achados.some((x) => x.titulo === "Prateleiras espaçadas")).toBe(true);
+  });
+
   test("móvel simples e pequeno não gera atenção crítica", () => {
     const a = analisarMovel({ largura_cm: 40, profundidade_cm: 35, altura_cm: 60, portas: 1, tipo_porta: "abrir", gavetas: 0, prateleiras: 1 });
     expect(a.nivel).not.toBe("critico");

@@ -54,6 +54,10 @@ export interface AnaliseMovel {
 
 const cm2mm = (v: number) => Math.round(v * 10);
 
+// Espaçamento vertical confortável entre prateleiras (cm) — prática de mercado.
+const ESPACO_PRATELEIRA_MIN_CM = 22;
+const ESPACO_PRATELEIRA_MAX_CM = 45;
+
 /** Peças aproximadas do corpo, para estimar o peso do móvel. */
 function pecasAprox(m: MovelParaAnalise): PecaPeso[] {
   const esp: EspessuraMDF = m.espessura_corpo_mm ?? 15;
@@ -129,7 +133,7 @@ export function analisarMovel(m: MovelParaAnalise): AnaliseMovel {
     }
   }
 
-  // ── Prateleira que enverga (vão x espessura) ──
+  // ── Prateleira que enverga (vão HORIZONTAL x espessura) ──
   if (m.prateleiras > 0) {
     const vaoInterno = m.largura_cm - 3;
     const espRec = espessuraParaVao(vaoInterno);
@@ -142,6 +146,41 @@ export function analisarMovel(m: MovelParaAnalise): AnaliseMovel {
         fonte: "BP-03",
       });
     }
+
+    // Espaçamento VERTICAL entre prateleiras (ergonomia de uso).
+    const espacamento = Math.round((m.altura_cm - 3) / (m.prateleiras + 1));
+    if (espacamento < ESPACO_PRATELEIRA_MIN_CM) {
+      achados.push({
+        severidade: "atencao",
+        titulo: "Prateleiras muito juntas",
+        detalhe: `~${espacamento}cm entre prateleiras. Abaixo de ${ESPACO_PRATELEIRA_MIN_CM}cm dificulta guardar itens — reduza a quantidade.`,
+        fonte: "ergonomia",
+      });
+    } else if (espacamento > ESPACO_PRATELEIRA_MAX_CM) {
+      achados.push({
+        severidade: "info",
+        titulo: "Prateleiras espaçadas",
+        detalhe: `~${espacamento}cm entre prateleiras. Acima de ${ESPACO_PRATELEIRA_MAX_CM}cm há espaço ocioso — cabe mais uma prateleira.`,
+        fonte: "ergonomia",
+      });
+    } else {
+      achados.push({
+        severidade: "info",
+        titulo: "Prateleiras",
+        detalhe: `${m.prateleiras} prateleiras · ~${espacamento}cm de vão entre elas.`,
+        fonte: "ergonomia",
+      });
+    }
+  }
+
+  // ── Profundidade fora do usual (alcance / uso) ──
+  if (m.portas > 0 && ehAbrir(m.tipo_porta) && m.profundidade_cm > 70) {
+    achados.push({
+      severidade: "info",
+      titulo: "Móvel profundo",
+      detalhe: `${m.profundidade_cm}cm de profundidade com porta de abrir — o fundo fica de difícil alcance. Considere gaveta/aramado interno.`,
+      fonte: "ergonomia",
+    });
   }
 
   // ── Gaveta: corrediça recomendada por profundidade ──
