@@ -4,7 +4,7 @@ import type { MovelInput, PecaCorte } from "./_calc";
 
 // ── Chapa padrão ─────────────────────────────────────────────────────────────
 const SHEET_W = 2750; // mm
-const SHEET_H = 1830; // mm
+const SHEET_H = 1850; // mm — chapa padrão 2750×1850 (base: Guararapes/Arauco)
 
 // Materiais que NÃO são chapas MDF/MDP — excluir do bin packing
 const NAO_CHAPA = /madeira\s*maci|vidro|espelho/i;
@@ -68,7 +68,7 @@ function calcularChapas(pecas: PecaCorte[]): { materiais: ChapaMaterial[]; inval
       if (piece.w <= SHEET_W && piece.h <= SHEET_H) orientations.push([piece.w, piece.h]);
       if (piece.h <= SHEET_W && piece.w <= SHEET_H) orientations.push([piece.h, piece.w]);
       if (orientations.length === 0) {
-        // Peça excede a chapa padrão (2750×1830) — registra em vez de descartar.
+        // Peça excede a chapa padrão (2750×1850) — registra em vez de descartar.
         invalidas.push({
           peca: piece.label,
           material,

@@ -107,17 +107,17 @@ DIMENSÕES DOS MÓVEIS:
 - A planta baixa (quando fornecida) serve APENAS para contexto espacial: verificar se uma porta de abrir tem folga, identificar obstáculos, posição de janelas/tomadas. Nunca use a planta para redimensionar os móveis.
 
 LIMITE FÍSICO DA CHAPA — REGRA MAIS IMPORTANTE:
-- Chapa padrão MDF/MDP: 2750mm × 1830mm (275cm × 183cm). NENHUMA peça pode ter dimensão > 269cm.
+- Chapa padrão MDF/MDP: 2750mm × 1850mm (275cm × 185cm). NENHUMA peça pode ter dimensão > 269cm.
 - Se largura_cm ou profundidade_cm do móvel for > 269cm, os painéis DEVEM ser divididos em módulos/segmentos:
   Exemplo: topo de 300cm → 2 segmentos (ex.: 160cm + 140cm). Cada segmento consome parte de uma chapa separada.
-- Ao calcular chapas, trate CADA SEGMENTO como peça independente. NÃO some toda a área e divida por 5,04m² quando há peças longas — isso subestima o consumo porque ignora o desperdício de folha ao fatiar segmentos.
+- Ao calcular chapas, trate CADA SEGMENTO como peça independente. NÃO some toda a área e divida por 5,09m² quando há peças longas — isso subestima o consumo porque ignora o desperdício de folha ao fatiar segmentos.
 - Método correto para peças longas: calcule a área de cada segmento individualmente + sobra perdida da chapa ao lado. Adicione ≥10% extra de perda por corte em móveis com peças > 269cm.
 - Na justificativa: sempre mencione "peça dividida em X segmentos pois excede 269cm (limite da chapa)".
 
 REGRAS DE CÁLCULO:
 - Espessura padrão da caixa (estrutura): MDF 15mm — use sempre como padrão salvo especificação contrária.
 - Fundo traseiro padrão: MDF 6mm Branco TX — sempre incluir quando "Fundo traseiro: SIM".
-- Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.04m² (chapa padrão 2750×1830mm). Arredonde para cima. Para peças longas (> 269cm), aplique o método de segmentos acima.
+- Chapas MDF/MDP: some a área total de painéis de cada móvel ÷ 5.09m² (chapa padrão 2750×1850mm). Arredonde para cima. Para peças longas (> 269cm), aplique o método de segmentos acima.
 - Dobradiças (regra da base): 2 por porta ≤90cm, 3 por porta ≤200cm, 4 por porta ≤240cm, 5 acima. USE OBRIGATORIAMENTE se tipo_porta = "abrir".
 - Corrediça de porta de correr: 1 par de corrediça + 1 trilho por par de folhas. USE OBRIGATORIAMENTE se tipo_porta = "correr".
 - Corrediça de gaveta: 1 par por gaveta. OBRIGATÓRIO se gavetas > 0.

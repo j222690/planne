@@ -67,7 +67,7 @@ export function criarMaterialPadrao(cor_hex: string, espessura: 3 | 6 | 9 | 12 |
     nome_display: `MDF ${espessura}mm`,
     espessura_mm: espessura,
     largura_chapa_mm: 2750,
-    comprimento_chapa_mm: 1830,
+    comprimento_chapa_mm: 1850,
     area_chapa_m2: AREA_CHAPA_M2,
     cor_hex,
     acabamento: "melamina",

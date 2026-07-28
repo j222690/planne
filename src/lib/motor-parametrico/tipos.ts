@@ -51,8 +51,12 @@ export const TOLERANCIA_SERRA_MM: Milimetros = 3;
 /** Comprimento máximo de peça processável no CNC padrão. */
 export const MAX_PECA_MM: Milimetros = 2690;
 
-/** Área útil de uma chapa padrão 2750×1830mm. */
-export const AREA_CHAPA_M2: MetrosQuadrados = 2.750 * 1.830;
+/**
+ * Área de uma chapa padrão 2750×1850mm — formato oficial do mercado brasileiro
+ * (Base de Conhecimento: Guararapes RUC / Arauco). A empresa pode sobrescrever
+ * as dimensões reais nas Configurações; este é o default.
+ */
+export const AREA_CHAPA_M2: MetrosQuadrados = 2.750 * 1.850;
 
 /** Espessura padrão do corpo do móvel. */
 export const ESP_CORPO_MM: EspessuraMDF = 15;

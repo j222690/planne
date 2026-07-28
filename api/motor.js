@@ -1129,7 +1129,7 @@ function regraPontoHidraulicoAtendido(_p, ambiente, modulos) {
 // src/lib/motor-parametrico/tipos.ts
 var TOLERANCIA_SERRA_MM = 3;
 var MAX_PECA_MM = 2690;
-var AREA_CHAPA_M2 = 2.75 * 1.83;
+var AREA_CHAPA_M2 = 2.75 * 1.85;
 
 // src/lib/motor-parametrico/pecas.ts
 function calcularPecas(instancia, template) {
@@ -1308,7 +1308,7 @@ function criarMaterialPadrao(cor_hex, espessura) {
     nome_display: `MDF ${espessura}mm`,
     espessura_mm: espessura,
     largura_chapa_mm: 2750,
-    comprimento_chapa_mm: 1830,
+    comprimento_chapa_mm: 1850,
     area_chapa_m2: AREA_CHAPA_M2,
     cor_hex,
     acabamento: "melamina",
@@ -3888,7 +3888,7 @@ var CONFIG_CUSTO_PADRAO = {
   margem_desejada_pct: 45,
   desperdicio_material_pct: 15,
   chapa_largura_mm: 2750,
-  chapa_comprimento_mm: 1830,
+  chapa_comprimento_mm: 1850,
   preco_chapa_mdf_15: 85,
   preco_chapa_mdf_18: 105
 };

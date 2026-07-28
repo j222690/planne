@@ -74,7 +74,7 @@ export interface PecaCorte {
 const ESP = 15;     // MDF estrutura 15mm
 const FUNDO = 6;    // MDF fundo 6mm
 const MAX_PECA = 2690; // Comprimento máximo de peça (chapa 2750mm - folga)
-const SHEET_AREA = 2.750 * 1.830; // m²
+const SHEET_AREA = 2.750 * 1.850; // m² — chapa padrão 2750×1850 (base: Guararapes/Arauco)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function cm2mm(v: number) { return Math.round(v * 10); }
