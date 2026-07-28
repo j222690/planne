@@ -19,6 +19,7 @@ import {
   upsertOrdemProducao, upsertLancamento,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { analisarMovel } from "@/lib/base-conhecimento/analise-movel";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -1788,7 +1789,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                   <Info className="size-3" />
                   Corrediças e dobradiças são calculadas automaticamente com base nas portas
                 </div>
-                {moveis.filter((m) => (m.parede_id ?? paredeAtiva) === paredeAtiva).map((m) => (
+                {moveis.filter((m) => (m.parede_id ?? paredeAtiva) === paredeAtiva).map((m) => {
+                  const analise = analisarMovel({
+                    largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
+                    portas: m.portas, tipo_porta: m.tipo_porta, gavetas: m.gavetas, prateleiras: m.prateleiras,
+                  });
+                  const temAlerta = analise.nivel === "atencao" || analise.nivel === "critico";
+                  return (
                   <div key={m.id} className="border border-border rounded-md overflow-hidden">
                     <button
                       type="button"
@@ -1796,12 +1803,17 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       className="w-full flex items-center justify-between px-3 py-2.5 bg-surface-2 hover:bg-secondary text-[13px] font-medium text-left"
                     >
                       <div className="flex items-center gap-2 min-w-0">
+                        {temAlerta && (
+                          <span className={`size-2 rounded-full shrink-0 ${analise.nivel === "critico" ? "bg-destructive" : "bg-amber-500"}`}
+                            title="A análise encontrou pontos de atenção" />
+                        )}
                         <span>{m.nome}</span>
                         {m.comodo_nome && (
                           <span className="text-[11px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-normal shrink-0">{m.comodo_nome}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-[11.5px] text-muted-foreground font-normal">
+                        <span title="Peso estimado">⚖ {analise.peso_kg}kg</span>
                         <span>{m.largura_cm}×{m.profundidade_cm}×{m.altura_cm}cm</span>
                         {m.portas > 0 && <span>{m.portas} porta{m.portas > 1 ? "s" : ""} ({m.tipo_porta})</span>}
                         {m.gavetas > 0 && <span>{m.gavetas} gav.</span>}
@@ -1832,6 +1844,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       if (m.largura_cm > 269) avisos.push(`Largura > 269cm — painéis serão divididos em módulos`);
                       if (m.altura_cm > 269) avisos.push(`Altura > 269cm — laterais serão divididas em módulos`);
 
+                      // `analise` (peso + avisos da base) vem do closure do map.
                       const temMatsEscolhidos = m.mdf_caixa_id || m.mdf_externo_id || m.fundo_id || m.dobradica_id || m.corrediça_porta_id || m.corrediça_gaveta_id || m.puxador_id;
                       const temAvancado = m.formato === "L" || m.pe_madeira || m.tem_roda_teto;
 
@@ -1871,6 +1884,29 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                             ))}
                           </div>
                         )}
+
+                        {/* Análise inteligente (Base de Conhecimento da marcenaria) */}
+                        <div className="rounded-md border border-border bg-surface-2/60 p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11.5px] font-medium text-muted-foreground inline-flex items-center gap-1.5">
+                              <Sparkles className="size-3.5 text-accent" /> Análise do móvel
+                            </span>
+                            <span className="text-[11.5px] font-medium text-foreground/80" title="Peso estimado (MDF)">
+                              ⚖ ~{analise.peso_kg}kg
+                            </span>
+                          </div>
+                          {analise.achados.map((a, i) => {
+                            const cor = a.severidade === "critico" ? "text-destructive" : a.severidade === "atencao" ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
+                            const dot = a.severidade === "critico" ? "bg-destructive" : a.severidade === "atencao" ? "bg-amber-500" : "bg-sky-500";
+                            return (
+                              <div key={i} className="flex items-start gap-1.5 text-[11.5px]">
+                                <span className={`mt-1 size-1.5 rounded-full shrink-0 ${dot}`} />
+                                <span className={cor}><span className="font-medium">{a.titulo}:</span> {a.detalhe}</span>
+                              </div>
+                            );
+                          })}
+                          <div className="text-[10px] text-muted-foreground/70 pt-0.5">Regras da base de conhecimento · estimativa auditável</div>
+                        </div>
 
                         {/* Dimensões */}
                         <div>
@@ -2185,7 +2221,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                       );
                     })()}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
