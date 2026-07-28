@@ -1,0 +1,334 @@
+{
+  "modulo": "Producao",
+  "total_atomos": 7,
+  "atomos": [
+    {
+      "id": "atom_09_plano_de_corte_e_nesting_otimizacao_de_aproveitamento_de_chapa_funcao_e_param",
+      "entidade": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "categoria": "Producao",
+      "subcategoria": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "titulo": "Função e parâmetros de entrada do plano de corte",
+      "tipo": "regra_obrigatoria",
+      "descricao": "O plano de corte é o documento técnico que detalha o melhor aproveitamento das chapas de MDF/MDP disponíveis, reduzindo desperdício de material e otimizando o tempo de produção. [cf. O plano de corte MDF é um documento técnico essencial para a marcenaria, que detalha o melhor aproveitamento das chapas de MDF, reduzindo desperdícios e otimizando o tempo de produção] O processo de \"nesting\" (denominação técnica do algoritmo de distribuição) considera parâmetros como dimensões das chapas disponíveis, medidas e formatos de cada peça, espessura do corte da ferramenta (kerf), direção de corte (quando o material exige), limites de rotação das peças, e regras específicas da máquina/processo produtivo. [cf. Dimensões das chapas disponíveis. Medidas e formatos das peças. Espessura do corte da ferramenta. Direção de corte, quando o material exige esse cuidado. Limites de rotação das peças. Regras específicas da máquina e do processo produtivo]",
+      "condicoes": {
+        "quando_aplicar": "Toda produção de marcenaria planejada, antes de liberar qualquer corte físico de chapa.",
+        "condicoes_adicionais": "O aproveitamento deve ser medido sobre a chapa inteira (a margem/refilo conta como sobra), porque é a chapa inteira que é efetivamente paga — uma prática de honestidade de cálculo citada por ferramentas especializadas do setor. [cf. O aproveitamento é medido sobre a chapa inteira (margem conta como sobra), porque é a chapa inteira que você paga]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo produções unitárias/artesanais se beneficiam de um plano de corte básico, ainda que manual.",
+        "limitacoes": "Planos de corte mal dimensionados podem gerar peças faltantes na produção, exigindo corte emergencial de chapa adicional — erro caro tanto em tempo quanto em material. [cf. Planos mal dimensionados podem gerar peças faltantes]"
+      },
+      "acoes_recomendadas": "Algoritmos de nesting automatizado (MaxRects e variantes, com rotação de 90°, multi-chapa) em vez de organização manual do layout — o software aplica algoritmos que simulam inúmeras combinações de posicionamento em segundos, superando o potencial de economia do método manual em operações mais complexas. [cf. No modelo tradicional, o programador organiza manualmente o layout das peças, utilizando seu conhecimento e experiência, já em operações mais complexas, esse método tende a limitar o potencial de economia. O software de nesting aplica algoritmos que simulam inúmeras combinações de posicionamento em poucos segundos]",
+      "motivo_tecnico": "O plano de corte é o documento técnico que detalha o melhor aproveitamento das chapas de MDF/MDP disponíveis, reduzindo desperdício de material e otimizando o tempo de produção. [cf. O plano de corte MDF é um documento técnico essencial para a marcenaria, que detalha o melhor aproveitamento das chapas de MDF, reduzindo desperdícios e otimizando o tempo de produção] O processo de \"nesting\" (denominação técnica do algoritmo de distribuição) considera parâmetros como dimensões das chapas disponíveis, medidas e formatos de cada peça, espessura do corte da ferramenta (kerf), direção de corte (quando o material exige), limites de rotação das peças, e regras específicas da máquina/processo produtivo. [cf. Dimensões das chapas disponíveis. Medidas e formatos das peças. Espessura do corte da ferramenta. Direção de corte, quando o material exige esse cuidado. Limites de rotação das peças. Regras específicas da máquina e do processo produtivo]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "crítico",
+        "estetico": "médio"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Guia da Marcenaria (blog técnico); Elite Solda e Robótica (blog especializado em CNC); Token Engenharia (ferramenta de nesting online).",
+      "fabricante": "N/A (categoria de processo/software, não fabricante de material).",
+      "observacoes": "O conhecimento do profissional continua essencial mesmo com uso de algoritmos dedicados — o papel do software é potencializar a experiência do time, não substituí-la. [cf. O conhecimento do profissional continua essencial, porém, o uso de algoritmos dedicados amplia a capacidade de análise e padroniza resultados. O papel do software é potencializar a experiência do time, e não substituí-la] ---",
+      "tags": [
+        "producao",
+        "plano",
+        "corte",
+        "nesting",
+        "otimização",
+        "aproveitamento",
+        "chapa",
+        "função"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_09_plano_de_corte_e_nesting_otimizacao_de_aproveitamento_de_chapa_indicadores_de",
+      "entidade": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "categoria": "Producao",
+      "subcategoria": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "titulo": "Indicadores de aproveitamento e retorno sobre investimento",
+      "tipo": "recomendacao",
+      "descricao": "Para avaliar o ganho de um software/processo de nesting, a prática recomendada é acompanhar o índice médio de aproveitamento de chapa (exemplos de faixa citados: 75%, 80%, 85%) e comparar o consumo de chapas antes e depois da implantação de um processo otimizado, traduzindo cada ponto percentual de ganho em quantidade de chapas que deixam de ser compradas. [cf. Comparar o consumo de chapas antes e depois da implantação. Acompanhar o índice médio de aproveitamento (por exemplo: 75%, 80%, 85%). Traduzir cada ponto percentual de ganho em quantidade de chapas que deixam de ser compradas]",
+      "condicoes": {
+        "quando_aplicar": "Análise de viabilidade de investimento em software de otimização de corte ou mudança de processo produtivo.",
+        "condicoes_adicionais": "Um exemplo prático de cálculo (ferramenta gratuita de nesting) mostrou, para um lote de 30 peças, necessidade de 2 chapas de 3.000×1.200 mm, com aproveitamento de 42,8% e sobra de 4,12 m² — ilustrando que aproveitamentos baixos (abaixo de 50%) são plenamente possíveis em lotes pequenos ou com peças de formato difícil de encaixar. [cf. No lote-exemplo da página, 30 peças pedem 2 chapas de 3000×1200 mm, com aproveitamento de 42,8% e sobra de 4,12 m²]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Produções muito pequenas/esporádicas podem não justificar o investimento em ferramentas avançadas — o cálculo de retorno deve considerar o volume de produção real da marcenaria.",
+        "limitacoes": "O resultado do nesting orienta orçamento e compra de material, mas o plano de produção completo (contorno real da peça, sequência de operação da máquina, ordem de laminação/aplicação de fita de borda) continua sendo uma etapa separada de engenharia de fabricação — o nesting não substitui o planejamento operacional completo. [cf. O resultado orienta orçamento e compra de material; o plano de produção (contorno real, sequência de tocha, laminação) continua sendo etapa de engenharia de fabricação]"
+      },
+      "acoes_recomendadas": "Sistemas mais completos (ERP integrado com módulo de nesting) para marcenarias de maior porte, versus ferramentas avulsas gratuitas/pagas para marcenarias menores ou de pedido individual.",
+      "motivo_tecnico": "Para avaliar o ganho de um software/processo de nesting, a prática recomendada é acompanhar o índice médio de aproveitamento de chapa (exemplos de faixa citados: 75%, 80%, 85%) e comparar o consumo de chapas antes e depois da implantação de um processo otimizado, traduzindo cada ponto percentual de ganho em quantidade de chapas que deixam de ser compradas. [cf. Comparar o consumo de chapas antes e depois da implantação. Acompanhar o índice médio de aproveitamento (por exemplo: 75%, 80%, 85%). Traduzir cada ponto percentual de ganho em quantidade de chapas que deixam de ser compradas]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "crítico",
+        "estetico": "nenhum"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Elite Solda e Robótica; Token Engenharia.",
+      "fabricante": "N/A.",
+      "observacoes": "Marcenarias que trabalham com pedido individual em lotes unitários têm produtividade de nesting inerentemente diferente (e geralmente menor aproveitamento) do que fábricas que produzem em série com peças repetidas — este é um fator de contexto importante para não comparar aproveitamentos de forma descontextualizada. [cf. Sua produtividade é incomparável dentro deste modelo de fabricação, o lote múltiplo. Não se pode afirmar o mesmo para marcenarias que trabalham o pedido individual em lotes unitários] ---",
+      "tags": [
+        "producao",
+        "plano",
+        "corte",
+        "nesting",
+        "otimização",
+        "aproveitamento",
+        "chapa",
+        "indicadores"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_09_plano_de_corte_e_nesting_otimizacao_de_aproveitamento_de_chapa_seccionadora_v",
+      "entidade": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "categoria": "Producao",
+      "subcategoria": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "titulo": "Seccionadora vs. CNC/nesting flexível",
+      "tipo": "boa_pratica",
+      "descricao": "A seccionadora trabalha com \"altura de corte variável\", permitindo processar simultaneamente diversas chapas empilhadas em um mesmo avanço de material — sua grande vantagem é a produtividade em lote múltiplo (peças repetidas, produção em série); já centros CNC com nesting oferecem layout de corte mais flexível, mais adequado a peças de formato variado e produção sob encomenda unitária. [cf. O grande diferencial da seccionadora é que ela trabalha com uma \"altura de corte variável\", o que permite processar simultaneamente diversas chapas em um mesmo avanço do material... a grande característica das seccionadoras é a questão da produtividade do lote, ou seja, seguir um plano de corte que trate simultaneamente da geração de peças repetidas para produtos em série] [cf. O nesting tem um layout de corte mais flexível]",
+      "condicoes": {
+        "quando_aplicar": "Decisão de investimento em equipamento de produção — seccionadora para operações de alto volume/série, CNC/nesting para operações de projeto sob medida com grande variedade de peças únicas.",
+        "condicoes_adicionais": "A escolha do equipamento deve ser cruzada com o perfil real de produção da marcenaria (série vs. sob medida) antes de qualquer decisão de investimento."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Marcenarias de pequeno porte com baixo volume geral podem não justificar nenhum dos dois investimentos de grande porte, mantendo processo manual ou semi-manual.",
+        "limitacoes": "Seccionadoras não têm a mesma flexibilidade de formato/nesting de peças variadas que uma CNC oferece — são otimizadas para outro perfil de produção."
+      },
+      "acoes_recomendadas": "Combinação dos dois equipamentos na mesma planta industrial, cada um dedicado ao tipo de demanda que melhor atende (série na seccionadora, sob medida na CNC).",
+      "motivo_tecnico": "A seccionadora trabalha com \"altura de corte variável\", permitindo processar simultaneamente diversas chapas empilhadas em um mesmo avanço de material — sua grande vantagem é a produtividade em lote múltiplo (peças repetidas, produção em série); já centros CNC com nesting oferecem layout de corte mais flexível, mais adequado a peças de formato variado e produção sob encomenda unitária. [cf. O grande diferencial da seccionadora é que ela trabalha com uma \"altura de corte variável\", o que permite processar simultaneamente diversas chapas em um mesmo avanço do material... a grande característica das seccionadoras é a questão da produtividade do lote, ou seja, seguir um plano de corte que trate simultaneamente da geração de peças repetidas para produtos em série] [cf. O nesting tem um layout de corte mais flexível]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "crítico",
+        "estetico": "nenhum"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Claudio Perin Consultoria (blog especializado em marcenaria/indústria moveleira, \"Marcenaria 4.0\").",
+      "fabricante": "N/A (categoria de equipamento, não marca específica).",
+      "observacoes": "Este item é mais relevante para o módulo de \"inteligência de produção\" do Planne voltado a fábricas/marcenarias industriais do que para o projetista individual — mas é importante que o motor de regras reconheça essa diferença de contexto ao sugerir fluxos de trabalho. ---",
+      "tags": [
+        "producao",
+        "plano",
+        "corte",
+        "nesting",
+        "otimização",
+        "aproveitamento",
+        "chapa",
+        "seccionadora"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_09_sistema_32_padrao_de_furacao_sequencial_definicao_e_medidas_padrao_do_sistema",
+      "entidade": "SISTEMA 32 — PADRÃO DE FURAÇÃO SEQUENCIAL",
+      "categoria": "Producao",
+      "subcategoria": "SISTEMA 32 — PADRÃO DE FURAÇÃO SEQUENCIAL",
+      "titulo": "Definição e medidas-padrão do Sistema 32",
+      "tipo": "regra_obrigatoria",
+      "descricao": "O Sistema 32 é uma técnica de furação amplamente difundida na Europa (no Brasil, praticada principalmente por grandes indústrias, devido à necessidade de máquinas de furação padronizadas), baseada em três medidas-padrão uniformes: (1) a distância de um furo até o outro é sempre 32 mm, tanto na horizontal quanto na vertical; (2) a fileira de furos nas laterais é posicionada a 37 mm da borda frontal do móvel; (3) as demais medidas de ferragem (dobradiças, corrediças) de diferentes fabricantes são desenhadas para coincidir com essa grade de 32 mm. [cf. Sistema 32 é muito difundido em países da Europa, enquanto, no Brasil, apenas grandes indústrias detêm essa tecnologia, devido as máquinas de furação serem padronizada múltiplas de 32 mm] [cf. 1º A distância de um furo até outro furo é 32 mm, tanto na horizontal como na vertical; 2º A fileira de furos nas laterais é posicionada em 37 mm (na parte interior) da borda do móvel] [cf. Esta técnica consiste na distância de 32mm de um furo até o outro, tanto na horizontal quanto na vertical, sendo amplamente recomendada para montagem de Dobradiças, Corrediças, Prateleiras, gavetas e todas as ferragens necessárias para a montagem de móveis]",
+      "condicoes": {
+        "quando_aplicar": "Todo projeto de furação de lateral de móvel (para prateleiras ajustáveis, dobradiças, corrediças), especialmente em produção industrializada/seriada.",
+        "condicoes_adicionais": "A maior parte das ferragens de indústria (dobradiças, corrediças de gaveta) já é projetada e desenvolvida tendo em mente as medições métricas do Sistema 32 — ou seja, especificar ferragem compatível com o sistema evita a necessidade de furação customizada fora do padrão. [cf. A maior parte dos equipamentos da indústria de móveis, tais como dobradiças, corrediças de gaveta, etc… já são projetados e desenvolvidos tendo em mente as medições métricas do Sistema 32]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Marcenarias artesanais de pedido único, sem máquina de furação padronizada em múltiplos de 32 mm, podem não conseguir aplicar o sistema com a mesma precisão — nesses casos, gabaritos específicos (item 2.2) tornam-se ainda mais importantes.",
+        "limitacoes": "Fabricantes de puxador, por exemplo, frequentemente usam distâncias entre furos \"quebradas\" (96 mm, 128 mm, 160 mm etc.), que não seguem exatamente a lógica do Sistema 32 — nem toda ferragia do móvel está sob essa mesma grade padronizada. [cf. Você já percebeu quanto um puxador alça tem medidas tão estranhas? A distância entre furos possui 128mm? 256mm? Por que não fizeram medidas padrões e redondas]"
+      },
+      "acoes_recomendadas": "Furação customizada ponto a ponto (sem seguir grade padronizada) para projetos muito específicos ou ferragens fora do padrão de mercado — solução mais lenta e sujeita a mais erro humano.",
+      "motivo_tecnico": "O Sistema 32 é uma técnica de furação amplamente difundida na Europa (no Brasil, praticada principalmente por grandes indústrias, devido à necessidade de máquinas de furação padronizadas), baseada em três medidas-padrão uniformes: (1) a distância de um furo até o outro é sempre 32 mm, tanto na horizontal quanto na vertical; (2) a fileira de furos nas laterais é posicionada a 37 mm da borda frontal do móvel; (3) as demais medidas de ferragem (dobradiças, corrediças) de diferentes fabricantes são desenhadas para coincidir com essa grade de 32 mm. [cf. Sistema 32 é muito difundido em países da Europa, enquanto, no Brasil, apenas grandes indústrias detêm essa tecnologia, devido as máquinas de furação serem padronizada múltiplas de 32 mm] [cf. 1º A distância de um furo até outro furo é 32 mm, tanto na horizontal como na vertical; 2º A fileira de furos nas laterais é posicionada em 37 mm (na parte interior) da borda do móvel] [cf. Esta técnica consiste na distância de 32mm de um furo até o outro, tanto na horizontal quanto na vertical, sendo amplamente recomendada para montagem de Dobradiças, Corrediças, Prateleiras, gavetas e todas as ferragens necessárias para a montagem de móveis]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Blog técnico do SENAI (Prof. Riverson Tobias do Vale, instrutor de marcenaria, SENAI São José dos Pinhais); Blog da Marcenaria (Marceneiro Expresso).",
+      "fabricante": "N/A (padrão de indústria, não específico de um fabricante — porém referenciado por praticamente todos os fabricantes de ferragem consultados nos módulos anteriores).",
+      "observacoes": "Este é um dos itens mais estratégicos de toda a base para o Planne: se o motor de regras adotar o Sistema 32 como grade nativa de furação, toda a compatibilidade entre diferentes fabricantes de ferragem (Blum, Häfele, Hettich — ver módulo Ferragens) fica naturalmente resolvida, já que todos operam sobre a mesma referência métrica internacional. ---",
+      "tags": [
+        "producao",
+        "sistema",
+        "padrão",
+        "furação",
+        "sequencial",
+        "definição",
+        "medidas"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_09_sistema_32_padrao_de_furacao_sequencial_gabaritos_de_furacao_e_desafios_de_al",
+      "entidade": "SISTEMA 32 — PADRÃO DE FURAÇÃO SEQUENCIAL",
+      "categoria": "Producao",
+      "subcategoria": "SISTEMA 32 — PADRÃO DE FURAÇÃO SEQUENCIAL",
+      "titulo": "Gabaritos de furação e desafios de alinhamento",
+      "tipo": "boa_pratica",
+      "descricao": "Gabaritos de furação (shelf-pin jigs, gabaritos de cavilha) são ferramentas físicas que garantem o alinhamento correto dos furos de acordo com a grade do Sistema 32 ou com a posição de dispositivos de montagem (minifix, cavilha) — mesmo pequenos desalinhamentos (poucos milímetros) entre furos comprometem o encaixe final da peça. [cf. Um milímetro que seja, de desalinhamento entre os furos, já acaba comprometendo o encaixe]",
+      "condicoes": {
+        "quando_aplicar": "Toda operação de furação manual (sem CNC/seccionadora automatizada), especialmente para cavilhas e dispositivos de montagem tipo Girofix/minifix.",
+        "condicoes_adicionais": "Gabaritos de qualidade superior (com sistema de travas) reduzem o problema de \"firmeza\"/deslizamento do gabarito durante a furação manual, evitando o desalinhamento citado como o maior desafio da técnica. [cf. Por possuir travas, evita o problema da \"firmeza\" mencionado]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Furação automatizada por CNC (com programa digital de posicionamento) dispensa gabarito físico, já que a máquina executa a furação com precisão programada.",
+        "limitacoes": "Trabalhar com cavilha manualmente é considerado por marceneiros experientes uma tarefa \"chatinha\" (trabalhosa e sujeita a erro), sendo mais eficiente na indústria, onde a furação é feita em máquinas programadas. [cf. É muito eficiente na indústria, onde a furação é feita em máquinas. Fazer em casa, na mão, é difícil]"
+      },
+      "acoes_recomendadas": "Investimento em CNC com programa de furação digital para marcenarias que produzem em volume suficiente para justificar o custo do equipamento, eliminando a dependência de gabaritos manuais.",
+      "motivo_tecnico": "Gabaritos de furação (shelf-pin jigs, gabaritos de cavilha) são ferramentas físicas que garantem o alinhamento correto dos furos de acordo com a grade do Sistema 32 ou com a posição de dispositivos de montagem (minifix, cavilha) — mesmo pequenos desalinhamentos (poucos milímetros) entre furos comprometem o encaixe final da peça. [cf. Um milímetro que seja, de desalinhamento entre os furos, já acaba comprometendo o encaixe]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Marceneiros & Bricoleiros (fórum técnico brasileiro); Zinni Gabaritos (fabricante de gabaritos, manual técnico).",
+      "fabricante": "Zinni Gabaritos (linha de gabaritos para minifix, VB/Rafix, cavilhas, dobradiças caneco, suportes de prateleira).",
+      "observacoes": "A profundidade de furação para o \"canal\" do parafuso do sistema minifix é recomendada em 12 mm, segundo manual técnico de fabricante de gabaritos — parâmetro útil de referência para validação automática no motor de regras do Planne. [cf. Recomendamos 12mm profundidade... gabarito Cavilha para realizar a furação do \"canal\" do parafuso do minifix (du)] ---",
+      "tags": [
+        "producao",
+        "sistema",
+        "padrão",
+        "furação",
+        "sequencial",
+        "gabaritos",
+        "desafios",
+        "alinhamento"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_09_sequencia_de_usinagem_furo_rasgo_corte_ordem_de_operacoes_na_usinagem_cnc",
+      "entidade": "SEQUÊNCIA DE USINAGEM (FURO → RASGO → CORTE)",
+      "categoria": "Producao",
+      "subcategoria": "SEQUÊNCIA DE USINAGEM (FURO → RASGO → CORTE)",
+      "titulo": "Ordem de operações na usinagem CNC",
+      "tipo": "boa_pratica",
+      "descricao": "Softwares de plano de corte/nesting permitem configurar a sequência em que a máquina CNC executa as diferentes operações sobre cada peça — por exemplo, a ordem \"FUROS → RASGO → CORTE\" é citada como configuração possível, definindo que furos e rasgos (canais para dispositivos de montagem, cabos, etc.) sejam usinados antes do corte final de contorno da peça. [cf. Escolha em qual sequência o nesting vai executar as operações. Por exemplo: FUROS - RASGO - CORTE]",
+      "condicoes": {
+        "quando_aplicar": "Configuração de qualquer fluxo de produção industrializado em CNC/seccionadora com múltiplas operações por peça.",
+        "condicoes_adicionais": "A definição da origem da posição dos eixos iniciais das fresas, o sentido de carregamento da chapa na máquina, e a configuração de referências de brocas para troca rápida são parâmetros complementares que devem ser configurados junto com a sequência de operações. [cf. Defina a origem da posição dos eixos iniciais das fresas para executar as operações... Determina o sentido do carregando da chapa na máquina para receber as operações... Permite configurar referências de brocas para troca rápida]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Produção manual/artesanal sem máquina CNC segue lógica de sequência própria, geralmente definida pelo marceneiro conforme a ferramenta disponível (furadeira, tupia, serra), não por configuração de software.",
+        "limitacoes": "A sequência incorreta de operações pode comprometer a estabilidade da peça durante a usinagem (por exemplo, cortar o contorno final antes de furar pode deixar a peça sem apoio firme para as operações subsequentes)."
+      },
+      "acoes_recomendadas": "Sequência alternativa (corte parcial → furos → corte final) para peças muito pequenas ou frágeis, quando a estabilidade durante a usinagem é uma preocupação maior que a velocidade do processo.",
+      "motivo_tecnico": "Softwares de plano de corte/nesting permitem configurar a sequência em que a máquina CNC executa as diferentes operações sobre cada peça — por exemplo, a ordem \"FUROS → RASGO → CORTE\" é citada como configuração possível, definindo que furos e rasgos (canais para dispositivos de montagem, cabos, etc.) sejam usinados antes do corte final de contorno da peça. [cf. Escolha em qual sequência o nesting vai executar as operações. Por exemplo: FUROS - RASGO - CORTE]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "médio",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "DinaBox (documentação de software de plano de corte com nesting).",
+      "fabricante": "N/A (configuração de software, aplicável a diferentes marcas de CNC).",
+      "observacoes": "Este item deve ser tratado como parâmetro avançado/técnico no motor de regras do Planne — de maior relevância para marcenarias industrializadas com CNC própria do que para o projetista que apenas especifica o móvel. ---",
+      "tags": [
+        "producao",
+        "sequência",
+        "usinagem",
+        "furo",
+        "rasgo",
+        "corte",
+        "ordem",
+        "operações"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_09_etiquetagem_e_rastreabilidade_de_pecas_funcao_das_etiquetas_de_identificacao_",
+      "entidade": "ETIQUETAGEM E RASTREABILIDADE DE PEÇAS",
+      "categoria": "Producao",
+      "subcategoria": "ETIQUETAGEM E RASTREABILIDADE DE PEÇAS",
+      "titulo": "Função das etiquetas de identificação na produção",
+      "tipo": "boa_pratica",
+      "descricao": "Etiquetas impressas (em impressoras especiais ou comuns) para identificar e rastrear peças produzidas são citadas como funcionalidade padrão de softwares de plano de corte, auxiliando diretamente as etapas de produção e montagem — cada peça cortada recebe uma identificação que a associa ao projeto/módulo/posição final no móvel. [cf. Imprima etiquetas em impressoras especiais ou comuns para identificar e rastrear as peças produzidas, auxiliando na produção e montagem]",
+      "condicoes": {
+        "quando_aplicar": "Toda produção com múltiplas peças por projeto e/ou múltiplos projetos simultâneos na mesma marcenaria — praticamente universal a partir de um volume mínimo de produção.",
+        "condicoes_adicionais": "A geração de etiquetas deve estar integrada ao próprio plano de corte/nesting, para que a identificação já saia associada à posição de corte de cada peça na chapa, evitando etapa manual adicional de correspondência. [cf. Várias opções de configuração para impressão de planos de cortes, com diversos métodos de otimização para melhor aproveitamento e fácil geração de etiquetas de identificação]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Produção unitária muito simples (poucas peças, um único módulo) pode dispensar etiquetagem formal, usando identificação manual (marcação a lápis) sem grande risco de erro.",
+        "limitacoes": "Etiquetagem manual (sem integração ao software de plano de corte) é mais sujeita a erro humano de transcrição/correspondência entre peça física e posição de projeto."
+      },
+      "acoes_recomendadas": "Códigos de barra ou QR code na etiqueta, para leitura automatizada em etapas posteriores (separação, embalagem, conferência antes do transporte — ver módulo Transporte, a ser detalhado).",
+      "motivo_tecnico": "Etiquetas impressas (em impressoras especiais ou comuns) para identificar e rastrear peças produzidas são citadas como funcionalidade padrão de softwares de plano de corte, auxiliando diretamente as etapas de produção e montagem — cada peça cortada recebe uma identificação que a associa ao projeto/módulo/posição final no móvel. [cf. Imprima etiquetas em impressoras especiais ou comuns para identificar e rastrear as peças produzidas, auxiliando na produção e montagem]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "médio",
+        "estetico": "nenhum"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Otimize Nesting (ficha de funcionalidades de software); DinaBox (documentação de software).",
+      "fabricante": "N/A (funcionalidade padrão de diversos softwares do setor: Otimize Nesting, DinaBox, MaxCut, Cutlist Optimizer, entre outros citados nas fontes consultadas).",
+      "observacoes": "Este item se conecta diretamente ao módulo \"Montagem\" (a ser detalhado) — a etiquetagem correta na produção é o que viabiliza uma sequência de montagem eficiente em obra, especialmente em projetos com muitos módulos e peças semelhantes entre si. --- ## PRÓXIMOS PASSOS SUGERIDOS Módulos concluídos até aqui: **Cozinhas**, **Ferragens**, **Estrutura**, **Portas e Gavetas**, **Materiais**, **Closets**, **Banheiros**, **Escritórios** e **Produção** (este documento). Sequência restante: 10. **Transporte** — peso, elevadores, portas, escadas, caminhões, divisão de peças. 11. **Montagem** — sequência, ferramentas, tempo, número de montadores, espaço. 12. **Economia** — redução de desperdício, engrossos econômicos, padronização, melhor aproveitamento de chapas. Continuando em sequência para o módulo **Transporte**.",
+      "tags": [
+        "producao",
+        "etiquetagem",
+        "rastreabilidade",
+        "peças",
+        "função",
+        "etiquetas",
+        "identificação",
+        "produção"
+      ],
+      "modulo_origem": "09-Producao",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

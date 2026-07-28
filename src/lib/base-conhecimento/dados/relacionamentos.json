@@ -1,0 +1,137 @@
+{
+  "total_relacionamentos": 22,
+  "relacionamentos": [
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_04_folgas_e_recobrimento_de_portas_folgas_de_referencia_entre_portas_e_nas_later",
+      "destino_modulo": "Ferragens",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_04_largura_maxima_recomendada_por_folha_limite_pratico_de_largura_por_folha_em_m",
+      "destino_modulo": "Ferragens",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_04_porta_de_correr_capacidade_de_carga_do_sistema_de_correr_por_linha_de_ferrage",
+      "destino_modulo": "Ferragens",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_04_gavetas_folgas_entre_frentes_e_composicao_vertical_folgas_entre_frentes_de_ga",
+      "destino_modulo": "Ferragens",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_04_gavetas_folgas_entre_frentes_e_composicao_vertical_sequencia_de_montagem_e_al",
+      "destino_modulo": "Estrutura",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_06_cabideiros_profundidade_e_altura_por_tipo_de_peca_profundidade_do_cabideiro_p",
+      "destino_modulo": "Portas",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_06_maleiros_e_nichos_superiores_altura_minima_e_funcao_do_maleiro",
+      "destino_modulo": "Estrutura",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_06_gavetas_de_closet_profundidades_por_categoria_de_item_tabela_de_profundidade_",
+      "destino_modulo": "Ferragens",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_06_metragem_e_circulacao_do_ambiente_espaco_de_circulacao_em_frente_aos_modulos",
+      "destino_modulo": "Portas",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_06_iluminacao_e_espelhos_espelhos_e_joalheiros_como_elementos_funcionais",
+      "destino_modulo": "de gavetas especializado",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_07_altura_de_bancada_e_pia_faixa_de_altura_recomendada",
+      "destino_modulo": "Cozinhas",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_necessidade_do_gabinete_decisao",
+      "destino_modulo": "Materiais",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_gabinete_suspenso_vs_gabinete_c",
+      "destino_modulo": "Materiais",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_08_gestao_de_cabos_e_infraestrutura_eletrica_estrategias_de_organizacao_de_cabos",
+      "destino_modulo": "Produção",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_08_gaveteiros_de_escritorio_estrutura_e_ferragem_especificacao_estrutural_de_gav",
+      "destino_modulo": "Escritórios é",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_10_icamento_vs_desmontagem_criterio_de_decisao_equipamentos_de_apoio_para_transp",
+      "destino_modulo": "Montagem",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_10_divisao_de_pecas_grandes_para_transporte_reducao_de_manipulacao_como_principi",
+      "destino_modulo": "Produção",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_10_divisao_de_pecas_grandes_para_transporte_reducao_de_manipulacao_como_principi",
+      "destino_modulo": "Montagem",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_11_sequencia_completa_de_montagem_em_obra_fase_de_planejamento_e_inspecao_previa",
+      "destino_modulo": "Transporte",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_11_sequencia_completa_de_montagem_em_obra_fase_de_planejamento_e_inspecao_previa",
+      "destino_modulo": "Produção",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_11_ferramentas_necessarias_por_tipo_de_montagem_ferramentas_basicas_vs_ferrament",
+      "destino_modulo": "Portas",
+      "natureza": "dependencia_ou_complemento"
+    },
+    {
+      "tipo": "referencia_cruzada",
+      "origem": "atom_12_reaproveitamento_de_retalhos_e_sobras_transformando_sobras_de_mdf_em_oportuni",
+      "destino_modulo": "Estrutura",
+      "natureza": "dependencia_ou_complemento"
+    }
+  ]
+}

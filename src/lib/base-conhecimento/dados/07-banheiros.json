@@ -1,0 +1,373 @@
+{
+  "modulo": "Banheiros",
+  "total_atomos": 8,
+  "atomos": [
+    {
+      "id": "atom_07_altura_de_bancada_e_pia_faixa_de_altura_recomendada",
+      "entidade": "ALTURA DE BANCADA E PIA",
+      "categoria": "Banheiros",
+      "subcategoria": "ALTURA DE BANCADA E PIA",
+      "titulo": "Faixa de altura recomendada",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A faixa mais citada por múltiplas fontes técnicas para altura de bancada/pia de banheiro é 80–90 cm do piso, com algumas fontes reduzindo o intervalo para 80–85 cm. [cf. Bancadas de banheiro devem ser instaladas entre 80 e 90 centímetros do chão, altura que traz funcionalidade para a maioria das pessoas] [cf. De acordo com recomendações de especialistas, a altura da bancada deve ficar entre 80 e 85 cm, podendo variar entre 80 a 90 cm] Uma fonte aponta faixa ligeiramente mais alta, 85–93 cm. [cf. A altura da pia do banheiro varia entre 85 cm e 93 cm. Essa medida é confortável para a maioria das pessoas, permitindo o uso da pia sem necessidade de se inclinar demais]",
+      "condicoes": {
+        "quando_aplicar": "Definição da altura do gabinete/bancada em qualquer banheiro social, suíte ou lavabo residencial.",
+        "condicoes_adicionais": "Para usuários com estatura acima de 1,80 m, a bancada pode chegar a 110 cm de altura — ajuste que deve ser sempre validado com o cliente antes de fechar a medida final. [cf. Em casos específicos, como para pessoas com mais de 1,80 m, a pia pode chegar a 110 cm de altura] Uma referência de mercado situa o valor mais usado em 90 cm do piso até a borda da bancada, variando conforme o tipo de cuba (embutida, apoio, esculpida). [cf. A altura mais usada é 90 cm do piso até a borda da bancada, mas varia conforme o tipo de cuba]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Banheiros infantis ou de acessibilidade (cadeirante) exigem alturas reduzidas e específicas, fora desta faixa padrão — tratamento à parte, fora do escopo deste item.",
+        "limitacoes": "Uma bancada muito baixa força má postura (inclinação excessiva do usuário); uma bancada muito alta prejudica a funcionalidade e o alcance de crianças e usuários de estatura menor. [cf. Uma pia muito baixa pode acabar em uma má postura para o usuário, enquanto uma bancada muito alta prejudica a funcionalidade]"
+      },
+      "acoes_recomendadas": "Adotar uma altura fora do padrão apenas com documentação explícita do impacto (desconforto, dificuldade de uso por crianças, risco de respingos, redução de vida útil do gabinete por postura inadequada de uso) — nunca fora do padrão \"por acaso\". [cf. Se a escolha for muito fora do padrão, é importante explicar os impactos: desconforto diário, dificuldade para crianças usarem, risco de respingos e até redução da vida útil do gabinete se a postura de uso for inadequada]",
+      "motivo_tecnico": "A faixa mais citada por múltiplas fontes técnicas para altura de bancada/pia de banheiro é 80–90 cm do piso, com algumas fontes reduzindo o intervalo para 80–85 cm. [cf. Bancadas de banheiro devem ser instaladas entre 80 e 90 centímetros do chão, altura que traz funcionalidade para a maioria das pessoas] [cf. De acordo com recomendações de especialistas, a altura da bancada deve ficar entre 80 e 85 cm, podendo variar entre 80 a 90 cm] Uma fonte aponta faixa ligeiramente mais alta, 85–93 cm. [cf. A altura da pia do banheiro varia entre 85 cm e 93 cm. Essa medida é confortável para a maioria das pessoas, permitindo o uso da pia sem necessidade de se inclinar demais]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Leroy Merlin (blog institucional); JC Materiais; QTMOV (blog institucional voltado a marcenaria); Hidrica; Guia da Marcenaria; Blog Obramax.",
+      "fabricante": "N/A (referência de projeto geral).",
+      "observacoes": "Ao decidir a altura final, cruzar sempre com o tipo de cuba escolhida (item 1.2) e com a espessura real do material de bancada, seguindo lógica análoga à já descrita no módulo Cozinhas (item 9.2 — altura de bancada de cooktop). ---",
+      "tags": [
+        "banheiros",
+        "altura",
+        "bancada",
+        "faixa",
+        "recomendada"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_altura_de_bancada_e_pia_cuba_sobreposta_e_ajuste_de_altura_por_tipo_de_cuba",
+      "entidade": "ALTURA DE BANCADA E PIA",
+      "categoria": "Banheiros",
+      "subcategoria": "ALTURA DE BANCADA E PIA",
+      "titulo": "Cuba sobreposta e ajuste de altura por tipo de cuba",
+      "tipo": "recomendacao",
+      "descricao": "Cubas de sobrepor (que ficam acima da superfície da bancada, não embutidas) precisam seguir a mesma recomendação geral de altura de instalação (80–90 cm), mas o topo efetivo de uso fica mais alto que o da bancada em si, já que a cuba se soma à altura da bancada. [cf. As pias de banheiro com cuba sobreposta precisam seguir a mesma recomendação de altura para instalação: entre 80 e 90 cm]",
+      "condicoes": {
+        "quando_aplicar": "Sempre que o projeto usar cuba de sobrepor (modelo decorativo comum em banheiros de padrão médio/alto) em vez de cuba embutida ou esculpida na própria pedra.",
+        "condicoes_adicionais": "A altura da cuba de sobrepor em si (não da bancada) varia por modelo — exemplos de mercado citam cubas de 13–15,5 cm de altura própria, que devem ser somadas à altura da bancada para chegar à altura de borda final de uso. [cf. Cuba de Apoio... tem 40,5 cm de largura e 15,5 cm de altura. Cuba de Sobrepor Redonda... Possui 31 cm de largura e 13 cm de altura]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Cubas embutidas (onde o topo da cuba fica no mesmo plano ou abaixo da bancada) não têm esse acréscimo de altura efetiva — a altura de referência da bancada já é a altura de uso final.",
+        "limitacoes": "Se o projetista esquecer de descontar/somar a altura própria da cuba de sobrepor, o resultado final da altura de uso pode ficar fora da faixa ergonômica recomendada mesmo com a bancada em si corretamente especificada."
+      },
+      "acoes_recomendadas": "Cuba embutida ou esculpida na pedra, quando o objetivo é simplificar o cálculo de altura final e reduzir o risco de erro de soma.",
+      "motivo_tecnico": "Cubas de sobrepor (que ficam acima da superfície da bancada, não embutidas) precisam seguir a mesma recomendação geral de altura de instalação (80–90 cm), mas o topo efetivo de uso fica mais alto que o da bancada em si, já que a cuba se soma à altura da bancada. [cf. As pias de banheiro com cuba sobreposta precisam seguir a mesma recomendação de altura para instalação: entre 80 e 90 cm]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Blog Obramax (com exemplos reais de produto e medidas).",
+      "fabricante": "Deca, Mari Louças (modelos citados como referência de mercado).",
+      "observacoes": "Esta regra deveria ser tratada no motor de regras do Planne como um cálculo automático: altura de bancada + altura própria da cuba (quando de sobrepor) = altura de borda final, validada contra a faixa ergonômica de 80–90 cm (ou 110 cm para usuários muito altos). ---",
+      "tags": [
+        "banheiros",
+        "altura",
+        "bancada",
+        "cuba",
+        "sobreposta",
+        "ajuste",
+        "tipo"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_necessidade_do_gabinete_decisao",
+      "entidade": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "categoria": "Banheiros",
+      "subcategoria": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "titulo": "Necessidade do gabinete: decisão funcional, não automática",
+      "tipo": "recomendacao",
+      "descricao": "A decisão de incluir ou não um gabinete sob a bancada do banheiro é uma questão de uso do ambiente, não uma obrigação automática — se o banheiro/lavabo não precisa armazenar ou esconder itens, o gabinete pode ser dispensado; quando incluído, tipo e dimensão variam conforme estilo e espaço disponível. [cf. A decisão sobre a inclusão ou não de gabinete sob a bancada é uma questão de uso do ambiente. Se um banheiro ou lavabo não tem necessidade de armazenar ou esconder itens, não justifica ter um gabinete. Já o tipo e a dimensão desse armário variam e estão diretamente ligados ao estilo e ao espaço]",
+      "condicoes": {
+        "quando_aplicar": "Fase de definição de escopo do projeto de banheiro, antes de especificar dimensões do gabinete.",
+        "condicoes_adicionais": "Quando o gabinete não é incluído, sifões estéticos (com acabamento decorativo, sem necessidade de ocultação) são a escolha recomendada, já que a peça fica totalmente aparente. [cf. Esse tipo de sifão é indicado principalmente em banheiros que não contam com gabinete... em que a peça fica totalmente aparente]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Lavabos pequenos de uso social eventual (sem necessidade real de armazenamento) muitas vezes prescindem de gabinete, priorizando cuba/coluna aparente por questão estética e de espaço.",
+        "limitacoes": "Espaço insuficiente para abertura de portas/gavetas do gabinete é uma limitação recorrente em banheiros pequenos, que deve ser avaliada antes de comprometer com o módulo completo. [cf. O problema é que nem sempre o tamanho do ambiente permite, já que as gavetas e portas precisam de espaço para a abertura]"
+      },
+      "acoes_recomendadas": "Pia com coluna (menos usada atualmente, mas ainda disponível), como alternativa ao gabinete quando se deseja esconder o sifão sem o volume de armazenamento de um móvel completo. [cf. Pias com colunas são boas opções para esconder o sifão da pia]",
+      "motivo_tecnico": "A decisão de incluir ou não um gabinete sob a bancada do banheiro é uma questão de uso do ambiente, não uma obrigação automática — se o banheiro/lavabo não precisa armazenar ou esconder itens, o gabinete pode ser dispensado; quando incluído, tipo e dimensão variam conforme estilo e espaço disponível. [cf. A decisão sobre a inclusão ou não de gabinete sob a bancada é uma questão de uso do ambiente. Se um banheiro ou lavabo não tem necessidade de armazenar ou esconder itens, não justifica ter um gabinete. Já o tipo e a dimensão desse armário variam e estão diretamente ligados ao estilo e ao espaço]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Imobiliária Fortes Guimarães (matéria com declaração de arquiteta especializada); Viva Decora (guia de tipos de sifão).",
+      "fabricante": "N/A.",
+      "observacoes": "A arquiteta consultada na fonte recomenda materiais resistentes à umidade para o gabinete quando ele é incluído — madeira tratada, fórmica, MDF ou MDP — reforçando a conexão direta com o módulo Materiais (item 2, MDF hidrófugo). [cf. A profissional indica materiais mais resistentes à umidade, como madeira tratada, fórmica, MDF ou MDP] ---",
+      "tags": [
+        "banheiros",
+        "gabinete",
+        "sifão",
+        "ventilação",
+        "umidade",
+        "necessidade",
+        "decisão",
+        "funcional"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_prevencao_de_mofo_fundo_aberto_",
+      "entidade": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "categoria": "Banheiros",
+      "subcategoria": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "titulo": "Prevenção de mofo: fundo aberto e vão central para o sifão",
+      "tipo": "recomendacao",
+      "descricao": "Recomenda-se manter o gabinete sob a pia sem fundo fechado contra a parede — assim, o risco de mofo por acúmulo de umidade é reduzido, e um eventual vazamento é percebido mais facilmente (em vez de ficar escondido atrás de um fundo fechado). [cf. Uma dica é manter o móvel sem fundo para a parede, assim não corre o risco de mofar por umidade e um vazamento pode ser notado facilmente]",
+      "condicoes": {
+        "quando_aplicar": "Todo projeto de gabinete de banheiro que abriga tubulação e sifão em seu interior.",
+        "condicoes_adicionais": "O sifão da pia deve sempre ficar posicionado em um vão central do gabinete, para facilitar manutenção; em caso de prateleiras internas, é necessário verificar a altura para não comprometer o funcionamento do sifão, ou providenciar um recorte específico na prateleira para o encaixe da tubulação. [cf. O sifão da pia precisa sempre estar em um vão central, para fácil manutenção. Em caso de prateleiras internas, verificar a altura para não comprometer o funcionamento do sifão, ou providenciar um recorte na prateleira para o encaixe dele]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Módulos de gabinete que não têm qualquer tubulação passando por dentro (ex.: gabinete lateral independente, sem função de esconder sifão) podem manter fundo fechado normalmente, seguindo a regra geral do módulo Estrutura (item 3).",
+        "limitacoes": "Esta é uma exceção deliberada à regra geral de fundo estrutural (módulo Estrutura, item 3.1) — no gabinete de banheiro, a função de travamento do fundo cede prioridade à prevenção de mofo e à facilidade de manutenção."
+      },
+      "acoes_recomendadas": "Fundo com recorte de inspeção (não removido por completo, mas com abertura pontual) quando se deseja manter alguma função de travamento estrutural sem sacrificar totalmente a ventilação/acesso.",
+      "motivo_tecnico": "Recomenda-se manter o gabinete sob a pia sem fundo fechado contra a parede — assim, o risco de mofo por acúmulo de umidade é reduzido, e um eventual vazamento é percebido mais facilmente (em vez de ficar escondido atrás de um fundo fechado). [cf. Uma dica é manter o móvel sem fundo para a parede, assim não corre o risco de mofar por umidade e um vazamento pode ser notado facilmente]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "baixo",
+        "estetico": "baixo"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Imobiliária Fortes Guimarães (declaração de arquiteta Thaisa Bohrer).",
+      "fabricante": "N/A.",
+      "observacoes": "O sifão acumula sujeira e precisa de limpeza regular (desenroscando por baixo) — o motor de regras do Planne deveria sinalizar automaticamente a necessidade de vão de acesso/inspeção ao especificar qualquer gabinete de banheiro com pia embutida. [cf. O sifão da pia acumula sujeira e precisa ser limpo regularmente, desenroscando por baixo] ---",
+      "tags": [
+        "banheiros",
+        "gabinete",
+        "sifão",
+        "ventilação",
+        "umidade",
+        "prevenção",
+        "mofo",
+        "fundo"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_gabinete_suspenso_vs_gabinete_c",
+      "entidade": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "categoria": "Banheiros",
+      "subcategoria": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "titulo": "Gabinete suspenso vs. gabinete com pés",
+      "tipo": "boa_pratica",
+      "descricao": "Gabinetes suspensos (fixados diretamente na parede, sem contato com o piso) facilitam a limpeza do piso do banheiro e conferem visual leve e contemporâneo; gabinetes com pés (ou base apoiada no piso) seguem uma lógica construtiva mais tradicional. [cf. A escolha entre gabinetes suspensos e gabinetes com pés é uma das decisões mais importantes na hora de renovar o banheiro. Os suspensos são fixados diretamente na parede, facilitam a limpeza do piso e conferem visual leve e contemporâneo ao ambiente]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de qualquer gabinete de banheiro, avaliando o perfil de manutenção/limpeza desejado pelo cliente.",
+        "condicoes_adicionais": "Fixação de gabinete suspenso exige verificação da resistência da parede (alvenaria, drywall com reforço interno) para suportar o peso do móvel e da cuba/pedra, análogo à regra de fixação de coifa já descrita no módulo Cozinhas (item 6.1)."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Banheiros com histórico de infiltração no piso ou em reformas onde a parede não suporta boa fixação suspensa (alvenaria frágil, drywall sem reforço) podem exigir gabinete apoiado no piso por razão estrutural, não apenas estética.",
+        "limitacoes": "Modelos suspensos concentram toda a carga em pontos de fixação na parede — uma parede fraca ou mal reforçada compromete a segurança da instalação."
+      },
+      "acoes_recomendadas": "Gabinete com pés, quando a parede não oferece condição segura de fixação suspensa, ou quando o cliente prefere o visual mais tradicional.",
+      "motivo_tecnico": "Gabinetes suspensos (fixados diretamente na parede, sem contato com o piso) facilitam a limpeza do piso do banheiro e conferem visual leve e contemporâneo; gabinetes com pés (ou base apoiada no piso) seguem uma lógica construtiva mais tradicional. [cf. A escolha entre gabinetes suspensos e gabinetes com pés é uma das decisões mais importantes na hora de renovar o banheiro. Os suspensos são fixados diretamente na parede, facilitam a limpeza do piso e conferem visual leve e contemporâneo ao ambiente]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Fabribam/Meu Móvel de Banheiro (fabricante de gabinetes).",
+      "fabricante": "Fabribam.",
+      "observacoes": "Fabricantes especializados destacam o uso de materiais selecionados para suportar a umidade e o vapor característicos do banheiro, reforçando novamente a conexão com o módulo Materiais. [cf. Todos os gabinetes são fabricados... com materiais selecionados para suportar a umidade e o vapor característicos dos banheiros, garantindo durabilidade e aparência preservada ao longo do tempo] ---",
+      "tags": [
+        "banheiros",
+        "gabinete",
+        "sifão",
+        "ventilação",
+        "umidade",
+        "suspenso"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_espelhos_altura_e_distancia_da_pia_distancia_entre_a_pia_e_a_base_do_espelho",
+      "entidade": "ESPELHOS — ALTURA E DISTÂNCIA DA PIA",
+      "categoria": "Banheiros",
+      "subcategoria": "ESPELHOS — ALTURA E DISTÂNCIA DA PIA",
+      "titulo": "Distância entre a pia e a base do espelho",
+      "tipo": "recomendacao",
+      "descricao": "Recomenda-se um espaço de 20 a 30 cm entre a bancada/pia e a base do espelho — essa distância garante posição conveniente de uso diário e ajuda a evitar respingos de água diretamente sobre a base do espelho. [cf. Um espaço de 20 a 30 cm entre a pia e a base do espelho é ideal. Isso não só garante que o espelho esteja em uma posição conveniente para o uso diário, mas também evita respingos de água]",
+      "condicoes": {
+        "quando_aplicar": "Instalação de qualquer espelho de banheiro posicionado diretamente acima da bancada/pia.",
+        "condicoes_adicionais": "Uma boa regra prática é alinhar o centro do espelho aproximadamente na altura dos olhos das pessoas que mais utilizam o banheiro — para a maioria dos adultos, isso corresponde a 150–170 cm do piso. [cf. Uma boa regra é alinhar o centro do espelho aproximadamente na altura dos olhos das pessoas que mais utilizam o banheiro. Para a maioria das pessoas, isso está entre 150 e 170 cm do chão]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Espelhos que cobrem toda a parede (do balcão até o teto) seguem lógica de centralização e proporção geral do ambiente, não a distância pontual da base. [cf. Se o espelho for muito grande ou vai do balcão até o teto, certifique-se de que ele esteja bem centralizado e proporcionado em relação ao restante do banheiro]",
+        "limitacoes": "Como a altura de olhos varia por usuário, banheiros de uso compartilhado por pessoas de estaturas muito diferentes (adultos e crianças, por exemplo) enfrentam o mesmo trade-off de compromisso já descrito no módulo Cozinhas (item 9.1 — altura de bancada)."
+      },
+      "acoes_recomendadas": "Espelho com ajuste de inclinação, ou espelho adicional em altura reduzida para crianças, quando o compromisso de altura única não atende bem a todos os usuários.",
+      "motivo_tecnico": "Recomenda-se um espaço de 20 a 30 cm entre a bancada/pia e a base do espelho — essa distância garante posição conveniente de uso diário e ajuda a evitar respingos de água diretamente sobre a base do espelho. [cf. Um espaço de 20 a 30 cm entre a pia e a base do espelho é ideal. Isso não só garante que o espelho esteja em uma posição conveniente para o uso diário, mas também evita respingos de água]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Casavee (guia técnico de instalação de espelho).",
+      "fabricante": "N/A.",
+      "observacoes": "O processo recomendado de instalação é: medir a altura real da pia instalada, marcar a altura dos olhos do usuário principal (pedindo para a pessoa se posicionar na frente da pia), decidir o espaço desejado acima da pia, e só então instalar o espelho nivelado e centralizado. [cf. Meça a Altura da Pia... Marque a Altura dos Olhos... Determine o Espaço Acima da Pia... Instale o Espelho: Use essas medidas para instalar o espelho. Certifique-se de que está nivelado e centralizado] ---",
+      "tags": [
+        "banheiros",
+        "espelhos",
+        "altura",
+        "distância",
+        "base",
+        "espelho"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_rodabanca_frontao_e_testeira_definicoes_e_funcao_de_cada_elemento",
+      "entidade": "RODABANCA, FRONTÃO E TESTEIRA",
+      "categoria": "Banheiros",
+      "subcategoria": "RODABANCA, FRONTÃO E TESTEIRA",
+      "titulo": "Definições e função de cada elemento",
+      "tipo": "restricao",
+      "descricao": "Três termos técnicos frequentemente confundidos descrevem elementos de proteção da bancada contra umidade: frontão/rodabanca/rodapia — peça (geralmente do mesmo material da bancada) posicionada sobre a pia junto à parede, cuja função principal é prevenir vazamento e proteger a parede do contato direto com água; [cf. Também conhecido como rodabanca ou rodapia, o frontão é um tipo de rodapé que fica sobre a pia, geralmente produzido com o mesmo material da bancada. Sua principal função é prevenir vazamentos, protegendo a parede do contato direto com a água] testeira — a parte frontal da bancada, que dá acabamento e, quando não há armário embaixo, esconde o sifão/tubulação; [cf. Testeira de bancada: é a parte da frente da bancada responsável por dar o acabamento e trazer requinte para a bancada e, quando não há armário embaixo da bancada esconder o sifão da torneira] rodabanca (em sentido mais específico, segundo outra fonte) — faixa de parede exposta entre o balcão e os armários superiores/espelho, que protege contra respingos e facilita a limpeza diária. [cf. Diferente do frontão, a rodabanca é instalada entre a bancada e a marcenaria aérea, ou seja, naquela faixa de parede que fica exposta entre o balcão e os armários superiores. Sua função principal é proteger essa área de respingos e facilitar a limpeza diária]",
+      "condicoes": {
+        "quando_aplicar": "Especificação completa de qualquer bancada de banheiro (ou cozinha) que tenha contato direto com respingos de água.",
+        "condicoes_adicionais": "Sem o frontão, a tendência é que umidade e resíduos se acumulem na fresta entre a pedra e a parede — problema recorrente tanto em banheiros quanto em cozinhas. [cf. Sem o frontão, a tendência é que umidade e resíduos se acumulem nesse espaço, especialmente em bancadas de cozinha e pias de banheiro]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "A terminologia varia por região/profissional (arquiteto, marceneiro e pedreiro podem usar termos diferentes para elementos parecidos) — o importante não é a nomenclatura em si, mas garantir que a função de proteção contra umidade esteja coberta no projeto, seja qual for o termo usado. [cf. O arquiteto fala em \"rodabanca\", a marceneira menciona \"frontão\" e o pedreiro pergunta se vai ter \"pingadeira\" na bancada]",
+        "limitacoes": "Erros de compatibilização entre esses elementos e a marcenaria/instalação elétrica na obra geram a maior parte dos \"improvisos\" corrigidos tardiamente — recomenda-se nunca deixar essa decisão para ser resolvida isoladamente pelo azulejista ou pelo pedreiro em obra. [cf. A compatibilização nessa etapa evita 80% dos improvisos de obra... não deixe para o azulejista decidir sozinho na obra. Especificação clara economiza retrabalho]"
+      },
+      "acoes_recomendadas": "Rodabanca no mesmo material da bancada (contínuo, visual monolítico) ou em revestimento cerâmico/porcelanato à parte — ambas as opções são válidas, desde que o material escolhido seja impermeável. [cf. A rodabanca pode ter o mesmo revestimento do restante da cozinha... Como a principal função da rodabanca é facilitar a limpeza e não permitir que os líquidos e umidade infiltrem na parede, o revestimento escolhido precisa ser impermeável]",
+      "motivo_tecnico": "Três termos técnicos frequentemente confundidos descrevem elementos de proteção da bancada contra umidade: frontão/rodabanca/rodapia — peça (geralmente do mesmo material da bancada) posicionada sobre a pia junto à parede, cuja função principal é prevenir vazamento e proteger a parede do contato direto com água; [cf. Também conhecido como rodabanca ou rodapia, o frontão é um tipo de rodapé que fica sobre a pia, geralmente produzido com o mesmo material da bancada. Sua principal função é prevenir vazamentos, protegendo a parede do contato direto com a água] testeira — a parte frontal da bancada, que dá acabamento e, quando não há armário embaixo, esconde o sifão/tubulação; [cf. Testeira de bancada: é a parte da frente da bancada responsável por dar o acabamento e trazer requinte para a bancada e, quando não há armário embaixo da bancada esconder o sifão da torneira] rodabanca (em sentido mais específico, segundo outra fonte) — faixa de parede exposta entre o balcão e os armários superiores/espelho, que protege contra respingos e facilita a limpeza diária. [cf. Diferente do frontão, a rodabanca é instalada entre a bancada e a marcenaria aérea, ou seja, naquela faixa de parede que fica exposta entre o balcão e os armários superiores. Sua função principal é proteger essa área de respingos e facilitar a limpeza diária]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Portal Insights (FAQ técnico); Enfeite Decora (matéria com declaração de arquiteta especializada); Pointer Revestimentos (blog institucional); Pâmela Decoração (blog profissional).",
+      "fabricante": "N/A (elemento de projeto, material variável).",
+      "observacoes": "Ao especificar rodabanca/frontão/testeira, é fundamental compatibilizar a altura final da bancada (com rodapia/pés), a altura do armário aéreo/espelho e a posição de tomadas na mesma etapa — tratá-los isoladamente é a causa mais citada de retrabalho em obra. [cf. Altura final da bancada (com rodapia/pés). Altura do armário aéreo e profundidade. Posição e quantidade de tomadas na faixa do backsplash. A compatibilização nessa etapa evita 80% dos improvisos de obra] ---",
+      "tags": [
+        "banheiros",
+        "rodabanca",
+        "frontão",
+        "testeira",
+        "definições",
+        "função",
+        "elemento"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_07_materiais_e_resistencia_a_umidade_em_banheiro_especificacao_de_material_para_",
+      "entidade": "MATERIAIS E RESISTÊNCIA À UMIDADE EM BANHEIRO",
+      "categoria": "Banheiros",
+      "subcategoria": "MATERIAIS E RESISTÊNCIA À UMIDADE EM BANHEIRO",
+      "titulo": "Especificação de material para gabinete de banheiro",
+      "tipo": "regra_obrigatoria",
+      "descricao": "Para o gabinete sob a pia (o elemento de marcenaria mais exposto à umidade em todo o banheiro), a recomendação técnica consolidada é usar materiais resistentes à umidade: madeira tratada, fórmica, MDF ou MDP — preferencialmente nas linhas hidrófugas específicas já descritas no módulo Materiais (item 2). [cf. A profissional indica materiais mais resistentes à umidade, como madeira tratada, fórmica, MDF ou MDP]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de material de qualquer módulo de marcenaria em banheiro — gabinete, prateleiras internas, painéis próximos ao box.",
+        "condicoes_adicionais": "Cruzar sempre a escolha de material com a regra de fundo aberto (item 2.2) e com a regra de rodabanca/frontão (item 4) — a resistência à umidade do material principal não substitui as demais camadas de proteção contra água do projeto."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Elementos de banheiro totalmente fora da zona de respingo (ex.: um armário de linho em corredor anexo, tecnicamente fora do banheiro) podem usar material convencional, sem necessidade da linha hidrófuga.",
+        "limitacoes": "Mesmo as linhas hidrófugas de MDF/MDP não são à prova d'água — a resistência à umidade reduz o risco, mas não elimina a necessidade de boas práticas complementares (fita de borda bem aplicada, fundo aberto, rodabanca)."
+      },
+      "acoes_recomendadas": "Compensado naval (módulo Materiais, item 3) para banheiros de uso muito intenso ou de padrão muito alto, quando a exposição à umidade é mais severa que a média residencial.",
+      "motivo_tecnico": "Para o gabinete sob a pia (o elemento de marcenaria mais exposto à umidade em todo o banheiro), a recomendação técnica consolidada é usar materiais resistentes à umidade: madeira tratada, fórmica, MDF ou MDP — preferencialmente nas linhas hidrófugas específicas já descritas no módulo Materiais (item 2). [cf. A profissional indica materiais mais resistentes à umidade, como madeira tratada, fórmica, MDF ou MDP]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Imobiliária Fortes Guimarães (referência já citada no item 2.1); conexão direta com o módulo Materiais deste projeto.",
+      "fabricante": "N/A (ver módulo Materiais para fabricantes específicos de linha hidrófuga).",
+      "observacoes": "Este item deve ser tratado no motor de regras como uma validação automática — qualquer módulo de marcenaria especificado dentro da categoria \"Banheiro\" deveria sugerir por padrão uma linha de material hidrófugo/resistente à umidade, exigindo confirmação explícita do projetista para usar material convencional. --- ## PRÓXIMOS PASSOS SUGERIDOS Módulos concluídos até aqui: **Cozinhas**, **Ferragens**, **Estrutura**, **Portas e Gavetas**, **Materiais**, **Closets** e **Banheiros** (este documento). Sequência restante: 8. **Escritórios** — ergonomia, monitores, cabos, CPU, impressoras. 9. **Produção** — plano de corte, otimização, etiquetas, sequência, usinagem, furação, acabamento. 10. **Transporte** — peso, elevadores, portas, escadas, caminhões, divisão de peças. 11. **Montagem** — sequência, ferramentas, tempo, número de montadores, espaço. 12. **Economia** — redução de desperdício, engrossos econômicos, padronização, melhor aproveitamento de chapas. Continuando em sequência para o módulo **Escritórios**.",
+      "tags": [
+        "banheiros",
+        "materiais",
+        "resistência",
+        "umidade",
+        "banheiro",
+        "especificação",
+        "material",
+        "gabinete"
+      ],
+      "modulo_origem": "07-Banheiros",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

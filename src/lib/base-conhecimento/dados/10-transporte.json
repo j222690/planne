@@ -1,0 +1,332 @@
+{
+  "modulo": "Transporte",
+  "total_atomos": 7,
+  "atomos": [
+    {
+      "id": "atom_10_dimensoes_padrao_de_elevador_predial_e_porta_de_acesso_medidas_de_referencia_",
+      "entidade": "DIMENSÕES-PADRÃO DE ELEVADOR PREDIAL E PORTA DE ACESSO",
+      "categoria": "Transporte",
+      "subcategoria": "DIMENSÕES-PADRÃO DE ELEVADOR PREDIAL E PORTA DE ACESSO",
+      "titulo": "Medidas de referência de elevador convencional (prédio) e residencial",
+      "tipo": "regra_obrigatoria",
+      "descricao": "Existem duas categorias distintas de elevador a considerar no planejamento de transporte de móveis: o elevador convencional de prédio, com cabine de referência de 1,10 × 1,40 m e porta a partir de 0,80 × 2,00 m; [cf. O elevador convencional para um edifício tem a medida da cabine de 1,10 x 1,40 m e a dimensão interna da caixa de corrida é de 1,80 x 1,80 m. As portas de um elevador predial tem a partir de 0,80 x 2,00 m] e o elevador residencial (unifamiliar, menor porte), com cabine padrão de cerca de 0,90 × 1,20 m e porta de 0,80 × 2,00 m. [cf. A medida da cabine de um elevador residencial padrão é de 0,90 x 1,20 m... As portas do elevador têm 0,80 x 2,00 m]",
+      "condicoes": {
+        "quando_aplicar": "Toda entrega de móveis planejados em edifícios (residenciais ou comerciais), antes de fechar o corte final das peças maiores (tampos, portas de correr grandes, torres inteiriças).",
+        "condicoes_adicionais": "Elevadores residenciais menores/mais compactos podem chegar a cabines de apenas 0,90 × 0,90 m (para 1–2 pessoas) ou até 1,10 × 1,10 m em instalações muito compactas, dependendo do fabricante — sempre confirmar a medida real do elevador específico do edifício de destino, nunca assumir por padrão de categoria. [cf. A medida mínima que alguns fornecedores ainda conseguem atender é de 1,10 x 1,10 m] [cf. Numa cabine de 0,90 x 0,90 metros cabem uma ou duas pessoas de forma confortável]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Entregas em residências térreas ou com acesso direto por porta/garagem no nível da rua não precisam considerar limite de elevador, apenas de porta/vão de acesso (item 1.2).",
+        "limitacoes": "A largura da porta do elevador é frequentemente o fator mais restritivo (não a área da cabine) — uma peça pode caber em área, mas não passar pela abertura da porta se a diagonal/maior dimensão da peça exceder a largura de porta disponível."
+      },
+      "acoes_recomendadas": "Uso de escada (com divisão de peças, ver item 3) ou içamento externo (item 2) quando a peça excede as dimensões do elevador disponível no prédio.",
+      "motivo_tecnico": "Existem duas categorias distintas de elevador a considerar no planejamento de transporte de móveis: o elevador convencional de prédio, com cabine de referência de 1,10 × 1,40 m e porta a partir de 0,80 × 2,00 m; [cf. O elevador convencional para um edifício tem a medida da cabine de 1,10 x 1,40 m e a dimensão interna da caixa de corrida é de 1,80 x 1,80 m. As portas de um elevador predial tem a partir de 0,80 x 2,00 m] e o elevador residencial (unifamiliar, menor porte), com cabine padrão de cerca de 0,90 × 1,20 m e porta de 0,80 × 2,00 m. [cf. A medida da cabine de um elevador residencial padrão é de 0,90 x 1,20 m... As portas do elevador têm 0,80 x 2,00 m]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "baixo"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "MeuElevador.com (múltiplos artigos técnicos); Vida Acessível; RJB Home; Elevadores de Escadas.",
+      "fabricante": "N/A (medidas de referência de mercado — sempre variam por fabricante específico do elevador instalado).",
+      "observacoes": "Esta é uma das regras mais valiosas para o motor de inteligência do Planne: o sistema deveria solicitar (ou permitir input) da medida real do elevador do prédio de destino antes de liberar o plano de corte de qualquer peça acima de determinado tamanho, cruzando automaticamente com a decisão de dividir a peça (módulo Estrutura/Painéis) quando necessário. ---",
+      "tags": [
+        "transporte",
+        "dimensões",
+        "padrão",
+        "elevador",
+        "predial",
+        "porta",
+        "acesso",
+        "medidas"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_10_dimensoes_padrao_de_elevador_predial_e_porta_de_acesso_porta_de_acesso_e_vao_",
+      "entidade": "DIMENSÕES-PADRÃO DE ELEVADOR PREDIAL E PORTA DE ACESSO",
+      "categoria": "Transporte",
+      "subcategoria": "DIMENSÕES-PADRÃO DE ELEVADOR PREDIAL E PORTA DE ACESSO",
+      "titulo": "Porta de acesso e vão de passagem",
+      "tipo": "regra_obrigatoria",
+      "descricao": "Além do elevador, a porta de entrada do apartamento/casa (e portas internas no caminho até o cômodo de instalação) é um segundo ponto de restrição dimensional — mesmo elevadores maiores de prédios comerciais/panorâmicos têm abertura de porta na faixa de 0,90 m, [cf. Um elevador panorâmico com capacidade de 1000kg, possui dimensões de 1,1m x 2,1m com abertura de portas de 0,9m] valor próximo ao de portas internas residenciais padrão.",
+      "condicoes": {
+        "quando_aplicar": "Levantamento de rota de transporte completa (não apenas o elevador) antes de definir o tamanho máximo de qualquer peça — do caminhão até o cômodo final de instalação, passando por todas as portas intermediárias.",
+        "condicoes_adicionais": "O caminho relevante para o dimensionamento inclui: porta de entrada do prédio/casa, elevador (se houver), corredores e curvas de acesso, e porta do cômodo de destino — o \"elo mais fraco\" (menor vão) do caminho inteiro é que define o limite real de tamanho de peça, não apenas o elemento mais óbvio (elevador)."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo em transporte por escada (sem elevador), o vão de porta continua sendo restrição relevante.",
+        "limitacoes": "Corredores estreitos com curvas fechadas podem impedir a passagem de uma peça mesmo que ela caiba em largura absoluta — a manobrabilidade real (não apenas a medida linear) deve ser avaliada, idealmente com visita técnica prévia ao local."
+      },
+      "acoes_recomendadas": "Içamento (item 2) quando a rota interna de elevador/escada/porta é fisicamente inviável para a peça na dimensão desejada pelo projeto.",
+      "motivo_tecnico": "Além do elevador, a porta de entrada do apartamento/casa (e portas internas no caminho até o cômodo de instalação) é um segundo ponto de restrição dimensional — mesmo elevadores maiores de prédios comerciais/panorâmicos têm abertura de porta na faixa de 0,90 m, [cf. Um elevador panorâmico com capacidade de 1000kg, possui dimensões de 1,1m x 2,1m com abertura de portas de 0,9m] valor próximo ao de portas internas residenciais padrão.",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "MeuElevador.com; Bruno Moraes Arquitetura (blog especializado em obra/transporte de materiais).",
+      "fabricante": "N/A.",
+      "observacoes": "Esta regra reforça a importância de uma \"visita técnica de viabilidade de transporte\" como etapa formal do processo comercial de marcenaria planejada — visita que deveria alimentar diretamente as restrições dimensionais no motor de regras do Planne antes mesmo do início do detalhamento do projeto. ---",
+      "tags": [
+        "transporte",
+        "dimensões",
+        "padrão",
+        "elevador",
+        "predial",
+        "porta",
+        "acesso",
+        "passagem"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_10_icamento_vs_desmontagem_criterio_de_decisao_quando_optar_por_icamento_externo",
+      "entidade": "IÇAMENTO VS. DESMONTAGEM — CRITÉRIO DE DECISÃO",
+      "categoria": "Transporte",
+      "subcategoria": "IÇAMENTO VS. DESMONTAGEM — CRITÉRIO DE DECISÃO",
+      "titulo": "Quando optar por içamento externo",
+      "tipo": "regra_obrigatoria",
+      "descricao": "Diante de um material de grandes proporções que não cabe pela rota interna (elevador/escada/porta), duas alternativas principais se apresentam: içamento (elevação vertical externa por cabos de aço ou cordas) ou desmontagem/divisão do produto em partes menores, para transporte pela rota interna convencional. [cf. Entre os caminhos possíveis estão o içamento (que consiste em uma elevação vertical geralmente feita por meio de cabos de aço ou cordas) ou, se possível, a desmontagem e divisão do produto em várias partes, para que seja carregado através das escadas ou elevadores]",
+      "condicoes": {
+        "quando_aplicar": "Peças/tampos de grande dimensão que, por decisão estética ou estrutural do projeto, não podem ou não devem ser divididos (ex.: tampo de pedra de bancada sem emenda).",
+        "condicoes_adicionais": "A decisão de dividir ou não uma peça (como um tampo de bancada de pedra) é, em última instância, uma questão de projeto — a peça única sem emenda frequentemente propicia uma estética mais bonita, mas isso deve ser ponderado contra a viabilidade prática de transporte. [cf. Com relação às bancadas de pedras, em algumas condições também é possível dividir o tampo da cozinha, eliminando a demanda do manuseio pelo lado externo. Porém, essa decisão dependerá muito de uma questão técnica de projeto, pois a peça única, sem emenda, por vezes propicia uma estética muito mais bonita]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Quando a divisão da peça é tecnicamente viável e não compromete significativamente a estética/estrutura final, a desmontagem é preferível ao içamento por ter custo mais baixo. [cf. Para quem prefere evitar o içamento, em razão do custo mais alto, há algumas alternativas para facilitar o trabalho de transporte]",
+        "limitacoes": "Içamento tem custo significativamente mais alto que o transporte convencional (equipamento especializado, mão de obra técnica, muitas vezes autorização condominial/municipal para uso de via pública)."
+      },
+      "acoes_recomendadas": "Priorizar, já na fase de projeto, peças desmontáveis ou modulares quando há sinal de que o transporte pela rota interna será um desafio — decisão que deveria ser antecipada, não descoberta apenas no dia da entrega. [cf. Para quem ainda se encontra na etapa de escolher os móveis de casa, eu indico a aquisição de sofás modulares ou peças desmontáveis, que são mais simples de carregar pelo elevador ou escada]",
+      "motivo_tecnico": "Diante de um material de grandes proporções que não cabe pela rota interna (elevador/escada/porta), duas alternativas principais se apresentam: içamento (elevação vertical externa por cabos de aço ou cordas) ou desmontagem/divisão do produto em partes menores, para transporte pela rota interna convencional. [cf. Entre os caminhos possíveis estão o içamento (que consiste em uma elevação vertical geralmente feita por meio de cabos de aço ou cordas) ou, se possível, a desmontagem e divisão do produto em várias partes, para que seja carregado através das escadas ou elevadores]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "crítico",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Bruno Moraes Arquitetura (blog especializado, com exemplo real de caso de projeto).",
+      "fabricante": "N/A.",
+      "observacoes": "O motor de regras do Planne deveria sinalizar automaticamente, ainda na fase de projeto, quando uma peça especificada excede as dimensões prováveis de transporte da rota informada pelo cliente — permitindo decidir entre içamento, divisão ou redesenho da peça antes da produção, não apenas no momento da entrega. ---",
+      "tags": [
+        "transporte",
+        "içamento",
+        "desmontagem",
+        "critério",
+        "decisão",
+        "optar",
+        "externo"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_10_icamento_vs_desmontagem_criterio_de_decisao_equipamentos_de_apoio_para_transp",
+      "entidade": "IÇAMENTO VS. DESMONTAGEM — CRITÉRIO DE DECISÃO",
+      "categoria": "Transporte",
+      "subcategoria": "IÇAMENTO VS. DESMONTAGEM — CRITÉRIO DE DECISÃO",
+      "titulo": "Equipamentos de apoio para transporte e elevação de peças",
+      "tipo": "boa_pratica",
+      "descricao": "Existem equipamentos especializados para o transporte e elevação de móveis planejados em obra — carrinhos transportadores com sistema de elevação permitem que um único montador instale peças elevadas (armários altos, torres) sem a necessidade de um ajudante para erguer e segurar, com exemplos de mercado citando capacidade de elevação de até 1,90 m de altura, peso de peça elevada de até 80 kg, e capacidade de transporte de carga de até 120 kg. [cf. Eleva até 1.90 metros com peso de até 80 Kg e transporta cargas de até 120 Kg]",
+      "condicoes": {
+        "quando_aplicar": "Instalação de qualquer módulo elevado (armário aéreo, torre alta) em obra, especialmente quando a equipe de montagem é reduzida (um único montador).",
+        "condicoes_adicionais": "O uso desse tipo de equipamento reduz a necessidade de um ajudante extra especificamente para a etapa de erguer/segurar peças pesadas durante a instalação, com impacto direto na composição da equipe de montagem (ver módulo Montagem, a ser detalhado). [cf. Com o Up Cargo a instalação de móveis elevados poderão ser realizadas facilmente com apenas 1 montador, dispensando um ajudante para erguer e segurar]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Módulos leves e de fácil manuseio manual (até 20–30 kg, por dois montadores) não exigem necessariamente equipamento de elevação especializado.",
+        "limitacoes": "Equipamentos de elevação têm limite de peso e altura próprios (no exemplo citado, 80 kg de peça elevada e 1,90 m de altura) — peças fora dessa faixa ainda exigem método convencional com equipe completa."
+      },
+      "acoes_recomendadas": "Equipe de montagem tradicional (2+ pessoas) sem equipamento de elevação especializado, para peças fora da faixa de capacidade do equipamento ou em obras onde o investimento no equipamento não se justifica pelo volume de trabalho.",
+      "motivo_tecnico": "Existem equipamentos especializados para o transporte e elevação de móveis planejados em obra — carrinhos transportadores com sistema de elevação permitem que um único montador instale peças elevadas (armários altos, torres) sem a necessidade de um ajudante para erguer e segurar, com exemplos de mercado citando capacidade de elevação de até 1,90 m de altura, peso de peça elevada de até 80 kg, e capacidade de transporte de carga de até 120 kg. [cf. Eleva até 1.90 metros com peso de até 80 Kg e transporta cargas de até 120 Kg]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "médio",
+        "estetico": "baixo"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "UpCargo (fabricante de equipamento especializado para marcenaria); Gasômetro Madeiras (revenda com ficha técnica).",
+      "fabricante": "UpCargo.",
+      "observacoes": "Este item se conecta diretamente ao módulo Montagem (a ser detalhado) — a disponibilidade ou não de equipamento de elevação afeta diretamente o dimensionamento da equipe mínima necessária para uma instalação específica. ---",
+      "tags": [
+        "transporte",
+        "içamento",
+        "desmontagem",
+        "critério",
+        "decisão",
+        "equipamentos",
+        "apoio",
+        "elevação"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_10_divisao_de_pecas_grandes_para_transporte_priorizacao_de_desmontagem_antes_do_",
+      "entidade": "DIVISÃO DE PEÇAS GRANDES PARA TRANSPORTE",
+      "categoria": "Transporte",
+      "subcategoria": "DIVISÃO DE PEÇAS GRANDES PARA TRANSPORTE",
+      "titulo": "Priorização de desmontagem antes do transporte",
+      "tipo": "recomendacao",
+      "descricao": "Sempre que possível, recomenda-se desmontar móveis e dividir peças maiores antes do transporte, especialmente em objetos de vidro ou outros materiais delicados — essa prática oferece proteção adicional contra danos durante o manuseio e reduz o risco de avarias maiores. [cf. Sempre que possível, desmonte os móveis e peças maiores para realizar o transporte, especialmente, nos casos de objetos de vidros e aqueles que são mais delicados para carregar. Isso ajuda a oferecer uma proteção maior]",
+      "condicoes": {
+        "quando_aplicar": "Transporte de qualquer móvel planejado em fase de entrega — seja para instalação inicial, seja para eventual retirada/mudança futura do cliente.",
+        "condicoes_adicionais": "Se não for possível desmontar completamente, ao menos retirar prateleiras e gavetas antes do transporte, reduzindo peso e risco de dano interno por movimentação de conteúdo solto. [cf. Caso não seja possível desmontar, retire prateleiras e gavetas]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Peças estruturalmente indivisíveis por decisão de projeto (ver item 2.1) seguem a lógica de içamento em vez de divisão.",
+        "limitacoes": "Peças previamente montadas na fábrica/oficina sem previsão de desmontagem para transporte exigem trabalho adicional e risco de dano na hora de desmontar — reforça a importância de considerar o transporte já na etapa de projeto/produção, não apenas na entrega."
+      },
+      "acoes_recomendadas": "Produção já modular, com peças pensadas para montagem final apenas no destino (nunca remontadas na fábrica antes do transporte) — abordagem preventiva mais eficiente que desmontar algo já pronto.",
+      "motivo_tecnico": "Sempre que possível, recomenda-se desmontar móveis e dividir peças maiores antes do transporte, especialmente em objetos de vidro ou outros materiais delicados — essa prática oferece proteção adicional contra danos durante o manuseio e reduz o risco de avarias maiores. [cf. Sempre que possível, desmonte os móveis e peças maiores para realizar o transporte, especialmente, nos casos de objetos de vidros e aqueles que são mais delicados para carregar. Isso ajuda a oferecer uma proteção maior]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "BSoft (blog institucional com dicas de transporte de móveis).",
+      "fabricante": "N/A.",
+      "observacoes": "Parafusos e peças pequenas retiradas na desmontagem devem ser guardados em sacos plásticos identificados, para não se perderem antes da remontagem no destino — boa prática simples mas frequentemente negligenciada. [cf. Não se esqueça de guardar os parafusos e peças menores em sacos plásticos com identificação e, dessa forma, não os perder na hora de realizar a montagem] ---",
+      "tags": [
+        "transporte",
+        "divisão",
+        "peças",
+        "grandes",
+        "priorização",
+        "desmontagem",
+        "antes"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_10_divisao_de_pecas_grandes_para_transporte_reducao_de_manipulacao_como_principi",
+      "entidade": "DIVISÃO DE PEÇAS GRANDES PARA TRANSPORTE",
+      "categoria": "Transporte",
+      "subcategoria": "DIVISÃO DE PEÇAS GRANDES PARA TRANSPORTE",
+      "titulo": "Redução de manipulação como princípio de custo",
+      "tipo": "alerta",
+      "descricao": "Cada vez que uma peça precisa ser içada, deslocada e armazenada em uma operação repetida, isso consome tempo de pessoal e recursos de equipamento — a redução de custos de produção e transporte está diretamente ligada à redução da quantidade de manipulações que cada peça sofre entre a produção e a instalação final. [cf. Constantemente a peça é içada, deslocada e armazenada em repetidas operações. Isto requer tempo de pessoal e equipamentos, que demandam recursos financeiros. Para a redução dos custos de produção, quanto menos manipulação houver, melhor]",
+      "condicoes": {
+        "quando_aplicar": "Planejamento logístico de qualquer entrega de marcenaria planejada, especialmente projetos com múltiplos módulos/peças.",
+        "condicoes_adicionais": "Também no canteiro de obras, enquanto uma equipe está ocupada descarregando um caminhão, não há montagem simultânea de peças na estrutura — essa atividade inevitável de descarga deve ser prevista no orçamento e no cronograma, não tratada como imprevisto. [cf. Também no canteiro de obras é assim: enquanto se mobiliza uma equipe para a descarga de uma carreta, não haverá montagem de peças na estrutura. Esta atividade inevitável, deve ser prevista nos orçamentos]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — o princípio de \"menos manipulação, menor custo e menor risco de dano\" é universal em logística de móveis.",
+        "limitacoes": "O maior risco evitável nesse processo é o retrabalho — uma peça montada no local errado, ou horas perdidas procurando uma peça específica em uma pilha desorganizada de peças semelhantes, geralmente causado por falta de planejamento de transporte/etiquetagem (ver módulo Produção, item 4). [cf. O que se deve evitar é o retrabalho, que durante a montagem pode ser uma peça montada em local errado, mas também pode significar horas perdidas em busca de uma determinada peça em uma pilha caótica de outras semelhantes. Esta desorganização pode ser causada pela falta de planejamento de transporte]"
+      },
+      "acoes_recomendadas": "Sequenciamento de carregamento do caminhão na ordem inversa de uso na montagem (última peça carregada = primeira peça usada), reduzindo a necessidade de reorganizar a carga no canteiro/obra.",
+      "motivo_tecnico": "Cada vez que uma peça precisa ser içada, deslocada e armazenada em uma operação repetida, isso consome tempo de pessoal e recursos de equipamento — a redução de custos de produção e transporte está diretamente ligada à redução da quantidade de manipulações que cada peça sofre entre a produção e a instalação final. [cf. Constantemente a peça é içada, deslocada e armazenada em repetidas operações. Isto requer tempo de pessoal e equipamentos, que demandam recursos financeiros. Para a redução dos custos de produção, quanto menos manipulação houver, melhor]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Manual técnico de Transporte e Montagem (MK Estruturas Metálicas) — embora a fonte original trate de estruturas metálicas de grande porte, o princípio de redução de manipulação é diretamente aplicável à logística de marcenaria planejada.",
+      "fabricante": "N/A.",
+      "observacoes": "Este item se conecta diretamente ao módulo Produção (item 4 — etiquetagem) e ao módulo Montagem (a ser detalhado) — a integração entre etiquetagem correta na produção, sequência de carregamento do transporte e sequência de montagem em obra é o que realmente reduz o retrabalho citado como o maior risco evitável do processo. ---",
+      "tags": [
+        "transporte",
+        "divisão",
+        "peças",
+        "grandes",
+        "redução",
+        "manipulação",
+        "princípio",
+        "custo"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_10_acondicionamento_e_organizacao_de_carga_distribuicao_de_peso_e_organizacao_po",
+      "entidade": "ACONDICIONAMENTO E ORGANIZAÇÃO DE CARGA",
+      "categoria": "Transporte",
+      "subcategoria": "ACONDICIONAMENTO E ORGANIZAÇÃO DE CARGA",
+      "titulo": "Distribuição de peso e organização por fragilidade",
+      "tipo": "recomendacao",
+      "descricao": "Na organização de carga para transporte, a prática recomendada é posicionar os itens mais pesados na parte de baixo e os mais leves na parte de cima, otimizando a estabilidade da carga e reduzindo risco de dano por esmagamento. [cf. A melhor forma de fazer essa atividade é colocar os itens mais pesados na parte de baixo das embalagens e os mais leves na parte de cima]",
+      "condicoes": {
+        "quando_aplicar": "Toda organização de carga de transporte de móveis planejados, incluindo acessórios e ferragens soltas transportadas junto com as peças principais.",
+        "condicoes_adicionais": "Peças e materiais frágeis devem ser embalados separadamente, minimizando riscos de contato direto com outras peças durante o transporte. [cf. Elas devem ser embaladas de forma separada, minimizando os riscos]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Peças únicas de grande porte (sem empilhamento possível) seguem lógica diferente de fixação/amarração no veículo, não de organização por peso/fragilidade em camadas.",
+        "limitacoes": "Transporte sem a devida segurança pode provocar desde danos menores (arranhões) até avarias maiores (quebra) — o nível de cuidado no acondicionamento deve ser proporcional à fragilidade e ao valor da peça específica. [cf. Transportar móveis sem a devida segurança pode provocar desde danos menores, por exemplo, arranhões, até avarias maiores, como quebra]"
+      },
+      "acoes_recomendadas": "Uso de material de embalagem específico (plástico bolha, mantas, cantoneiras de proteção) conforme a fragilidade, tamanho e forma de acondicionamento de cada peça.",
+      "motivo_tecnico": "Na organização de carga para transporte, a prática recomendada é posicionar os itens mais pesados na parte de baixo e os mais leves na parte de cima, otimizando a estabilidade da carga e reduzindo risco de dano por esmagamento. [cf. A melhor forma de fazer essa atividade é colocar os itens mais pesados na parte de baixo das embalagens e os mais leves na parte de cima]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "BSoft (blog institucional com dicas práticas de transporte).",
+      "fabricante": "N/A.",
+      "observacoes": "Este item, embora tratado na fonte original no contexto de mudança residencial geral, aplica-se diretamente à logística de entrega de marcenaria planejada — especialmente relevante para acessórios, ferragens soltas e peças de vidro/espelho transportadas junto com a marcenaria principal. --- ## PRÓXIMOS PASSOS SUGERIDOS Módulos concluídos até aqui: **Cozinhas**, **Ferragens**, **Estrutura**, **Portas e Gavetas**, **Materiais**, **Closets**, **Banheiros**, **Escritórios**, **Produção** e **Transporte** (este documento). Sequência restante: 11. **Montagem** — sequência, ferramentas, tempo, número de montadores, espaço. 12. **Economia** — redução de desperdício, engrossos econômicos, padronização, melhor aproveitamento de chapas. Continuando em sequência para o módulo **Montagem**.",
+      "tags": [
+        "transporte",
+        "acondicionamento",
+        "organização",
+        "carga",
+        "distribuição",
+        "peso",
+        "fragilidade"
+      ],
+      "modulo_origem": "10-Transporte",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

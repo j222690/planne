@@ -1,0 +1,379 @@
+{
+  "modulo": "Montagem",
+  "total_atomos": 8,
+  "atomos": [
+    {
+      "id": "atom_11_sequencia_completa_de_montagem_em_obra_fase_de_planejamento_e_inspecao_previa",
+      "entidade": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "categoria": "Montagem",
+      "subcategoria": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "titulo": "Fase de planejamento e inspeção prévia",
+      "tipo": "regra_obrigatoria",
+      "descricao": "Antes mesmo de abrir as caixas de peças, a etapa de planejamento é crucial para evitar erros e otimizar o tempo de instalação: inspeção do ambiente (verificação de medidas finais e condições de piso/parede — nivelamento, esquadro — identificando ajustes necessários na peça), marcação precisa dos pontos de fixação (respeitando localização de fiação elétrica e tubulações), e organização/proteção do ambiente (isolamento, proteção do piso com lonas, organização das caixas para facilitar identificação de módulos e peças). [cf. Inspeção do Ambiente: O montador verifica as medidas finais e as condições do piso e das paredes (nivelamento, esquadro), identificando possíveis ajustes que serão necessários na peça. Marcação de Pontos: Marcação precisa dos pontos de fixação, principalmente para armários aéreos e painéis, respeitando a localização de fiação elétrica e tubulações, quando aplicável. Organização e Proteção: O ambiente é isolado, e o piso é protegido com lonas ou cobertores. As caixas são organizadas para facilitar a identificação dos módulos e peças]",
+      "condicoes": {
+        "quando_aplicar": "Toda instalação de marcenaria planejada, independentemente do tamanho do projeto.",
+        "condicoes_adicionais": "A inspeção deve confirmar que as medidas finais em obra ainda correspondem às medidas de projeto originais — divergências (parede fora de esquadro, piso desnivelado) descobertas nesta etapa são muito mais baratas de corrigir do que as descobertas apenas na fixação final."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa desta etapa — mesmo projetos pequenos se beneficiam de inspeção prévia mínima antes de iniciar a montagem física.",
+        "limitacoes": "Pular esta etapa (indo direto para a montagem) é a causa mais comum de erros de instalação em ambientes com pequenas divergências entre projeto e execução civil."
+      },
+      "acoes_recomendadas": "Visita técnica formal antecipada (antes mesmo da produção das peças) para reduzir ainda mais o risco de divergência entre projeto e obra real — prática recomendada especialmente para projetos de maior complexidade.",
+      "motivo_tecnico": "Antes mesmo de abrir as caixas de peças, a etapa de planejamento é crucial para evitar erros e otimizar o tempo de instalação: inspeção do ambiente (verificação de medidas finais e condições de piso/parede — nivelamento, esquadro — identificando ajustes necessários na peça), marcação precisa dos pontos de fixação (respeitando localização de fiação elétrica e tubulações), e organização/proteção do ambiente (isolamento, proteção do piso com lonas, organização das caixas para facilitar identificação de módulos e peças). [cf. Inspeção do Ambiente: O montador verifica as medidas finais e as condições do piso e das paredes (nivelamento, esquadro), identificando possíveis ajustes que serão necessários na peça. Marcação de Pontos: Marcação precisa dos pontos de fixação, principalmente para armários aéreos e painéis, respeitando a localização de fiação elétrica e tubulações, quando aplicável. Organização e Proteção: O ambiente é isolado, e o piso é protegido com lonas ou cobertores. As caixas são organizadas para facilitar a identificação dos módulos e peças]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "MP Montagem de Móveis (guia completo de processo de instalação).",
+      "fabricante": "N/A.",
+      "observacoes": "Esta etapa se conecta diretamente ao módulo Transporte (item 3.2) no que se refere à organização da carga descarregada — a etiquetagem correta do módulo Produção (item 4) é o que viabiliza a \"organização das caixas para facilitar a identificação\" citada nesta etapa. ---",
+      "tags": [
+        "montagem",
+        "sequência",
+        "completa",
+        "obra",
+        "fase",
+        "planejamento",
+        "inspeção",
+        "prévia"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_sequencia_completa_de_montagem_em_obra_montagem_da_caixa_estrutura_interna_de",
+      "entidade": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "categoria": "Montagem",
+      "subcategoria": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "titulo": "Montagem da caixa/estrutura interna de cada módulo",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A montagem propriamente dita começa pela estrutura interna de cada módulo (a \"caixa\" de sustentação do móvel) — laterais, fundos e prateleiras internas são unidos, garantindo que o esquadro de cada módulo esteja perfeito antes de qualquer etapa subsequente. [cf. A montagem começa pela estrutura interna de cada módulo, que é a base de sustentação do móvel: Montagem da Caixa: As laterais, fundos e prateleiras internas são unidos, garantindo que o esquadro de cada módulo esteja perfeito]",
+      "condicoes": {
+        "quando_aplicar": "Todo processo de montagem de móvel modulado ou planejado, sempre como primeira etapa física (após o planejamento/inspeção do item 1.1).",
+        "condicoes_adicionais": "Esta etapa deve seguir rigorosamente a regra já estabelecida no módulo Estrutura (item 3.2) — montar sobre superfície plana e forrada, com verificação de esquadro por ferramenta apropriada, antes de fixar definitivamente o fundo."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — esta é a etapa fundacional que determina se as etapas seguintes (portas, gavetas, puxadores) terão uma base correta para se apoiar.",
+        "limitacoes": "Erro de esquadro nesta etapa se propaga para todas as etapas seguintes (portas desalinhadas, gavetas emperradas) — é o ponto de maior efeito cascata de toda a sequência de montagem."
+      },
+      "acoes_recomendadas": "Uso de gabaritos de nivelamento e esquadro específicos para acelerar e tornar mais confiável esta etapa em produções de maior volume.",
+      "motivo_tecnico": "A montagem propriamente dita começa pela estrutura interna de cada módulo (a \"caixa\" de sustentação do móvel) — laterais, fundos e prateleiras internas são unidos, garantindo que o esquadro de cada módulo esteja perfeito antes de qualquer etapa subsequente. [cf. A montagem começa pela estrutura interna de cada módulo, que é a base de sustentação do móvel: Montagem da Caixa: As laterais, fundos e prateleiras internas são unidos, garantindo que o esquadro de cada módulo esteja perfeito]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "MP Montagem de Móveis; conexão direta com módulo Estrutura (item 3.2) e módulo Portas e Gavetas (item 6.2) já construídos.",
+      "fabricante": "N/A.",
+      "observacoes": "Ferramentas de medida de ângulo tornam esta tarefa mais fácil e confiável — recomenda-se sempre a checagem de esquadro em pelo menos dois pontos do módulo (não apenas um canto), especialmente em módulos maiores. [cf. As ferramentas de medida de ângulos podem tornar essa tarefa mais fácil] ---",
+      "tags": [
+        "montagem",
+        "sequência",
+        "completa",
+        "obra",
+        "caixa",
+        "estrutura",
+        "interna",
+        "módulo"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_sequencia_completa_de_montagem_em_obra_fixacao_reforco_de_juntas_e_instalacao",
+      "entidade": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "categoria": "Montagem",
+      "subcategoria": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "titulo": "Fixação, reforço de juntas e instalação de prateleiras",
+      "tipo": "boa_pratica",
+      "descricao": "Após a montagem da caixa, o painel traseiro (fundo) é colado e fixado (com juntas de topo) para ficar rente à parede; em seguida, as junções são reforçadas com reforços de canto, e as prateleiras são instaladas — medindo, marcando e nivelando as posições de pelo menos quatro suportes por prateleira (dois de cada lado), antes de deslizar a prateleira nos suportes. [cf. Prenda os painéis laterais. Em seguida, cole e prenda (com mais juntas de topo), o painel traseiro para que ele fique rente à parede... Reforce as juntas. Agora, fortaleça todas as junções com reforços de canto... Instale as prateleiras. Meça, marque e nivele as posições de pelo menos quatro suportes de canto (dois de cada lado). Em seguida, deslize as prateleiras]",
+      "condicoes": {
+        "quando_aplicar": "Sequência padrão de montagem de qualquer armário/estante com prateleiras, entre a etapa da caixa (item 1.2) e o acabamento final (portas, quadros frontais).",
+        "condicoes_adicionais": "A espessura do painel traseiro deve ser validada conforme o módulo Estrutura (item 3.1) — referência prática citada é uma placa de compensado de 1,5 cm de espessura, com espessura maior necessária para armários de maior porte/carga. [cf. Meça e aparafuse uma placa de compensado de 1,5 cm de espessura no lugar. Uma mais grossa será necessário para os armários]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Prateleiras fixas embutidas em ranhura (não removíveis/ajustáveis) seguem lógica diferente, já integrada à montagem da caixa em si.",
+        "limitacoes": "Suportes de prateleira mal nivelados (mesmo com pequena diferença entre os dois lados) resultam em prateleira visivelmente inclinada — verificação com nível é etapa obrigatória, não opcional."
+      },
+      "acoes_recomendadas": "Uso do Sistema 32 de furação (módulo Produção, item 2) para garantir posicionamento padronizado e preciso dos suportes de prateleira, reduzindo dependência de medição manual repetida.",
+      "motivo_tecnico": "Após a montagem da caixa, o painel traseiro (fundo) é colado e fixado (com juntas de topo) para ficar rente à parede; em seguida, as junções são reforçadas com reforços de canto, e as prateleiras são instaladas — medindo, marcando e nivelando as posições de pelo menos quatro suportes por prateleira (dois de cada lado), antes de deslizar a prateleira nos suportes. [cf. Prenda os painéis laterais. Em seguida, cole e prenda (com mais juntas de topo), o painel traseiro para que ele fique rente à parede... Reforce as juntas. Agora, fortaleça todas as junções com reforços de canto... Instale as prateleiras. Meça, marque e nivele as posições de pelo menos quatro suportes de canto (dois de cada lado). Em seguida, deslize as prateleiras]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Apostila técnica Profec (\"Montagem de Móveis Planejados\").",
+      "fabricante": "N/A.",
+      "observacoes": "A etapa de \"adicionar os quadros frontais\" (montá-los como uma moldura única, com juntas planas ou esquadrinhadas) é citada como etapa final de composição estética antes do acabamento — relevante especialmente em móveis com molduras/frisos decorativos na frente da caixaria. [cf. Adicione os quadros frontais. Monte-os em uma só unidade, como se fizesse uma moldura. Você pode usar juntas planas ou deixá-las esquadrinhadas] ---",
+      "tags": [
+        "montagem",
+        "sequência",
+        "completa",
+        "obra",
+        "fixação",
+        "reforço",
+        "juntas",
+        "instalação"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_sequencia_completa_de_montagem_em_obra_ajuste_fino_instalacao_de_acessorios_e",
+      "entidade": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "categoria": "Montagem",
+      "subcategoria": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "titulo": "Ajuste fino, instalação de acessórios e limpeza final",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A etapa final de montagem inclui: ajuste fino/regulagem (dobradiças ajustadas para alinhamento vertical/horizontal perfeito, testando sistemas de amortecimento), instalação de puxadores e acessórios (nichos decorativos, calceiros, porta-gravatas e demais itens internos), e limpeza final (remoção de resíduos de montagem, limpeza do móvel e do local, entrega do ambiente pronto para uso). [cf. Ajuste Fino (Regulagem): O montador faz a regulagem de portas e gavetas, ajustando as dobradiças para garantir o alinhamento vertical e horizontal perfeito, e testando os sistemas de amortecimento. Instalação de Puxadores e Acessórios: Puxadores, nichos decorativos, e quaisquer acessórios internos (calceiros, porta-gravatas) são instalados. Limpeza Final: O profissional retira os resíduos de montagem, faz a limpeza final do móvel e do local, entregando o ambiente pronto para uso]",
+      "condicoes": {
+        "quando_aplicar": "Etapa final de toda instalação de marcenaria planejada, sempre após a estrutura e o acabamento estarem fisicamente completos.",
+        "condicoes_adicionais": "O ajuste fino de dobradiças deve usar a regulagem tridimensional já descrita no módulo Ferragens (item 1.3) — lateral, altura e profundidade — para corrigir pequenas variações de execução sem comprometer o alinhamento visual final."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo sob pressão de prazo, pular a etapa de ajuste fino compromete diretamente a percepção de qualidade do cliente na entrega.",
+        "limitacoes": "Testar os sistemas de amortecimento (soft-close) é frequentemente negligenciado, mas é o que garante que o cliente perceba a qualidade da ferragem no primeiro uso — falha nesse teste na entrega gera reclamação imediata."
+      },
+      "acoes_recomendadas": "Checklist formal de entrega (com item específico para cada porta/gaveta testada) para reduzir a chance de item esquecido nesta etapa final.",
+      "motivo_tecnico": "A etapa final de montagem inclui: ajuste fino/regulagem (dobradiças ajustadas para alinhamento vertical/horizontal perfeito, testando sistemas de amortecimento), instalação de puxadores e acessórios (nichos decorativos, calceiros, porta-gravatas e demais itens internos), e limpeza final (remoção de resíduos de montagem, limpeza do móvel e do local, entrega do ambiente pronto para uso). [cf. Ajuste Fino (Regulagem): O montador faz a regulagem de portas e gavetas, ajustando as dobradiças para garantir o alinhamento vertical e horizontal perfeito, e testando os sistemas de amortecimento. Instalação de Puxadores e Acessórios: Puxadores, nichos decorativos, e quaisquer acessórios internos (calceiros, porta-gravatas) são instalados. Limpeza Final: O profissional retira os resíduos de montagem, faz a limpeza final do móvel e do local, entregando o ambiente pronto para uso]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "crítico"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "MP Montagem de Móveis.",
+      "fabricante": "N/A.",
+      "observacoes": "Esta sequência completa (planejamento → caixa → fixação/prateleiras → ajuste fino/acabamento) deveria ser tratada no motor de regras do Planne como um checklist estruturado de entrega, gerando uma lista de verificação automática por módulo/projeto. ---",
+      "tags": [
+        "montagem",
+        "sequência",
+        "completa",
+        "obra",
+        "ajuste",
+        "fino",
+        "instalação",
+        "acessórios"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_ferramentas_necessarias_por_tipo_de_montagem_ferramentas_basicas_vs_ferrament",
+      "entidade": "FERRAMENTAS NECESSÁRIAS POR TIPO DE MONTAGEM",
+      "categoria": "Montagem",
+      "subcategoria": "FERRAMENTAS NECESSÁRIAS POR TIPO DE MONTAGEM",
+      "titulo": "Ferramentas básicas vs. ferramentas para puxador embutido",
+      "tipo": "boa_pratica",
+      "descricao": "Para móveis simples sem arremates/fechamentos especiais, ferramentas básicas de furadeira e parafusadeira já são suficientes; quando o projeto inclui puxadores embutidos (cava usinada), é necessária adicionalmente uma tupia manual; a serra tico-tico é frequentemente necessária para ajustes finos, cortes de recorte para tomadas e outros cortes que só podem ser definidos no momento da montagem em obra (não previstos com precisão total na produção da fábrica). [cf. Geralmente móveis soltos onde não vão ser usados arremates ou fechamentos usamos apenas furadeira e parafusadeira mesmo. Em móveis que serão utilizados puxadores embutidos precisamos usar uma tupia manual, além das ferramentas já citadas acima] [cf. Serra tico tico: Sempre é necessário para ajustes, cortes de tomadas e diversos cortes fundamentais que só podem ser feitos na hora da montagem]",
+      "condicoes": {
+        "quando_aplicar": "Definição do kit de ferramentas necessário para a equipe de montagem, com base no tipo de acabamento especificado no projeto (puxador convencional vs. embutido/cava).",
+        "condicoes_adicionais": "A presença de recortes para tomadas elétricas, pontos de gás ou hidráulica no local de instalação exige ferramenta de corte de ajuste (serra tico-tico) disponível na equipe, mesmo quando o projeto foi bem especificado — imprevistos de obra civil são praticamente inevitáveis."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Móveis totalmente pré-furados e com ferragem 100% padronizada (linha de produção em série) podem dispensar tupia manual se não houver recorte in loco necessário.",
+        "limitacoes": "Equipe sem a ferramenta correta disponível no dia da montagem gera atraso ou, pior, improviso com ferramenta inadequada, comprometendo o acabamento."
+      },
+      "acoes_recomendadas": "Padronização de recortes já na fábrica (baseada em medição precisa em visita técnica prévia), reduzindo a necessidade de ajuste de corte no local — mas nunca eliminando totalmente essa necessidade, dado o risco de pequenas divergências de execução civil.",
+      "motivo_tecnico": "Para móveis simples sem arremates/fechamentos especiais, ferramentas básicas de furadeira e parafusadeira já são suficientes; quando o projeto inclui puxadores embutidos (cava usinada), é necessária adicionalmente uma tupia manual; a serra tico-tico é frequentemente necessária para ajustes finos, cortes de recorte para tomadas e outros cortes que só podem ser definidos no momento da montagem em obra (não previstos com precisão total na produção da fábrica). [cf. Geralmente móveis soltos onde não vão ser usados arremates ou fechamentos usamos apenas furadeira e parafusadeira mesmo. Em móveis que serão utilizados puxadores embutidos precisamos usar uma tupia manual, além das ferramentas já citadas acima] [cf. Serra tico tico: Sempre é necessário para ajustes, cortes de tomadas e diversos cortes fundamentais que só podem ser feitos na hora da montagem]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Marcenaria de Hoje (blog técnico com lista de ferramentas por tipo de montagem).",
+      "fabricante": "N/A.",
+      "observacoes": "Este item se conecta diretamente ao módulo Portas e Gavetas (item 6.1, sobre puxador \"cava\") — a decisão de projeto de usar puxador embutido tem impacto direto e previsível no kit de ferramentas necessário em obra, permitindo que o motor de regras do Planne gere automaticamente uma \"lista de ferramentas requeridas\" por projeto. ---",
+      "tags": [
+        "montagem",
+        "ferramentas",
+        "necessárias",
+        "tipo",
+        "básicas",
+        "puxador",
+        "embutido"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_ferramentas_necessarias_por_tipo_de_montagem_componentes_e_verificacao_pre_mo",
+      "entidade": "FERRAMENTAS NECESSÁRIAS POR TIPO DE MONTAGEM",
+      "categoria": "Montagem",
+      "subcategoria": "FERRAMENTAS NECESSÁRIAS POR TIPO DE MONTAGEM",
+      "titulo": "Componentes e verificação pré-montagem",
+      "tipo": "boa_pratica",
+      "descricao": "As diretrizes de montagem geralmente incluem informações sobre os componentes necessários (parafusos, dobradiças, suportes) e as ferramentas apropriadas (chaves de fenda, furadeiras, níveis) — ter tudo isso organizado e à mão antes de iniciar evita interrupções durante o processo. [cf. As diretrizes de montagem geralmente incluem informações sobre os componentes necessários, como parafusos, dobradiças e suportes. Também podem conter orientações sobre as ferramentas apropriadas para a montagem, como chaves de fenda, furadeiras e níveis. Esses detalhes são fundamentais para que o montador tenha tudo o que precisa à mão, facilitando o processo e evitando interrupções]",
+      "condicoes": {
+        "quando_aplicar": "Antes do início de qualquer montagem, como parte da checklist de verificação pré-execução.",
+        "condicoes_adicionais": "Verificar se todos os componentes necessários (ferragens, parafusos, pregos, puxadores) estão presentes e em boas condições, e se o manual de instruções da montagem acompanha os móveis, antes de iniciar fisicamente. [cf. Componentes e Ferramentas: Certifique-se de que todos os componentes necessários para a montagem, como ferragens, parafusos, pregos e puxadores, estejam presentes e em boas condições. Manual de Instruções: Verifique se o manual de instruções da montagem acompanha os móveis]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo montagens pequenas se beneficiam de checagem de componentes antes de começar.",
+        "limitacoes": "Faltar um componente no meio do processo (descoberto apenas durante a montagem) gera atraso significativo, especialmente se a peça faltante precisar ser comprada/produzida às pressas."
+      },
+      "acoes_recomendadas": "Kit de reposição rápida (parafusos, buchas, cavilhas extras de tipos comuns) sempre disponível na equipe de montagem, para resolver pequenas faltas sem precisar interromper o trabalho.",
+      "motivo_tecnico": "As diretrizes de montagem geralmente incluem informações sobre os componentes necessários (parafusos, dobradiças, suportes) e as ferramentas apropriadas (chaves de fenda, furadeiras, níveis) — ter tudo isso organizado e à mão antes de iniciar evita interrupções durante o processo. [cf. As diretrizes de montagem geralmente incluem informações sobre os componentes necessários, como parafusos, dobradiças e suportes. Também podem conter orientações sobre as ferramentas apropriadas para a montagem, como chaves de fenda, furadeiras e níveis. Esses detalhes são fundamentais para que o montador tenha tudo o que precisa à mão, facilitando o processo e evitando interrupções]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "SOS Planejados (glossário técnico); JS Studio (blog de marcenaria).",
+      "fabricante": "N/A.",
+      "observacoes": "O tempo de montagem varia de acordo com a complexidade do projeto, o tamanho dos móveis e a quantidade de peças — não deve ser tratado como um valor fixo único, mas estimado proporcionalmente à complexidade real de cada projeto. [cf. Tempo de Montagem: O tempo de montagem varia de acordo com a complexidade do projeto, tamanho dos móveis e quantidade de peças] ---",
+      "tags": [
+        "montagem",
+        "ferramentas",
+        "necessárias",
+        "tipo",
+        "componentes",
+        "verificação"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_ajuste_fino_e_regulagem_de_ferragens_regulagem_tridimensional_como_etapa_nao_",
+      "entidade": "AJUSTE FINO E REGULAGEM DE FERRAGENS",
+      "categoria": "Montagem",
+      "subcategoria": "AJUSTE FINO E REGULAGEM DE FERRAGENS",
+      "titulo": "Regulagem tridimensional como etapa não-opcional",
+      "tipo": "alerta",
+      "descricao": "Montar móveis planejados exige equipamentos que garantam cortes precisos, nivelamento correto e ajustes finos — quando o profissional depende de improvisos em vez de ferramentas adequadas, o risco de comprometer o acabamento aumenta significativamente. [cf. Montar móveis planejados exige equipamentos que garantam cortes precisos, nivelamento correto e ajustes finos. Quando o profissional depende de improvisos, o risco de comprometer o acabamento aumenta]",
+      "condicoes": {
+        "quando_aplicar": "Etapa final de toda montagem, aplicando a regulagem tridimensional de dobradiças (módulo Ferragens, item 1.3) e o nivelamento geral do módulo instalado.",
+        "condicoes_adicionais": "A montagem de móveis planejados é uma etapa altamente técnica, diferente de móveis prontos com medidas padronizadas — cada painel, dobradiça, corrediça ou puxador foi pensado especificamente para aquele espaço, e qualquer erro pode comprometer todo o projeto. [cf. A montagem de móveis planejados é uma etapa altamente técnica. Ao contrário de móveis prontos, que seguem medidas padronizadas e geralmente possuem instruções genéricas, os móveis planejados são fabricados sob medida. Isso significa que cada painel, dobradiça, corrediça ou puxador foi pensado especificamente para aquele espaço, e qualquer erro pode comprometer todo o projeto]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo dobradiças de linha básica (sem sistema premium de regulagem) precisam de checagem final antes da entrega.",
+        "limitacoes": "O profissional responsável precisa interpretar o projeto técnico e identificar a sequência correta de instalação — um montador sem essa capacitação específica para marcenaria planejada (mesmo que experiente em móveis prontos) pode cometer erros por desconhecimento do caráter sob medida do projeto. [cf. O profissional responsável pela montagem precisa interpretar o projeto técnico, identificar a sequência correta de instalação e ajustar os componentes de forma que o conjunto final esteja perfeitamente nivelado, alinhado e funcional]"
+      },
+      "acoes_recomendadas": "Capacitação específica ou contratação de montador com histórico comprovado em marcenaria planejada sob medida, não apenas em montagem de móveis modulados de linha.",
+      "motivo_tecnico": "Montar móveis planejados exige equipamentos que garantam cortes precisos, nivelamento correto e ajustes finos — quando o profissional depende de improvisos em vez de ferramentas adequadas, o risco de comprometer o acabamento aumenta significativamente. [cf. Montar móveis planejados exige equipamentos que garantam cortes precisos, nivelamento correto e ajustes finos. Quando o profissional depende de improvisos, o risco de comprometer o acabamento aumenta]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "alto",
+        "estetico": "crítico"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Forte Montadores (blog especializado em contratação de montadores).",
+      "fabricante": "N/A.",
+      "observacoes": "Este item reforça a importância de o Planne (enquanto software) gerar documentação técnica clara e específica do projeto — não genérica — para orientar corretamente o montador responsável pela execução em campo. ---",
+      "tags": [
+        "montagem",
+        "ajuste",
+        "fino",
+        "regulagem",
+        "ferragens",
+        "tridimensional",
+        "etapa",
+        "opcional"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_11_boas_praticas_de_contratacao_e_garantia_criterios_de_avaliacao_de_montador_pr",
+      "entidade": "BOAS PRÁTICAS DE CONTRATAÇÃO E GARANTIA",
+      "categoria": "Montagem",
+      "subcategoria": "BOAS PRÁTICAS DE CONTRATAÇÃO E GARANTIA",
+      "titulo": "Critérios de avaliação de montador profissional",
+      "tipo": "recomendacao",
+      "descricao": "Ao contratar um serviço de montagem de móveis planejados, recomenda-se verificar: se o profissional entende as especificidades da marcenaria sob medida (não apenas de móveis de linha), se trabalha com ferramentas adequadas, os prazos e forma de trabalho (rotina de montagem, se será feito em um único dia ou com intervalos), e a garantia de serviço oferecida. [cf. Também vale a pena conversar sobre prazos e formas de trabalho. Pergunte como será a rotina da montagem: se o serviço será feito em um único dia e se haverá intervalos... Outro detalhe que muita gente esquece é a garantia do serviço]",
+      "condicoes": {
+        "quando_aplicar": "Fase de contratação de serviço de montagem, seja pela própria marcenaria/fábrica, seja por terceirizado independente.",
+        "condicoes_adicionais": "Um montador sério costuma oferecer um prazo de garantia para retorno caso algum problema apareça logo após a instalação, como portas desalinhadas ou corrediças que não funcionem corretamente. [cf. Um montador sério costuma oferecer um prazo para retorno caso algum problema apareça logo após a instalação, como portas desalinhadas ou corrediças que não funcionem como deveriam]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa desta avaliação — mesmo marcenarias com equipe própria de montagem se beneficiam de aplicar esses critérios internamente como padrão de qualidade.",
+        "limitacoes": "A ausência de garantia formal de serviço de montagem deixa o cliente (e a marcenaria contratante) desamparado diante de problemas pós-instalação — risco reputacional relevante."
+      },
+      "acoes_recomendadas": "Contrato formal de prestação de serviço de montagem com cláusula explícita de garantia e prazo de retorno, mesmo para prestadores autônomos/terceirizados.",
+      "motivo_tecnico": "Ao contratar um serviço de montagem de móveis planejados, recomenda-se verificar: se o profissional entende as especificidades da marcenaria sob medida (não apenas de móveis de linha), se trabalha com ferramentas adequadas, os prazos e forma de trabalho (rotina de montagem, se será feito em um único dia ou com intervalos), e a garantia de serviço oferecida. [cf. Também vale a pena conversar sobre prazos e formas de trabalho. Pergunte como será a rotina da montagem: se o serviço será feito em um único dia e se haverá intervalos... Outro detalhe que muita gente esquece é a garantia do serviço]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Forte Montadores.",
+      "fabricante": "N/A.",
+      "observacoes": "Este item complementa o módulo \"Economia\" (a ser detalhado) no que se refere à gestão de custos de pós-venda/assistência técnica — formalizar a garantia de montagem desde a contratação é uma prática preventiva que reduz custo de conflito futuro. --- ## PRÓXIMOS PASSOS SUGERIDOS Módulos concluídos até aqui: **Cozinhas**, **Ferragens**, **Estrutura**, **Portas e Gavetas**, **Materiais**, **Closets**, **Banheiros**, **Escritórios**, **Produção**, **Transporte** e **Montagem** (este documento). Falta apenas: 12. **Economia** — redução de desperdício, engrossos econômicos, padronização, melhor aproveitamento de chapas. Continuando para o último módulo planejado: **Economia**.",
+      "tags": [
+        "montagem",
+        "boas",
+        "práticas",
+        "contratação",
+        "garantia",
+        "critérios",
+        "avaliação",
+        "montador"
+      ],
+      "modulo_origem": "11-Montagem",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

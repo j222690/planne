@@ -1,0 +1,515 @@
+{
+  "modulo": "Closets",
+  "total_atomos": 11,
+  "atomos": [
+    {
+      "id": "atom_06_cabideiros_profundidade_e_altura_por_tipo_de_peca_profundidade_do_cabideiro_p",
+      "entidade": "CABIDEIROS — PROFUNDIDADE E ALTURA POR TIPO DE PEÇA",
+      "categoria": "Closets",
+      "subcategoria": "CABIDEIROS — PROFUNDIDADE E ALTURA POR TIPO DE PEÇA",
+      "titulo": "Profundidade do cabideiro por tipo de porta",
+      "tipo": "recomendacao",
+      "descricao": "A profundidade recomendada do vão de cabideiro varia conforme o tipo de porta: com portas de abrir, 55–60 cm é considerado ideal; com portas de correr, a profundidade precisa aumentar para 65–70 cm, já que o sistema de trilho e o espaço de manobra da porta consomem parte do vão útil. [cf. Quando a porta é de abrir, 55 cm são ideais. Quando o modelo for de correr, as medidas variam entre 65 cm e 70 cm, dependendo do fabricante] [cf. Se o seu guarda-roupa possui portas de puxar, o ideal é que a profundidade do espaço para o cabideiro seja de 60 centímetros. Quando a porta é de correr, as medidas desse espaço variam entre 65 e 70 centímetros]",
+      "condicoes": {
+        "quando_aplicar": "Definição de profundidade de qualquer módulo de cabideiro em closet ou guarda-roupa.",
+        "condicoes_adicionais": "A diferença de profundidade entre porta de abrir e porta de correr deve ser tratada como regra automática — o motor de regras do Planne deveria recalcular a profundidade do módulo automaticamente ao mudar o tipo de porta selecionado, sem exigir input manual duplicado do projetista."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Roupeiros abertos (sem porta, apenas com prateleiras/varão exposto) podem usar profundidade menor, de 45–50 cm, desde que caiba um travesseiro na prateleira como referência prática básica. [cf. Seria um roupeiro, apenas com prateleiras, e que pode ter profundidade menor, de 45 a 50cm... O importante é que caiba um travesseiro nas prateleiras, essa é uma referência básica em relação à profundidade]",
+        "limitacoes": "Profundidades menores que o mínimo recomendado comprimem os ombros dos cabides, amassando as roupas e dificultando a retirada de peças penduradas."
+      },
+      "acoes_recomendadas": "Cabideiro perpendicular à parede (não paralelo) em espaços muito estreitos, economizando profundidade às custas de largura.",
+      "motivo_tecnico": "A profundidade recomendada do vão de cabideiro varia conforme o tipo de porta: com portas de abrir, 55–60 cm é considerado ideal; com portas de correr, a profundidade precisa aumentar para 65–70 cm, já que o sistema de trilho e o espaço de manobra da porta consomem parte do vão útil. [cf. Quando a porta é de abrir, 55 cm são ideais. Quando o modelo for de correr, as medidas variam entre 65 cm e 70 cm, dependendo do fabricante] [cf. Se o seu guarda-roupa possui portas de puxar, o ideal é que a profundidade do espaço para o cabideiro seja de 60 centímetros. Quando a porta é de correr, as medidas desse espaço variam entre 65 e 70 centímetros]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Fox Lux (blog técnico); Krona (blog institucional de fabricante de ferragem/acessórios); Dicas de Arquitetura (blog especializado).",
+      "fabricante": "N/A (medida de projeto geral, pode variar por fabricante de sistema de correr específico).",
+      "observacoes": "Esta regra se conecta diretamente ao módulo Portas e Gavetas (item 3 — Porta de correr), já que a profundidade final do cabideiro depende do sistema de trilho escolhido. ---",
+      "tags": [
+        "closets",
+        "cabideiros",
+        "profundidade",
+        "altura",
+        "tipo",
+        "peça",
+        "cabideiro",
+        "porta"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_cabideiros_profundidade_e_altura_por_tipo_de_peca_altura_por_tipo_de_peca_pen",
+      "entidade": "CABIDEIROS — PROFUNDIDADE E ALTURA POR TIPO DE PEÇA",
+      "categoria": "Closets",
+      "subcategoria": "CABIDEIROS — PROFUNDIDADE E ALTURA POR TIPO DE PEÇA",
+      "titulo": "Altura por tipo de peça pendurada",
+      "tipo": "boa_pratica",
+      "descricao": "A altura de vão necessária para cada categoria de peça pendurada varia significativamente: camisas e blazers precisam de 1,05–1,10 m livres; [cf. Para camisas e blazers deve-se deixar livre entre 1,05 m e 1,10 m] saias, calças e blusas curtas precisam de 85–90 cm; [cf. Para saias, calças e blusinhas, valem de 85 cm a 90 cm] vestidos e casacos longos precisam de 1,30–1,60 m. [cf. Já para vestidos e casacos longos, as medidas são de 1,30 m a 1,50 m] [cf. Cabideiro para vestidos: Altura de 1,40 a 1,60m para vestidos longos e de 1,15 a 1,20m para vestidos curtos] A altura total entre piso e barra de cabideiro (para um único cabideiro alto, sem duplo) costuma ser de referência 2 m, ajustável conforme a estatura do usuário principal (1,80–1,85 m para pessoas de estatura mais baixa). [cf. A altura entre piso e cabideiro pode ser de 2 m. Mas isso também depende da altura da pessoa. Se a estatura for baixa, o ideal fica entre 1,80 m a 1,85 m]",
+      "condicoes": {
+        "quando_aplicar": "Composição de qualquer módulo de closet ou guarda-roupa com cabideiro, antes de definir se será cabideiro único (alto) ou duplo (dois níveis sobrepostos).",
+        "condicoes_adicionais": "Cabideiro inferior (calças penduradas na barra, dobradas ao meio) precisa de no mínimo 70 cm livres abaixo do vão. [cf. Cabideiro inferior, para colocar calças: No mínimo 70cm livres abaixo do cabideiro] Cabideiro longo (para casacos e vestidos) em closets femininos costuma ter de 1,20 a 1,60 m, dependendo do tipo de cabide usado. [cf. O cabideiro longo é fundamental para os Closet femininos, abrigam casacos longos e vestidos, devem ter de 1,20 a 1,60 (dependendo da maneira que vai utilizar o cabide)]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Em closets femininos com predominância de peças curtas, um cabideiro duplo (dois níveis) pode ser mais eficiente que um único cabideiro alto — decisão depende do perfil de guarda-roupa do usuário, não de uma regra fixa.",
+        "limitacoes": "A altura útil realmente acessível sem esforço em roupeiros muito altos (2,60 m) fica limitada a cerca de 1,90 m — a parte superior a isso tende a virar espaço de maleiro (acesso ocasional), a menos que se use cabideiro extensível/retrátil. [cf. Normalmente só conseguimos acessar os cabides que estão a uma altura útil de 1,90 m. Os roupeiros planejados chegam a 2,60 m de altura. A parte de cima acaba virando maleiro]"
+      },
+      "acoes_recomendadas": "Cabideiro extensível (mecanismo que desce o cabideiro até a altura de alcance do usuário) para aproveitar toda a altura do roupeiro sem sacrificar ergonomia de uso diário. [cf. Você sabe quando é interessante usar o cabideiro extensível? Quer aproveitar toda a altura do roupeiro? Com o cabideiro extensível fica fácil]",
+      "motivo_tecnico": "A altura de vão necessária para cada categoria de peça pendurada varia significativamente: camisas e blazers precisam de 1,05–1,10 m livres; [cf. Para camisas e blazers deve-se deixar livre entre 1,05 m e 1,10 m] saias, calças e blusas curtas precisam de 85–90 cm; [cf. Para saias, calças e blusinhas, valem de 85 cm a 90 cm] vestidos e casacos longos precisam de 1,30–1,60 m. [cf. Já para vestidos e casacos longos, as medidas são de 1,30 m a 1,50 m] [cf. Cabideiro para vestidos: Altura de 1,40 a 1,60m para vestidos longos e de 1,15 a 1,20m para vestidos curtos] A altura total entre piso e barra de cabideiro (para um único cabideiro alto, sem duplo) costuma ser de referência 2 m, ajustável conforme a estatura do usuário principal (1,80–1,85 m para pessoas de estatura mais baixa). [cf. A altura entre piso e cabideiro pode ser de 2 m. Mas isso também depende da altura da pessoa. Se a estatura for baixa, o ideal fica entre 1,80 m a 1,85 m]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Fox Lux; Andrade & Mello Arquitetura; Dicas de Arquitetura (com vídeo de arquiteta especializada); Pinterest/redes profissionais (referência de mercado consolidada).",
+      "fabricante": "N/A.",
+      "observacoes": "É prática recomendada medir as peças reais do cliente (altura, largura, profundidade dos itens que serão guardados) antes de fechar as alturas de projeto, em vez de aplicar cegamente uma tabela padrão — a tabela serve como ponto de partida, não substituto do levantamento real. [cf. Não desgrude da trena! Tire a medida das peças e anote tudo (altura, largura e profundidade dos itens que o seu cliente vai guardar)] ---",
+      "tags": [
+        "closets",
+        "cabideiros",
+        "profundidade",
+        "altura",
+        "tipo",
+        "peça",
+        "pendurada"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_sapateiras_profundidade_e_altura_por_modelo_profundidade_por_tipo_de_sapateir",
+      "entidade": "SAPATEIRAS — PROFUNDIDADE E ALTURA POR MODELO",
+      "categoria": "Closets",
+      "subcategoria": "SAPATEIRAS — PROFUNDIDADE E ALTURA POR MODELO",
+      "titulo": "Profundidade por tipo de sapateira",
+      "tipo": "boa_pratica",
+      "descricao": "A profundidade de uma sapateira varia conforme o modelo: prateleiras simples (um par por vez, de frente) precisam de cerca de 35 cm livres; [cf. Qual é a profundidade ideal para sapateiras? 35 cm livres, no caso de prateleiras] gavetas com dois pares por profundidade (um atrás do outro) precisam de 60–65 cm de interior; [cf. Se o objetivo for colocar 2 pares – um atrás do outro – o ideal é 60 cm a 65 cm de interior de gaveta] considerando o gabinete completo (interior de 35 cm) com portas de correr, a profundidade total do móvel fica entre 42–43 cm, e com portas de abrir, entre 38–40 cm. [cf. Considerando o interior, com 35 cm e portas de correr, a profundidade deve ficar entre 42 cm e 43 cm. Com portas de abrir, as medidas variam entre 38 cm e 40 cm]",
+      "condicoes": {
+        "quando_aplicar": "Definição de qualquer módulo dedicado a sapateira, seja em closet ou embutido em guarda-roupa.",
+        "condicoes_adicionais": "Diferenciar sempre profundidade \"interior útil\" (onde o sapato efetivamente fica) de \"profundidade total do móvel\" (que inclui espessura de porta, folga de trilho, etc.) — são medidas diferentes e frequentemente confundidas em orçamentos."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Sapateiras deslizantes especializadas em calçados baixos (rasteirinhas, sandálias, tênis) usam lógica de altura reduzida, não de profundidade — ver item 2.2.",
+        "limitacoes": "Modelos de gaveta com 2 pares em profundidade dificultam o acesso ao par de trás sem retirar o da frente primeiro — trade-off entre economia de espaço e praticidade de acesso."
+      },
+      "acoes_recomendadas": "Sapateiras giratórias ou com sistema \"carrossel\" para melhor visualização de múltiplos pares sem sacrificar acesso, em projetos de padrão superior.",
+      "motivo_tecnico": "A profundidade de uma sapateira varia conforme o modelo: prateleiras simples (um par por vez, de frente) precisam de cerca de 35 cm livres; [cf. Qual é a profundidade ideal para sapateiras? 35 cm livres, no caso de prateleiras] gavetas com dois pares por profundidade (um atrás do outro) precisam de 60–65 cm de interior; [cf. Se o objetivo for colocar 2 pares – um atrás do outro – o ideal é 60 cm a 65 cm de interior de gaveta] considerando o gabinete completo (interior de 35 cm) com portas de correr, a profundidade total do móvel fica entre 42–43 cm, e com portas de abrir, entre 38–40 cm. [cf. Considerando o interior, com 35 cm e portas de correr, a profundidade deve ficar entre 42 cm e 43 cm. Com portas de abrir, as medidas variam entre 38 cm e 40 cm]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Fox Lux; Krona (referência complementar de profundidade de 50 cm para gavetas em geral).",
+      "fabricante": "N/A.",
+      "observacoes": "Referência complementar de mercado: prateleiras para sapatos com 35 cm de profundidade, com altura de 15–20 cm para sapatos baixos e 25–30 cm para calçados de salto — ver item 2.2. [cf. Sapatos: Prateleiras com 35 cm de profundidade, altura de 15-20 cm para sapatos baixos e 25-30 cm para saltos] ---",
+      "tags": [
+        "closets",
+        "sapateiras",
+        "profundidade",
+        "altura",
+        "modelo",
+        "tipo",
+        "sapateira"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_sapateiras_profundidade_e_altura_por_modelo_altura_de_prateleira_vao_por_tipo",
+      "entidade": "SAPATEIRAS — PROFUNDIDADE E ALTURA POR MODELO",
+      "categoria": "Closets",
+      "subcategoria": "SAPATEIRAS — PROFUNDIDADE E ALTURA POR MODELO",
+      "titulo": "Altura de prateleira/vão por tipo de calçado",
+      "tipo": "recomendacao",
+      "descricao": "A altura de vão entre prateleiras de sapateira varia por tipo de calçado: sapatos baixos (rasteirinha, sandália, tênis baixo) precisam de 12–20 cm de altura livre; [cf. Altura de 15-20 cm para sapatos baixos] [cf. As sapateiras deslizantes com altura de 12 a 18cm, acomodam rasteirinhas, sandálias e tênis baixos] sapatos de salto alto precisam de 25–30 cm. [cf. 25-30 cm para saltos]",
+      "condicoes": {
+        "quando_aplicar": "Distribuição vertical de qualquer módulo de sapateira com múltiplas prateleiras/vãos.",
+        "condicoes_adicionais": "Para sapateiras do tipo retrátil ou com gavetas (não prateleira fixa aberta), a altura máxima recomendada do módulo é de cerca de 1,60 m — acima disso, o alcance até o sapato fica comprometido quando o compartimento está aberto (o usuário não consegue ver/alcançar bem o fundo do compartimento em posição elevada). [cf. Se for retrátil ou com gavetas, o alcance até o sapato é comprometido já com 1,60 m, quando os compartimentos estiverem abertos] [cf. Se o modelo da sua sapateira contém prateleiras, é retrátil ou com gavetas, a altura dela deve ser de 160 centímetros]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Sapateiras \"genéricas\" (sem distinção por tipo de calçado, vão único padronizado) sacrificam otimização de espaço em favor de simplicidade de projeto — aceitável em projetos de entrada, mas não recomendado em closets de padrão superior.",
+        "limitacoes": "Misturar tipos de calçado (baixo e salto) na mesma prateleira de altura fixa obriga a usar sempre a altura do item mais alto, desperdiçando espaço vertical nas prateleiras destinadas a calçados baixos."
+      },
+      "acoes_recomendadas": "Prateleiras reguláveis (altura ajustável) para permitir reconfiguração conforme mudança no perfil de calçados do usuário ao longo do tempo.",
+      "motivo_tecnico": "A altura de vão entre prateleiras de sapateira varia por tipo de calçado: sapatos baixos (rasteirinha, sandália, tênis baixo) precisam de 12–20 cm de altura livre; [cf. Altura de 15-20 cm para sapatos baixos] [cf. As sapateiras deslizantes com altura de 12 a 18cm, acomodam rasteirinhas, sandálias e tênis baixos] sapatos de salto alto precisam de 25–30 cm. [cf. 25-30 cm para saltos]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "referências consolidadas de blogs técnicos de arquitetura (Viva Decora, Fox Lux) e Andrade & Mello Arquitetura.",
+      "fabricante": "N/A.",
+      "observacoes": "Esta é uma boa candidata a regra parametrizável por \"perfil de guarda-roupa do cliente\" no motor de regras do Planne — o sistema poderia perguntar a proporção estimada de calçados baixos vs. salto e sugerir automaticamente a distribuição de alturas de prateleira. ---",
+      "tags": [
+        "closets",
+        "sapateiras",
+        "profundidade",
+        "altura",
+        "modelo",
+        "prateleira",
+        "tipo",
+        "calçado"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_maleiros_e_nichos_superiores_altura_minima_e_funcao_do_maleiro",
+      "entidade": "MALEIROS E NICHOS SUPERIORES",
+      "categoria": "Closets",
+      "subcategoria": "MALEIROS E NICHOS SUPERIORES",
+      "titulo": "Altura mínima e função do maleiro",
+      "tipo": "recomendacao",
+      "descricao": "O maleiro é o compartimento superior do closet/guarda-roupa, de acesso mais difícil (geralmente exigindo banquinho ou escada), destinado a itens de uso pouco frequente — malas, caixas, roupas de cama de reserva. A altura mínima recomendada varia conforme a fonte: 30 cm como mínimo absoluto, [cf. Os maleiros devem ter no mínimo 30 cm de altura e são os compartimentos com maior difícil acesso] ou 60 cm livres quando o objetivo é acomodar malas de viagem de tamanho grande. [cf. Maleiro: A altura mínima ideal é de 60cm livres, caso se queira colocar malas grandes]",
+      "condicoes": {
+        "quando_aplicar": "Definição do compartimento superior de qualquer closet ou guarda-roupa com pé-direito suficiente para essa divisão adicional.",
+        "condicoes_adicionais": "A decisão entre 30 cm (compartimento apenas para caixas/roupas de cama) e 60 cm (para malas grandes) deve ser tomada com base no perfil real de uso declarado pelo cliente, não assumida por padrão."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Closets com pé-direito baixo ou onde a prioridade é maximizar o cabideiro alto podem dispensar o maleiro dedicado, absorvendo essa função em prateleiras internas do próprio cabideiro (ver item 1.2 sobre altura útil de 1,90 m).",
+        "limitacoes": "É, por definição, o compartimento de acesso mais difícil do closet — não deve ser dimensionado para itens de uso frequente."
+      },
+      "acoes_recomendadas": "Cabideiro extensível (item 1.2) como alternativa ao maleiro fixo, quando o cliente prefere maximizar capacidade de pendurar roupas em vez de reservar espaço para malas/caixas.",
+      "motivo_tecnico": "O maleiro é o compartimento superior do closet/guarda-roupa, de acesso mais difícil (geralmente exigindo banquinho ou escada), destinado a itens de uso pouco frequente — malas, caixas, roupas de cama de reserva. A altura mínima recomendada varia conforme a fonte: 30 cm como mínimo absoluto, [cf. Os maleiros devem ter no mínimo 30 cm de altura e são os compartimentos com maior difícil acesso] ou 60 cm livres quando o objetivo é acomodar malas de viagem de tamanho grande. [cf. Maleiro: A altura mínima ideal é de 60cm livres, caso se queira colocar malas grandes]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "baixo"
+      },
+      "prioridade": "médio",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Andrade & Mello Arquitetura; Dicas de Arquitetura.",
+      "fabricante": "N/A.",
+      "observacoes": "Este item se conecta ao módulo \"Nichos\" do índice geral (limites, resistência, profundidade, fixação) — o maleiro é, estruturalmente, um nicho horizontal de grande vão que deve seguir as regras de carga/vão máximo já descritas no módulo Estrutura (item 2). ---",
+      "tags": [
+        "closets",
+        "maleiros",
+        "nichos",
+        "superiores",
+        "altura",
+        "mínima",
+        "função",
+        "maleiro"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_maleiros_e_nichos_superiores_nichos_internos_para_itens_dobrados",
+      "entidade": "MALEIROS E NICHOS SUPERIORES",
+      "categoria": "Closets",
+      "subcategoria": "MALEIROS E NICHOS SUPERIORES",
+      "titulo": "Nichos internos para itens dobrados",
+      "tipo": "alerta",
+      "descricao": "Nichos internos (compartimentos abertos, sem gaveta) são indicados para camisetas, malhas, peças de linha dobradas, bolsas e caixas de acessórios — a medida mínima mais adequada citada é de 30 × 30 cm, podendo reduzir a altura (empilhando menos roupas) às custas de dificultar o acesso às peças do fundo da pilha. [cf. Os nichos são ótimos para camisetas, malhas ou peças de linha. Também acomodam as bolsas e caixas com lenços ou acessórios. As medidas mínimas mais adequadas são 30 por 30 cm. Se preferir empilhar menos roupas é possível diminuir na altura, mas, atenção, o acesso ficará mais complicado]",
+      "condicoes": {
+        "quando_aplicar": "Distribuição de compartimentos internos de closet para peças dobradas (não penduradas, não em gaveta).",
+        "condicoes_adicionais": "Peças mais compridas dobradas (saia longa, cardigã) precisam de altura de nicho maior, em torno de 1 metro. [cf. Quando falamos de peças mais compridas, como uma saia longa ou um cardigã, a altura sugerida é de um metro]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Peças finas empilhadas (camisetas, por exemplo) toleram altura reduzida (25–30 cm) melhor do que peças mais volumosas. [cf. Para os empilhados (camisetas, por exemplo), 25cm a 30cm de altura é o ideal]",
+        "limitacoes": "Empilhamento muito alto em um único nicho compromete a organização visual e dificulta a retirada de peças do meio/fundo da pilha."
+      },
+      "acoes_recomendadas": "Gavetas com divisórias internas para itens que se beneficiam de organização individual (em vez de empilhamento aberto).",
+      "motivo_tecnico": "Nichos internos (compartimentos abertos, sem gaveta) são indicados para camisetas, malhas, peças de linha dobradas, bolsas e caixas de acessórios — a medida mínima mais adequada citada é de 30 × 30 cm, podendo reduzir a altura (empilhando menos roupas) às custas de dificultar o acesso às peças do fundo da pilha. [cf. Os nichos são ótimos para camisetas, malhas ou peças de linha. Também acomodam as bolsas e caixas com lenços ou acessórios. As medidas mínimas mais adequadas são 30 por 30 cm. Se preferir empilhar menos roupas é possível diminuir na altura, mas, atenção, o acesso ficará mais complicado]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "médio",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Andrade & Mello Arquitetura; Club ArqExpress.",
+      "fabricante": "N/A.",
+      "observacoes": "A altura de prateleira entre nichos de closet (30–50 cm) permite acomodar bastante conteúdo sem formar pilha excessivamente alta, mantendo acesso razoável às peças do fundo. [cf. A altura entre uma prateleira e outra pode ser em torno de 50cm, pois nesse espaço cabe bastante coisa sem formar uma pilha tão grande que seja difícil pegar as peças de baixo] ---",
+      "tags": [
+        "closets",
+        "maleiros",
+        "nichos",
+        "superiores",
+        "internos",
+        "itens",
+        "dobrados"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_gavetas_de_closet_profundidades_por_categoria_de_item_tabela_de_profundidade_",
+      "entidade": "GAVETAS DE CLOSET — PROFUNDIDADES POR CATEGORIA DE ITEM",
+      "categoria": "Closets",
+      "subcategoria": "GAVETAS DE CLOSET — PROFUNDIDADES POR CATEGORIA DE ITEM",
+      "titulo": "Tabela de profundidade de gaveta por tipo de peça",
+      "tipo": "recomendacao",
+      "descricao": "A profundidade interna de gaveta de closet varia por categoria de item guardado: gavetas com visor para acessórios (relógios, joias pequenas) usam 9–12 cm; peças íntimas usam profundidade mínima de 12 cm, variando até 15 cm; roupas de ginástica e camisas cabem em gavetas de 15–20 cm; gavetões mais profundos (20–40 cm) são reservados para roupas de inverno, mais volumosas. [cf. Para as peças íntimas a profundidade mínima passa a ser 12 e varia até 15 cm. Roupas de ginástica e camisas podem ser armazenadas em gavetas que variam de 15 a 20 cm. Os gavetões mais profundos (20 a 40 cm) são apropriados para roupas de inverno] [cf. Neste modelo utilizamos apenas nas gavetas para acessórios, elas devem ter entre 9 e 12 cm]",
+      "condicoes": {
+        "quando_aplicar": "Distribuição vertical de qualquer gaveteiro de closet, priorizando a categoria de item que o cliente mais guarda.",
+        "condicoes_adicionais": "Como referência geral de mercado (não específica de closet, mas aplicável), a altura mínima recomendada de frente externa de gaveta em guarda-roupa é de 20 cm, aumentando para roupas mais grossas. [cf. Gavetas: Pelo menos 20cm de altura final externa, devendo ser maior para roupas mais grossas]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo gaveteiros \"genéricos\" se beneficiam de ao menos uma diferenciação básica entre gavetas rasas (acessórios/roupa íntima) e gavetas fundas (roupas de inverno/volumosas).",
+        "limitacoes": "Gavetas muito rasas (abaixo de 9 cm) tornam-se pouco práticas mesmo para itens pequenos, pela dificuldade de manuseio dentro do compartimento."
+      },
+      "acoes_recomendadas": "Uso de organizadores internos (divisórias, bandejas) dentro de gavetas de profundidade padrão, em vez de multiplicar profundidades customizadas — reduz a complexidade de produção sem sacrificar tanto a organização.",
+      "motivo_tecnico": "A profundidade interna de gaveta de closet varia por categoria de item guardado: gavetas com visor para acessórios (relógios, joias pequenas) usam 9–12 cm; peças íntimas usam profundidade mínima de 12 cm, variando até 15 cm; roupas de ginástica e camisas cabem em gavetas de 15–20 cm; gavetões mais profundos (20–40 cm) são reservados para roupas de inverno, mais volumosas. [cf. Para as peças íntimas a profundidade mínima passa a ser 12 e varia até 15 cm. Roupas de ginástica e camisas podem ser armazenadas em gavetas que variam de 15 a 20 cm. Os gavetões mais profundos (20 a 40 cm) são apropriados para roupas de inverno] [cf. Neste modelo utilizamos apenas nas gavetas para acessórios, elas devem ter entre 9 e 12 cm]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Andrade & Mello Arquitetura; Fox Lux; Krona.",
+      "fabricante": "N/A.",
+      "observacoes": "Este item se conecta diretamente ao módulo Ferragens (corrediças) — a profundidade final da gaveta deve sempre ser validada contra o comprimento de corrediça disponível na linha de ferragem escolhida. ---",
+      "tags": [
+        "closets",
+        "gavetas",
+        "closet",
+        "profundidades",
+        "categoria",
+        "item",
+        "tabela",
+        "profundidade"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_metragem_e_circulacao_do_ambiente_metragem_minima_recomendada_por_perfil_de_c",
+      "entidade": "METRAGEM E CIRCULAÇÃO DO AMBIENTE",
+      "categoria": "Closets",
+      "subcategoria": "METRAGEM E CIRCULAÇÃO DO AMBIENTE",
+      "titulo": "Metragem mínima recomendada por perfil de closet",
+      "tipo": "recomendacao",
+      "descricao": "O tamanho padrão de closet costuma variar entre 3 m² e 6 m²; um closet individual pode funcionar em 3–4 m² com layout otimizado, enquanto um closet de casal recomenda-se a partir de 6 m² (permitindo armários dos dois lados, cabideiros com profundidade adequada, gavetas e prateleiras, além de circulação confortável). [cf. O tamanho padrão de closet costuma variar entre 3 m² e 6 m²... um closet para uma pessoa pode ter áreas entre 3 m² e 4 m², desde que o layout seja otimizado... O tamanho ideal de closet casal é a partir de 6 m²] Closets com banheiro integrado (suíte máster) recomendam áreas entre 6 e 9 m², para garantir acesso fluido e boa ventilação. [cf. Se o projeto incluir closet com banheiro, o ideal é trabalhar com áreas entre 6 m² e 9 m², permitindo acesso fluido e boa ventilação]",
+      "condicoes": {
+        "quando_aplicar": "Fase de layout inicial do projeto de closet, antes de definir quantidade e disposição de módulos.",
+        "condicoes_adicionais": "A metragem mínima real depende diretamente da largura de vão necessária para cada função — por exemplo, um vão de pelo menos 65 cm de largura é indicado quando se deseja acomodar um edredom grande ou travesseiros nas prateleiras. [cf. A largura de cada vão, ou pelo menos de alguns deles, pode ser de pelo menos 65cm, para caber um edredon grande, se preciso, ou travesseiros]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Espaços muito compactos (1,40 × 2,20 m) ainda podem funcionar como closet pequeno, desde que se priorizem armários de profundidade reduzida, portas de correr e armazenamento vertical. [cf. Um closet pequeno com medidas entre 1,40 m x 2,20 m pode funcionar... priorize armários de profundidade reduzida, portas de correr e armazenamento vertical]",
+        "limitacoes": "Metragens abaixo do mínimo recomendado forçam redução de profundidade e/ou eliminação de módulos completos (maleiro, sapateira dedicada), não apenas \"aperto\" proporcional de todos os elementos."
+      },
+      "acoes_recomendadas": "Priorização de módulos por perfil de uso do cliente quando a metragem disponível é insuficiente para incluir tudo do checklist ideal (cabideiro, sapateira, maleiro, gavetas, nichos).",
+      "motivo_tecnico": "O tamanho padrão de closet costuma variar entre 3 m² e 6 m²; um closet individual pode funcionar em 3–4 m² com layout otimizado, enquanto um closet de casal recomenda-se a partir de 6 m² (permitindo armários dos dois lados, cabideiros com profundidade adequada, gavetas e prateleiras, além de circulação confortável). [cf. O tamanho padrão de closet costuma variar entre 3 m² e 6 m²... um closet para uma pessoa pode ter áreas entre 3 m² e 4 m², desde que o layout seja otimizado... O tamanho ideal de closet casal é a partir de 6 m²] Closets com banheiro integrado (suíte máster) recomendam áreas entre 6 e 9 m², para garantir acesso fluido e boa ventilação. [cf. Se o projeto incluir closet com banheiro, o ideal é trabalhar com áreas entre 6 m² e 9 m², permitindo acesso fluido e boa ventilação]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Planner 5D (guia de dimensionamento).",
+      "fabricante": "N/A.",
+      "observacoes": "Esta regra deve ser cruzada, no motor do Planne, com o perfil declarado de uso do cliente (individual vs. casal, com/sem banheiro integrado) para sugerir automaticamente a metragem mínima recomendada antes mesmo de começar a distribuir módulos. ---",
+      "tags": [
+        "closets",
+        "metragem",
+        "circulação",
+        "ambiente",
+        "mínima",
+        "recomendada",
+        "perfil",
+        "closet"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_metragem_e_circulacao_do_ambiente_espaco_de_circulacao_em_frente_aos_modulos",
+      "entidade": "METRAGEM E CIRCULAÇÃO DO AMBIENTE",
+      "categoria": "Closets",
+      "subcategoria": "METRAGEM E CIRCULAÇÃO DO AMBIENTE",
+      "titulo": "Espaço de circulação em frente aos módulos",
+      "tipo": "boa_pratica",
+      "descricao": "O espaço livre necessário em frente aos armários depende do tipo de porta: em closets abertos (sem porta) ou com portas de correr, a circulação mínima pode ser de 70 cm; na frente de armários com portas de abrir, é necessário espaço maior, proporcional ao tamanho da porta — para portas de 50 cm de largura, pode ser preciso deixar pelo menos 90 cm livres na passagem. [cf. Em closets abertos, sem portas, ou então com portas de correr, a circulação mínima pode ser de 70cm, enquanto na frente de armários com portas de abrir é necessário um espaço maior, proporcional ao tamanho das portas. Para portas de 50cm de largura, pode ser preciso deixar pelo menos 90cm livres na passagem]",
+      "condicoes": {
+        "quando_aplicar": "Definição de layout de closet com corredor central ou circulação entre módulos opostos.",
+        "condicoes_adicionais": "Para guarda-roupas de quarto (não closet dedicado), a dica prática é sempre fazer a medida da porta menor que a medida da circulação disponível, garantindo que a porta aberta não bata na cama ou em outro mobiliário. [cf. Qual a medida mínima para que as portas do armário se abram sem encostarem na cama? Se a porta for de correr, a circulação não será prejudicada. Se for de abrir, a dica é fazer em uma medida sempre menor que a da circulação]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa em closets fechados — a circulação mínima é sempre necessária para o funcionamento básico do ambiente.",
+        "limitacoes": "Portas de abrir em ambientes muito compactos podem inviabilizar completamente esse tipo de porta — nesses casos, porta de correr (ver módulo Portas e Gavetas, item 3) é praticamente obrigatória."
+      },
+      "acoes_recomendadas": "Priorizar sistemas de correr ou camarão (módulo Portas e Gavetas, itens 3 e 4) em qualquer closet com circulação abaixo de 1 metro livre.",
+      "motivo_tecnico": "O espaço livre necessário em frente aos armários depende do tipo de porta: em closets abertos (sem porta) ou com portas de correr, a circulação mínima pode ser de 70 cm; na frente de armários com portas de abrir, é necessário espaço maior, proporcional ao tamanho da porta — para portas de 50 cm de largura, pode ser preciso deixar pelo menos 90 cm livres na passagem. [cf. Em closets abertos, sem portas, ou então com portas de correr, a circulação mínima pode ser de 70cm, enquanto na frente de armários com portas de abrir é necessário um espaço maior, proporcional ao tamanho das portas. Para portas de 50cm de largura, pode ser preciso deixar pelo menos 90cm livres na passagem]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Dicas de Arquitetura; Krona (recomendação complementar de pelo menos 1 metro de área livre para circulação confortável em frente ao guarda-roupa). [cf. Você vai precisar de pelo menos um metro de área livre para se movimentar com conforto e sem esbarrões]",
+      "fabricante": "N/A.",
+      "observacoes": "Este item se conecta diretamente ao módulo Portas e Gavetas (limite de largura por folha, tipos de porta) — a escolha de tipo de porta em closet deve sempre considerar a circulação disponível como restrição de entrada, não apenas preferência estética. ---",
+      "tags": [
+        "closets",
+        "metragem",
+        "circulação",
+        "ambiente",
+        "espaço",
+        "frente",
+        "módulos"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_iluminacao_e_espelhos_estrategia_de_iluminacao_por_zona_do_closet",
+      "entidade": "ILUMINAÇÃO E ESPELHOS",
+      "categoria": "Closets",
+      "subcategoria": "ILUMINAÇÃO E ESPELHOS",
+      "titulo": "Estratégia de iluminação por zona do closet",
+      "tipo": "recomendacao",
+      "descricao": "A iluminação eficaz de closet combina iluminação geral (ambiente) com iluminação de destaque/zona (dentro de gavetas, sob prateleiras, ao longo de varões suspensos) — tiras de LED são citadas como solução flexível para iluminar prateleiras, grades suspensas, gavetas e espelhos internos. [cf. A flexibilidade das tiras de LED permite que você use tiras de LED de forma versátil. Você pode colocá-los sob as prateleiras do seu armário, nas grades suspensas, ou iluminar a gaveta e os espelhos]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de projeto elétrico complementar em qualquer closet fechado, especialmente armários grandes onde a iluminação ambiente do cômodo não penetra bem no interior dos módulos. [cf. Quando você tem um armário grande, é difícil iluminar toda a área corretamente. Para este problema, a iluminação vertical pode ajudá-lo a ver todos os gabinetes com clareza]",
+        "condicoes_adicionais": "Para closets, a recomendação técnica de temperatura de cor é luz branca brilhante/fria, que favorece a percepção real das cores das roupas e itens guardados. [cf. Para armários, é melhor usar luz branca brilhante ou fria. Essas cores ajudam você a ver suas roupas e itens]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Closets pequenos com boa iluminação natural/ambiente e módulos rasos podem dispensar iluminação interna dedicada, reduzindo custo de instalação elétrica.",
+        "limitacoes": "Iluminação muito quente (amarelada) distorce a percepção de cor das roupas, dificultando a escolha de combinações no próprio closet."
+      },
+      "acoes_recomendadas": "Iluminação de sanca com fita de LED, holofotes pontuais e luzes de trilho para destacar zonas especiais (sapateira em vitrine, joalheiro) sem iluminar o ambiente inteiro de forma uniforme. [cf. Você pode adicionar iluminação suspensa, holofotes e luzes de trilho para destacar zonas especiais do seu armário]",
+      "motivo_tecnico": "A iluminação eficaz de closet combina iluminação geral (ambiente) com iluminação de destaque/zona (dentro de gavetas, sob prateleiras, ao longo de varões suspensos) — tiras de LED são citadas como solução flexível para iluminar prateleiras, grades suspensas, gavetas e espelhos internos. [cf. A flexibilidade das tiras de LED permite que você use tiras de LED de forma versátil. Você pode colocá-los sob as prateleiras do seu armário, nas grades suspensas, ou iluminar a gaveta e os espelhos]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "médio",
+        "estetico": "crítico"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "LEDYi Lighting (guia técnico de iluminação para armários/closets).",
+      "fabricante": "N/A (tecnologia genérica de LED, não específica de fabricante de marcenaria).",
+      "observacoes": "A instalação elétrica para iluminação interna de módulos deve ser prevista na fase de projeto (antes da produção da caixaria), já que passagens de fiação e sensores de presença/toque exigem furação e canaletas planejadas com antecedência. ---",
+      "tags": [
+        "closets",
+        "iluminação",
+        "espelhos",
+        "estratégia",
+        "zona",
+        "closet"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_06_iluminacao_e_espelhos_espelhos_e_joalheiros_como_elementos_funcionais",
+      "entidade": "ILUMINAÇÃO E ESPELHOS",
+      "categoria": "Closets",
+      "subcategoria": "ILUMINAÇÃO E ESPELHOS",
+      "titulo": "Espelhos e joalheiros como elementos funcionais",
+      "tipo": "boa_pratica",
+      "descricao": "Espelhos de corpo inteiro em closets frequentemente vêm integrados a móveis organizadores de joias (joalheiros), combinando função de vestir-se com armazenamento de acessórios — modelos de mercado incluem espelho ajustável em múltiplos ângulos, iluminação LED integrada, gavetas e compartimentos especializados (ganchos para colar, furos para brincos, compartimentos para anéis). [cf. O seu espelho ajusta-se em 3 ângulos para se adaptar às suas necessidades em qualquer altura] [cf. A área para joias inclui 36 ganchos para colar, 108 furos para brincos e 91 compartimentos para anéis para manter todas as suas joias organizadas]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de módulo de joalheiro dedicado em closets de padrão médio a alto, especialmente em closets femininos.",
+        "condicoes_adicionais": "Módulos de joalheiro/espelho de pé geralmente contam com sistema de trava/fechadura para segurança dos itens guardados. [cf. Gabinete com trava para maior segurança]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Closets compactos ou de uso misto podem priorizar apenas um espelho de corpo inteiro simples, sem a função combinada de joalheiro, para economizar espaço e custo.",
+        "limitacoes": "Modelos de espelho de pé com joalheiro integrado ocupam área de piso dedicada — não substituem a necessidade de espelho de parede fixo se o objetivo é economizar espaço de circulação."
+      },
+      "acoes_recomendadas": "Espelho de porta (fixado na própria porta de armário ou closet) combinado com organizador de joias em gaveta separada, quando o espaço não permite um módulo de pé dedicado.",
+      "motivo_tecnico": "Espelhos de corpo inteiro em closets frequentemente vêm integrados a móveis organizadores de joias (joalheiros), combinando função de vestir-se com armazenamento de acessórios — modelos de mercado incluem espelho ajustável em múltiplos ângulos, iluminação LED integrada, gavetas e compartimentos especializados (ganchos para colar, furos para brincos, compartimentos para anéis). [cf. O seu espelho ajusta-se em 3 ângulos para se adaptar às suas necessidades em qualquer altura] [cf. A área para joias inclui 36 ganchos para colar, 108 furos para brincos e 91 compartimentos para anéis para manter todas as suas joias organizadas]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "médio",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Referências de catálogo de produtos de mercado (HOMCOM, VEVOR, Leroy Merlin) — usadas aqui apenas para confirmar tipologia e funcionalidade de mercado, não como especificação técnica de marcenaria sob medida.",
+      "fabricante": "N/A (categoria de produto, presente em diversos fabricantes de móveis e acessórios).",
+      "observacoes": "Vale registrar que a maior parte do material disponível sobre \"joalheiro\" no mercado é de produtos prontos (não sob medida) — para a marcenaria planejada, a boa prática é tratar o joalheiro como um módulo de gavetas especializado (profundidades de 9–15 cm, ver item 4.1) combinado com espelho, em vez de depender de um produto avulso. --- ## PRÓXIMOS PASSOS SUGERIDOS Módulos concluídos até aqui: **Cozinhas**, **Ferragens**, **Estrutura**, **Portas e Gavetas**, **Materiais** e **Closets** (este documento). Sequência restante: 7. **Banheiros** — umidade, cubas, espelhos, iluminação, rodabanca, ventilação. 8. **Escritórios** — ergonomia, monitores, cabos, CPU, impressoras. 9. **Produção** — plano de corte, otimização, etiquetas, sequência, usinagem, furação, acabamento. 10. **Transporte** — peso, elevadores, portas, escadas, caminhões, divisão de peças. 11. **Montagem** — sequência, ferramentas, tempo, número de montadores, espaço. 12. **Economia** — redução de desperdício, engrossos econômicos, padronização, melhor aproveitamento de chapas. Continuando em sequência para o módulo **Banheiros**.",
+      "tags": [
+        "closets",
+        "iluminação",
+        "espelhos",
+        "joalheiros",
+        "elementos",
+        "funcionais"
+      ],
+      "modulo_origem": "06-Closets",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

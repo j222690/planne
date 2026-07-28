@@ -1,0 +1,968 @@
+{
+  "modulo": "Cozinhas",
+  "total_atomos": 21,
+  "atomos": [
+    {
+      "id": "atom_01_triangulo_de_trabalho_e_fluxo_regra_do_triangulo_de_trabalho_nkba",
+      "entidade": "TRIÂNGULO DE TRABALHO E FLUXO",
+      "categoria": "Cozinhas",
+      "subcategoria": "TRIÂNGULO DE TRABALHO E FLUXO",
+      "titulo": "Regra do Triângulo de Trabalho (NKBA)",
+      "tipo": "regra_obrigatoria",
+      "descricao": "O triângulo de trabalho conecta os três centros primários de atividade da cozinha — refrigeração (geladeira), lavagem/preparo (pia) e cocção (fogão/cooktop). A soma dos três lados do triângulo deve ficar entre 4 m e 8 m (13 a 26 pés), e nenhum lado individual deve medir menos de 1,20 m nem mais de 2,70 m. [cf. No leg of the triangle should be less than 1.2 m (4 ft) or more than 2.7 m (9 ft), and the sum of all three sides should be between 4–8 m (13–26 ft)]",
+      "condicoes": {
+        "quando_aplicar": "Em qualquer layout com três centros de trabalho bem definidos (linear, L, U, ilha simples). Serve como ponto de partida do zoneamento antes de posicionar módulos de marcenaria.",
+        "condicoes_adicionais": "Nenhum obstáculo de piso a teto (torre, geladeira, despensa) pode separar dois centros de trabalho; nenhum corredor de circulação principal deve cruzar o triângulo; ilhas/penínsulas não podem interceptar um lado do triângulo em mais de 30 cm. [cf. Cabinets or other obstacles should not intersect any leg of the triangle by more than 30 cm (12 in), and a full-height obstacle should not come between any two points of the triangle]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Cozinhas com múltiplos cozinheiros, cozinhas abertas/integradas de grande metragem ou ilhas com centros de trabalho duplicados — nesses casos o conceito de \"zonas de trabalho\" (zone planning), recomendado pelas diretrizes mais recentes da NKBA, substitui o triângulo único.",
+        "limitacoes": "É um modelo dos anos 1940 pensado para cozinhas de um único cozinheiro; não escala bem para cozinhas gourmet contemporâneas com múltiplos usuários simultâneos."
+      },
+      "acoes_recomendadas": "Modelo de \"zonas de trabalho\" (prep zone, cook zone, clean zone, cold zone) para cozinhas grandes ou com dois cozinheiros; nesse caso a largura do corredor de trabalho aumenta de 1,10 m para 1,20–1,35 m. [cf. To accommodate multiple cooks, modern guidelines expand the work triangle's parameters, recommending aisle widths of 48 to 54 inches to prevent congestion and allow simultaneous activity]",
+      "motivo_tecnico": "O triângulo de trabalho conecta os três centros primários de atividade da cozinha — refrigeração (geladeira), lavagem/preparo (pia) e cocção (fogão/cooktop). A soma dos três lados do triângulo deve ficar entre 4 m e 8 m (13 a 26 pés), e nenhum lado individual deve medir menos de 1,20 m nem mais de 2,70 m. [cf. No leg of the triangle should be less than 1.2 m (4 ft) or more than 2.7 m (9 ft), and the sum of all three sides should be between 4–8 m (13–26 ft)]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "NKBA (National Kitchen & Bath Association) Kitchen Planning Guidelines; Wikipedia \"Kitchen work triangle\" (compilação de normas internacionais).",
+      "fabricante": "N/A (norma de associação profissional, não de fabricante).",
+      "observacoes": "Embora seja uma diretriz norte-americana, o conceito é usado como referência técnica mundial, inclusive por escolas técnicas e softwares de projeto no Brasil. ---",
+      "tags": [
+        "cozinhas",
+        "triângulo",
+        "trabalho",
+        "fluxo",
+        "regra",
+        "nkba"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_triangulo_de_trabalho_e_fluxo_larguras_minimas_de_corredor_aisle",
+      "entidade": "TRIÂNGULO DE TRABALHO E FLUXO",
+      "categoria": "Cozinhas",
+      "subcategoria": "TRIÂNGULO DE TRABALHO E FLUXO",
+      "titulo": "Larguras mínimas de corredor/aisle",
+      "tipo": "boa_pratica",
+      "descricao": "O corredor de trabalho — medido entre a face frontal de bancadas, armários altos e/ou eletrodomésticos — deve ter no mínimo 1,10 m para um único cozinheiro e 1,20–1,35 m quando dois cozinheiros usam a cozinha simultaneamente. [cf. The width of a work aisle should be at least 42” for one cook and at least 48” for multiple cooks, measured between the counter frontage, tall cabinets and/or appliances]",
+      "condicoes": {
+        "quando_aplicar": "Definição de layout em L, U, corredor (galley) e ilha, antes de fechar as medidas de cada módulo de marcenaria.",
+        "condicoes_adicionais": "Medir sempre face a face dos elementos fixos (não de parede a parede); reserva de folga extra de 15–24 cm ao lado do cooktop e da pia para apoio de panelas e escorredor. [cf. Provide at least 15 inches next to or above the oven; landing areas beside cooking surfaces need clearance on both sides]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Cozinhas americanas integradas com bancada de bar, onde parte da circulação é compartilhada com a área social — nesse caso considerar folga adicional para cadeiras/banquetas.",
+        "limitacoes": "Em reformas de apartamentos pequenos, muitas vezes não há espaço físico para atingir 1,10 m; nesse caso o projetista deve documentar a exceção e priorizar segurança de circulação sobre a diretriz ideal."
+      },
+      "acoes_recomendadas": "Redução pontual do corredor para 90–95 cm em trechos curtos sem cruzamento de tráfego, nunca na frente de fogão/forno aberto.",
+      "motivo_tecnico": "O corredor de trabalho — medido entre a face frontal de bancadas, armários altos e/ou eletrodomésticos — deve ter no mínimo 1,10 m para um único cozinheiro e 1,20–1,35 m quando dois cozinheiros usam a cozinha simultaneamente. [cf. The width of a work aisle should be at least 42” for one cook and at least 48” for multiple cooks, measured between the counter frontage, tall cabinets and/or appliances]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "NKBA Guidelines; Mod Cabinetry (compilação NKBA).",
+      "fabricante": "N/A.",
+      "observacoes": "Regra deve ser tratada como restrição \"hard\" no motor de regras — violá-la gera recomendação de revisão de layout, não apenas alerta. ---",
+      "tags": [
+        "cozinhas",
+        "triângulo",
+        "trabalho",
+        "fluxo",
+        "larguras",
+        "mínimas",
+        "corredor",
+        "aisle"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_geladeira_folga_de_ventilacao_lateral_superior_e_traseira",
+      "entidade": "GELADEIRA",
+      "categoria": "Cozinhas",
+      "subcategoria": "GELADEIRA",
+      "titulo": "Folga de ventilação lateral, superior e traseira",
+      "tipo": "recomendacao",
+      "descricao": "Todo refrigerador — especialmente modelos embutidos em torre ou nicho de marcenaria — precisa de folga de ar para dissipar calor do compressor e do condensador. A prática geral indica de 2 a 5 cm nas laterais e no topo, e de 5 a 10 cm na parte traseira. [cf. A folga recomendada gira em torno de 2 a 5 cm nas laterais, no topo e no fundo, para o compressor dissipar o calor; sem essa ventilação, o aparelho trabalha forçado, consome mais energia e perde eficiência com o tempo]",
+      "condicoes": {
+        "quando_aplicar": "Sempre que a geladeira for encaixada entre dois módulos de marcenaria ou sob um armário aéreo/nicho fechado.",
+        "condicoes_adicionais": "Medir a largura do vão nas três alturas (base, meio, topo), pois paredes raramente são perfeitamente retas; usar a menor medida encontrada como referência de projeto. [cf. Meça a largura em três alturas do vão (base, meio e topo); paredes raramente são retas — anote o menor valor e some pelo menos 5 cm de folga de cada lado]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Modelos \"built-in\" (embutidos verdadeiros, sem grade lateral de ventilação, com dissipação frontal) seguem especificação própria do fabricante, que pode dispensar folga lateral — a regra genérica não deve ser aplicada a esses modelos sem checar o manual.",
+        "limitacoes": "Reduz o aproveitamento linear da parede — cada geladeira \"consome\" cerca de 10–15 cm a mais de largura de projeto do que a medida nominal do produto."
+      },
+      "acoes_recomendadas": "Colunas de refrigeração profissionais (built-in de verdade) com sistema de ventilação frontal via grelha no rodapé, que dispensam folga lateral mas custam significativamente mais.",
+      "motivo_tecnico": "Todo refrigerador — especialmente modelos embutidos em torre ou nicho de marcenaria — precisa de folga de ar para dissipar calor do compressor e do condensador. A prática geral indica de 2 a 5 cm nas laterais e no topo, e de 5 a 10 cm na parte traseira. [cf. A folga recomendada gira em torno de 2 a 5 cm nas laterais, no topo e no fundo, para o compressor dissipar o calor; sem essa ventilação, o aparelho trabalha forçado, consome mais energia e perde eficiência com o tempo]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Blog técnico de eletrodomésticos (Casa dos Eletrodomésticos); manuais de fabricantes de refrigeradores.",
+      "fabricante": "Referência geral de mercado (Brastemp, Electrolux, Samsung — cada um com tolerância própria no manual).",
+      "observacoes": "O motor de regras do Planne deveria sempre solicitar o modelo exato da geladeira antes de fechar a medida do nicho — \"regra de ouro\" citada por múltiplas fontes do setor. ---",
+      "tags": [
+        "cozinhas",
+        "geladeira",
+        "folga",
+        "ventilação",
+        "lateral",
+        "superior",
+        "traseira"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_geladeira_nao_posicionar_geladeira_ao_lado_do_fogao_forno",
+      "entidade": "GELADEIRA",
+      "categoria": "Cozinhas",
+      "subcategoria": "GELADEIRA",
+      "titulo": "Não posicionar geladeira ao lado do fogão/forno",
+      "tipo": "boa_pratica",
+      "descricao": "Posicionar a geladeira imediatamente ao lado de fontes de calor (fogão, forno, torre quente) faz o compressor trabalhar mais para compensar o ganho de calor externo, reduzindo a eficiência e a vida útil do equipamento. [cf. O importante desta técnica é não deixar a geladeira ao lado do fogão, pois o excesso de calor danifica o equipamento de refrigeração]",
+      "condicoes": {
+        "quando_aplicar": "Em qualquer definição de layout onde geladeira e fogão/torre quente concorrem pela mesma parede.",
+        "condicoes_adicionais": "Preferir posicionar a geladeira em uma ponta do triângulo, com a pia como elemento central entre ela e o fogão. [cf. Os arquitetos costumam aplicar a regra do triângulo para definir o melhor posicionamento da geladeira: o ideal é que o refrigerador seja posicionado numa extremidade, a pia como objeto central e o fogão do outro lado]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Quando há uma barreira térmica planejada entre os dois (ex.: uma torre de despensa ou painel isolante entre eles) — nesse caso a distância física resolve o problema mesmo estando na mesma parede.",
+        "limitacoes": "Em cozinhas muito estreitas (corredor/galley) nem sempre há opção de layout alternativa."
+      },
+      "acoes_recomendadas": "Uso de painel termoisolante entre os dois módulos, quando a distância física não pode ser garantida.",
+      "motivo_tecnico": "Posicionar a geladeira imediatamente ao lado de fontes de calor (fogão, forno, torre quente) faz o compressor trabalhar mais para compensar o ganho de calor externo, reduzindo a eficiência e a vida útil do equipamento. [cf. O importante desta técnica é não deixar a geladeira ao lado do fogão, pois o excesso de calor danifica o equipamento de refrigeração]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "médio",
+        "estetico": "nenhum"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Casa e Festa (blog técnico sobre eletrodomésticos).",
+      "fabricante": "N/A.",
+      "observacoes": "Regra de bom senso amplamente repetida na literatura de arquitetura de interiores, mas raramente formalizada em normas — vale como \"boa prática\" e não como norma dura. ---",
+      "tags": [
+        "cozinhas",
+        "geladeira",
+        "posicionar",
+        "lado",
+        "fogão",
+        "forno"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_cooktop_fogao_distancia_minima_da_pia_respingos",
+      "entidade": "COOKTOP / FOGÃO",
+      "categoria": "Cozinhas",
+      "subcategoria": "COOKTOP / FOGÃO",
+      "titulo": "Distância mínima da pia (respingos)",
+      "tipo": "boa_pratica",
+      "descricao": "O cooktop ou fogão deve ficar a, no mínimo, 45 cm de distância da cuba da pia, para evitar respingos de água da torneira sobre a chama/resistência. [cf. É essencial que o eletrodoméstico seja instalado a uma distância de, no mínimo, 45 centímetros da pia para evitar respingos de água da torneira]",
+      "condicoes": {
+        "quando_aplicar": "Definição de layout de bancada com pia e cooktop na mesma linha.",
+        "condicoes_adicionais": "Verificar também a instalação do ponto de gás — normas de segurança determinam que a abertura superior do ambiente com aparelhos a gás fique a no mínimo 1,50 m do piso, com abertura inferior a no máximo 0,80 m. [cf. A norma técnica ABNT NBR 13103 prevê que a abertura superior do ambiente que contém aparelhos a gás deve estar a uma altura mínima de 1,50 m em relação ao piso acabado e a abertura inferior, no máximo a 0,80 m deste piso]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Ilhas com cooktop isolado da pia por um desnível ou divisor físico — a distância pode ser reavaliada caso haja barreira física.",
+        "limitacoes": "Em cozinhas muito compactas, a distância de 45 cm pode consumir espaço valioso de bancada — não deve ser reduzida por questões de segurança contra respingo e vapor de água na instalação elétrica/gás."
+      },
+      "acoes_recomendadas": "Uso de protetor/divisor de bancada (splash guard) quando a distância mínima não puder ser respeitada integralmente.",
+      "motivo_tecnico": "O cooktop ou fogão deve ficar a, no mínimo, 45 cm de distância da cuba da pia, para evitar respingos de água da torneira sobre a chama/resistência. [cf. É essencial que o eletrodoméstico seja instalado a uma distância de, no mínimo, 45 centímetros da pia para evitar respingos de água da torneira]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 100,
+        "base": "norma_oficial"
+      },
+      "fonte": "ABNT NBR 13103 (instalações de aparelhos a gás); FAQ técnico Black Pilado.",
+      "fabricante": "Recomendação geral válida para cooktops Mueller, Brastemp, Fischer, entre outros.",
+      "observacoes": "Regra deve ser tratada como restrição de segurança (hard constraint) no motor de regras, com referência direta à NBR 13103. ---",
+      "tags": [
+        "cozinhas",
+        "cooktop",
+        "fogão",
+        "distância",
+        "mínima",
+        "respingos"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_cooktop_fogao_folga_lateral_do_cooktop_fogao",
+      "entidade": "COOKTOP / FOGÃO",
+      "categoria": "Cozinhas",
+      "subcategoria": "COOKTOP / FOGÃO",
+      "titulo": "Folga lateral do cooktop/fogão",
+      "tipo": "boa_pratica",
+      "descricao": "Deve haver ao menos 40 cm de bancada livre de um lado do cooktop e 30 cm do outro lado, para apoio de panelas quentes e manuseio seguro. [cf. A stove or cooktop should have a clear 40 cm (15 in) area on one side, and at least 30 cm (12 in) on the other side]",
+      "condicoes": {
+        "quando_aplicar": "Em qualquer definição de módulo de bancada que acomode cooktop/fogão de embutir.",
+        "condicoes_adicionais": "Preferencialmente, o lado com maior folga (40 cm) deve ficar do lado de maior uso do cozinheiro principal (destro ou canhoto)."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Ilhas de cocção com bancada contínua de ambos os lados superior a essas medidas — a regra já está automaticamente satisfeita, não sendo um limitador de projeto.",
+        "limitacoes": "Em kitchenettes e cozinhas americanas compactas, dificilmente as duas folgas cabem — priorizar o lado de maior tráfego de panelas quentes."
+      },
+      "acoes_recomendadas": "Uso de apoio retrátil (tábua deslizante) para compensar falta de bancada fixa lateral.",
+      "motivo_tecnico": "Deve haver ao menos 40 cm de bancada livre de um lado do cooktop e 30 cm do outro lado, para apoio de panelas quentes e manuseio seguro. [cf. A stove or cooktop should have a clear 40 cm (15 in) area on one side, and at least 30 cm (12 in) on the other side]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "baixo",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "NKBA Guidelines (via Wikipedia \"Kitchen work triangle\").",
+      "fabricante": "N/A.",
+      "observacoes": "Complementa a regra do triângulo de trabalho (item 1.1) e a regra da coifa (item 6). ---",
+      "tags": [
+        "cozinhas",
+        "cooktop",
+        "fogão",
+        "folga",
+        "lateral"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_forno_de_embutir_ausencia_de_padrao_dimensional_entre_fabricantes",
+      "entidade": "FORNO DE EMBUTIR",
+      "categoria": "Cozinhas",
+      "subcategoria": "FORNO DE EMBUTIR",
+      "titulo": "Ausência de padrão dimensional entre fabricantes",
+      "tipo": "regra_obrigatoria",
+      "descricao": "Diferente do que ocorre em outros mercados, não existe padronização de medidas de nicho entre fabricantes de forno de embutir no Brasil — cada marca e modelo pode ter uma combinação diferente de largura, altura e profundidade de nicho. [cf. Não existe um padrão de medida para nichos de fogões de embutir. Isso dificulta muito o consumidor quando troca o fogão por um outro modelo]",
+      "condicoes": {
+        "quando_aplicar": "Sempre — esta é uma regra de \"alerta permanente\" que deve disparar antes de qualquer execução de nicho para forno.",
+        "condicoes_adicionais": "O nicho só deve ser cortado após a confirmação do modelo exato do forno (ou de uma lista fechada de modelos compatíveis) pelo cliente/projetista."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há exceção; mesmo dentro da mesma marca, capacidades diferentes (litros) podem ter dimensões físicas diferentes.",
+        "limitacoes": "Isso obriga o Planne a manter (ou integrar com) uma base de dados de modelos e dimensões de forno atualizada por fabricante — informação sujeita a mudança sem aviso prévio. [cf. SEMPRE confirme as medidas no manual do fogão, pois os fabricantes podem alterar as medidas sem prévio aviso]"
+      },
+      "acoes_recomendadas": "Adotar como referência aproximada de mercado um nicho de 56–57 cm (L) x 58–60 cm (A) x 56–58 cm (P) para fornos de 60 cm, sempre como estimativa inicial a ser validada. [cf. Forno embutido 60 cm: nicho aproximado 56–57 x 58–60 x 56–58 cm (L x A x P) com respiro]",
+      "motivo_tecnico": "Diferente do que ocorre em outros mercados, não existe padronização de medidas de nicho entre fabricantes de forno de embutir no Brasil — cada marca e modelo pode ter uma combinação diferente de largura, altura e profundidade de nicho. [cf. Não existe um padrão de medida para nichos de fogões de embutir. Isso dificulta muito o consumidor quando troca o fogão por um outro modelo]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Blog Eletrodomésticos (comparativo de nichos); múltiplos relatos de consumidores no mesmo artigo confirmando o problema.",
+      "fabricante": "Regra vale para todas as marcas (GE, Brastemp, Electrolux, Fischer, Tramontina, Mueller etc.) — cada uma com tabela própria.",
+      "observacoes": "Esta é uma das regras mais valiosas para o \"diferencial de inteligência\" do Planne: nenhum concorrente (Promob/Cabinet Vision) parece tratar isso como alerta ativo de compatibilidade futura. ---",
+      "tags": [
+        "cozinhas",
+        "forno",
+        "embutir",
+        "ausência",
+        "padrão",
+        "dimensional",
+        "fabricantes"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_forno_de_embutir_folga_de_ventilacao_e_ergonomia_de_altura_do_forno",
+      "entidade": "FORNO DE EMBUTIR",
+      "categoria": "Cozinhas",
+      "subcategoria": "FORNO DE EMBUTIR",
+      "titulo": "Folga de ventilação e ergonomia de altura do forno",
+      "tipo": "restricao",
+      "descricao": "O forno de embutir deve ter folga de 5 a 10 cm no fundo do nicho para ventilação, e ser posicionado de forma que a base fique entre 60 e 90 cm do piso (ou o centro do forno entre 90 e 110 cm), evitando que o usuário precise se curvar excessivamente. [cf. Para evitar o superaquecimento, é recomendado deixar uma folga de 5 a 10 centímetros no fundo e uma altura total de 90 centímetros a partir do chão] [cf. O centro do forno elétrico deve estar posicionado a uma altura entre 90 cm e 110 cm do piso]",
+      "condicoes": {
+        "quando_aplicar": "Em qualquer torre quente ou módulo isolado que acomode forno de embutir.",
+        "condicoes_adicionais": "Nunca vedar completamente as frestas de ventilação do nicho, mesmo por motivos estéticos. [cf. Folgas mínimas evitam barulho, empeno e sobrecarga térmica; portanto, não reduza o nicho \"no limite\"]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Fornos de piso (não embutidos) seguem regra própria de instalação e não usam nicho de marcenaria da mesma forma.",
+        "limitacoes": "Em torres muito baixas (cozinhas com pé-direito reduzido), pode ser necessário abrir mão do micro-ondas acima do forno para manter a ergonomia de altura."
+      },
+      "acoes_recomendadas": "Posicionar o forno na parte inferior da torre quente e o micro-ondas acima, na altura dos olhos — composição mais comum do mercado.",
+      "motivo_tecnico": "O forno de embutir deve ter folga de 5 a 10 cm no fundo do nicho para ventilação, e ser posicionado de forma que a base fique entre 60 e 90 cm do piso (ou o centro do forno entre 90 e 110 cm), evitando que o usuário precise se curvar excessivamente. [cf. Para evitar o superaquecimento, é recomendado deixar uma folga de 5 a 10 centímetros no fundo e uma altura total de 90 centímetros a partir do chão] [cf. O centro do forno elétrico deve estar posicionado a uma altura entre 90 cm e 110 cm do piso]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "FAQ Black Pilado; O Móvel (guia de torre quente 2025).",
+      "fabricante": "Referência geral (Fischer, Brastemp, Electrolux).",
+      "observacoes": "Complementa diretamente as regras da seção 5 (Torre Quente). ---",
+      "tags": [
+        "cozinhas",
+        "forno",
+        "embutir",
+        "folga",
+        "ventilação",
+        "ergonomia",
+        "altura"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_micro_ondas_e_torre_quente_altura_ergonomica_do_micro_ondas_embutido",
+      "entidade": "MICRO-ONDAS E TORRE QUENTE",
+      "categoria": "Cozinhas",
+      "subcategoria": "MICRO-ONDAS E TORRE QUENTE",
+      "titulo": "Altura ergonômica do micro-ondas embutido",
+      "tipo": "recomendacao",
+      "descricao": "O micro-ondas embutido deve ficar posicionado de forma que o painel/linha de visão fique próxima à altura dos olhos do usuário principal, evitando que ele precise se curvar (risco de queimadura ao retirar líquidos quentes) ou se esticar. Na prática, isso costuma corresponder a uma faixa de 120 a 150 cm do piso até o centro do aparelho. [cf. A altura ideal para o forno costuma ficar entre 60 e 70 cm do chão, enquanto o micro-ondas pode ir mais alto, entre 120 e 140 cm] [cf. A Electrolux recomenda instalar o microondas de embutir na altura dos olhos do usuário, com a linha de visão nivelada ao painel de controle; na prática, para uma pessoa de 1,65 m a 1,75 m de altura, isso significa que a base do nicho fica entre 1,20 m e 1,40 m do chão]",
+      "condicoes": {
+        "quando_aplicar": "Definição de torre quente ou nicho isolado para micro-ondas de embutir.",
+        "condicoes_adicionais": "Se o micro-ondas dividir a mesma torre com o forno elétrico, cada equipamento precisa de saída de ar independente, para não haver transferência de calor entre eles. [cf. Se o micro-ondas ficar no mesmo móvel do forno elétrico, preveja duas saídas de ar independentes — uma para cada nicho —, evitando transferência de calor entre os eletros e possíveis prejuízos ao desempenho]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Micro-ondas de bancada (não embutido) não segue esta regra de nicho, mas ainda deve respeitar boa ergonomia de uso.",
+        "limitacoes": "Em famílias com usuários de estaturas muito diferentes (ex.: cadeira de rodas, crianças), a altura de referência deve ser reavaliada — considerar quem mais usa o aparelho como referência principal."
+      },
+      "acoes_recomendadas": "Instalação em armário baixo com prateleira deslizante, quando não há espaço vertical para torre quente — solução menos ergonômica, mas viável em reformas.",
+      "motivo_tecnico": "O micro-ondas embutido deve ficar posicionado de forma que o painel/linha de visão fique próxima à altura dos olhos do usuário principal, evitando que ele precise se curvar (risco de queimadura ao retirar líquidos quentes) ou se esticar. Na prática, isso costuma corresponder a uma faixa de 120 a 150 cm do piso até o centro do aparelho. [cf. A altura ideal para o forno costuma ficar entre 60 e 70 cm do chão, enquanto o micro-ondas pode ir mais alto, entre 120 e 140 cm] [cf. A Electrolux recomenda instalar o microondas de embutir na altura dos olhos do usuário, com a linha de visão nivelada ao painel de controle; na prática, para uma pessoa de 1,65 m a 1,75 m de altura, isso significa que a base do nicho fica entre 1,20 m e 1,40 m do chão]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Antonietta SP (guia técnico); Montador Local (guia de nicho de micro-ondas); Fischer (blog institucional).",
+      "fabricante": "Electrolux (recomendação explícita de altura dos olhos), Fischer.",
+      "observacoes": "Nunca instalar micro-ondas diretamente sobre forno elétrico convencional sem isolamento — o calor do forno pode danificar a base do micro-ondas. [cf. Nunca coloque o microondas sobre o forno elétrico comum. O calor do forno derrete a parte de baixo do microondas] ---",
+      "tags": [
+        "cozinhas",
+        "micro",
+        "ondas",
+        "torre",
+        "quente",
+        "altura",
+        "ergonômica",
+        "embutido"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_micro_ondas_e_torre_quente_dimensoes_padrao_do_nicho_da_torre_quente",
+      "entidade": "MICRO-ONDAS E TORRE QUENTE",
+      "categoria": "Cozinhas",
+      "subcategoria": "MICRO-ONDAS E TORRE QUENTE",
+      "titulo": "Dimensões-padrão do nicho da torre quente",
+      "tipo": "recomendacao",
+      "descricao": "O mercado brasileiro convergiu para um nicho de largura padrão de 60 cm (com variação para 76 cm em fornos de câmara maior), profundidade de 60 a 70 cm (60 cm sendo o mínimo absoluto, com 5 a 10 cm extras recomendados para ventilação e passagem de fiação) e altura total de coluna entre 2,10 m e 2,40 m. [cf. As medidas padrão de uma torre quente em cozinha planejada seguem as larguras de 60 cm e 76 cm para os equipamentos de embutir; módulos de marcenaria padrão têm 60 cm de profundidade, mas a maioria dos fornos de embutir tem entre 55 cm e 58 cm de profundidade] [cf. O recomendado por 99% dos fabricantes de móveis e eletrodomésticos é trabalhar com uma profundidade de 65 cm a 70 cm; esses 5-10 cm extras são o espaço para o respiro traseiro]",
+      "condicoes": {
+        "quando_aplicar": "Projeto de qualquer torre quente nova, com forno + micro-ondas (e opcionalmente gaveta aquecida).",
+        "condicoes_adicionais": "Confirmar profundidade real do forno escolhido antes de fechar o gabinete — modelos de mesma largura nominal podem ter profundidades diferentes entre marcas. [cf. Um forno de 60 cm de largura de uma marca pode ter profundidade diferente de outro da mesma largura de outra marca]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não aplicável a cozinhas sem torre quente (forno de piso tradicional).",
+        "limitacoes": "A folga extra de profundidade (65–70 cm vs. 60 cm) consome espaço de circulação em cozinhas estreitas."
+      },
+      "acoes_recomendadas": "Gaveta térmica na base da torre, abaixo do forno, quando há espaço vertical sobrando.",
+      "motivo_tecnico": "O mercado brasileiro convergiu para um nicho de largura padrão de 60 cm (com variação para 76 cm em fornos de câmara maior), profundidade de 60 a 70 cm (60 cm sendo o mínimo absoluto, com 5 a 10 cm extras recomendados para ventilação e passagem de fiação) e altura total de coluna entre 2,10 m e 2,40 m. [cf. As medidas padrão de uma torre quente em cozinha planejada seguem as larguras de 60 cm e 76 cm para os equipamentos de embutir; módulos de marcenaria padrão têm 60 cm de profundidade, mas a maioria dos fornos de embutir tem entre 55 cm e 58 cm de profundidade] [cf. O recomendado por 99% dos fabricantes de móveis e eletrodomésticos é trabalhar com uma profundidade de 65 cm a 70 cm; esses 5-10 cm extras são o espaço para o respiro traseiro]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "O Móvel (dois artigos técnicos sobre torre quente); Arch Trends.",
+      "fabricante": "Referência de mercado geral (padrão brasileiro de 60 cm).",
+      "observacoes": "Esta regra deve ser vinculada, no motor de regras, à mesma tabela de compatibilidade de modelos citada no item 4.1. ---",
+      "tags": [
+        "cozinhas",
+        "micro",
+        "ondas",
+        "torre",
+        "quente",
+        "dimensões",
+        "padrão",
+        "nicho"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_coifa_exaustor_altura_da_coifa_sobre_o_cooktop_fogao",
+      "entidade": "COIFA / EXAUSTOR",
+      "categoria": "Cozinhas",
+      "subcategoria": "COIFA / EXAUSTOR",
+      "titulo": "Altura da coifa sobre o cooktop/fogão",
+      "tipo": "restricao",
+      "descricao": "A distância entre a base da coifa e a boca do fogão/cooktop deve ficar entre 65 e 75 cm para combustão a gás, e entre 50 e 65 cm para cooktop elétrico/indução (sem chama viva). [cf. A distância mínima entre a parte inferior da Coifa e os queimadores do fogão/cooktop deve ser de 65 cm para fogão/cooktop a gás e 50 cm para fogão/cooktop elétrico — se o manual pedir uma distância maior, siga as recomendações do fabricante] [cf. Fogão ou cooktop a gás: 65–75 cm para coifa; cooktop elétrico/indução: 55–65 cm para coifa, visto que a chama não existe]",
+      "condicoes": {
+        "quando_aplicar": "Instalação de qualquer coifa de parede ou de ilha sobre fogão/cooktop.",
+        "condicoes_adicionais": "Se o cooktop tiver tampa de vidro, medir a distância com o vidro aberto, pois a altura efetiva de queima muda. [cf. Se o seu fogão/cooktop tiver tampão de vidro, é recomendável que se verifique a distância entre a coifa e o fogão com o vidro do tampão aberto, pois a altura de cada fogão/cooktop pode variar] Nunca ultrapassar 80 cm de distância máxima — acima disso a eficiência de captação cai drasticamente. [cf. Se você estiver se perguntando qual é a distância máxima permitida entre o fogão e a coifa, saiba que o recomendado é nunca ultrapassar 80 cm; isso ocorre porque, acima dessa distância, a capacidade da coifa de captar fumaça e odores diminui drasticamente]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Regra não se aplica a depuradores em modo recirculação sem captação direta de chama (nesse caso, reduzir a faixa em 3–5 cm é aceitável), nem a coifas industriais de cozinha profissional, que seguem norma própria.",
+        "limitacoes": "A vazão (m³/h) da coifa também influencia a distância ideal — coifas de maior vazão toleram distâncias um pouco maiores. [cf. Quanto maior a vazão (m³/h), maior pode ser a distância sem perder eficiência: coifa até 450 m³/h: 65–68 cm; coifa 451–650 m³/h: 68–72 cm; coifa 651–800 m³/h: 70–75 cm; coifa acima de 800 m³/h: 72–78 cm]"
+      },
+      "acoes_recomendadas": "Para coifas de ilha (instalação no teto, sem parede de apoio), acrescentar 3–5 cm à faixa padrão por causa do ar cruzado do ambiente aberto. [cf. Para coifa de ilha, acrescente 3 a 5 cm, justamente por causa do ar cruzado]",
+      "motivo_tecnico": "A distância entre a base da coifa e a boca do fogão/cooktop deve ficar entre 65 e 75 cm para combustão a gás, e entre 50 e 65 cm para cooktop elétrico/indução (sem chama viva). [cf. A distância mínima entre a parte inferior da Coifa e os queimadores do fogão/cooktop deve ser de 65 cm para fogão/cooktop a gás e 50 cm para fogão/cooktop elétrico — se o manual pedir uma distância maior, siga as recomendações do fabricante] [cf. Fogão ou cooktop a gás: 65–75 cm para coifa; cooktop elétrico/indução: 55–65 cm para coifa, visto que a chama não existe]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Brastemp (FAQ oficial); Estrela Móveis (blog técnico); Melhores Coifas (comparativo de fabricantes, incluindo Tramontina e Fischer).",
+      "fabricante": "Tramontina (650–750 mm), Fischer (65–80 cm) — cada fabricante com faixa própria no manual.",
+      "observacoes": "A largura da coifa deve ser igual ou maior que a largura do cooktop, nunca menor. [cf. A largura da coifa deve ser igual ou maior que o cooktop: 60 cm para até 4 bocas, 90 cm para 5 e 6 bocas] ---",
+      "tags": [
+        "cozinhas",
+        "coifa",
+        "exaustor",
+        "altura",
+        "sobre",
+        "cooktop",
+        "fogão"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_lava_loucas_largura_padrao_de_nicho_60_cm_45_cm",
+      "entidade": "LAVA-LOUÇAS",
+      "categoria": "Cozinhas",
+      "subcategoria": "LAVA-LOUÇAS",
+      "titulo": "Largura padrão de nicho (60 cm / 45 cm)",
+      "tipo": "boa_pratica",
+      "descricao": "As lava-louças de embutir do mercado seguem majoritariamente duas larguras de categoria: 60 cm (padrão europeu de capacidade plena, 12 a 16 serviços) e 45 cm (compacta, 8 a 10 serviços), mas não existe uma medida universal única — a ficha técnica do modelo específico sempre prevalece. [cf. Lava louças de embutir existem em duas larguras padrão — 45cm e 60cm; modelos de 45cm são mais compactos, indicados para cozinhas com espaço reduzido, enquanto modelos de 60cm seguem o padrão europeu de capacidade plena]",
+      "condicoes": {
+        "quando_aplicar": "Definição do módulo de bancada que vai acomodar a lava-louças, geralmente ao lado da cuba.",
+        "condicoes_adicionais": "O nicho de marcenaria deve ser projetado com a largura correta antes da execução — a lava-louças não pode ser \"adaptada depois\" de a caixaria estar pronta. [cf. O nicho de marcenaria deve ser projetado com a largura correta antes da execução — não pode ser adaptado depois]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Lava-louças de piso (freestanding, não embutida) não exige nicho dedicado, apenas espaço com acesso a hidráulica e elétrica.",
+        "limitacoes": "Modelos \"de revestir\" (que recebem painel igual à marcenaria) têm exigências dimensionais adicionais para a espessura do painel frontal."
+      },
+      "acoes_recomendadas": "Modelo \"de embutir\" convencional, com painel/acabamento próprio (mais simples de especificar do que o modelo de revestir).",
+      "motivo_tecnico": "As lava-louças de embutir do mercado seguem majoritariamente duas larguras de categoria: 60 cm (padrão europeu de capacidade plena, 12 a 16 serviços) e 45 cm (compacta, 8 a 10 serviços), mas não existe uma medida universal única — a ficha técnica do modelo específico sempre prevalece. [cf. Lava louças de embutir existem em duas larguras padrão — 45cm e 60cm; modelos de 45cm são mais compactos, indicados para cozinhas com espaço reduzido, enquanto modelos de 60cm seguem o padrão europeu de capacidade plena]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Casacomcê (especificações técnicas); Lavadora Boa (guia de nicho); Melhor Lava-louça (guia de escolha).",
+      "fabricante": "Bertazzoni, Gorenje (linhas \"de revestir\" citadas como referência).",
+      "observacoes": "Ventilação e respiro frontal são obrigatórios mesmo em modelo embutido — nunca obstruir o rodapé/base do móvel. [cf. Ventilação e respiro frontal: a máquina precisa \"respirar\". Deixe folga mínima indicada no manual e não obstrua o rodapé] ---",
+      "tags": [
+        "cozinhas",
+        "lava",
+        "louças",
+        "largura",
+        "padrão",
+        "nicho"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_lava_loucas_folga_traseira_e_ponto_eletrico_dedicado",
+      "entidade": "LAVA-LOUÇAS",
+      "categoria": "Cozinhas",
+      "subcategoria": "LAVA-LOUÇAS",
+      "titulo": "Folga traseira e ponto elétrico dedicado",
+      "tipo": "boa_pratica",
+      "descricao": "A distância entre a parede e a parte traseira da lava-louças deve ser de, no mínimo, 5 cm para ventilação adequada, com folga lateral entre módulos de 0,5 a 0,8 cm. [cf. A distância entre a parede e a parede traseira da máquina de lavar louça deve ser de pelo menos 5 cm, o que garantirá uma ventilação normal; é necessário deixar um pequeno espaço de 0,5 a 0,8 cm entre as paredes do conjunto de armários]",
+      "condicoes": {
+        "quando_aplicar": "Todo projeto de módulo de bancada com lava-louças embutida.",
+        "condicoes_adicionais": "Prever ponto elétrico exclusivo (voltagem compatível, aterramento) e entrada de água fria dedicada; verificar posição do sifão para evitar dobras excessivas na tubulação de saída. [cf. Voltagem (110/220 V) e ponto elétrico dedicado, com aterramento; verifique a distância até o sifão e o retorno do esgoto (sem \"joelhos\" desnecessários)]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há exceção conhecida — folga de ventilação traseira é universal para este tipo de equipamento.",
+        "limitacoes": "Instalação retroativa (depois da marcenaria pronta) é significativamente mais difícil e cara do que planejar desde o início."
+      },
+      "acoes_recomendadas": "N/A — infraestrutura hidráulica/elétrica é pré-requisito, não alternativa.",
+      "motivo_tecnico": "A distância entre a parede e a parte traseira da lava-louças deve ser de, no mínimo, 5 cm para ventilação adequada, com folga lateral entre módulos de 0,5 a 0,8 cm. [cf. A distância entre a parede e a parede traseira da máquina de lavar louça deve ser de pelo menos 5 cm, o que garantirá uma ventilação normal; é necessário deixar um pequeno espaço de 0,5 a 0,8 cm entre as paredes do conjunto de armários]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "alto",
+        "estetico": "baixo"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Guide Washerhouse (comparativo técnico internacional); Melhor Lava-louça.",
+      "fabricante": "N/A (regra geral de instalação).",
+      "observacoes": "Regra deve ser vinculada ao módulo de \"produção\" do Planne — infraestrutura elétrica/hidráulica precisa estar marcada na planta antes do plano de corte ser fechado. ---",
+      "tags": [
+        "cozinhas",
+        "lava",
+        "louças",
+        "folga",
+        "traseira",
+        "ponto",
+        "elétrico",
+        "dedicado"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_cubas_e_pia_compatibilidade_cuba_x_largura_de_bancada",
+      "entidade": "CUBAS E PIA",
+      "categoria": "Cozinhas",
+      "subcategoria": "CUBAS E PIA",
+      "titulo": "Compatibilidade cuba x largura de bancada",
+      "tipo": "recomendacao",
+      "descricao": "O tamanho da cuba deve ser proporcional à largura da bancada disponível: cubas compactas (40×34 cm) para pias de apoio ou espaços reduzidos; cuba padrão (50×40 cm) para bancadas residenciais comuns; cubas duplas (80–110 cm de comprimento total) para bancadas maiores. [cf. Compactas (40×34 cm ou 44×44 cm): perfeitas para pias de apoio, áreas gourmet reduzidas; padrão intermediário (50×40 cm): a medida de maior volume de comercialização; as medidas padrão para cubas duplas costumam variar entre 80 cm e 110 cm de comprimento total]",
+      "condicoes": {
+        "quando_aplicar": "Definição do recorte de bancada (pedra/granito/quartzo) em conjunto com o gabinete inferior que a sustenta.",
+        "condicoes_adicionais": "Cuba nº1 recomendada para bancadas de 1,20–1,50 m de largura; para bancadas de 1,80–2,00 m, considerar cuba maior ou dupla. [cf. A cuba Nº 1 é recomendada para bancadas que têm de 1,20 a 1,50 m de largura]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Cubas integradas (moldadas na própria bancada) não seguem esta lógica de \"cuba avulsa cortada no tampo\" — são fabricadas sob medida junto com a pedra.",
+        "limitacoes": "Cubas muito grandes em bancadas pequenas reduzem a área útil de trabalho e podem comprometer a integridade estrutural do tampo ao redor do recorte. [cf. O tamanho da cozinha limita a escolha da cuba de inox, uma vez que modelos excessivamente grandes em bancadas pequenas reduzem a área útil de trabalho e podem comprometer a estrutura da pedra]"
+      },
+      "acoes_recomendadas": "Cuba redonda como opção de apoio em espaços gourmet reduzidos. [cf. Para espaços gourmet ou áreas pequenas, a cuba redonda é a mais indicada, já que serve como apoio]",
+      "motivo_tecnico": "O tamanho da cuba deve ser proporcional à largura da bancada disponível: cubas compactas (40×34 cm) para pias de apoio ou espaços reduzidos; cuba padrão (50×40 cm) para bancadas residenciais comuns; cubas duplas (80–110 cm de comprimento total) para bancadas maiores. [cf. Compactas (40×34 cm ou 44×44 cm): perfeitas para pias de apoio, áreas gourmet reduzidas; padrão intermediário (50×40 cm): a medida de maior volume de comercialização; as medidas padrão para cubas duplas costumam variar entre 80 cm e 110 cm de comprimento total]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "ABL Inox (dois artigos técnicos); Leroy Merlin (guia de produto); Telhanorte (blog institucional).",
+      "fabricante": "Tramontina (linha Lavínia, citada como referência de mercado).",
+      "observacoes": "Sempre comprar a cuba antes de finalizar o recorte da pedra — o recorte deve ser feito com base nas medidas reais da cuba escolhida, não o inverso. [cf. Caso você ainda não tenha a pedra da bancada da cozinha, o ideal é comprar a cuba antes e depois entregá-la para o profissional que fará o recorte] ---",
+      "tags": [
+        "cozinhas",
+        "cubas",
+        "compatibilidade",
+        "cuba",
+        "largura",
+        "bancada"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_cubas_e_pia_profundidade_da_cuba_x_ergonomia",
+      "entidade": "CUBAS E PIA",
+      "categoria": "Cozinhas",
+      "subcategoria": "CUBAS E PIA",
+      "titulo": "Profundidade da cuba x ergonomia",
+      "tipo": "boa_pratica",
+      "descricao": "A profundidade da cuba (não confundir com profundidade da bancada) deve ficar entre 17 e 20 cm para equilibrar conforto ergonômico e redução de respingos durante a lavagem. [cf. A profundidade entre 17 cm e 20 cm oferece o melhor equilíbrio entre conforto ergonômico e a redução de respingos durante a lavagem]",
+      "condicoes": {
+        "quando_aplicar": "Especificação da cuba em qualquer projeto de cozinha.",
+        "condicoes_adicionais": "Considerar também a altura da bancada (item 9) em conjunto com a profundidade da cuba — bancada alta + cuba profunda pode dificultar o alcance ao fundo."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Cubas \"gourmet\" ou industriais, voltadas a imersão de panelas grandes, podem justificar maior profundidade — nesse caso a ergonomia cede espaço à funcionalidade específica.",
+        "limitacoes": "Cubas muito profundas obrigam o usuário a se curvar mais, gerando desconforto lombar em uso prolongado."
+      },
+      "acoes_recomendadas": "Cuba mais rasa combinada com bancada ligeiramente mais baixa, quando o usuário principal for de estatura menor.",
+      "motivo_tecnico": "A profundidade da cuba (não confundir com profundidade da bancada) deve ficar entre 17 e 20 cm para equilibrar conforto ergonômico e redução de respingos durante a lavagem. [cf. A profundidade entre 17 cm e 20 cm oferece o melhor equilíbrio entre conforto ergonômico e a redução de respingos durante a lavagem]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "médio"
+      },
+      "prioridade": "médio",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "ABL Inox.",
+      "fabricante": "N/A.",
+      "observacoes": "Regra pouco discutida na literatura de marcenaria, mas relevante para composição do perfil ergonômico do usuário principal, cruzando com os dados de estatura já usados na regra de armários aéreos (item 10). ---",
+      "tags": [
+        "cozinhas",
+        "cubas",
+        "profundidade",
+        "cuba",
+        "ergonomia"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_bancadas_altura_ergonomica_altura_padrao_da_bancada_de_trabalho",
+      "entidade": "BANCADAS (altura ergonômica)",
+      "categoria": "Cozinhas",
+      "subcategoria": "BANCADAS (altura ergonômica)",
+      "titulo": "Altura padrão da bancada de trabalho",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A altura padrão de bancada de cozinha no Brasil varia entre 85 e 95 cm do piso até a superfície da pedra (medida já incluindo a espessura do tampo), calibrada para atender a média de altura da população. [cf. No Brasil, a altura padrão de bancada de cozinha varia entre 85 cm e 95 cm (do piso até a superfície da pedra); a medida já inclui a espessura do tampo e foi definida para atender à média de altura da população] A referência mais precisa é calcular 10–15 cm abaixo da altura do cotovelo do usuário principal. [cf. A medida mais ergonômica é cerca de 10 a 15 cm abaixo da altura do cotovelo do usuário principal]",
+      "condicoes": {
+        "quando_aplicar": "Definição da altura de qualquer módulo de bancada de cozinha, sempre no início do projeto.",
+        "condicoes_adicionais": "Personalizar para usuários mais altos (95–100 cm) ou mais baixos (85–90 cm); considerar altura reduzida (76–80 cm) em trecho dedicado a sovar/abrir massas. [cf. Pessoas mais altas: bancadas entre 95 cm e 100 cm aumentam o conforto; para quem gosta de sovar massas ou abrir massas finas, recomenda-se uma altura em torno de 76–80 cm]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Bancadas de bar/cozinha americana integrada, que seguem altura própria de ~110 cm para uso com banquetas altas. [cf. Em cozinhas integradas, a altura de bancada de cozinha americana costuma ser de 110 cm]",
+        "limitacoes": "Em cozinhas com múltiplos usuários de estaturas muito diferentes, uma única altura de bancada sempre representará uma solução de compromisso."
+      },
+      "acoes_recomendadas": "Bancadas de duas alturas na mesma cozinha (ex.: 90 cm para cocção/lavagem + 80 cm para preparo de massas), quando o layout permitir.",
+      "motivo_tecnico": "A altura padrão de bancada de cozinha no Brasil varia entre 85 e 95 cm do piso até a superfície da pedra (medida já incluindo a espessura do tampo), calibrada para atender a média de altura da população. [cf. No Brasil, a altura padrão de bancada de cozinha varia entre 85 cm e 95 cm (do piso até a superfície da pedra); a medida já inclui a espessura do tampo e foi definida para atender à média de altura da população] A referência mais precisa é calcular 10–15 cm abaixo da altura do cotovelo do usuário principal. [cf. A medida mais ergonômica é cerca de 10 a 15 cm abaixo da altura do cotovelo do usuário principal]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 100,
+        "base": "norma_oficial"
+      },
+      "fonte": "Planner 5D (guia de medidas); Clique Arquitetura (guia de ergonomia); MDBF (guia prático, citando ABNT NBR 9050 e estudo da UFSC).",
+      "fabricante": "N/A (medida de projeto, não de fabricante específico).",
+      "observacoes": "Para acessibilidade universal (cadeirantes), a referência muda para os parâmetros da NBR 9050, com bancada mais baixa e vão livre inferior para aproximação frontal. [cf. As medidas necessárias para a manobra de cadeira de rodas sem deslocamento são: para rotação de 90° = 1,20 m x 1,20 m; para rotação de 180° = 1,50 m x 1,20 m] ---",
+      "tags": [
+        "cozinhas",
+        "bancadas",
+        "altura",
+        "ergonômica",
+        "padrão",
+        "bancada",
+        "trabalho"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_bancadas_altura_ergonomica_altura_especifica_para_bancada_de_cooktop",
+      "entidade": "BANCADAS (altura ergonômica)",
+      "categoria": "Cozinhas",
+      "subcategoria": "BANCADAS (altura ergonômica)",
+      "titulo": "Altura específica para bancada de cooktop",
+      "tipo": "boa_pratica",
+      "descricao": "A altura ideal da bancada onde fica o cooktop situa-se entre 86 e 92 cm, considerando a estatura média dos usuários — uma regra prática é: altura do usuário principal ÷ 2, aproximadamente. [cf. A altura ideal para bancada de cooktop é aquela que une ergonomia, segurança e praticidade, normalmente situada entre 86 e 92 cm, considerando a estatura média dos moradores da casa]",
+      "condicoes": {
+        "quando_aplicar": "Definição da altura do gabinete que sustenta o cooktop, em conjunto com a espessura do tampo escolhido.",
+        "condicoes_adicionais": "Descontar a espessura real da pedra escolhida (comumente 2 ou 3 cm) da altura de caixaria — ex.: usuário de 1,70 m → bancada ideal ~89 cm → caixaria de marcenaria com 86 cm se a pedra tiver 3 cm. [cf. Imagine que o principal usuário da cozinha tenha 1,70 m de altura; a altura ideal da bancada será em torno de 89 cm; se a pedra escolhida tem 3 cm de espessura, a marcenaria deve ser planejada com 86 cm de altura do piso até a base do gabinete]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Ilhas de cocção seguem por vezes altura ligeiramente diferente (90 cm é comum), por não terem a limitação de alinhamento com armários aéreos adjacentes.",
+        "limitacoes": "Ignorar a espessura do tampo no cálculo é um erro recorrente de projeto que resulta em bancada final mais alta que o planejado."
+      },
+      "acoes_recomendadas": "N/A.",
+      "motivo_tecnico": "A altura ideal da bancada onde fica o cooktop situa-se entre 86 e 92 cm, considerando a estatura média dos usuários — uma regra prática é: altura do usuário principal ÷ 2, aproximadamente. [cf. A altura ideal para bancada de cooktop é aquela que une ergonomia, segurança e praticidade, normalmente situada entre 86 e 92 cm, considerando a estatura média dos moradores da casa]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Ecovet (guia técnico de bancada de cooktop).",
+      "fabricante": "N/A.",
+      "observacoes": "Esta regra deve estar vinculada, no motor de regras do Planne, à espessura do material de bancada selecionado pelo usuário (input dinâmico, não fixo). ---",
+      "tags": [
+        "cozinhas",
+        "bancadas",
+        "altura",
+        "ergonômica",
+        "específica",
+        "bancada",
+        "cooktop"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_armarios_aereos_vao_livre_entre_bancada_e_armario_aereo",
+      "entidade": "ARMÁRIOS AÉREOS",
+      "categoria": "Cozinhas",
+      "subcategoria": "ARMÁRIOS AÉREOS",
+      "titulo": "Vão livre entre bancada e armário aéreo",
+      "tipo": "boa_pratica",
+      "descricao": "O espaço livre entre o topo da bancada e a base do armário aéreo deve ficar entre 50 e 60 cm sobre a área de trabalho geral, e entre 65 e 75 cm sobre o fogão/cooktop (por causa da coifa e do calor). [cf. Vão livre: 55 a 65 cm sobre a bancada da cozinha, 65 a 75 cm sobre o fogão]",
+      "condicoes": {
+        "quando_aplicar": "Definição da altura de instalação de qualquer armário aéreo, em conjunto com a altura da bancada (item 9).",
+        "condicoes_adicionais": "Ajustar o vão conforme a estatura do usuário principal: até 1,60 m → vão de 50–53 cm; 1,61–1,75 m → 54–57 cm; acima de 1,75 m → 58–60 cm. [cf. Até 1,60 m: vão de 50–53 cm favorece alcance; entre 1,61 e 1,75 m: 54–57 cm equilibra conforto e visual; acima de 1,75 m: 58–60 cm reduz inclinação do tronco]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Sobre a geladeira, onde o vão costuma ser maior e mais variável (30–60 cm), dependendo da altura do modelo de geladeira escolhido. [cf. A abertura padrão para uma geladeira geralmente é de 90 cm de largura; as alturas variam de 30 cm a 60 cm, dependendo dos armários das paredes e de quão grande é a geladeira]",
+        "limitacoes": "Torneiras \"gourmet\" (bica alta) podem exigir vão maior (58–60 cm) para a porta do aéreo não bater na bica quando aberta. [cf. Torneira alta ou gourmet: escolha arejamento de 58–60 cm; por conseguinte, a porta não encosta na bica]"
+      },
+      "acoes_recomendadas": "Reduzir o vão para 50–53 cm em cozinhas de usuários de estatura menor, priorizando alcance sobre volume de armazenamento.",
+      "motivo_tecnico": "O espaço livre entre o topo da bancada e a base do armário aéreo deve ficar entre 50 e 60 cm sobre a área de trabalho geral, e entre 65 e 75 cm sobre o fogão/cooktop (por causa da coifa e do calor). [cf. Vão livre: 55 a 65 cm sobre a bancada da cozinha, 65 a 75 cm sobre o fogão]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Viva Decora; Estrela Móveis; Blog Viiish.",
+      "fabricante": "N/A.",
+      "observacoes": "A altura padrão de instalação do aéreo no Brasil (base do armário) costuma ficar próxima de 1,50 m do piso, resultado da soma bancada (92 cm) + vão (58 cm). [cf. No Brasil, a altura padrão para instalação dos armários aéreos é 1,50 m do piso até a base do armário] ---",
+      "tags": [
+        "cozinhas",
+        "armários",
+        "aéreos",
+        "livre",
+        "bancada",
+        "armário",
+        "aéreo"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_armarios_aereos_profundidade_do_armario_aereo",
+      "entidade": "ARMÁRIOS AÉREOS",
+      "categoria": "Cozinhas",
+      "subcategoria": "ARMÁRIOS AÉREOS",
+      "titulo": "Profundidade do armário aéreo",
+      "tipo": "restricao",
+      "descricao": "A profundidade padrão de um armário aéreo de cozinha fica entre 30 e 35 cm; para gabinetes que acomodam micro-ondas, a profundidade sobe para 40–45 cm; sobre a geladeira, pode chegar a 60 cm. [cf. Os gabinetes aéreos têm geralmente entre 30 cm a 35 cm de profundidade, exceto para gabinetes de microondas, que têm de 40 cm a 45 cm de profundidade para acomodar a maioria dos tamanhos de microondas padrão; os armários colocados acima de uma geladeira também são um pouco mais profundos, tipicamente medindo 60 cm de profundidade]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de qualquer módulo de armário aéreo, distinguindo uso geral de uso especial (micro-ondas, acima de geladeira).",
+        "condicoes_adicionais": "Nunca ultrapassar a profundidade da bancada abaixo — regra prática é o aéreo não avançar além da linha da bancada (geralmente 60 cm), para não interferir na área de trabalho. [cf. Uma dica na hora de analisar as medidas é garantir que o armário aéreo de cozinha não ultrapasse a profundidade da bancada (geralmente 60 cm)]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Aéreos decorativos/vitrine (com portas de vidro) podem adotar profundidade menor (20–28 cm), priorizando estética sobre capacidade de armazenamento.",
+        "limitacoes": "Profundidade maior que 35 cm em uso geral aumenta risco de o usuário bater a cabeça ao se debruçar sobre a bancada."
+      },
+      "acoes_recomendadas": "Nicho para micro-ondas separado do restante da fileira de aéreos, com profundidade própria de 40–45 cm, evitando estender essa profundidade para os módulos vizinhos.",
+      "motivo_tecnico": "A profundidade padrão de um armário aéreo de cozinha fica entre 30 e 35 cm; para gabinetes que acomodam micro-ondas, a profundidade sobe para 40–45 cm; sobre a geladeira, pode chegar a 60 cm. [cf. Os gabinetes aéreos têm geralmente entre 30 cm a 35 cm de profundidade, exceto para gabinetes de microondas, que têm de 40 cm a 45 cm de profundidade para acomodar a maioria dos tamanhos de microondas padrão; os armários colocados acima de uma geladeira também são um pouco mais profundos, tipicamente medindo 60 cm de profundidade]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "2Quartos (guia de medidas); Madesa (blog institucional).",
+      "fabricante": "N/A.",
+      "observacoes": "Regra deve ser vinculada ao item 5.1 (altura do micro-ondas) — profundidade e altura do nicho de micro-ondas devem ser tratadas como um único conjunto de regras no motor do Planne. ---",
+      "tags": [
+        "cozinhas",
+        "armários",
+        "aéreos",
+        "profundidade",
+        "armário",
+        "aéreo"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_despenseiros_e_armarios_de_coluna_profundidade_e_alinhamento_com_torre_de_ele",
+      "entidade": "DESPENSEIROS E ARMÁRIOS DE COLUNA",
+      "categoria": "Cozinhas",
+      "subcategoria": "DESPENSEIROS E ARMÁRIOS DE COLUNA",
+      "titulo": "Profundidade e alinhamento com torre de eletros",
+      "tipo": "boa_pratica",
+      "descricao": "Armários de despensa (armários altos de coluna) seguem profundidade padrão de 60 cm, igual à da torre quente e dos gabinetes de base — isso permite que a porta do despenseiro fique nivelada com a porta dos eletros embutidos ao lado, mantendo a linha estética contínua da parede de armários altos. [cf. A profundidade padrão dos armários de despensa é de 60 cm, o que permite o encaixe do forno ou microondas ao lado da despensa, de modo que o revestimento dos aparelhos esteja nivelado nas portas dos armários]",
+      "condicoes": {
+        "quando_aplicar": "Sempre que um despenseiro for posicionado ao lado de uma torre quente ou coluna de refrigeração, na mesma parede.",
+        "condicoes_adicionais": "Verificar a profundidade real do forno/geladeira escolhidos — a diferença entre a profundidade do equipamento e a profundidade nominal do gabinete de 60 cm deve ser absorvida pela caixaria (fundo falso), não pela porta."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Despenseiros isolados, sem torre de eletros ao lado, podem adotar profundidade reduzida (45–55 cm) para economizar espaço, sem prejuízo estético.",
+        "limitacoes": "Despenseiros muito profundos (60 cm) dificultam o acesso a itens no fundo das prateleiras — compensar com prateleiras deslizantes ou puxadores tipo \"carrossel\"/cesto extraível."
+      },
+      "acoes_recomendadas": "Puxadores telescópicos e cestos aramados de extração total, para compensar a perda de acessibilidade em módulos profundos.",
+      "motivo_tecnico": "Armários de despensa (armários altos de coluna) seguem profundidade padrão de 60 cm, igual à da torre quente e dos gabinetes de base — isso permite que a porta do despenseiro fique nivelada com a porta dos eletros embutidos ao lado, mantendo a linha estética contínua da parede de armários altos. [cf. A profundidade padrão dos armários de despensa é de 60 cm, o que permite o encaixe do forno ou microondas ao lado da despensa, de modo que o revestimento dos aparelhos esteja nivelado nas portas dos armários]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "alto",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "2Quartos (guia de medidas de armários de cozinha).",
+      "fabricante": "N/A (regra de composição, aplicável a qualquer fabricante de ferragem de extração).",
+      "observacoes": "Este item se conecta diretamente ao módulo \"Nichos\" e \"Prateleiras\" do índice geral do projeto Planne — recomenda-se tratá-los de forma cruzada no motor de regras. ---",
+      "tags": [
+        "cozinhas",
+        "despenseiros",
+        "armários",
+        "coluna",
+        "profundidade",
+        "alinhamento",
+        "torre",
+        "eletros"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_01_boas_praticas_gerais_de_projeto_de_cozinha_regra_de_ouro_escolher_os_eletrodo",
+      "entidade": "BOAS PRÁTICAS GERAIS DE PROJETO DE COZINHA",
+      "categoria": "Cozinhas",
+      "subcategoria": "BOAS PRÁTICAS GERAIS DE PROJETO DE COZINHA",
+      "titulo": "Regra de ouro: escolher os eletrodomésticos antes de fechar a marcenaria",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A prática mais repetida entre marceneiros experientes e fabricantes de eletrodomésticos é: nunca fechar as medidas finais da caixaria antes de o cliente confirmar os modelos exatos de geladeira, forno, cooktop, coifa e lava-louças que serão usados — já que praticamente nenhum desses equipamentos tem medida verdadeiramente universal entre marcas. [cf. Se a sua cozinha é planejada e você está fazendo marcenaria sob medida, o planejamento do nicho é fundamental; a regra de ouro: escolha a geladeira antes de fechar o projeto do móvel]",
+      "condicoes": {
+        "quando_aplicar": "Em toda venda/projeto de cozinha planejada, como etapa formal antes da liberação do plano de corte.",
+        "condicoes_adicionais": "Documentar formalmente (contrato/ficha técnica) os modelos escolhidos antes da produção, com data de confirmação — protege tanto o marceneiro quanto o cliente de divergências futuras."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há exceção; mesmo clientes que \"ainda não decidiram a marca\" devem receber ao menos uma faixa de tolerância de nicho baseada em um conjunto de modelos pré-aprovados.",
+        "limitacoes": "Obriga o processo comercial a incluir uma etapa de especificação técnica de eletrodomésticos, que muitas marcenarias tradicionalmente pulam."
+      },
+      "acoes_recomendadas": "Quando o cliente realmente não pode decidir antes da produção, usar a maior tolerância de nicho encontrada no mercado para aquela categoria de equipamento, sempre como solução de compromisso, nunca como padrão recomendado.",
+      "motivo_tecnico": "A prática mais repetida entre marceneiros experientes e fabricantes de eletrodomésticos é: nunca fechar as medidas finais da caixaria antes de o cliente confirmar os modelos exatos de geladeira, forno, cooktop, coifa e lava-louças que serão usados — já que praticamente nenhum desses equipamentos tem medida verdadeiramente universal entre marcas. [cf. Se a sua cozinha é planejada e você está fazendo marcenaria sob medida, o planejamento do nicho é fundamental; a regra de ouro: escolha a geladeira antes de fechar o projeto do móvel]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "crítico",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Blog institucional Brastemp; padrão recorrente em múltiplas fontes consultadas neste módulo (fornos, lava-louças, geladeiras).",
+      "fabricante": "N/A (prática de processo, não de produto).",
+      "observacoes": "Esta é, possivelmente, a regra de maior valor estratégico para o \"motor de inteligência\" do Planne: transformar uma boa prática informal de marceneiros experientes em uma trava automática de fluxo de projeto (o sistema não libera plano de corte de torre de eletros sem confirmação de modelo) seria um diferencial real frente a Promob e Cabinet Vision. --- ## PRÓXIMOS PASSOS SUGERIDOS Este módulo cobriu **Cozinhas** em profundidade técnica, com pesquisa real e formato estruturado completo. Para dar continuidade à \"Wikipedia da Marcenaria\" do Planne, sugiro seguirmos, categoria por categoria, na mesma profundidade: 1. **Ferragens** (dobradiças, corrediças, puxadores, minifix, cavilhas) — fabricantes Blum, Häfele, Hettich, Rometal, Domus. 2. **Estrutura** (travamentos, engrossos, tampos, empenamento) — normas ABNT + boas práticas de fabricação. 3. **Portas e Gavetas** (folgas, recuos, limites de peso e dimensão). 4. **Materiais** (MDF, MDP, compensado) — fabricantes Arauco, Duratex, Berneck, Guararapes, Greenplac. 5. **Closets, Banheiros, Escritórios** — mesmo padrão de profundidade. 6. **Produção, Transporte, Montagem, Economia** — conhecimento operacional da marcenaria. Cada módulo seguirá o mesmo padrão: pesquisa real, formato estruturado completo, faixas numéricas (não números únicos artificiais), e identificação clara de fonte/fabricante.",
+      "tags": [
+        "cozinhas",
+        "boas",
+        "práticas",
+        "gerais",
+        "projeto",
+        "cozinha",
+        "regra",
+        "ouro"
+      ],
+      "modulo_origem": "01-Cozinhas",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

@@ -1,0 +1,473 @@
+{
+  "modulo": "Ferragens",
+  "total_atomos": 10,
+  "atomos": [
+    {
+      "id": "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_regra_de_quantidade_p",
+      "entidade": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "categoria": "Ferragens",
+      "subcategoria": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "titulo": "Regra de quantidade por altura de porta",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A quantidade mínima de dobradiças por porta escala com a altura da folha. Uma referência amplamente usada no setor é: 2 dobradiças até ~600 mm de altura, 3 dobradiças até ~900–2000 mm, 4 dobradiças acima de 2000 mm, chegando a 5 em portas muito altas (~2400 mm). [cf. 2 dobradiças de gabinete para altura de porta de 600 mm; 3 dobradiças de gabinete para altura de porta de 900 mm; 4 dobradiças de gabinete para altura de porta de 2000 mm; 5 dobradiças de gabinete para altura de porta de 2400 mm] Uma regra prática complementar, comum em manuais de instalação, é usar 3 dobradiças como padrão geral (topo, meio, base), independentemente da altura, sempre que a porta tiver mola/fechamento automático. [cf. Em portas de madeira com dispositivos de fechos autónomos (molas) devem ser aplicadas pelo menos 3 dobradiças, independentemente]",
+      "condicoes": {
+        "quando_aplicar": "Definição de ferragem em qualquer porta de armário, especialmente portas altas (roupeiro, torre, despensa).",
+        "condicoes_adicionais": "A dobradiça central nunca deve ser posicionada apenas para \"preencher espaço\" — ela atua como estabilizadora estrutural, reduzindo o risco de empenamento em portas altas de MDF/MDP. [cf. A dobradiça central atua como estabilizadora, reduzindo o risco de empenamento em portas altas de MDF/MDP] Posicionamento típico de recuo: primeira dobradiça a ~100 mm do topo, última a ~100 mm da base (alguns fabricantes recomendam 150 mm no topo e 200 mm na base), com as intermediárias distribuídas uniformemente. [cf. As dobradiças são distribuídas com recuo padrão de ~100 mm das extremidades e espaçamento uniforme entre as intermediárias] [cf. Regra geral, aplicam-se 3 dobradiças: no topo, a 15 cm do topo da porta; em baixo, a 20 cm da base; a do meio é colocada entre ambas, com igual distância]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Portas muito pequenas e leves (nichos decorativos, portas de vidro fino sem peso relevante) podem funcionar com 2 dobradiças mesmo acima de 600 mm, desde que o peso da folha esteja dentro do limite de carga da dobradiça escolhida.",
+        "limitacoes": "Portas mais largas criam maior alavanca sobre as dobradiças (momento de força maior), o que pode exigir uma dobradiça extra mesmo em alturas moderadas. [cf. Portas mais largas criam maior alavanca, exigindo dobradiças extras]"
+      },
+      "acoes_recomendadas": "Quando a altura ultrapassa a capacidade padrão de uma linha de dobradiças, usar dobradiças de reforço específicas para porta pesada, em vez de simplesmente aumentar a quantidade indefinidamente.",
+      "motivo_tecnico": "A quantidade mínima de dobradiças por porta escala com a altura da folha. Uma referência amplamente usada no setor é: 2 dobradiças até ~600 mm de altura, 3 dobradiças até ~900–2000 mm, 4 dobradiças acima de 2000 mm, chegando a 5 em portas muito altas (~2400 mm). [cf. 2 dobradiças de gabinete para altura de porta de 600 mm; 3 dobradiças de gabinete para altura de porta de 900 mm; 4 dobradiças de gabinete para altura de porta de 2000 mm; 5 dobradiças de gabinete para altura de porta de 2400 mm] Uma regra prática complementar, comum em manuais de instalação, é usar 3 dobradiças como padrão geral (topo, meio, base), independentemente da altura, sempre que a porta tiver mola/fechamento automático. [cf. Em portas de madeira com dispositivos de fechos autónomos (molas) devem ser aplicadas pelo menos 3 dobradiças, independentemente]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 100,
+        "base": "norma_oficial"
+      },
+      "fonte": "Venace (guia técnico); Modo Criativo/Ploys (calculadora baseada em catálogos Blum/Hettich); MaxMat (guia de instalação); handlie (norma EN 1935).",
+      "fabricante": "Blum, Hettich (referências de catálogo citadas pela calculadora Modo Criativo).",
+      "observacoes": "A norma europeia EN 1935 (referenciada pela handlie) prevê fatores de correção de peso quando a razão altura/largura da porta é baixa (porta larga e baixa) — para portas com fator altura/largura ≥ 2, nenhuma correção é necessária; abaixo disso, o peso \"efetivo\" considerado no dimensionamento da dobradiça deve ser corrigido para cima. [cf. Quando o factor resultante da divisão da altura pela largura for igual ou superior a 2 não deve ser efectuada nenhuma correcção; para portas ou janelas largas, deve-se corrigir a massa a suportar pelas dobradiças] ---",
+      "tags": [
+        "ferragens",
+        "dobradiças",
+        "quantidade",
+        "espaçamento",
+        "capacidade",
+        "carga",
+        "regra",
+        "altura"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_capacidade_de_carga_p",
+      "entidade": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "categoria": "Ferragens",
+      "subcategoria": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "titulo": "Capacidade de carga por peso de porta (tabela por fabricante)",
+      "tipo": "recomendacao",
+      "descricao": "Fabricantes de sistemas de elevação/dobradiça especializados publicam tabelas específicas de quantidade por peso de frente, não apenas por altura. Um exemplo de catálogo técnico (sistema de dobradiças para portas elevatórias) prevê: até 22 kg de peso de frente → 5 dobradiças; até 27 kg → 6 dobradiças; até 32 kg → 7 dobradiças, com aplicação testada em 80.000 ciclos de movimento. [cf. Quantidade de dobradiças / Peso frontal FG (kg): até 22 → 5; até 27 → 6; até 32 → 7. Aplicação testada em 80.000 ciclos de movimento]",
+      "condicoes": {
+        "quando_aplicar": "Portas de elevação (sistemas tipo tip-up/lift), portas muito pesadas ou de grande dimensão, onde a regra genérica de \"3 dobradiças\" não é suficiente.",
+        "condicoes_adicionais": "Sempre validar o peso real da frente (incluindo puxador, revestimento e eventuais reforços) contra a tabela específica do sistema de dobradiça escolhido — tabelas de fabricantes diferentes não são intercambiáveis."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Portas leves residenciais padrão (MDF de 15–18 mm, até ~1,20 m de altura) normalmente não chegam a esses patamares de peso — a tabela genérica de altura (item 1.1) já cobre a maioria dos casos.",
+        "limitacoes": "Dobradiças de mola (com sistema de auto-abertura/fechamento tipo CLIP top BLUMOTION) têm limite de recomendação de teste de recobrimento em frentes muito estreitas (~300 mm de largura livre), não sendo recomendada a combinação em larguras maiores sem verificação. [cf. Na combinação de dobradiças com mola CLIP top BLUMOTION e CLIP top em frentes com pequena largura livre de aproximadamente 300 mm, recomenda-se um teste de recobrimento; em larguras frontais maiores não se recomenda uma combinação]"
+      },
+      "acoes_recomendadas": "Uso de pistões a gás complementares em portas de elevação muito pesadas, para reduzir a carga efetiva sobre as dobradiças.",
+      "motivo_tecnico": "Fabricantes de sistemas de elevação/dobradiça especializados publicam tabelas específicas de quantidade por peso de frente, não apenas por altura. Um exemplo de catálogo técnico (sistema de dobradiças para portas elevatórias) prevê: até 22 kg de peso de frente → 5 dobradiças; até 27 kg → 6 dobradiças; até 32 kg → 7 dobradiças, com aplicação testada em 80.000 ciclos de movimento. [cf. Quantidade de dobradiças / Peso frontal FG (kg): até 22 → 5; até 27 → 6; até 32 → 7. Aplicação testada em 80.000 ciclos de movimento]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Catálogo técnico Blum 2024–2025 (publicação oficial).",
+      "fabricante": "Blum.",
+      "observacoes": "Este tipo de tabela por peso deveria ser tratado, no motor de regras do Planne, como uma tabela paramétrica por fabricante/linha de produto — cada fabricante tem sua própria curva peso × quantidade, e o sistema idealmente deveria permitir cadastro dessas tabelas por fornecedor. ---",
+      "tags": [
+        "ferragens",
+        "dobradiças",
+        "quantidade",
+        "espaçamento",
+        "capacidade",
+        "carga",
+        "peso",
+        "porta"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_faixas_de_espessura_d",
+      "entidade": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "categoria": "Ferragens",
+      "subcategoria": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "titulo": "Faixas de espessura de porta compatíveis",
+      "tipo": "boa_pratica",
+      "descricao": "Dobradiças de copo padrão (Ø35 mm) atendem uma faixa relativamente estreita de espessura de porta — exemplos de catálogo indicam compatibilidade entre 14 e 26 mm, com variações entre 14–24 mm dependendo do modelo específico. [cf. Para portas com espessura de 14 a 26 mm. Possibilidade de afinação 3D (dobradiça + calço): altura, largura, profundidade]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de dobradiça para qualquer porta com espessura fora do padrão \"MDF 15 mm\" mais comum — vidro, alumínio, portas duplas (com friso), portas laminadas de maior espessura.",
+        "condicoes_adicionais": "Modelos especiais existem para portas finas, com fixação especial (ex.: EXPANDO T), permitindo uso em frentes mais delgadas que o padrão. [cf. A dobradiça CLIP top BLUMOTION para portas finas com a fixação especial EXPANDO T e a variante de cor preto-ônix apoiam estas tendências em qualidade comprovada]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa desta verificação — espessura fora da faixa da dobradiça é incompatibilidade física direta, não uma questão de preferência.",
+        "limitacoes": "Portas de vidro, alumínio ou com moldura exigem linha de dobradiça específica — nem toda dobradiça de copo para madeira serve para esses materiais. [cf. Nosso programa de dobradiças oferece possibilidades para muitas aplicações diferentes, como portas de madeira, de vidro ou com moldura de alumínio, portas finas ou espessas]"
+      },
+      "acoes_recomendadas": "Dobradiças de sistema de furação rasa (11,5 mm de profundidade) para portas a partir de 15 mm quando o espaço de usinagem é limitado. [cf. Pouca profundidade de furação (11.5 mm) para portas de móveis a partir de uma espessura de 15 mm]",
+      "motivo_tecnico": "Dobradiças de copo padrão (Ø35 mm) atendem uma faixa relativamente estreita de espessura de porta — exemplos de catálogo indicam compatibilidade entre 14 e 26 mm, com variações entre 14–24 mm dependendo do modelo específico. [cf. Para portas com espessura de 14 a 26 mm. Possibilidade de afinação 3D (dobradiça + calço): altura, largura, profundidade]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Catálogos técnicos Blum (linhas CLIP top BLUMOTION, X91, M110); O Ferrolho (revenda com especificações de produto).",
+      "fabricante": "Blum.",
+      "observacoes": "O motor de regras do Planne deveria validar automaticamente a espessura do material selecionado pelo usuário contra a faixa de compatibilidade da dobradiça escolhida, bloqueando combinações incompatíveis antes da geração do plano de corte. ---",
+      "tags": [
+        "ferragens",
+        "dobradiças",
+        "quantidade",
+        "espaçamento",
+        "capacidade",
+        "carga",
+        "faixas",
+        "espessura"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_dobradicas_tipos_e_recobrimento_reta_curva_e_super_curva_semi_sobreposta_embu",
+      "entidade": "DOBRADIÇAS — TIPOS E RECOBRIMENTO",
+      "categoria": "Ferragens",
+      "subcategoria": "DOBRADIÇAS — TIPOS E RECOBRIMENTO",
+      "titulo": "Reta, Curva e Super Curva (semi-sobreposta / embutida)",
+      "tipo": "boa_pratica",
+      "descricao": "O tipo de dobradiça (reta/sobreposta, curva/semi-sobreposta, super curva/embutida) é determinado pela posição da porta em relação à lateral do móvel: dobradiça reta para portas que cobrem totalmente a lateral (sobrepostas), curva para portas que dividem a lateral com outra porta (semi-sobreposta), e super curva para portas embutidas dentro do vão, alinhadas à lateral. [cf. Reta (sobreposta) é o padrão; Curva (semi-sobreposta) e Super Curva (embutida) conforme o projeto e o recobrimento desejado]",
+      "condicoes": {
+        "quando_aplicar": "Definição de ferragem de qualquer módulo com duas ou mais portas na mesma lateral (caso mais comum: armários com portas duplas em um único módulo compartilhando uma lateral central).",
+        "condicoes_adicionais": "A escolha errada do tipo de dobradiça (reta em vez de curva, por exemplo) impede fisicamente a montagem correta ou faz a porta colidir com a porta vizinha ou com a lateral."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Módulos de porta única, onde a porta cobre toda a face frontal, usam exclusivamente dobradiça reta — não há necessidade de avaliar tipo curvo.",
+        "limitacoes": "Alguns fabricantes tratam \"super curva\" como linha de produto separada, com disponibilidade limitada de modelos (menos variantes com amortecedor, cores, etc.) comparado à linha reta, que é a mais vendida e mais variada."
+      },
+      "acoes_recomendadas": "Uso de perfil de alumínio ou moldura para resolver visualmente o encontro de portas quando o tipo de dobradiça ideal não está disponível na cor/linha desejada.",
+      "motivo_tecnico": "O tipo de dobradiça (reta/sobreposta, curva/semi-sobreposta, super curva/embutida) é determinado pela posição da porta em relação à lateral do móvel: dobradiça reta para portas que cobrem totalmente a lateral (sobrepostas), curva para portas que dividem a lateral com outra porta (semi-sobreposta), e super curva para portas embutidas dentro do vão, alinhadas à lateral. [cf. Reta (sobreposta) é o padrão; Curva (semi-sobreposta) e Super Curva (embutida) conforme o projeto e o recobrimento desejado]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Modo Criativo/Ploys (calculadora de dobradiças).",
+      "fabricante": "Blum, Hettich (nomenclatura similar entre fabricantes, com pequenas variações de nome comercial).",
+      "observacoes": "Regra deve ser vinculada, no motor de regras, à detecção automática de módulos com portas compartilhando lateral — o sistema deveria sugerir automaticamente \"curva\" nesses casos, evitando erro humano recorrente em projetos manuais. ---",
+      "tags": [
+        "ferragens",
+        "dobradiças",
+        "tipos",
+        "recobrimento",
+        "reta",
+        "curva",
+        "super",
+        "semi"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_corredicas_capacidade_de_carga_e_tipos_de_extracao_capacidade_de_carga_por_co",
+      "entidade": "CORREDIÇAS — CAPACIDADE DE CARGA E TIPOS DE EXTRAÇÃO",
+      "categoria": "Ferragens",
+      "subcategoria": "CORREDIÇAS — CAPACIDADE DE CARGA E TIPOS DE EXTRAÇÃO",
+      "titulo": "Capacidade de carga por comprimento/linha de produto",
+      "tipo": "regra_obrigatoria",
+      "descricao": "A capacidade de carga de uma corrediça telescópica varia conforme a linha/fabricante, não existindo um valor único de mercado — exemplos de catálogo: corrediça telescópica larga de 250 mm com 30 kg por par; [cf. Capacidade de Carga: Suporta até 30 kg por par, sendo perfeita para gavetas de utensílios, escritórios ou armazenamento de itens moderadamente pesados] trilho telescópico de linha reforçada com 45 kg de capacidade; [cf. O Trilho Telescópico KA 5632 proporciona resistência elevada através da sua estabilidade e maior aproveitamento de espaço; corrediça extração total, capacidade de carga 45 kg] corrediça invisível (oculta sob a gaveta) de 550 mm com 30 kg. [cf. A Corrediça Hettich Quadro V6 550mm Invisível... suporta até 30 kg, garantindo robustez e durabilidade para diversas aplicações]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de qualquer gaveta, sempre cruzando peso estimado de uso (louças, panelas, ferramentas) com a linha de corrediça escolhida.",
+        "condicoes_adicionais": "A capacidade informada é sempre \"por par\" (as duas corrediças da gaveta juntas) — não deve ser somada em dobro nem interpretada como capacidade unitária."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo gavetas \"leves\" (roupas, papelaria) devem ter a corrediça validada contra o peso máximo esperado de uso, incluindo o peso próprio da caixa da gaveta.",
+        "limitacoes": "Linhas de corrediça com sistemas diferentes (visível/lateral vs. invisível/oculta sob a gaveta) têm limites de carga tipicamente na mesma faixa (30 kg), mas a robustez lateral pode diferir — o sistema oculto tende a ser preferido em projetos de alto padrão pela estética, mas a lateral visível costuma tolerar melhor gavetas muito largas."
+      },
+      "acoes_recomendadas": "Linhas de gaveta com caixa metálica integrada (tipo Legrabox, Antaro da Blum, ou Innotech da Hettich) para cargas maiores — capacidade de até 65 kg em algumas linhas. [cf. Gaveta interna de cozinha Blum Antaro projetado para uma carga de até 65 kg de peso]",
+      "motivo_tecnico": "A capacidade de carga de uma corrediça telescópica varia conforme a linha/fabricante, não existindo um valor único de mercado — exemplos de catálogo: corrediça telescópica larga de 250 mm com 30 kg por par; [cf. Capacidade de Carga: Suporta até 30 kg por par, sendo perfeita para gavetas de utensílios, escritórios ou armazenamento de itens moderadamente pesados] trilho telescópico de linha reforçada com 45 kg de capacidade; [cf. O Trilho Telescópico KA 5632 proporciona resistência elevada através da sua estabilidade e maior aproveitamento de espaço; corrediça extração total, capacidade de carga 45 kg] corrediça invisível (oculta sob a gaveta) de 550 mm com 30 kg. [cf. A Corrediça Hettich Quadro V6 550mm Invisível... suporta até 30 kg, garantindo robustez e durabilidade para diversas aplicações]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "médio",
+        "estetico": "alto"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Hettich Brasil (catálogo institucional); FGVTN (ficha técnica de produto); Häfele Brasil (página institucional de corrediças).",
+      "fabricante": "Hettich (KA 5632, Quadro V6), Häfele (linha telescópica 300–700 mm), FGVTN (H42).",
+      "observacoes": "A linha Häfele tem capacidade de carga variável conforme o comprimento e o sistema (extração parcial ou total) escolhido — não existe uma única tabela peso × comprimento válida para toda a linha, reforçando a necessidade de cadastro paramétrico por fabricante. [cf. A linha de corrediças telescópicas Häfele está disponível em medidas que vão de 300 a 700 mm, sendo sua capacidade de carga variável, dependendo do sistema e comprimento escolhido] ---",
+      "tags": [
+        "ferragens",
+        "corrediças",
+        "capacidade",
+        "carga",
+        "tipos",
+        "extração",
+        "comprimento",
+        "linha"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_corredicas_capacidade_de_carga_e_tipos_de_extracao_extracao_total_vs_extracao",
+      "entidade": "CORREDIÇAS — CAPACIDADE DE CARGA E TIPOS DE EXTRAÇÃO",
+      "categoria": "Ferragens",
+      "subcategoria": "CORREDIÇAS — CAPACIDADE DE CARGA E TIPOS DE EXTRAÇÃO",
+      "titulo": "Extração total vs. extração parcial",
+      "tipo": "boa_pratica",
+      "descricao": "Corrediças de extração total permitem acesso completo ao conteúdo da gaveta (a gaveta sai inteiramente do vão); as de extração parcial deixam parte da gaveta ainda dentro do móvel quando totalmente aberta. [cf. Graças ao sistema de extração total, ela garante acesso livre a todo o conteúdo da gaveta]",
+      "condicoes": {
+        "quando_aplicar": "Extração total é preferível sempre que o fundo da gaveta precisar ser plenamente acessível (talheres, utensílios, itens pequenos que se perdem no fundo); extração parcial é aceitável em gavetas rasas de uso pouco frequente, ou quando o custo precisa ser reduzido.",
+        "condicoes_adicionais": "Verificar sempre a vida útil em ciclos declarada pelo fabricante — uma linha de mercado indica vida útil de mais de 50 mil ciclos, com certificação europeia de teste (TÜV). [cf. Com vida útil de mais de 50 mil ciclos, esta linha de corrediça telescópica possui certificação europeia, tendo sua qualidade sido comprovada pelo renomado laboratório de testes TÜV]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Extração total não é necessária em prateleiras deslizantes de uso ocasional (ex.: despensa alta), onde uma extração parcial é suficiente e mais barata.",
+        "limitacoes": "Corrediças de extração total tendem a custar mais e exigir folga lateral um pouco maior no vão do que as de extração parcial equivalentes."
+      },
+      "acoes_recomendadas": "Sistemas de trava de segurança que impedem a queda acidental da gaveta ao ser aberta totalmente, com alavanca de engate rápido para remoção em limpeza — recurso presente em linhas de extração total de qualidade. [cf. Trava de Segurança: Possui sistema de travamento que impede a queda acidental da gaveta ao ser aberta totalmente, além de uma alavanca de engate rápido que facilita a remoção da gaveta para limpeza]",
+      "motivo_tecnico": "Corrediças de extração total permitem acesso completo ao conteúdo da gaveta (a gaveta sai inteiramente do vão); as de extração parcial deixam parte da gaveta ainda dentro do móvel quando totalmente aberta. [cf. Graças ao sistema de extração total, ela garante acesso livre a todo o conteúdo da gaveta]",
+      "impacto": {
+        "estrutural": "médio",
+        "financeiro": "médio",
+        "estetico": "baixo"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "FGVTN (ficha técnica); Häfele Brasil.",
+      "fabricante": "FGVTN, Häfele.",
+      "observacoes": "Esferas de aço de alta precisão (rolamentos) são o diferencial técnico citado repetidamente entre fabricantes premium (Hettich, Häfele) para garantir deslize estável, silencioso e sem folgas ao longo da vida útil. [cf. Rolamentos de Esfera: Equipado com esferas de aço de alta precisão que garantem um deslize suave, sem travamentos ou ruídos metálicos] ---",
+      "tags": [
+        "ferragens",
+        "corrediças",
+        "capacidade",
+        "carga",
+        "tipos",
+        "extração",
+        "total",
+        "parcial"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_puxadores_posicionamento_ergonomico_altura_ideal_do_puxador_em_portas_vertica",
+      "entidade": "PUXADORES — POSICIONAMENTO ERGONÔMICO",
+      "categoria": "Ferragens",
+      "subcategoria": "PUXADORES — POSICIONAMENTO ERGONÔMICO",
+      "titulo": "Altura ideal do puxador em portas verticais",
+      "tipo": "recomendacao",
+      "descricao": "Para puxadores instalados em portas de altura considerável (armários, roupeiros), a altura recomendada do centro do puxador fica entre 1,00 m e 1,10 m do piso, faixa que atende à maior parte dos usuários adultos. [cf. Altura ideal do centro do puxador: entre 1,00 m e 1,10 m do piso] Quando o puxador é um perfil vertical longo (ex.: 60 cm), a prática comum é centralizá-lo na altura da própria folha da porta, priorizando o equilíbrio estético sobre a altura ergonômica fixa. [cf. Quando o puxador é vertical e longo (ex: de 60 cm), pode-se centralizá-lo na altura da folha da porta para estética equilibrada]",
+      "condicoes": {
+        "quando_aplicar": "Especificação de puxador em qualquer porta vertical de armário, roupeiro ou torre.",
+        "condicoes_adicionais": "Distância lateral do puxador em relação à borda da porta gira em torno de 5 cm, como referência de mercado. [cf. A distância ideal do puxador da porta para sua instalação varia, mas geralmente é posicionado a cerca de 5cm das laterais da porta]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Em ambientes infantis, a altura deve ser reduzida para 70–85 cm do piso, facilitando o alcance por crianças. [cf. Em ambientes infantis, o ideal é instalar os puxadores mais baixos, entre 70 e 85 cm do piso, facilitando o alcance] Em móveis de quarto infantil, no entanto, há uma corrente oposta de boas práticas que recomenda justamente EVITAR puxadores de fácil alcance, para reduzir o risco de a criança usar o puxador como apoio para escalar o móvel — nesse caso, a decisão depende da política de segurança adotada no projeto (ver módulo \"Closets\"/\"Segurança infantil\", a detalhar em rodada futura).",
+        "limitacoes": "Não existe uma norma técnica única e universal (tipo ABNT) fixando essa altura para móveis residenciais — os valores citados são consolidação de boas práticas de mercado, não normas regulatórias obrigatórias."
+      },
+      "acoes_recomendadas": "Puxadores ocultos/perfil (sistema J-pull ou friso usinado) em portas de correr de vidro, que dispensam totalmente a necessidade de altura de puxador convencional — vantajoso em espaços pequenos por não exigir vão de abertura adicional. [cf. Puxadores ocultos em conjunto com portas de correr de vidro são uma excelente opção, pois não exigem espaço adicional para a abertura, sendo especialmente adequados para apartamentos pequenos]",
+      "motivo_tecnico": "Para puxadores instalados em portas de altura considerável (armários, roupeiros), a altura recomendada do centro do puxador fica entre 1,00 m e 1,10 m do piso, faixa que atende à maior parte dos usuários adultos. [cf. Altura ideal do centro do puxador: entre 1,00 m e 1,10 m do piso] Quando o puxador é um perfil vertical longo (ex.: 60 cm), a prática comum é centralizá-lo na altura da própria folha da porta, priorizando o equilíbrio estético sobre a altura ergonômica fixa. [cf. Quando o puxador é vertical e longo (ex: de 60 cm), pode-se centralizá-lo na altura da folha da porta para estética equilibrada]",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Casual Inox (guia técnico); Meu Móvel Planejado (blog institucional).",
+      "fabricante": "N/A (regra de composição geral, válida para qualquer fabricante de puxador em zamac, alumínio ou aço inox).",
+      "observacoes": "Puxadores em zamac (liga de zinco, alumínio, magnésio e cobre) são citados como opção durável e resistente à corrosão, sendo referência comum de material no mercado nacional de marcenaria planejada. [cf. O puxador zamac é fabricado a partir de uma liga de zinco, alumínio, magnésio e cobre, sendo durável, resistente à corrosão e oferecendo diversas opções] ---",
+      "tags": [
+        "ferragens",
+        "puxadores",
+        "posicionamento",
+        "ergonômico",
+        "altura",
+        "ideal",
+        "puxador",
+        "portas"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_puxadores_posicionamento_ergonomico_posicionamento_de_puxador_em_gavetas",
+      "entidade": "PUXADORES — POSICIONAMENTO ERGONÔMICO",
+      "categoria": "Ferragens",
+      "subcategoria": "PUXADORES — POSICIONAMENTO ERGONÔMICO",
+      "titulo": "Posicionamento de puxador em gavetas",
+      "tipo": "boa_pratica",
+      "descricao": "Em gavetas, o puxador é posicionado horizontalmente centralizado na largura da frente, sem uma \"altura padrão\" fixa (já que a posição vertical é determinada pela própria altura da frente da gaveta na composição do móvel).",
+      "condicoes": {
+        "quando_aplicar": "Toda especificação de frente de gaveta com puxador aparente (não aplicável a sistemas com abertura por pressão/tip-on, que dispensam puxador).",
+        "condicoes_adicionais": "A distância entre furos do puxador deve ser medida com precisão contra a especificação do produto antes da compra/furação, para garantir compatibilidade com o gabarito de furação da fábrica. [cf. Disponibilizamos as medidas dos nossos puxadores na descrição do produto, para comprar o ideal na sua casa é essencial que meça o entre furos da sua porta/gaveta da mesma forma descrita acima]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Gavetas com abertura por toque (push-to-open) não seguem esta regra — nesse caso, a \"pega\" é feita por um friso ou reentrância usinada na própria frente, não por um puxador de ferragem.",
+        "limitacoes": "Erros de medida na distância entre furos são causa comum de retrabalho (furos visíveis e não aproveitados na frente da gaveta)."
+      },
+      "acoes_recomendadas": "Puxador tipo \"cava\" (usinado na própria porta/gaveta com fresa de 45°), que dispensa ferragem de puxador — comum em projetos minimalistas. [cf. Saiba como fazer puxador cava na altura da porta com fresa de 45 graus e dicas para móveis sob medida]",
+      "motivo_tecnico": "Em gavetas, o puxador é posicionado horizontalmente centralizado na largura da frente, sem uma \"altura padrão\" fixa (já que a posição vertical é determinada pela própria altura da frente da gaveta na composição do móvel).",
+      "impacto": {
+        "estrutural": "baixo",
+        "financeiro": "baixo",
+        "estetico": "alto"
+      },
+      "prioridade": "médio",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Conteúdo institucional de fabricantes de puxador (TikTok/redes sociais de marcas do setor, usado aqui apenas como confirmação de prática de mercado, não como norma técnica formal).",
+      "fabricante": "N/A.",
+      "observacoes": "Este item deveria ser tratado no motor de regras como validação cruzada entre o gabarito de furação do puxador escolhido e a geometria da frente (largura mínima necessária para acomodar a distância entre furos sem comprometer as bordas). ---",
+      "tags": [
+        "ferragens",
+        "puxadores",
+        "posicionamento",
+        "ergonômico",
+        "puxador",
+        "gavetas"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_dispositivos_de_montagem_minifix_cavilha_vb_rafix_minifix_castanha_cavilha_fu",
+      "entidade": "DISPOSITIVOS DE MONTAGEM — MINIFIX, CAVILHA, VB/RAFIX",
+      "categoria": "Ferragens",
+      "subcategoria": "DISPOSITIVOS DE MONTAGEM — MINIFIX, CAVILHA, VB/RAFIX",
+      "titulo": "Minifix (castanha) + cavilha: função e regra de uso conjunto",
+      "tipo": "regra_obrigatoria",
+      "descricao": "O minifix (também chamado de castanha, girofix, tamborfix, rastex ou tambor zamac, dependendo do fabricante) é um dispositivo de montagem desmontável composto por um tambor (que recebe um parafuso de pescoço alongado) e um parafuso — permitindo montar e desmontar o móvel repetidamente sem danificar a madeira. [cf. É popularmente conhecido como castanha... esse dispositivo garante a fixação de duas peças de forma segura; com o minifix, você pode montar e desmontar seu móvel sem danificar a madeira exatamente por ele ser eficiente e projetado com esse propósito] Via de regra, o minifix deve ser usado em conjunto com uma ou mais cavilhas (tarugos), que absorvem esforços de cisalhamento e impedem a rotação/abertura da junta. [cf. Minifix: Dispositivo de montagem utilizado para união de peças com pressão no lado esquerdo e direito, e sempre deve ser utilizado em conjunto com cavilhas (tarugos)]",
+      "condicoes": {
+        "quando_aplicar": "Uniões estruturais desmontáveis entre painéis de MDF/MDP/compensado — union de laterais com tampo, fundo, prateleiras fixas — especialmente em móveis modulados vendidos \"para montar\" ou que precisem ser desmontados para mudança/transporte.",
+        "condicoes_adicionais": "A posição do minifix e das cavilhas na peça varia conforme a profundidade da peça: em peças com menos de 120 mm de profundidade, usa-se apenas um minifix a 25 mm da borda e uma cavilha a 25 mm da borda oposta; em peças até 250 mm, um minifix centralizado com duas cavilhas a 40 mm das bordas; em peças acima de 250 mm, o minifix a 50 mm das bordas e cavilhas a 100 mm de cada borda. [cf. Em peças com menos de 120mm de profundidade é utilizado apenas um minifix á 25mm da borda e uma cavilha também a 25mm da borda oposta... em peças menores que 250mm... um minifix centralizado e duas cavilhas cada uma a 40mm das bordas... em peças maiores que 250mm de profundidade o minifix é posicionado a 50mm das bordas, e as cavilhas ficam afastadas 100mm de cada borda]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Uniões permanentes (que nunca precisarão ser desmontadas) podem usar sistemas mais simples (cavilha + cola, ou parafuso direto), com custo de ferragem menor.",
+        "limitacoes": "Erros de alinhamento entre o furo da cavilha e o furo do parafuso/minifix (divergência de centro) são um problema recorrente relatado por marceneiros, resultando em abertura visível na junta entre lateral e tampo."
+      },
+      "acoes_recomendadas": "Dispositivo VB/Rafix, que não necessita do uso de cavilhas complementares, funcionando como sistema autônomo de fixação. [cf. VB: Dispositivo de montagem que não necessita o uso de cavilhas]",
+      "motivo_tecnico": "O minifix (também chamado de castanha, girofix, tamborfix, rastex ou tambor zamac, dependendo do fabricante) é um dispositivo de montagem desmontável composto por um tambor (que recebe um parafuso de pescoço alongado) e um parafuso — permitindo montar e desmontar o móvel repetidamente sem danificar a madeira. [cf. É popularmente conhecido como castanha... esse dispositivo garante a fixação de duas peças de forma segura; com o minifix, você pode montar e desmontar seu móvel sem danificar a madeira exatamente por ele ser eficiente e projetado com esse propósito] Via de regra, o minifix deve ser usado em conjunto com uma ou mais cavilhas (tarugos), que absorvem esforços de cisalhamento e impedem a rotação/abertura da junta. [cf. Minifix: Dispositivo de montagem utilizado para união de peças com pressão no lado esquerdo e direito, e sempre deve ser utilizado em conjunto com cavilhas (tarugos)]",
+      "impacto": {
+        "estrutural": "crítico",
+        "financeiro": "baixo",
+        "estetico": "baixo"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Blog da Marcenaria (Marceneiro Expresso); Central de Ajuda Gabster (documentação técnica de software de marcenaria); Gasômetro Madeiras (ficha de produto).",
+      "fabricante": "Referência geral de mercado — nomenclatura varia entre Häfele (Minifix/Rastex), outros fabricantes usam Girofix/Tamborfix para produtos equivalentes.",
+      "observacoes": "O nome \"minifix\" surgiu na Alemanha, associado à ascensão do MDF como material predominante na marcenaria modulada — é hoje tratado como padrão de fato da indústria, mesmo com nomenclatura comercial variável entre fabricantes. [cf. Foi inserido no mundo da marcenaria na ascensão do MDF, na Alemanha, e hoje é um grande aliado na montagem de móveis modulados por sua precisão e praticidade] ---",
+      "tags": [
+        "ferragens",
+        "dispositivos",
+        "montagem",
+        "minifix",
+        "cavilha",
+        "rafix",
+        "castanha",
+        "função"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_02_dispositivos_de_montagem_minifix_cavilha_vb_rafix_vb_rafix_como_alternativa_a",
+      "entidade": "DISPOSITIVOS DE MONTAGEM — MINIFIX, CAVILHA, VB/RAFIX",
+      "categoria": "Ferragens",
+      "subcategoria": "DISPOSITIVOS DE MONTAGEM — MINIFIX, CAVILHA, VB/RAFIX",
+      "titulo": "VB/Rafix como alternativa ao minifix",
+      "tipo": "boa_pratica",
+      "descricao": "O VB (também chamado Rafix, dependendo do fabricante) é um dispositivo de montagem de painéis muito usado na indústria moveleira, funcionando com parafuso de união e bucha plástica, sem exigir cavilhas complementares para estabilidade da junta. [cf. O dispositivo VB e Rafix são muito utilizados na marcenaria e indústria moveleira; os parafusos de união são essenciais para garantir a fixação segura e oferecer durabilidade na montagem dos mobiliários]",
+      "condicoes": {
+        "quando_aplicar": "Uniões estruturais onde se deseja reduzir o número de furações/dispositivos por junta (menos peças = montagem mais rápida), especialmente em produção em escala industrial.",
+        "condicoes_adicionais": "Cada sistema (Minifix, Rafix, VB36) tem geometria de furação própria e não intercambiável — é necessário definir o sistema de montagem antes de gerar o plano de furação, não depois."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Em uniões onde a resistência ao cisalhamento lateral é crítica e não há geometria de encaixe adicional (como uma cava ou friso), pode ser preferível reforçar com cavilha mesmo assim, dependendo do peso previsto sobre a junta.",
+        "limitacoes": "Menor familiaridade de parte da mão de obra tradicional com sistemas VB/Rafix em comparação ao minifix, que é mais difundido no Brasil."
+      },
+      "acoes_recomendadas": "Minifix + cavilha (item 5.1) quando a praticidade de desmontagem for prioridade sobre a velocidade de montagem inicial.",
+      "motivo_tecnico": "O VB (também chamado Rafix, dependendo do fabricante) é um dispositivo de montagem de painéis muito usado na indústria moveleira, funcionando com parafuso de união e bucha plástica, sem exigir cavilhas complementares para estabilidade da junta. [cf. O dispositivo VB e Rafix são muito utilizados na marcenaria e indústria moveleira; os parafusos de união são essenciais para garantir a fixação segura e oferecer durabilidade na montagem dos mobiliários]",
+      "impacto": {
+        "estrutural": "alto",
+        "financeiro": "médio",
+        "estetico": "baixo"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Gasômetro Madeiras (ficha de produto); vídeo institucional comparativo Minifix/Rafix/VB36 (fabricantes do setor).",
+      "fabricante": "Referência geral — nomenclatura e geometria variam por fabricante (Häfele, Rometal, Domus, entre outros, cada um com sua linha própria).",
+      "observacoes": "Este é um ponto onde o Planne pode se diferenciar de concorrentes: tratar \"sistema de montagem\" como uma decisão de projeto tomada uma vez (por padrão de fábrica ou por módulo) e propagada automaticamente para todas as furações do plano de corte, evitando mistura acidental de sistemas incompatíveis dentro do mesmo móvel. --- ## PRÓXIMOS PASSOS SUGERIDOS Módulos concluídos até aqui: **Cozinhas** (piloto) e **Ferragens** (este documento). Sugestão de sequência para as próximas rodadas, mantendo a mesma profundidade e metodologia: 1. **Estrutura** — travamentos, engrossos, tampos, empenamento, reforços (normas ABNT de resistência de painéis). 2. **Portas e Gavetas** — folgas, recuos, limites de peso/dimensão, tipos especiais (correr, camarão, basculante, pivotante). 3. **Materiais** — MDF, MDP, compensado (Arauco, Duratex, Berneck, Guararapes, Greenplac) — densidade, espessuras-padrão, resistência à umidade. 4. **Closets** — cabideiros, maleiros, sapateiras, calceiros, joalheiros. 5. **Banheiros e Escritórios**. 6. **Produção, Transporte, Montagem, Economia** — conhecimento operacional. Quer que eu continue direto pelo módulo **Estrutura** (travamentos/tampos/empenamento) ou prefere priorizar **Portas e Gavetas**, já que são complementares diretos deste módulo de Ferragens?",
+      "tags": [
+        "ferragens",
+        "dispositivos",
+        "montagem",
+        "minifix",
+        "cavilha",
+        "rafix",
+        "alternativa"
+      ],
+      "modulo_origem": "02-Ferragens",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}

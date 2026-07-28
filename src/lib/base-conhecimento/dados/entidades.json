@@ -1,0 +1,507 @@
+{
+  "total_entidades": 65,
+  "entidades": {
+    "TRIÂNGULO DE TRABALHO E FLUXO": {
+      "nome": "TRIÂNGULO DE TRABALHO E FLUXO",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_triangulo_de_trabalho_e_fluxo_regra_do_triangulo_de_trabalho_nkba",
+        "atom_01_triangulo_de_trabalho_e_fluxo_larguras_minimas_de_corredor_aisle"
+      ]
+    },
+    "GELADEIRA": {
+      "nome": "GELADEIRA",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_geladeira_folga_de_ventilacao_lateral_superior_e_traseira",
+        "atom_01_geladeira_nao_posicionar_geladeira_ao_lado_do_fogao_forno"
+      ]
+    },
+    "COOKTOP / FOGÃO": {
+      "nome": "COOKTOP / FOGÃO",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_cooktop_fogao_distancia_minima_da_pia_respingos",
+        "atom_01_cooktop_fogao_folga_lateral_do_cooktop_fogao"
+      ]
+    },
+    "FORNO DE EMBUTIR": {
+      "nome": "FORNO DE EMBUTIR",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_forno_de_embutir_ausencia_de_padrao_dimensional_entre_fabricantes",
+        "atom_01_forno_de_embutir_folga_de_ventilacao_e_ergonomia_de_altura_do_forno"
+      ]
+    },
+    "MICRO-ONDAS E TORRE QUENTE": {
+      "nome": "MICRO-ONDAS E TORRE QUENTE",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_micro_ondas_e_torre_quente_altura_ergonomica_do_micro_ondas_embutido",
+        "atom_01_micro_ondas_e_torre_quente_dimensoes_padrao_do_nicho_da_torre_quente"
+      ]
+    },
+    "COIFA / EXAUSTOR": {
+      "nome": "COIFA / EXAUSTOR",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_coifa_exaustor_altura_da_coifa_sobre_o_cooktop_fogao"
+      ]
+    },
+    "LAVA-LOUÇAS": {
+      "nome": "LAVA-LOUÇAS",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_lava_loucas_largura_padrao_de_nicho_60_cm_45_cm",
+        "atom_01_lava_loucas_folga_traseira_e_ponto_eletrico_dedicado"
+      ]
+    },
+    "CUBAS E PIA": {
+      "nome": "CUBAS E PIA",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_cubas_e_pia_compatibilidade_cuba_x_largura_de_bancada",
+        "atom_01_cubas_e_pia_profundidade_da_cuba_x_ergonomia"
+      ]
+    },
+    "BANCADAS (altura ergonômica)": {
+      "nome": "BANCADAS (altura ergonômica)",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_bancadas_altura_ergonomica_altura_padrao_da_bancada_de_trabalho",
+        "atom_01_bancadas_altura_ergonomica_altura_especifica_para_bancada_de_cooktop"
+      ]
+    },
+    "ARMÁRIOS AÉREOS": {
+      "nome": "ARMÁRIOS AÉREOS",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_armarios_aereos_vao_livre_entre_bancada_e_armario_aereo",
+        "atom_01_armarios_aereos_profundidade_do_armario_aereo"
+      ]
+    },
+    "DESPENSEIROS E ARMÁRIOS DE COLUNA": {
+      "nome": "DESPENSEIROS E ARMÁRIOS DE COLUNA",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_despenseiros_e_armarios_de_coluna_profundidade_e_alinhamento_com_torre_de_ele"
+      ]
+    },
+    "BOAS PRÁTICAS GERAIS DE PROJETO DE COZINHA": {
+      "nome": "BOAS PRÁTICAS GERAIS DE PROJETO DE COZINHA",
+      "categoria": "Cozinhas",
+      "atomos": [
+        "atom_01_boas_praticas_gerais_de_projeto_de_cozinha_regra_de_ouro_escolher_os_eletrodo"
+      ]
+    },
+    "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA": {
+      "nome": "DOBRADIÇAS — QUANTIDADE, ESPAÇAMENTO E CAPACIDADE DE CARGA",
+      "categoria": "Ferragens",
+      "atomos": [
+        "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_regra_de_quantidade_p",
+        "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_capacidade_de_carga_p",
+        "atom_02_dobradicas_quantidade_espacamento_e_capacidade_de_carga_faixas_de_espessura_d"
+      ]
+    },
+    "DOBRADIÇAS — TIPOS E RECOBRIMENTO": {
+      "nome": "DOBRADIÇAS — TIPOS E RECOBRIMENTO",
+      "categoria": "Ferragens",
+      "atomos": [
+        "atom_02_dobradicas_tipos_e_recobrimento_reta_curva_e_super_curva_semi_sobreposta_embu"
+      ]
+    },
+    "CORREDIÇAS — CAPACIDADE DE CARGA E TIPOS DE EXTRAÇÃO": {
+      "nome": "CORREDIÇAS — CAPACIDADE DE CARGA E TIPOS DE EXTRAÇÃO",
+      "categoria": "Ferragens",
+      "atomos": [
+        "atom_02_corredicas_capacidade_de_carga_e_tipos_de_extracao_capacidade_de_carga_por_co",
+        "atom_02_corredicas_capacidade_de_carga_e_tipos_de_extracao_extracao_total_vs_extracao"
+      ]
+    },
+    "PUXADORES — POSICIONAMENTO ERGONÔMICO": {
+      "nome": "PUXADORES — POSICIONAMENTO ERGONÔMICO",
+      "categoria": "Ferragens",
+      "atomos": [
+        "atom_02_puxadores_posicionamento_ergonomico_altura_ideal_do_puxador_em_portas_vertica",
+        "atom_02_puxadores_posicionamento_ergonomico_posicionamento_de_puxador_em_gavetas"
+      ]
+    },
+    "DISPOSITIVOS DE MONTAGEM — MINIFIX, CAVILHA, VB/RAFIX": {
+      "nome": "DISPOSITIVOS DE MONTAGEM — MINIFIX, CAVILHA, VB/RAFIX",
+      "categoria": "Ferragens",
+      "atomos": [
+        "atom_02_dispositivos_de_montagem_minifix_cavilha_vb_rafix_minifix_castanha_cavilha_fu",
+        "atom_02_dispositivos_de_montagem_minifix_cavilha_vb_rafix_vb_rafix_como_alternativa_a"
+      ]
+    },
+    "ESPESSURAS DE MDF/MDP E FUNÇÃO ESTRUTURAL DE CADA UMA": {
+      "nome": "ESPESSURAS DE MDF/MDP E FUNÇÃO ESTRUTURAL DE CADA UMA",
+      "categoria": "Estrutura",
+      "atomos": [
+        "atom_03_espessuras_de_mdf_mdp_e_funcao_estrutural_de_cada_uma_tabela_geral_de_aplicac",
+        "atom_03_espessuras_de_mdf_mdp_e_funcao_estrutural_de_cada_uma_frequencia_de_uso_como_"
+      ]
+    },
+    "PRATELEIRAS — VÃO MÁXIMO E CAPACIDADE DE CARGA": {
+      "nome": "PRATELEIRAS — VÃO MÁXIMO E CAPACIDADE DE CARGA",
+      "categoria": "Estrutura",
+      "atomos": [
+        "atom_03_prateleiras_vao_maximo_e_capacidade_de_carga_relacao_entre_vao_espessura_e_fl",
+        "atom_03_prateleiras_vao_maximo_e_capacidade_de_carga_exemplos_praticos_de_capacidade_"
+      ]
+    },
+    "FUNDO DO MÓVEL — FUNÇÃO ESTRUTURAL (TRAVAMENTO TRASEIRO)": {
+      "nome": "FUNDO DO MÓVEL — FUNÇÃO ESTRUTURAL (TRAVAMENTO TRASEIRO)",
+      "categoria": "Estrutura",
+      "atomos": [
+        "atom_03_fundo_do_movel_funcao_estrutural_travamento_traseiro_fundo_como_elemento_de_t",
+        "atom_03_fundo_do_movel_funcao_estrutural_travamento_traseiro_montagem_sobre_superfici"
+      ]
+    },
+    "EMPENAMENTO — CAUSAS E PREVENÇÃO": {
+      "nome": "EMPENAMENTO — CAUSAS E PREVENÇÃO",
+      "categoria": "Estrutura",
+      "atomos": [
+        "atom_03_empenamento_causas_e_prevencao_causa_tecnica_raiz_diferenca_de_absorcao_de_um",
+        "atom_03_empenamento_causas_e_prevencao_limite_de_tolerancia_e_criterio_de_substituica",
+        "atom_03_empenamento_causas_e_prevencao_prevencao_pelo_armazenamento_correto_do_mdf_an"
+      ]
+    },
+    "ENGROSSO E TAMPONAMENTO — TÉCNICAS DE COMPOSIÇÃO DE ESPESSURA E ACABAMENTO": {
+      "nome": "ENGROSSO E TAMPONAMENTO — TÉCNICAS DE COMPOSIÇÃO DE ESPESSURA E ACABAMENTO",
+      "categoria": "Estrutura",
+      "atomos": [
+        "atom_03_engrosso_e_tamponamento_tecnicas_de_composicao_de_espessura_e_acabamento_engr",
+        "atom_03_engrosso_e_tamponamento_tecnicas_de_composicao_de_espessura_e_acabamento_tamp"
+      ]
+    },
+    "ESQUADRO E TRAVAMENTO DIAGONAL": {
+      "nome": "ESQUADRO E TRAVAMENTO DIAGONAL",
+      "categoria": "Estrutura",
+      "atomos": [
+        "atom_03_esquadro_e_travamento_diagonal_cantoneiras_em_diagonal_como_reforco_de_esquad"
+      ]
+    },
+    "FOLGAS E RECOBRIMENTO DE PORTAS": {
+      "nome": "FOLGAS E RECOBRIMENTO DE PORTAS",
+      "categoria": "Portas e Gavetas",
+      "atomos": [
+        "atom_04_folgas_e_recobrimento_de_portas_folgas_de_referencia_entre_portas_e_nas_later"
+      ]
+    },
+    "LARGURA MÁXIMA RECOMENDADA POR FOLHA": {
+      "nome": "LARGURA MÁXIMA RECOMENDADA POR FOLHA",
+      "categoria": "Portas e Gavetas",
+      "atomos": [
+        "atom_04_largura_maxima_recomendada_por_folha_limite_pratico_de_largura_por_folha_em_m"
+      ]
+    },
+    "PORTA DE CORRER": {
+      "nome": "PORTA DE CORRER",
+      "categoria": "Portas e Gavetas",
+      "atomos": [
+        "atom_04_porta_de_correr_limites_dimensionais_por_sistema_fabricante",
+        "atom_04_porta_de_correr_capacidade_de_carga_do_sistema_de_correr_por_linha_de_ferrage"
+      ]
+    },
+    "PORTA CAMARÃO": {
+      "nome": "PORTA CAMARÃO",
+      "categoria": "Portas e Gavetas",
+      "atomos": [
+        "atom_04_porta_camarao_funcionamento_vantagens_e_limitacoes_acusticas_termicas"
+      ]
+    },
+    "PORTA BASCULANTE E PISTÃO A GÁS": {
+      "nome": "PORTA BASCULANTE E PISTÃO A GÁS",
+      "categoria": "Portas e Gavetas",
+      "atomos": [
+        "atom_04_porta_basculante_e_pistao_a_gas_formula_de_dimensionamento_da_forca_do_pistao",
+        "atom_04_porta_basculante_e_pistao_a_gas_angulos_de_abertura_e_compatibilidade_com_o_u"
+      ]
+    },
+    "GAVETAS — FOLGAS ENTRE FRENTES E COMPOSIÇÃO VERTICAL": {
+      "nome": "GAVETAS — FOLGAS ENTRE FRENTES E COMPOSIÇÃO VERTICAL",
+      "categoria": "Portas e Gavetas",
+      "atomos": [
+        "atom_04_gavetas_folgas_entre_frentes_e_composicao_vertical_folgas_entre_frentes_de_ga",
+        "atom_04_gavetas_folgas_entre_frentes_e_composicao_vertical_sequencia_de_montagem_e_al"
+      ]
+    },
+    "MDF VS. MDP — DIFERENÇAS ESTRUTURAIS E DE APLICAÇÃO": {
+      "nome": "MDF VS. MDP — DIFERENÇAS ESTRUTURAIS E DE APLICAÇÃO",
+      "categoria": "Materiais",
+      "atomos": [
+        "atom_05_mdf_vs_mdp_diferencas_estruturais_e_de_aplicacao_composicao_e_diferenca_estru",
+        "atom_05_mdf_vs_mdp_diferencas_estruturais_e_de_aplicacao_resistencia_a_umidade_e_ao_e"
+      ]
+    },
+    "MDF HIDRÓFUGO/RUC/ULTRA — LINHAS RESISTENTES À UMIDADE POR FABRICANTE": {
+      "nome": "MDF HIDRÓFUGO/RUC/ULTRA — LINHAS RESISTENTES À UMIDADE POR FABRICANTE",
+      "categoria": "Materiais",
+      "atomos": [
+        "atom_05_mdf_hidrofugo_ruc_ultra_linhas_resistentes_a_umidade_por_fabricante_linha_ruc",
+        "atom_05_mdf_hidrofugo_ruc_ultra_linhas_resistentes_a_umidade_por_fabricante_linha_ult"
+      ]
+    },
+    "COMPENSADO NAVAL — QUANDO USAR EM VEZ DE MDF": {
+      "nome": "COMPENSADO NAVAL — QUANDO USAR EM VEZ DE MDF",
+      "categoria": "Materiais",
+      "atomos": [
+        "atom_05_compensado_naval_quando_usar_em_vez_de_mdf_composicao_e_resistencia_tecnica_s",
+        "atom_05_compensado_naval_quando_usar_em_vez_de_mdf_comparativo_de_custo_beneficio_com"
+      ]
+    },
+    "DIMENSÕES-PADRÃO DE CHAPA E ESPESSURAS DISPONÍVEIS": {
+      "nome": "DIMENSÕES-PADRÃO DE CHAPA E ESPESSURAS DISPONÍVEIS",
+      "categoria": "Materiais",
+      "atomos": [
+        "atom_05_dimensoes_padrao_de_chapa_e_espessuras_disponiveis_formato_padrao_de_chapa_no"
+      ]
+    },
+    "CABIDEIROS — PROFUNDIDADE E ALTURA POR TIPO DE PEÇA": {
+      "nome": "CABIDEIROS — PROFUNDIDADE E ALTURA POR TIPO DE PEÇA",
+      "categoria": "Closets",
+      "atomos": [
+        "atom_06_cabideiros_profundidade_e_altura_por_tipo_de_peca_profundidade_do_cabideiro_p",
+        "atom_06_cabideiros_profundidade_e_altura_por_tipo_de_peca_altura_por_tipo_de_peca_pen"
+      ]
+    },
+    "SAPATEIRAS — PROFUNDIDADE E ALTURA POR MODELO": {
+      "nome": "SAPATEIRAS — PROFUNDIDADE E ALTURA POR MODELO",
+      "categoria": "Closets",
+      "atomos": [
+        "atom_06_sapateiras_profundidade_e_altura_por_modelo_profundidade_por_tipo_de_sapateir",
+        "atom_06_sapateiras_profundidade_e_altura_por_modelo_altura_de_prateleira_vao_por_tipo"
+      ]
+    },
+    "MALEIROS E NICHOS SUPERIORES": {
+      "nome": "MALEIROS E NICHOS SUPERIORES",
+      "categoria": "Closets",
+      "atomos": [
+        "atom_06_maleiros_e_nichos_superiores_altura_minima_e_funcao_do_maleiro",
+        "atom_06_maleiros_e_nichos_superiores_nichos_internos_para_itens_dobrados"
+      ]
+    },
+    "GAVETAS DE CLOSET — PROFUNDIDADES POR CATEGORIA DE ITEM": {
+      "nome": "GAVETAS DE CLOSET — PROFUNDIDADES POR CATEGORIA DE ITEM",
+      "categoria": "Closets",
+      "atomos": [
+        "atom_06_gavetas_de_closet_profundidades_por_categoria_de_item_tabela_de_profundidade_"
+      ]
+    },
+    "METRAGEM E CIRCULAÇÃO DO AMBIENTE": {
+      "nome": "METRAGEM E CIRCULAÇÃO DO AMBIENTE",
+      "categoria": "Closets",
+      "atomos": [
+        "atom_06_metragem_e_circulacao_do_ambiente_metragem_minima_recomendada_por_perfil_de_c",
+        "atom_06_metragem_e_circulacao_do_ambiente_espaco_de_circulacao_em_frente_aos_modulos"
+      ]
+    },
+    "ILUMINAÇÃO E ESPELHOS": {
+      "nome": "ILUMINAÇÃO E ESPELHOS",
+      "categoria": "Closets",
+      "atomos": [
+        "atom_06_iluminacao_e_espelhos_estrategia_de_iluminacao_por_zona_do_closet",
+        "atom_06_iluminacao_e_espelhos_espelhos_e_joalheiros_como_elementos_funcionais"
+      ]
+    },
+    "ALTURA DE BANCADA E PIA": {
+      "nome": "ALTURA DE BANCADA E PIA",
+      "categoria": "Banheiros",
+      "atomos": [
+        "atom_07_altura_de_bancada_e_pia_faixa_de_altura_recomendada",
+        "atom_07_altura_de_bancada_e_pia_cuba_sobreposta_e_ajuste_de_altura_por_tipo_de_cuba"
+      ]
+    },
+    "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE": {
+      "nome": "GABINETE SOB A PIA — SIFÃO, VENTILAÇÃO E UMIDADE",
+      "categoria": "Banheiros",
+      "atomos": [
+        "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_necessidade_do_gabinete_decisao",
+        "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_prevencao_de_mofo_fundo_aberto_",
+        "atom_07_gabinete_sob_a_pia_sifao_ventilacao_e_umidade_gabinete_suspenso_vs_gabinete_c"
+      ]
+    },
+    "ESPELHOS — ALTURA E DISTÂNCIA DA PIA": {
+      "nome": "ESPELHOS — ALTURA E DISTÂNCIA DA PIA",
+      "categoria": "Banheiros",
+      "atomos": [
+        "atom_07_espelhos_altura_e_distancia_da_pia_distancia_entre_a_pia_e_a_base_do_espelho"
+      ]
+    },
+    "RODABANCA, FRONTÃO E TESTEIRA": {
+      "nome": "RODABANCA, FRONTÃO E TESTEIRA",
+      "categoria": "Banheiros",
+      "atomos": [
+        "atom_07_rodabanca_frontao_e_testeira_definicoes_e_funcao_de_cada_elemento"
+      ]
+    },
+    "MATERIAIS E RESISTÊNCIA À UMIDADE EM BANHEIRO": {
+      "nome": "MATERIAIS E RESISTÊNCIA À UMIDADE EM BANHEIRO",
+      "categoria": "Banheiros",
+      "atomos": [
+        "atom_07_materiais_e_resistencia_a_umidade_em_banheiro_especificacao_de_material_para_"
+      ]
+    },
+    "ALTURA DE MESA E ERGONOMIA": {
+      "nome": "ALTURA DE MESA E ERGONOMIA",
+      "categoria": "Escritorios",
+      "atomos": [
+        "atom_08_altura_de_mesa_e_ergonomia_faixa_de_altura_recomendada_e_referencia_normativa"
+      ]
+    },
+    "POSICIONAMENTO DE MONITOR": {
+      "nome": "POSICIONAMENTO DE MONITOR",
+      "categoria": "Escritorios",
+      "atomos": [
+        "atom_08_posicionamento_de_monitor_altura_e_distancia_do_monitor_em_relacao_ao_usuario"
+      ]
+    },
+    "COMPARTIMENTO DE CPU — VENTILAÇÃO E SUPORTE": {
+      "nome": "COMPARTIMENTO DE CPU — VENTILAÇÃO E SUPORTE",
+      "categoria": "Escritorios",
+      "atomos": [
+        "atom_08_compartimento_de_cpu_ventilacao_e_suporte_ventilacao_do_compartimento_de_cpu",
+        "atom_08_compartimento_de_cpu_ventilacao_e_suporte_suporte_de_cpu_tipo_pedestal_e_pass"
+      ]
+    },
+    "GESTÃO DE CABOS E INFRAESTRUTURA ELÉTRICA": {
+      "nome": "GESTÃO DE CABOS E INFRAESTRUTURA ELÉTRICA",
+      "categoria": "Escritorios",
+      "atomos": [
+        "atom_08_gestao_de_cabos_e_infraestrutura_eletrica_estrategias_de_organizacao_de_cabos"
+      ]
+    },
+    "GAVETEIROS DE ESCRITÓRIO — ESTRUTURA E FERRAGEM": {
+      "nome": "GAVETEIROS DE ESCRITÓRIO — ESTRUTURA E FERRAGEM",
+      "categoria": "Escritorios",
+      "atomos": [
+        "atom_08_gaveteiros_de_escritorio_estrutura_e_ferragem_especificacao_estrutural_de_gav"
+      ]
+    },
+    "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA": {
+      "nome": "PLANO DE CORTE E NESTING — OTIMIZAÇÃO DE APROVEITAMENTO DE CHAPA",
+      "categoria": "Producao",
+      "atomos": [
+        "atom_09_plano_de_corte_e_nesting_otimizacao_de_aproveitamento_de_chapa_funcao_e_param",
+        "atom_09_plano_de_corte_e_nesting_otimizacao_de_aproveitamento_de_chapa_indicadores_de",
+        "atom_09_plano_de_corte_e_nesting_otimizacao_de_aproveitamento_de_chapa_seccionadora_v"
+      ]
+    },
+    "SISTEMA 32 — PADRÃO DE FURAÇÃO SEQUENCIAL": {
+      "nome": "SISTEMA 32 — PADRÃO DE FURAÇÃO SEQUENCIAL",
+      "categoria": "Producao",
+      "atomos": [
+        "atom_09_sistema_32_padrao_de_furacao_sequencial_definicao_e_medidas_padrao_do_sistema",
+        "atom_09_sistema_32_padrao_de_furacao_sequencial_gabaritos_de_furacao_e_desafios_de_al"
+      ]
+    },
+    "SEQUÊNCIA DE USINAGEM (FURO → RASGO → CORTE)": {
+      "nome": "SEQUÊNCIA DE USINAGEM (FURO → RASGO → CORTE)",
+      "categoria": "Producao",
+      "atomos": [
+        "atom_09_sequencia_de_usinagem_furo_rasgo_corte_ordem_de_operacoes_na_usinagem_cnc"
+      ]
+    },
+    "ETIQUETAGEM E RASTREABILIDADE DE PEÇAS": {
+      "nome": "ETIQUETAGEM E RASTREABILIDADE DE PEÇAS",
+      "categoria": "Producao",
+      "atomos": [
+        "atom_09_etiquetagem_e_rastreabilidade_de_pecas_funcao_das_etiquetas_de_identificacao_"
+      ]
+    },
+    "DIMENSÕES-PADRÃO DE ELEVADOR PREDIAL E PORTA DE ACESSO": {
+      "nome": "DIMENSÕES-PADRÃO DE ELEVADOR PREDIAL E PORTA DE ACESSO",
+      "categoria": "Transporte",
+      "atomos": [
+        "atom_10_dimensoes_padrao_de_elevador_predial_e_porta_de_acesso_medidas_de_referencia_",
+        "atom_10_dimensoes_padrao_de_elevador_predial_e_porta_de_acesso_porta_de_acesso_e_vao_"
+      ]
+    },
+    "IÇAMENTO VS. DESMONTAGEM — CRITÉRIO DE DECISÃO": {
+      "nome": "IÇAMENTO VS. DESMONTAGEM — CRITÉRIO DE DECISÃO",
+      "categoria": "Transporte",
+      "atomos": [
+        "atom_10_icamento_vs_desmontagem_criterio_de_decisao_quando_optar_por_icamento_externo",
+        "atom_10_icamento_vs_desmontagem_criterio_de_decisao_equipamentos_de_apoio_para_transp"
+      ]
+    },
+    "DIVISÃO DE PEÇAS GRANDES PARA TRANSPORTE": {
+      "nome": "DIVISÃO DE PEÇAS GRANDES PARA TRANSPORTE",
+      "categoria": "Transporte",
+      "atomos": [
+        "atom_10_divisao_de_pecas_grandes_para_transporte_priorizacao_de_desmontagem_antes_do_",
+        "atom_10_divisao_de_pecas_grandes_para_transporte_reducao_de_manipulacao_como_principi"
+      ]
+    },
+    "ACONDICIONAMENTO E ORGANIZAÇÃO DE CARGA": {
+      "nome": "ACONDICIONAMENTO E ORGANIZAÇÃO DE CARGA",
+      "categoria": "Transporte",
+      "atomos": [
+        "atom_10_acondicionamento_e_organizacao_de_carga_distribuicao_de_peso_e_organizacao_po"
+      ]
+    },
+    "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA": {
+      "nome": "SEQUÊNCIA COMPLETA DE MONTAGEM EM OBRA",
+      "categoria": "Montagem",
+      "atomos": [
+        "atom_11_sequencia_completa_de_montagem_em_obra_fase_de_planejamento_e_inspecao_previa",
+        "atom_11_sequencia_completa_de_montagem_em_obra_montagem_da_caixa_estrutura_interna_de",
+        "atom_11_sequencia_completa_de_montagem_em_obra_fixacao_reforco_de_juntas_e_instalacao",
+        "atom_11_sequencia_completa_de_montagem_em_obra_ajuste_fino_instalacao_de_acessorios_e"
+      ]
+    },
+    "FERRAMENTAS NECESSÁRIAS POR TIPO DE MONTAGEM": {
+      "nome": "FERRAMENTAS NECESSÁRIAS POR TIPO DE MONTAGEM",
+      "categoria": "Montagem",
+      "atomos": [
+        "atom_11_ferramentas_necessarias_por_tipo_de_montagem_ferramentas_basicas_vs_ferrament",
+        "atom_11_ferramentas_necessarias_por_tipo_de_montagem_componentes_e_verificacao_pre_mo"
+      ]
+    },
+    "AJUSTE FINO E REGULAGEM DE FERRAGENS": {
+      "nome": "AJUSTE FINO E REGULAGEM DE FERRAGENS",
+      "categoria": "Montagem",
+      "atomos": [
+        "atom_11_ajuste_fino_e_regulagem_de_ferragens_regulagem_tridimensional_como_etapa_nao_"
+      ]
+    },
+    "BOAS PRÁTICAS DE CONTRATAÇÃO E GARANTIA": {
+      "nome": "BOAS PRÁTICAS DE CONTRATAÇÃO E GARANTIA",
+      "categoria": "Montagem",
+      "atomos": [
+        "atom_11_boas_praticas_de_contratacao_e_garantia_criterios_de_avaliacao_de_montador_pr"
+      ]
+    },
+    "REDUÇÃO DE DESPERDÍCIO VIA PLANO DE CORTE": {
+      "nome": "REDUÇÃO DE DESPERDÍCIO VIA PLANO DE CORTE",
+      "categoria": "Economia",
+      "atomos": [
+        "atom_12_reducao_de_desperdicio_via_plano_de_corte_onde_a_marcenaria_perde_dinheiro_o_",
+        "atom_12_reducao_de_desperdicio_via_plano_de_corte_boas_praticas_de_planejamento_de_co"
+      ]
+    },
+    "REAPROVEITAMENTO DE RETALHOS E SOBRAS": {
+      "nome": "REAPROVEITAMENTO DE RETALHOS E SOBRAS",
+      "categoria": "Economia",
+      "atomos": [
+        "atom_12_reaproveitamento_de_retalhos_e_sobras_transformando_sobras_de_mdf_em_oportuni",
+        "atom_12_reaproveitamento_de_retalhos_e_sobras_reducao_de_erro_humano_como_beneficio_c"
+      ]
+    },
+    "PADRONIZAÇÃO DE PROCESSO — 5S E MELHORIA CONTÍNUA": {
+      "nome": "PADRONIZAÇÃO DE PROCESSO — 5S E MELHORIA CONTÍNUA",
+      "categoria": "Economia",
+      "atomos": [
+        "atom_12_padronizacao_de_processo_5s_e_melhoria_continua_metodologia_5s_aplicada_a_mar"
+      ]
+    },
+    "INDICADORES DE APROVEITAMENTO E GESTÃO POR DADOS": {
+      "nome": "INDICADORES DE APROVEITAMENTO E GESTÃO POR DADOS",
+      "categoria": "Economia",
+      "atomos": [
+        "atom_12_indicadores_de_aproveitamento_e_gestao_por_dados_kpis_de_aproveitamento_de_ch"
+      ]
+    }
+  }
+}

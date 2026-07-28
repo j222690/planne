@@ -1,0 +1,286 @@
+{
+  "modulo": "Economia",
+  "total_atomos": 6,
+  "atomos": [
+    {
+      "id": "atom_12_reducao_de_desperdicio_via_plano_de_corte_onde_a_marcenaria_perde_dinheiro_o_",
+      "entidade": "REDUÇÃO DE DESPERDÍCIO VIA PLANO DE CORTE",
+      "categoria": "Economia",
+      "subcategoria": "REDUÇÃO DE DESPERDÍCIO VIA PLANO DE CORTE",
+      "titulo": "Onde a marcenaria perde dinheiro: o retalho descartado",
+      "tipo": "boa_pratica",
+      "descricao": "Um dos pontos mais críticos de perda financeira na gestão de produção de marcenaria é o retalho que vai para o lixo — fazer o plano de corte manualmente ou de forma intuitiva é apontado como o caminho mais rápido para o desperdício de material, já que o planejamento técnico aliado à tecnologia permite prever exatamente como cada chapa será fatiada, reduzindo as sobras ao mínimo tecnicamente possível. [cf. Um dos pontos críticos da gestão de produção na marcenaria é o plano de corte. Fazer isso manualmente ou de forma intuitiva é o caminho mais rápido para o desperdício de material. O planejamento técnico, quando aliado à tecnologia, permite prever exatamente como cada chapa será fatiada, reduzindo as sobras ao mínimo técnico possível. Onde a maioria das marcenarias perde dinheiro? No retalho que vai para o lixo]",
+      "condicoes": {
+        "quando_aplicar": "Toda gestão de produção de marcenaria que trabalha com volume relevante de chapas cortadas, desde pequenas marcenarias até operações industriais.",
+        "condicoes_adicionais": "Cortes improvisados (sem plano de corte formal) levam a desperdício de matéria-prima, retalhos sem utilidade, e em casos mais graves, à necessidade de adquirir mais chapas do que o necessário para o mesmo projeto. [cf. Cortes improvisados levam a desperdício de matéria-prima, retalhos sem utilidade e, em casos mais graves, à necessidade de adquirir mais chapas do que o necessário para um projeto]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa completa — mesmo produções muito pequenas se beneficiam de, ao menos, um plano de corte básico manual bem pensado, mesmo sem software dedicado.",
+        "limitacoes": "Métodos manuais (desenho em papel, planilhas complexas) tornam a visualização da otimização um desafio, e a capacidade de testar diferentes arranjos para encontrar o mais eficiente é praticamente nula — o tempo gasto em tentativa e erro é, em si, um custo oculto que afeta a produtividade. [cf. Esse cenário é comum em marcenarias que ainda dependem de métodos manuais, como o desenho em papel ou o uso de planilhas complexas. A visualização da otimização torna-se um desafio, e a capacidade de testar diferentes arranjos para encontrar o mais eficiente é praticamente nula. O tempo gasto na tentativa e erro também é um custo oculto que afeta a produtividade]"
+      },
+      "acoes_recomendadas": "Softwares de plano de corte/nesting (já descritos no módulo Produção, item 1) que armazenam retalhos para uso futuro, considerando sentido de textura, agrupando peças por cor e gerando relatórios estatísticos detalhados (peso, preço, aproveitamento, volume, perímetro). [cf. O programa armazena retalhos para uso futuro, permitindo que você aproveite até as menores sobras. Ele considera o sentido da textura, agrupa peças iguais por cor e gera relatórios estatísticos detalhados com peso, preços, aproveitamento, volume e perímetro]",
+      "motivo_tecnico": "Um dos pontos mais críticos de perda financeira na gestão de produção de marcenaria é o retalho que vai para o lixo — fazer o plano de corte manualmente ou de forma intuitiva é apontado como o caminho mais rápido para o desperdício de material, já que o planejamento técnico aliado à tecnologia permite prever exatamente como cada chapa será fatiada, reduzindo as sobras ao mínimo tecnicamente possível. [cf. Um dos pontos críticos da gestão de produção na marcenaria é o plano de corte. Fazer isso manualmente ou de forma intuitiva é o caminho mais rápido para o desperdício de material. O planejamento técnico, quando aliado à tecnologia, permite prever exatamente como cada chapa será fatiada, reduzindo as sobras ao mínimo técnico possível. Onde a maioria das marcenarias perde dinheiro? No retalho que vai para o lixo]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "crítico",
+        "estetico": "nenhum"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Corte Certo (blog especializado em software de otimização de corte); Guia da Marcenaria (blog técnico).",
+      "fabricante": "N/A (categoria de software/processo).",
+      "observacoes": "Vale a distinção terminológica citada por uma das fontes: retalho é uma sobra de tamanho aproveitável; perda é o material que não tem mais utilidade prática nenhuma — o objetivo da boa gestão de corte é maximizar retalhos aproveitáveis e minimizar perdas reais. [cf. Lembre-se, retalho é uma sobra de tamanho aproveitável; a perda é o que não] ---",
+      "tags": [
+        "economia",
+        "redução",
+        "desperdício",
+        "plano",
+        "corte",
+        "marcenaria",
+        "perde",
+        "dinheiro"
+      ],
+      "modulo_origem": "12-Economia",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_12_reducao_de_desperdicio_via_plano_de_corte_boas_praticas_de_planejamento_de_co",
+      "entidade": "REDUÇÃO DE DESPERDÍCIO VIA PLANO DE CORTE",
+      "categoria": "Economia",
+      "subcategoria": "REDUÇÃO DE DESPERDÍCIO VIA PLANO DE CORTE",
+      "titulo": "Boas práticas de planejamento de corte",
+      "tipo": "recomendacao",
+      "descricao": "Entre as boas práticas recomendadas para todo marceneiro na elaboração de um plano de corte estão: priorizar o planejamento detalhado do corte (evitando ajustes desnecessários), definir a sequência de cortes com base na facilidade de execução e na estabilidade da chapa, revisar o alinhamento das peças antes de iniciar o corte, simular o processo com um aplicativo antes de cortar fisicamente, e salvar diferentes versões do plano para eventuais alterações de última hora. [cf. Priorizar o planejamento detalhado do corte, evitando ajustes desnecessários. Definir a sequência de cortes com base na facilidade de execução e na estabilidade da chapa. Revisar o alinhamento das peças antes de iniciar o corte para evitar erros de encaixe. Simular o processo com um aplicativo desenhar móveis antes de cortar o MDF. Salvar diferentes versões do plano para eventuais alterações de última hora]",
+      "condicoes": {
+        "quando_aplicar": "Toda elaboração de plano de corte, seja manual ou assistida por software, antes de qualquer corte físico de chapa.",
+        "condicoes_adicionais": "Ao enviar o plano de corte para terceiros ou para uma central de corte (serviço terceirizado de corte de chapa), a revisão cuidadosa ajuda a evitar erros de comunicação/interpretação entre quem projeta e quem efetivamente executa o corte. [cf. Essa revisão ajuda a evitar erros, inclusive, quando o plano de corte será enviado para terceiros ou para uma central de corte]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa — mesmo com software avançado, a revisão humana do plano antes da execução continua sendo recomendada.",
+        "limitacoes": "Simulação em software não substitui a verificação final humana antes do corte físico — erros de input (medida errada digitada) podem passar despercebidos mesmo em um software correto."
+      },
+      "acoes_recomendadas": "Dupla checagem (revisão cruzada por segunda pessoa) do plano de corte antes da liberação para produção, especialmente em projetos de alto valor ou peças caras (compensado naval, chapas grandes).",
+      "motivo_tecnico": "Entre as boas práticas recomendadas para todo marceneiro na elaboração de um plano de corte estão: priorizar o planejamento detalhado do corte (evitando ajustes desnecessários), definir a sequência de cortes com base na facilidade de execução e na estabilidade da chapa, revisar o alinhamento das peças antes de iniciar o corte, simular o processo com um aplicativo antes de cortar fisicamente, e salvar diferentes versões do plano para eventuais alterações de última hora. [cf. Priorizar o planejamento detalhado do corte, evitando ajustes desnecessários. Definir a sequência de cortes com base na facilidade de execução e na estabilidade da chapa. Revisar o alinhamento das peças antes de iniciar o corte para evitar erros de encaixe. Simular o processo com um aplicativo desenhar móveis antes de cortar o MDF. Salvar diferentes versões do plano para eventuais alterações de última hora]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Calcme (blog técnico); Duratex (blog institucional do fabricante).",
+      "fabricante": "Duratex (fonte institucional, reforçando que fabricantes de matéria-prima também investem em orientar boas práticas de corte para reduzir desperdício de seu próprio material).",
+      "observacoes": "O gerador de plano de corte deve ser capaz de considerar medidas exatas e espessuras específicas de cada projeto para evitar erros — um sistema genérico que ignore variações reais de espessura entre fabricantes (ver módulo Materiais) pode gerar planos tecnicamente incorretos. [cf. Precisão: considera medidas exatas e espessuras para evitar erros] ---",
+      "tags": [
+        "economia",
+        "redução",
+        "desperdício",
+        "plano",
+        "corte",
+        "boas",
+        "práticas",
+        "planejamento"
+      ],
+      "modulo_origem": "12-Economia",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_12_reaproveitamento_de_retalhos_e_sobras_transformando_sobras_de_mdf_em_oportuni",
+      "entidade": "REAPROVEITAMENTO DE RETALHOS E SOBRAS",
+      "categoria": "Economia",
+      "subcategoria": "REAPROVEITAMENTO DE RETALHOS E SOBRAS",
+      "titulo": "Transformando sobras de MDF em oportunidade de lucro",
+      "tipo": "boa_pratica",
+      "descricao": "O desperdício de retalhos de madeira é um problema recorrente na marcenaria, mas pode ser transformado em fonte adicional de lucro quando bem gerenciado — retalhos grandes e bem-acabados têm maior potencial para peças mais elaboradas, enquanto peças finas (sobras de 3 a 6 mm) são adequadas para itens pequenos. [cf. O desperdício de retalhos de madeira é um problema recorrente na marcenaria, mas você sabia que ele pode ser a chave para aumentar seus lucros? Para garantir a rentabilidade, considere reaproveitar: Retalhos grandes e bem acabados, com maior potencial para peças mais elaboradas; Peças finas: sobras de 3mm a 6mm são perfeitas para itens pequenos]",
+      "condicoes": {
+        "quando_aplicar": "Gestão de estoque de sobras em qualquer marcenaria que produz em volume relevante, como estratégia deliberada de redução de custo (e não apenas descarte automático).",
+        "condicoes_adicionais": "A previsibilidade das sobras — o sistema de nesting calculando automaticamente os retalhos que sobrarão antes mesmo de cortar a chapa — permite planejar o que fazer com essas sobras já na fase de projeto, não apenas depois do corte físico. [cf. Previsibilidade das sobras: o sistema calcula automaticamente os retalhos que sobram para que você possa planejar o que fazer com essas sobras antes mesmo de cortar a chapa]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Retalhos muito pequenos ou danificados (sem tamanho aproveitável para qualquer aplicação prática) devem ser corretamente classificados como perda, não retalho — forçar o reaproveitamento de material sem valor real gera mais custo de gestão do que economia.",
+        "limitacoes": "Gestão de estoque de retalhos exige organização física (espaço dedicado, catalogação por tamanho/cor/espessura) — sem essa organização, o \"estoque de sobras\" rapidamente se torna uma pilha desorganizada sem valor prático real."
+      },
+      "acoes_recomendadas": "Uso direto de retalhos de 6–9 mm como material de engrosso (ver módulo Estrutura, item 5.1) — conectando diretamente a prática de reaproveitamento de sobra com uma técnica estrutural já estabelecida na base.",
+      "motivo_tecnico": "O desperdício de retalhos de madeira é um problema recorrente na marcenaria, mas pode ser transformado em fonte adicional de lucro quando bem gerenciado — retalhos grandes e bem-acabados têm maior potencial para peças mais elaboradas, enquanto peças finas (sobras de 3 a 6 mm) são adequadas para itens pequenos. [cf. O desperdício de retalhos de madeira é um problema recorrente na marcenaria, mas você sabia que ele pode ser a chave para aumentar seus lucros? Para garantir a rentabilidade, considere reaproveitar: Retalhos grandes e bem acabados, com maior potencial para peças mais elaboradas; Peças finas: sobras de 3mm a 6mm são perfeitas para itens pequenos]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Promob (blog institucional de software de marcenaria).",
+      "fabricante": "N/A.",
+      "observacoes": "Este item conecta diretamente com o módulo Estrutura (item 5.1 — engrosso) e reforça um padrão que já apareceu em múltiplos módulos desta base: retalhos e sobras não são apenas \"desperdício a minimizar\" mas um recurso ativo a ser gerenciado e reaproveitado deliberadamente. ---",
+      "tags": [
+        "economia",
+        "reaproveitamento",
+        "retalhos",
+        "sobras",
+        "transformando",
+        "oportunidade",
+        "lucro"
+      ],
+      "modulo_origem": "12-Economia",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_12_reaproveitamento_de_retalhos_e_sobras_reducao_de_erro_humano_como_beneficio_c",
+      "entidade": "REAPROVEITAMENTO DE RETALHOS E SOBRAS",
+      "categoria": "Economia",
+      "subcategoria": "REAPROVEITAMENTO DE RETALHOS E SOBRAS",
+      "titulo": "Redução de erro humano como benefício colateral da tecnologia",
+      "tipo": "alerta",
+      "descricao": "Além da economia direta de material, o uso de softwares especializados de planejamento de corte reduz erros humanos, já que os cálculos automáticos orientam o operador sobre a forma mais eficiente de cortar as chapas, com flexibilidade de ajuste rápido quando necessário. [cf. Redução de erros humanos: as chances de errar diminuem, já que os cálculos são automáticos e o programa orienta como cortar as chapas com mais eficiência; Facilidade de ajuste: muitas plataformas]",
+      "condicoes": {
+        "quando_aplicar": "Avaliação de investimento em tecnologia de plano de corte para qualquer marcenaria, considerando o benefício combinado (economia de material + redução de retrabalho por erro).",
+        "condicoes_adicionais": "O sistema sinaliza peças muito pequenas ou a última peça de um mesmo tamanho, aumentando a eficiência do processo de corte e reduzindo a chance de esquecer uma peça na produção. [cf. O software informa diferentes formas de descrição e sinaliza peças muito pequenas ou a última peça do mesmo tamanho, aumentando a eficiência do processo]"
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Marcenarias de volume muito baixo (poucas peças por mês) podem não justificar o investimento completo em software, embora ainda se beneficiem de ferramentas gratuitas/simplificadas.",
+        "limitacoes": "O software elimina cálculos manuais, mas não substitui completamente a verificação humana final (ver item 1.2) — a tecnologia reduz, mas não elimina totalmente o risco de erro."
+      },
+      "acoes_recomendadas": "Ferramentas gratuitas/simplificadas (Cutlist Optimizer, MaxCut, entre outras já citadas no módulo Produção) para marcenarias de menor porte que não justificam o investimento em software completo de gestão.",
+      "motivo_tecnico": "Além da economia direta de material, o uso de softwares especializados de planejamento de corte reduz erros humanos, já que os cálculos automáticos orientam o operador sobre a forma mais eficiente de cortar as chapas, com flexibilidade de ajuste rápido quando necessário. [cf. Redução de erros humanos: as chances de errar diminuem, já que os cálculos são automáticos e o programa orienta como cortar as chapas com mais eficiência; Facilidade de ajuste: muitas plataformas]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "médio"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Promob; Corte Certo (blog de software especializado).",
+      "fabricante": "Promob (citado aqui apenas como fonte de conteúdo técnico do blog institucional, não como recomendação de produto específico).",
+      "observacoes": "Este item reforça diretamente o valor estratégico do próprio Planne como plataforma — a redução de erro humano via automação de regras é exatamente o tipo de benefício que o motor de inteligência do sistema deveria entregar de forma nativa, não apenas no plano de corte, mas em toda a cadeia de decisão de projeto coberta pelos módulos anteriores desta base. ---",
+      "tags": [
+        "economia",
+        "reaproveitamento",
+        "retalhos",
+        "sobras",
+        "redução",
+        "erro",
+        "humano",
+        "benefício"
+      ],
+      "modulo_origem": "12-Economia",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_12_padronizacao_de_processo_5s_e_melhoria_continua_metodologia_5s_aplicada_a_mar",
+      "entidade": "PADRONIZAÇÃO DE PROCESSO — 5S E MELHORIA CONTÍNUA",
+      "categoria": "Economia",
+      "subcategoria": "PADRONIZAÇÃO DE PROCESSO — 5S E MELHORIA CONTÍNUA",
+      "titulo": "Metodologia 5S aplicada à marcenaria",
+      "tipo": "boa_pratica",
+      "descricao": "A metodologia 5S — Organização (Seiri), Arrumação (Seiton), Limpeza (Seiso), Padronização (Seiketsu) e Disciplina (Shitsuke) — é citada como estrutura de gestão de produção aplicável à marcenaria, complementada pelo conceito de melhoria contínua (Kaizen): pequenas mudanças diárias nos processos de corte e montagem que, somadas ao longo de um ano, geram impacto massivo na produtividade. [cf. Metodologia 5S: Organização (Seiri), Arrumação (Seiton), Limpeza (Seiso), Padronização (Seiketsu) e Disciplina (Shitsuke). Melhoria contínua (Kaizen): Pequenas mudanças diárias nos processos de corte e montagem que, somadas ao longo de um ano, geram um impacto massivo na produtividade]",
+      "condicoes": {
+        "quando_aplicar": "Gestão de qualquer marcenaria com volume de produção relevante, especialmente aquelas com múltiplos colaboradores/etapas de produção.",
+        "condicoes_adicionais": "A padronização (Seiketsu) de medidas e processos — por exemplo, adotar um formato-padrão de chapa (módulo Materiais, item 4.1) e um padrão de furação (Sistema 32, módulo Produção, item 2) — reduz variabilidade e retrabalho de forma sistemática, não pontual."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Marcenarias unipessoais/artesanais de escala muito pequena podem aplicar uma versão simplificada dos princípios (organização e padronização básicas), sem necessariamente formalizar o programa 5S completo.",
+        "limitacoes": "Implementar 5S exige disciplina contínua da equipe — programas que começam bem mas não são mantidos ao longo do tempo perdem o benefício de melhoria contínua citado como diferencial da metodologia."
+      },
+      "acoes_recomendadas": "Adoção parcial dos princípios (por exemplo, apenas organização e padronização, sem o programa formal completo) para marcenarias que não têm estrutura de gestão para implementar o 5S por completo.",
+      "motivo_tecnico": "A metodologia 5S — Organização (Seiri), Arrumação (Seiton), Limpeza (Seiso), Padronização (Seiketsu) e Disciplina (Shitsuke) — é citada como estrutura de gestão de produção aplicável à marcenaria, complementada pelo conceito de melhoria contínua (Kaizen): pequenas mudanças diárias nos processos de corte e montagem que, somadas ao longo de um ano, geram impacto massivo na produtividade. [cf. Metodologia 5S: Organização (Seiri), Arrumação (Seiton), Limpeza (Seiso), Padronização (Seiketsu) e Disciplina (Shitsuke). Melhoria contínua (Kaizen): Pequenas mudanças diárias nos processos de corte e montagem que, somadas ao longo de um ano, geram um impacto massivo na produtividade]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "alto",
+        "estetico": "nenhum"
+      },
+      "prioridade": "alto",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Corte Certo (guia de gestão de produção em marcenarias).",
+      "fabricante": "N/A (metodologia de gestão industrial genérica, adaptada ao contexto de marcenaria).",
+      "observacoes": "Este item conecta a base de conhecimento técnico (módulos 1–11) com uma camada de gestão organizacional — o Planne, como plataforma, poderia oferecer suporte tanto ao aspecto técnico (regras de projeto) quanto ao aspecto de gestão de processo (aplicação prática do 5S/Kaizen na rotina da marcenaria). ---",
+      "tags": [
+        "economia",
+        "padronização",
+        "processo",
+        "melhoria",
+        "contínua",
+        "metodologia",
+        "aplicada",
+        "marcenaria"
+      ],
+      "modulo_origem": "12-Economia",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    },
+    {
+      "id": "atom_12_indicadores_de_aproveitamento_e_gestao_por_dados_kpis_de_aproveitamento_de_ch",
+      "entidade": "INDICADORES DE APROVEITAMENTO E GESTÃO POR DADOS",
+      "categoria": "Economia",
+      "subcategoria": "INDICADORES DE APROVEITAMENTO E GESTÃO POR DADOS",
+      "titulo": "KPIs de aproveitamento de chapa",
+      "tipo": "regra_obrigatoria",
+      "descricao": "O uso de indicadores de desempenho (KPIs), como o índice de aproveitamento de chapa por projeto, permite que o gestor da marcenaria tome decisões baseadas em dados reais, em vez de percepção subjetiva — a mesma lógica de acompanhamento de índice médio de aproveitamento (75%, 80%, 85%, conforme já citado no módulo Produção, item 1.2) se aplica aqui como ferramenta central de gestão econômica. [cf. O uso de indicadores de desempenho (KPIs), como o índice de aproveitamento de chapa por projeto, permite que o gestor tome decisões baseadas em dados]",
+      "condicoes": {
+        "quando_aplicar": "Gestão financeira e operacional contínua de qualquer marcenaria, cruzando dados de aproveitamento de material com custo real de produção por projeto.",
+        "condicoes_adicionais": "Comparar o consumo de chapas antes e depois da implantação de qualquer melhoria de processo (novo software, novo método de organização) é a forma mais direta de validar se a mudança realmente trouxe o benefício esperado — sem essa comparação, decisões de investimento em processo/tecnologia ficam sem validação objetiva."
+      },
+      "restricoes": {
+        "quando_nao_aplicar": "Não há dispensa completa — mesmo marcenarias pequenas se beneficiam de acompanhar ao menos um indicador básico de aproveitamento de material ao longo do tempo.",
+        "limitacoes": "Indicadores isolados (apenas aproveitamento de chapa, por exemplo) não capturam toda a complexidade financeira da operação — devem ser complementados por indicadores de tempo de produção, retrabalho e satisfação do cliente para uma visão de gestão completa."
+      },
+      "acoes_recomendadas": "Dashboard integrado (cruzando múltiplos módulos desta base — Produção, Transporte, Montagem, Economia) para uma visão de gestão unificada, em vez de indicadores isolados por área.",
+      "motivo_tecnico": "O uso de indicadores de desempenho (KPIs), como o índice de aproveitamento de chapa por projeto, permite que o gestor da marcenaria tome decisões baseadas em dados reais, em vez de percepção subjetiva — a mesma lógica de acompanhamento de índice médio de aproveitamento (75%, 80%, 85%, conforme já citado no módulo Produção, item 1.2) se aplica aqui como ferramenta central de gestão econômica. [cf. O uso de indicadores de desempenho (KPIs), como o índice de aproveitamento de chapa por projeto, permite que o gestor tome decisões baseadas em dados]",
+      "impacto": {
+        "estrutural": "nenhum",
+        "financeiro": "crítico",
+        "estetico": "nenhum"
+      },
+      "prioridade": "crítico",
+      "confianca": {
+        "score": 92,
+        "base": "fabricante_oficial"
+      },
+      "fonte": "Corte Certo (guia de gestão de produção em marcenarias).",
+      "fabricante": "N/A.",
+      "observacoes": "Este é o item de fechamento natural de toda a base de conhecimento construída até aqui: o motor de regras do Planne — que ao longo dos 12 módulos incorporou regras de projeto, materiais, ferragens, produção, transporte e montagem — deveria também alimentar e ser alimentado por indicadores reais de aproveitamento e desempenho, fechando o ciclo entre conhecimento técnico (o que fazer) e gestão por dados (o que está realmente funcionando na prática). --- ## FECHAMENTO DO CICLO INICIAL DE 12 MÓDULOS Com este módulo, encerra-se o conjunto inicial de 12 categorias definidas no escopo original do projeto: 1. Cozinhas 2. Ferragens 3. Estrutura 4. Portas e Gavetas 5. Materiais 6. Closets 7. Banheiros 8. Escritórios 9. Produção 10. Transporte 11. Montagem 12. Economia Cada módulo foi pesquisado com fontes técnicas reais (fabricantes, associações profissionais, blogs especializados, normas quando aplicável), reescrito em linguagem própria e estruturado no formato completo solicitado (título, categoria, descrição, quando aplicar/não aplicar, condições, limitações, alternativas, impactos, fonte, fabricante, observações). **Possíveis extensões futuras** (fora do escopo original de 12 categorias, mas mencionadas na solicitação inicial): aprofundamento por país (normas alemãs, italianas, americanas, australianas e canadenses específicas), aprofundamento de subcategorias ainda tratadas de forma resumida (ex.: painéis de TV/ripados, nichos de forma isolada, iluminação técnica), e conteúdo de escolas técnicas (SENAI) de forma mais extensa. Esses são bons candidatos a uma \"segunda rodada\" de aprofundamento, se e quando fizer sentido para o Planne.",
+      "tags": [
+        "economia",
+        "indicadores",
+        "aproveitamento",
+        "gestão",
+        "dados",
+        "kpis",
+        "chapa"
+      ],
+      "modulo_origem": "12-Economia",
+      "versao": {
+        "numero": 1,
+        "origem": "migracao_v1_markdown"
+      }
+    }
+  ]
+}
