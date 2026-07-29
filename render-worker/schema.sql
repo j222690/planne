@@ -82,10 +82,34 @@ create index if not exists render3d_job_fila_idx on render3d_job (status, create
 -- Bucket de storage sugerido: 'renders3d' (público de leitura, escrita pelo worker).
 -- Criar em Storage → New bucket. Policies conforme padrão do projeto.
 
--- RLS (esqueleto — ajustar ao padrão de vocês):
-alter table render_asset       enable row level security;
-alter table render_chapa       enable row level security;
-alter table modulo_asset_map   enable row level security;
-alter table render3d_job       enable row level security;
--- Exemplo de policy multi-empresa (adaptar à função de empresa do projeto):
---   using (empresa_id is null or empresa_id = (select empresa_atual()))
+-- ── RLS (padrão do projeto: is_member / minha_empresa_id) ──
+-- Catálogo: leitura de ativos globais (empresa_id null) liberada a todos os
+-- membros; escrita só na própria empresa. Jobs: sempre por empresa. O worker usa
+-- service_role (bypassa RLS), então continua conseguindo ler/atualizar a fila.
+
+alter table render_asset     enable row level security;
+alter table render_chapa     enable row level security;
+alter table modulo_asset_map enable row level security;
+alter table render3d_job     enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['render_asset','render_chapa','modulo_asset_map'] loop
+    execute format('drop policy if exists %1$s_read on %1$s', t);
+    execute format('drop policy if exists %1$s_ins on %1$s', t);
+    execute format('drop policy if exists %1$s_upd on %1$s', t);
+    execute format('drop policy if exists %1$s_del on %1$s', t);
+    execute format('create policy %1$s_read on %1$s for select using (empresa_id is null or is_member(empresa_id))', t);
+    execute format('create policy %1$s_ins on %1$s for insert with check (is_member(empresa_id))', t);
+    execute format('create policy %1$s_upd on %1$s for update using (is_member(empresa_id))', t);
+    execute format('create policy %1$s_del on %1$s for delete using (is_member(empresa_id))', t);
+  end loop;
+end $$;
+
+drop policy if exists render3d_job_read on render3d_job;
+drop policy if exists render3d_job_ins on render3d_job;
+drop policy if exists render3d_job_upd on render3d_job;
+create policy render3d_job_read on render3d_job for select using (is_member(empresa_id));
+create policy render3d_job_ins on render3d_job for insert with check (is_member(empresa_id));
+create policy render3d_job_upd on render3d_job for update using (is_member(empresa_id));
