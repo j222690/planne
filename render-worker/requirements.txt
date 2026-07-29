@@ -1,0 +1,5 @@
+# O bpy (Blender Python) VEM COM O BLENDER — não instalar por pip.
+# Rodar os scripts de cena via: blender --background --python <script>.
+# Estas deps são só para o worker (fila + storage), fora do Blender.
+supabase>=2.4.0
+python-dotenv>=1.0.0
