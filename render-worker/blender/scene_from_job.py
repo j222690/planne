@@ -23,6 +23,18 @@ PISO_AEREO = 1.50    # aéreo a 150cm do piso
 BANC_ESP = 0.04      # espessura bancada
 RODAPE = 0.10        # recuo dos pés (toe-kick) dos móveis de piso
 
+ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
+HDRI = os.path.join(ASSETS, "hdri", "studio_1k.hdr")
+
+
+def tex_set(subdir, prefix):
+    """Mapas Color/Roughness/Normal de uma textura CC0 baixada (ambientCG)."""
+    base = os.path.join(ASSETS, "textures", subdir)
+    def g(suf):
+        p = os.path.join(base, f"{prefix}_1K-JPG_{suf}.jpg")
+        return p if os.path.exists(p) else None
+    return {"color": g("Color"), "rough": g("Roughness"), "normal": g("NormalGL")}
+
 
 def parse_args():
     argv = sys.argv
@@ -30,6 +42,7 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--job", required=True)
     p.add_argument("--out", default="./cena.png")
+    p.add_argument("--engine", default="eevee", choices=["eevee", "cycles"])
     return p.parse_args(argv)
 
 
@@ -41,9 +54,10 @@ def hex_rgb(h, fb="#EDE7DA"):
     return (lin(r), lin(g), lin(b), 1.0)
 
 
-def mat_pbr(nome, rgba, rough=0.45, metal=0.0, textura=None, grao=0.0):
-    """PBR. `textura` = imagem (se houver); `grao` > 0 = textura procedural de
-    MDF (relevo fino + leve variação), pra não ficar liso/plástico."""
+def mat_pbr(nome, rgba, rough=0.45, metal=0.0, texset=None, use_color=True,
+           escala=1.0, nrm_forca=1.0):
+    """PBR. `texset` = dict Color/Roughness/Normal (imagens CC0). use_color=False
+    mantém a cor base (ex.: MDF branco) e usa só relevo/roughness da textura."""
     m = bpy.data.materials.new(nome)
     m.use_nodes = True
     nt = m.node_tree
@@ -51,29 +65,28 @@ def mat_pbr(nome, rgba, rough=0.45, metal=0.0, textura=None, grao=0.0):
     b.inputs["Base Color"].default_value = rgba
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
-    if textura and os.path.exists(textura):
+    if texset:
         try:
-            img = nt.nodes.new("ShaderNodeTexImage")
-            img.image = bpy.data.images.load(textura)
-            nt.links.new(img.outputs["Color"], b.inputs["Base Color"])
-            return m
-        except Exception:
-            pass
-    if grao > 0:
-        try:
-            # veio de madeira/MDF: ruído esticado no eixo Y → relevo + grão
             tc = nt.nodes.new("ShaderNodeTexCoord")
             mp = nt.nodes.new("ShaderNodeMapping")
-            mp.inputs["Scale"].default_value = (6.0, 60.0, 6.0)  # esticado = veio
-            nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
-            noise = nt.nodes.new("ShaderNodeTexNoise")
-            noise.inputs["Scale"].default_value = 8.0
-            noise.inputs["Detail"].default_value = 6.0
-            nt.links.new(mp.outputs["Vector"], noise.inputs["Vector"])
-            bump = nt.nodes.new("ShaderNodeBump")
-            bump.inputs["Strength"].default_value = grao
-            nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
-            nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+            mp.inputs["Scale"].default_value = (escala, escala, escala)
+            nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])  # escala real (m)
+            def img(path, noncolor):
+                n = nt.nodes.new("ShaderNodeTexImage")
+                n.image = bpy.data.images.load(path)
+                if noncolor:
+                    n.image.colorspace_settings.name = "Non-Color"
+                nt.links.new(mp.outputs["Vector"], n.inputs["Vector"])
+                return n
+            if use_color and texset.get("color"):
+                nt.links.new(img(texset["color"], False).outputs["Color"], b.inputs["Base Color"])
+            if texset.get("rough"):
+                nt.links.new(img(texset["rough"], True).outputs["Color"], b.inputs["Roughness"])
+            if texset.get("normal"):
+                nm = nt.nodes.new("ShaderNodeNormalMap")
+                nm.inputs["Strength"].default_value = nrm_forca
+                nt.links.new(img(texset["normal"], True).outputs["Color"], nm.inputs["Color"])
+                nt.links.new(nm.outputs["Normal"], b.inputs["Normal"])
         except Exception:
             pass
     return m
@@ -222,30 +235,58 @@ def camera_luz(cx, W, D, H, max_z):
     bpy.context.scene.camera = cam
     trk = cam.constraints.new(type="TRACK_TO")
     trk.target, trk.track_axis, trk.up_axis = alvo, "TRACK_NEGATIVE_Z", "UP_Y"
-    # Iluminação: softbox grande e quente (key) + preenchimento frio + luz da janela.
-    key = bpy.data.lights.new("key", type="AREA"); key.energy = 700; key.size = 6
+    # Iluminação: softbox quente (key) + preenchimento frio; o HDRI dá o ambiente.
+    key = bpy.data.lights.new("key", type="AREA"); key.energy = 450; key.size = 6
     key.color = (1.0, 0.96, 0.9)
     ko = bpy.data.objects.new("key", key)
     ko.location = (cx - W * 0.2, -D * 0.5, H - 0.05); ko.rotation_euler = (0.5, 0, 0)
     bpy.context.collection.objects.link(ko)
-    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 260; fill.size = 9
+    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 130; fill.size = 9
     fill.color = (0.9, 0.94, 1.0)
     fo = bpy.data.objects.new("fill", fill)
     fo.location = (cx + W * 0.4, -dist * 0.7, H * 0.8)
     bpy.context.collection.objects.link(fo)
+    # Mundo: HDRI de estúdio (luz + reflexos realistas); fallback cinza claro.
     w = bpy.data.worlds.new("w"); w.use_nodes = True
-    w.node_tree.nodes["Background"].inputs[0].default_value = (0.88, 0.89, 0.93, 1)
-    w.node_tree.nodes["Background"].inputs[1].default_value = 0.4
+    bg = w.node_tree.nodes.get("Background")
+    if os.path.exists(HDRI):
+        env = w.node_tree.nodes.new("ShaderNodeTexEnvironment")
+        env.image = bpy.data.images.load(HDRI)
+        w.node_tree.links.new(env.outputs["Color"], bg.inputs["Color"])
+        bg.inputs["Strength"].default_value = 0.7
+    else:
+        bg.inputs[0].default_value = (0.88, 0.89, 0.93, 1)
+        bg.inputs[1].default_value = 0.4
     bpy.context.scene.world = w
 
 
-def setup_render(out):
+def setup_render(out, engine="eevee"):
     scn = bpy.context.scene
-    for eng in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
+    if engine == "cycles":
+        # Fotorrealista (GI real). Mais lento; CPU por padrão.
+        scn.render.engine = "CYCLES"
         try:
-            scn.render.engine = eng; break
-        except TypeError:
-            continue
+            scn.cycles.device = "CPU"
+            scn.cycles.samples = 160
+            scn.cycles.use_denoising = True
+        except Exception:
+            pass
+    else:
+        for eng in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
+            try:
+                scn.render.engine = eng; break
+            except TypeError:
+                continue
+        # Qualidade: mais amostras + raytracing (GI/reflexo/sombra suave) no EEVEE Next
+        try:
+            scn.eevee.taa_render_samples = 96
+        except Exception:
+            pass
+        for attr in ("use_raytracing", "use_gtao", "use_shadows"):
+            try:
+                setattr(scn.eevee, attr, True)
+            except Exception:
+                pass
     scn.render.resolution_x, scn.render.resolution_y = 1600, 900
     # AgX evita o "estouro" de branco; fallback p/ versões antigas
     for vt in ("AgX", "Filmic", "Standard"):
@@ -254,16 +295,6 @@ def setup_render(out):
         except TypeError:
             continue
     scn.view_settings.exposure = -0.2
-    # Qualidade: mais amostras + raytracing (GI/reflexo/sombra suave) no EEVEE Next
-    try:
-        scn.eevee.taa_render_samples = 96
-    except Exception:
-        pass
-    for attr in ("use_raytracing", "use_gtao", "use_shadows"):
-        try:
-            setattr(scn.eevee, attr, True)
-        except Exception:
-            pass
     scn.render.filepath = out
     scn.render.image_settings.file_format = "PNG"
 
@@ -278,18 +309,22 @@ def main():
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.cursor.location = (0, 0, 0)
-    tex = job.get("chapa_textura")
+    # texturas CC0 (ambientCG). MDF branco: mantém a cor, usa só relevo/roughness.
+    t_mad = tex_set("madeira", "Wood095")
+    t_ban = tex_set("bancada", "Marble012")
+    t_pis = tex_set("piso", "WoodFloor051")
+    branco = hex_rgb(job.get("chapa_hex"))
     mats = {
-        "corpo": mat_pbr("chapa", hex_rgb(job.get("chapa_hex")), 0.5, textura=tex, grao=0.10),
-        "porta": mat_pbr("porta", hex_rgb(job.get("chapa_hex")), 0.42, textura=tex, grao=0.10),
-        "banc": mat_pbr("bancada", hex_rgb(job.get("bancada_hex", "#2b2b2e")), 0.18, 0.0, grao=0.03),
+        "corpo": mat_pbr("chapa", branco, 0.45, texset=t_mad, use_color=False, escala=1.2, nrm_forca=0.30),
+        "porta": mat_pbr("porta", branco, 0.40, texset=t_mad, use_color=False, escala=1.2, nrm_forca=0.30),
+        "banc": mat_pbr("bancada", (1, 1, 1, 1), 0.14, 0.0, texset=t_ban, escala=0.5, nrm_forca=0.6),
         "pux": mat_pbr("puxador", (0.72, 0.73, 0.75, 1), 0.28, 0.9),
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
         "boca": mat_pbr("boca", (0.05, 0.05, 0.06, 1), 0.15, 0.3),
         "rodape": mat_pbr("rodape", (0.18, 0.18, 0.2, 1), 0.5),
-        "backsplash": mat_pbr("backsplash", (0.93, 0.93, 0.94, 1), 0.3),
+        "backsplash": mat_pbr("backsplash", (0.94, 0.94, 0.95, 1), 0.3),
         "parede": mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.9),
-        "piso": mat_pbr("piso", (0.60, 0.52, 0.44, 1), 0.5, grao=0.06),  # amadeirado
+        "piso": mat_pbr("piso", (1, 1, 1, 1), 0.5, texset=t_pis, escala=0.45, nrm_forca=0.8),
     }
 
     for m in modulos:
@@ -302,7 +337,7 @@ def main():
     max_p = max(m["profundidade_cm"] / 100.0 for m in modulos)
     cx, W, D, H = montar_comodo(job, min_x, max_x, max_z, max_p, mats)
     camera_luz(cx, W, D, H, max_z)
-    setup_render(a.out)
+    setup_render(a.out, a.engine)
     bpy.ops.render.render(write_still=True)
     print(f"[scene] {len(modulos)} módulos → {a.out}")
 
