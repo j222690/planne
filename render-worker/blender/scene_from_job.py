@@ -40,7 +40,9 @@ def hex_rgb(h, fb="#EDE7DA"):
     return (lin(r), lin(g), lin(b), 1.0)
 
 
-def mat_pbr(nome, rgba, rough=0.45, metal=0.0, textura=None):
+def mat_pbr(nome, rgba, rough=0.45, metal=0.0, textura=None, grao=0.0):
+    """PBR. `textura` = imagem (se houver); `grao` > 0 = textura procedural de
+    MDF (relevo fino + leve variação), pra não ficar liso/plástico."""
     m = bpy.data.materials.new(nome)
     m.use_nodes = True
     nt = m.node_tree
@@ -53,6 +55,24 @@ def mat_pbr(nome, rgba, rough=0.45, metal=0.0, textura=None):
             img = nt.nodes.new("ShaderNodeTexImage")
             img.image = bpy.data.images.load(textura)
             nt.links.new(img.outputs["Color"], b.inputs["Base Color"])
+            return m
+        except Exception:
+            pass
+    if grao > 0:
+        try:
+            # veio de madeira/MDF: ruído esticado no eixo Y → relevo + grão
+            tc = nt.nodes.new("ShaderNodeTexCoord")
+            mp = nt.nodes.new("ShaderNodeMapping")
+            mp.inputs["Scale"].default_value = (6.0, 60.0, 6.0)  # esticado = veio
+            nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
+            noise = nt.nodes.new("ShaderNodeTexNoise")
+            noise.inputs["Scale"].default_value = 8.0
+            noise.inputs["Detail"].default_value = 6.0
+            nt.links.new(mp.outputs["Vector"], noise.inputs["Vector"])
+            bump = nt.nodes.new("ShaderNodeBump")
+            bump.inputs["Strength"].default_value = grao
+            nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+            nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
         except Exception:
             pass
     return m
@@ -149,49 +169,55 @@ def bancada_e_cooktops(modulos, mats):
             box("torneira", mx, -P * 0.25, A + BANC_ESP + 0.13, 0.02, 0.02, 0.26, mats["pux"])
 
 
-def parede_piso_janela(job, min_x, max_x, max_z, max_p):
+def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
+    """Cômodo FECHADO: piso, teto, parede do fundo + 2 laterais (frente aberta
+    para a câmera). Dimensões do projeto (medidas) ou envolvendo o móvel."""
+    med = job.get("medidas", {}) or {}
     cx = (min_x + max_x) / 2
-    larg = max(max_x - min_x, 1.0)
-    parede = mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.85)
-    piso = mat_pbr("piso", (0.80, 0.79, 0.80, 1), 0.55)
-    box("piso", cx, 0.8, -0.002, larg * 3, max_p * 8, 0.004, piso, bevel=False)
-    box("parede", cx, 0.03, (max_z + 1.0) / 2, larg * 3, 0.03, max_z + 1.0, parede, bevel=False)
+    W = max(max_x - min_x + 0.5, float(med.get("largura", 3.0)))
+    D = max(max_p + 1.7, float(med.get("profundidade", 3.0)))
+    H = max(max_z + 0.25, float(med.get("altura", 2.7)))
+    x0, x1 = cx - W / 2, cx + W / 2
+    p, pi = mats["parede"], mats["piso"]
+    box("piso", cx, -D / 2, -0.006, W, D, 0.012, pi, bevel=False)
+    box("teto", cx, -D / 2, H, W, D, 0.02, p, bevel=False)
+    box("parede_fundo", cx, 0.02, H / 2, W, 0.04, H, p, bevel=False)
+    box("parede_esq", x0, -D / 2, H / 2, 0.04, D, H, p, bevel=False)
+    box("parede_dir", x1, -D / 2, H / 2, 0.04, D, H, p, bevel=False)
     j = job.get("janela")
     if j:
-        jx = j.get("centro_x_cm", (min_x + max_x) * 50) / 100.0
+        jx = j.get("centro_x_cm", cx * 100) / 100.0
         jz = (j.get("base_cm", 100) + j.get("altura_cm", 100) / 2) / 100.0
         jw, jh = j.get("largura_cm", 120) / 100.0, j.get("altura_cm", 100) / 100.0
-        vidro = bpy.data.materials.new("vidro")
-        vidro.use_nodes = True
-        b = vidro.node_tree.nodes.get("Principled BSDF")
-        b.inputs["Emission Color"].default_value = (0.95, 0.97, 1.0, 1)
-        b.inputs["Emission Strength"].default_value = 2.5
-        box("janela", jx, 0.05, jz, jw, 0.02, jh, vidro, bevel=False)
-        box("caixilho", jx, 0.06, jz, jw + 0.06, 0.03, jh + 0.06, mat_pbr("caixilho", (0.15, 0.15, 0.16, 1), 0.5), bevel=False)
+        vidro = bpy.data.materials.new("vidro"); vidro.use_nodes = True
+        vb = vidro.node_tree.nodes.get("Principled BSDF")
+        vb.inputs["Emission Color"].default_value = (0.95, 0.97, 1.0, 1)
+        vb.inputs["Emission Strength"].default_value = 3.0
+        box("janela", jx, 0.045, jz, jw, 0.02, jh, vidro, bevel=False)
+        box("caixilho", jx, 0.05, jz, jw + 0.06, 0.045, jh + 0.06, mat_pbr("caixilho", (0.14, 0.14, 0.15, 1), 0.5), bevel=False)
+    return cx, W, D, H
 
 
-def iluminar(cx, larg, max_z, max_p):
+def camera_luz(cx, W, D, H, max_z):
     alvo = bpy.data.objects.new("alvo", None)
-    alvo.location = (cx, -max_p / 2, max_z * 0.42)
+    alvo.location = (cx, -D * 0.32, max_z * 0.5)
     bpy.context.collection.objects.link(alvo)
-    cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 38
+    cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 24
     cam = bpy.data.objects.new("cam", cam_d)
-    cam.location = (cx + larg * 0.12, -(max_p + larg * 1.05 + 1.2), max_z * 0.85)
+    # DENTRO do cômodo, perto da frente, num canto (vista 3/4)
+    cam.location = (cx - W * 0.30, -(D * 0.94), H * 0.60)
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
     trk = cam.constraints.new(type="TRACK_TO")
     trk.target, trk.track_axis, trk.up_axis = alvo, "TRACK_NEGATIVE_Z", "UP_Y"
-    key = bpy.data.lights.new("key", type="AREA"); key.energy = 220; key.size = 5
-    ko = bpy.data.objects.new("key", key)
-    ko.location = (cx - larg * 0.3, -(max_p + larg), max_z * 2.0)
-    bpy.context.collection.objects.link(ko)
-    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 90; fill.size = 8
-    fo = bpy.data.objects.new("fill", fill)
-    fo.location = (cx + larg * 0.6, -(max_p + larg * 1.6), max_z * 1.2)
-    bpy.context.collection.objects.link(fo)
+    # luzes de teto (apontam pra baixo por padrão) + preenchimento
+    for (lx, ly, e, s) in [(cx, -D * 0.4, 550, 3.2), (cx + W * 0.3, -D * 0.75, 200, 4.0)]:
+        ld = bpy.data.lights.new("l", type="AREA"); ld.energy = e; ld.size = s
+        lo = bpy.data.objects.new("l", ld); lo.location = (lx, ly, H - 0.05)
+        bpy.context.collection.objects.link(lo)
     w = bpy.data.worlds.new("w"); w.use_nodes = True
-    w.node_tree.nodes["Background"].inputs[0].default_value = (0.86, 0.87, 0.9, 1)
-    w.node_tree.nodes["Background"].inputs[1].default_value = 0.35
+    w.node_tree.nodes["Background"].inputs[0].default_value = (0.85, 0.86, 0.9, 1)
+    w.node_tree.nodes["Background"].inputs[1].default_value = 0.25
     bpy.context.scene.world = w
 
 
@@ -226,11 +252,13 @@ def main():
     bpy.context.scene.cursor.location = (0, 0, 0)
     tex = job.get("chapa_textura")
     mats = {
-        "corpo": mat_pbr("chapa", hex_rgb(job.get("chapa_hex")), 0.5, textura=tex),
-        "porta": mat_pbr("porta", hex_rgb(job.get("chapa_hex")), 0.42, textura=tex),
-        "banc": mat_pbr("bancada", hex_rgb(job.get("bancada_hex", "#2b2b2e")), 0.18, 0.0),
+        "corpo": mat_pbr("chapa", hex_rgb(job.get("chapa_hex")), 0.5, textura=tex, grao=0.10),
+        "porta": mat_pbr("porta", hex_rgb(job.get("chapa_hex")), 0.42, textura=tex, grao=0.10),
+        "banc": mat_pbr("bancada", hex_rgb(job.get("bancada_hex", "#2b2b2e")), 0.18, 0.0, grao=0.03),
         "pux": mat_pbr("puxador", (0.72, 0.73, 0.75, 1), 0.28, 0.9),
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
+        "parede": mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.9),
+        "piso": mat_pbr("piso", (0.60, 0.52, 0.44, 1), 0.5, grao=0.06),  # amadeirado
     }
 
     for m in modulos:
@@ -241,8 +269,8 @@ def main():
     max_x = max(m.get("posicao_x_cm", 0) / 100.0 + m["largura_cm"] / 100.0 for m in modulos)
     max_z = max((PISO_AEREO if m.get("posicao_y_cm", 0) >= 100 else 0) + m["altura_cm"] / 100.0 for m in modulos)
     max_p = max(m["profundidade_cm"] / 100.0 for m in modulos)
-    parede_piso_janela(job, min_x, max_x, max_z, max_p)
-    iluminar((min_x + max_x) / 2, max(max_x - min_x, 1.0), max_z, max_p)
+    cx, W, D, H = montar_comodo(job, min_x, max_x, max_z, max_p, mats)
+    camera_luz(cx, W, D, H, max_z)
     setup_render(a.out)
     bpy.ops.render.render(write_still=True)
     print(f"[scene] {len(modulos)} módulos → {a.out}")
