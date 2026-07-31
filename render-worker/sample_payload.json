@@ -1,0 +1,166 @@
+{
+  "modulos": [
+    {
+      "id": "base_60_top_60",
+      "modulo_template_codigo": "base_60",
+      "nome_display": "Gabinete Base 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 72,
+      "profundidade_cm": 55,
+      "parede": "top",
+      "posicao_x_cm": 60,
+      "posicao_y_cm": 0,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "base_60_top_120",
+      "modulo_template_codigo": "base_60",
+      "nome_display": "Gabinete Base 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 72,
+      "profundidade_cm": 55,
+      "parede": "top",
+      "posicao_x_cm": 120,
+      "posicao_y_cm": 0,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "base_60_top_180",
+      "modulo_template_codigo": "base_60",
+      "nome_display": "Gabinete Base 60cm — Parede top (cooktop)",
+      "largura_cm": 60,
+      "altura_cm": 72,
+      "profundidade_cm": 55,
+      "parede": "top",
+      "posicao_x_cm": 180,
+      "posicao_y_cm": 0,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "base_60_top_240",
+      "modulo_template_codigo": "base_60",
+      "nome_display": "Gabinete Base 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 72,
+      "profundidade_cm": 55,
+      "parede": "top",
+      "posicao_x_cm": 240,
+      "posicao_y_cm": 0,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "aereo_60_top_60",
+      "modulo_template_codigo": "aereo_60",
+      "nome_display": "Armário Aéreo 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 40,
+      "profundidade_cm": 33,
+      "parede": "top",
+      "posicao_x_cm": 60,
+      "posicao_y_cm": 150,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "aereo_60_top_120",
+      "modulo_template_codigo": "aereo_60",
+      "nome_display": "Armário Aéreo 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 40,
+      "profundidade_cm": 33,
+      "parede": "top",
+      "posicao_x_cm": 120,
+      "posicao_y_cm": 150,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "aereo_60_top_180",
+      "modulo_template_codigo": "aereo_60",
+      "nome_display": "Armário Aéreo 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 40,
+      "profundidade_cm": 33,
+      "parede": "top",
+      "posicao_x_cm": 180,
+      "posicao_y_cm": 150,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "aereo_60_top_240",
+      "modulo_template_codigo": "aereo_60",
+      "nome_display": "Armário Aéreo 60cm — Parede top",
+      "largura_cm": 60,
+      "altura_cm": 40,
+      "profundidade_cm": 33,
+      "parede": "top",
+      "posicao_x_cm": 240,
+      "posicao_y_cm": 150,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 1,
+        "tipo_porta": "dobradica"
+      }
+    },
+    {
+      "id": "torre_forno_60_top_0",
+      "modulo_template_codigo": "torre_forno_60",
+      "nome_display": "Torre de Forno 60cm — Torre de forno",
+      "largura_cm": 60,
+      "altura_cm": 220,
+      "profundidade_cm": 60,
+      "parede": "top",
+      "posicao_x_cm": 0,
+      "posicao_y_cm": 0,
+      "configuracao": {
+        "num_portas": 2,
+        "num_gavetas": 0,
+        "num_prateleiras": 3,
+        "tipo_porta": "dobradica"
+      }
+    }
+  ],
+  "chapa_codigo": "branco_tx",
+  "chapa_hex": "#F2F0EB",
+  "puxador_codigo": "perfil_alu",
+  "ambiente": "Cozinha",
+  "medidas": {
+    "largura": 3,
+    "profundidade": 3,
+    "altura": 2.7
+  }
+}
