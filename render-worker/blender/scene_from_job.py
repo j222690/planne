@@ -21,6 +21,7 @@ import argparse
 T = 0.018            # espessura painel (m)
 PISO_AEREO = 1.50    # aéreo a 150cm do piso
 BANC_ESP = 0.04      # espessura bancada
+RODAPE = 0.10        # recuo dos pés (toe-kick) dos móveis de piso
 
 
 def parse_args():
@@ -97,7 +98,7 @@ def montar_modulo(m, mats):
     P = m["profundidade_cm"] / 100.0
     x0 = m.get("posicao_x_cm", 0) / 100.0
     aereo = m.get("posicao_y_cm", 0) >= 100
-    z0 = PISO_AEREO if aereo else 0.0
+    z0 = PISO_AEREO if aereo else RODAPE   # móvel de piso sobe pelo rodapé
     cx = x0 + L / 2
     cy = -P / 2
     cfg = m.get("configuracao", {}) or {}
@@ -111,6 +112,9 @@ def montar_modulo(m, mats):
     box("base", cx, cy, z0 + T / 2, L, P, T, mats["corpo"])
     box("teto", cx, cy, z0 + A - T / 2, L, P, T, mats["corpo"])
     box("fundo", cx, -T / 2, z0 + A / 2, L - 2 * T, T, A - 2 * T, mats["corpo"])
+    # rodapé recuado (toe-kick escuro) nos móveis de piso
+    if not aereo:
+        box("rodape", cx, -(P - 0.06), RODAPE / 2, L - 2 * T, 0.03, RODAPE, mats["rodape"], bevel=False)
 
     # FORNO + MICRO embutidos na torre (insets escuros na frente)
     if cfg.get("tem_forno") and not aereo:
@@ -156,17 +160,24 @@ def bancada_e_cooktops(modulos, mats):
     P = max(m["profundidade_cm"] / 100.0 for m in bases)
     x0, x1 = min(xs), max(xe)
     cx = (x0 + x1) / 2
-    z_top = A + BANC_ESP / 2
-    box("bancada", cx, -(P + 0.02) / 2, z_top, (x1 - x0), P + 0.02, BANC_ESP, mats["banc"])
-    # cooktop / cuba nos módulos marcados
+    topo = RODAPE + A                    # altura do topo do balcão
+    z_banc = topo + BANC_ESP / 2
+    box("bancada", cx, -(P + 0.03) / 2, z_banc, (x1 - x0), P + 0.03, BANC_ESP, mats["banc"])
+    # frontão / backsplash entre a bancada e os aéreos
+    z_bs0, z_bs1 = topo + BANC_ESP, PISO_AEREO
+    if z_bs1 > z_bs0 + 0.05:
+        box("backsplash", cx, 0.05, (z_bs0 + z_bs1) / 2, (x1 - x0), 0.02, z_bs1 - z_bs0, mats["backsplash"], bevel=False)
+    # cooktop (com bocas) / cuba nos módulos marcados
     for m in bases:
         cfg = m.get("configuracao", {}) or {}
         mx = m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 200.0
         if cfg.get("tem_recorte_cooktop"):
-            box("cooktop", mx, -P * 0.5, A + BANC_ESP + 0.004, 0.58, 0.50, 0.01, mats["eletro"])
+            box("cooktop", mx, -P * 0.5, topo + BANC_ESP + 0.005, 0.58, 0.50, 0.01, mats["eletro"])
+            for dx, dy in [(-0.14, 0.12), (0.14, 0.12), (-0.14, -0.12), (0.14, -0.12)]:
+                box("boca", mx + dx, -P * 0.5 + dy, topo + BANC_ESP + 0.012, 0.11, 0.11, 0.008, mats["boca"], bevel=False)
         if cfg.get("tem_recorte_cuba"):
-            box("cuba", mx, -P * 0.5, A + BANC_ESP - 0.03, 0.44, 0.38, 0.06, mats["eletro"])
-            box("torneira", mx, -P * 0.25, A + BANC_ESP + 0.13, 0.02, 0.02, 0.26, mats["pux"])
+            box("cuba", mx, -P * 0.5, topo + BANC_ESP - 0.03, 0.44, 0.38, 0.06, mats["eletro"])
+            box("torneira", mx, -P * 0.28, topo + BANC_ESP + 0.13, 0.022, 0.022, 0.26, mats["pux"])
 
 
 def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
@@ -200,24 +211,31 @@ def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
 
 def camera_luz(cx, W, D, H, max_z):
     alvo = bpy.data.objects.new("alvo", None)
-    alvo.location = (cx, -D * 0.32, max_z * 0.5)
+    alvo.location = (cx, -D * 0.30, H * 0.42)
     bpy.context.collection.objects.link(alvo)
-    cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 24
+    cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 30
     cam = bpy.data.objects.new("cam", cam_d)
-    # DENTRO do cômodo, perto da frente, num canto (vista 3/4)
-    cam.location = (cx - W * 0.30, -(D * 0.94), H * 0.60)
+    # FORA da frente (aberta), longe o bastante p/ pegar o cômodo INTEIRO; leve 3/4
+    dist = D + W * 0.55 + 0.6
+    cam.location = (cx - W * 0.10, -dist, H * 0.58)
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
     trk = cam.constraints.new(type="TRACK_TO")
     trk.target, trk.track_axis, trk.up_axis = alvo, "TRACK_NEGATIVE_Z", "UP_Y"
-    # luzes de teto (apontam pra baixo por padrão) + preenchimento
-    for (lx, ly, e, s) in [(cx, -D * 0.4, 550, 3.2), (cx + W * 0.3, -D * 0.75, 200, 4.0)]:
-        ld = bpy.data.lights.new("l", type="AREA"); ld.energy = e; ld.size = s
-        lo = bpy.data.objects.new("l", ld); lo.location = (lx, ly, H - 0.05)
-        bpy.context.collection.objects.link(lo)
+    # Iluminação: softbox grande e quente (key) + preenchimento frio + luz da janela.
+    key = bpy.data.lights.new("key", type="AREA"); key.energy = 700; key.size = 6
+    key.color = (1.0, 0.96, 0.9)
+    ko = bpy.data.objects.new("key", key)
+    ko.location = (cx - W * 0.2, -D * 0.5, H - 0.05); ko.rotation_euler = (0.5, 0, 0)
+    bpy.context.collection.objects.link(ko)
+    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 260; fill.size = 9
+    fill.color = (0.9, 0.94, 1.0)
+    fo = bpy.data.objects.new("fill", fill)
+    fo.location = (cx + W * 0.4, -dist * 0.7, H * 0.8)
+    bpy.context.collection.objects.link(fo)
     w = bpy.data.worlds.new("w"); w.use_nodes = True
-    w.node_tree.nodes["Background"].inputs[0].default_value = (0.85, 0.86, 0.9, 1)
-    w.node_tree.nodes["Background"].inputs[1].default_value = 0.25
+    w.node_tree.nodes["Background"].inputs[0].default_value = (0.88, 0.89, 0.93, 1)
+    w.node_tree.nodes["Background"].inputs[1].default_value = 0.4
     bpy.context.scene.world = w
 
 
@@ -235,7 +253,17 @@ def setup_render(out):
             scn.view_settings.view_transform = vt; break
         except TypeError:
             continue
-    scn.view_settings.exposure = -0.4
+    scn.view_settings.exposure = -0.2
+    # Qualidade: mais amostras + raytracing (GI/reflexo/sombra suave) no EEVEE Next
+    try:
+        scn.eevee.taa_render_samples = 96
+    except Exception:
+        pass
+    for attr in ("use_raytracing", "use_gtao", "use_shadows"):
+        try:
+            setattr(scn.eevee, attr, True)
+        except Exception:
+            pass
     scn.render.filepath = out
     scn.render.image_settings.file_format = "PNG"
 
@@ -257,6 +285,9 @@ def main():
         "banc": mat_pbr("bancada", hex_rgb(job.get("bancada_hex", "#2b2b2e")), 0.18, 0.0, grao=0.03),
         "pux": mat_pbr("puxador", (0.72, 0.73, 0.75, 1), 0.28, 0.9),
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
+        "boca": mat_pbr("boca", (0.05, 0.05, 0.06, 1), 0.15, 0.3),
+        "rodape": mat_pbr("rodape", (0.18, 0.18, 0.2, 1), 0.5),
+        "backsplash": mat_pbr("backsplash", (0.93, 0.93, 0.94, 1), 0.3),
         "parede": mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.9),
         "piso": mat_pbr("piso", (0.60, 0.52, 0.44, 1), 0.5, grao=0.06),  # amadeirado
     }
