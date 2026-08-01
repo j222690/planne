@@ -286,31 +286,52 @@ def colocar_asset(caminho, cx, alvo, eixo="alt", rot=(0, 0, 0),
         root.location.y += y_frente - mn.y
     if y_centro is not None:
         root.location.y += y_centro - (mn.y + mx.y) / 2
-    return root
+    bpy.context.view_layer.update()
+    return root, objs
 
 
-def eletros_reais(modulos):
-    """Encaixa eletros realistas (BlenderKit): geladeira, cooktop, coifa e o
-    micro-ondas embutido na torre."""
+def eletros_reais(modulos, mats):
+    """Encaixa eletros realistas (BlenderKit) + a TORRE DA GELADEIRA:
+    geladeira, cooktop EMBUTIDO, coifa e micro-ondas embutido na torre."""
     bases = [m for m in modulos if m.get("posicao_y_cm", 0) < 100]
     if not bases:
         return None
+    aereos = [m for m in modulos if m.get("posicao_y_cm", 0) >= 100]
+    atop = PISO_AEREO + max((m["altura_cm"] / 100.0 for m in aereos), default=0.70)
     x1 = max(m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 100.0 for m in bases)
 
-    # GELADEIRA — freestanding à direita do corrido (altura real ~1.85m)
-    gx = x1 + 0.50
-    colocar_asset(os.path.join(MODELS, "geladeira.blend"), cx=gx, alvo=1.85, eixo="alt",
-                  z_base=0.0, y_fundo=-0.02)
+    # GELADEIRA + TORRE DA GELADEIRA (laterais de acabamento + aéreo por cima)
+    gx = x1 + 0.55
+    groot, gobjs = colocar_asset(os.path.join(MODELS, "geladeira.blend"), cx=gx, alvo=1.85,
+                                 eixo="alt", z_base=0.0, y_fundo=-0.02)
+    borda_dir = gx + 0.40
+    if gobjs:
+        mn, mx = _bbox(gobjs)
+        cxg = (mn.x + mx.x) / 2
+        prof = mx.y - mn.y
+        lat = 0.018
+        for xx in (mn.x - lat / 2, mx.x + lat / 2):   # laterais chão->topo da torre
+            box("torre_ger_lat", xx, (mn.y + mx.y) / 2, atop / 2, lat, prof, atop, mats["corpo"])
+        az0 = mx.z + 0.04                              # aéreo sobre a geladeira
+        if atop - az0 > 0.12:
+            depA, largA = 0.35, (mx.x - mn.x) + 2 * lat
+            box("torre_ger_base", cxg, -depA / 2, az0, largA, depA, T, mats["corpo"])
+            box("torre_ger_teto", cxg, -depA / 2, atop - T / 2, largA, depA, T, mats["corpo"])
+            box("torre_ger_porta", cxg, -depA - T / 2, (az0 + atop) / 2,
+                largA - 0.006, T, (atop - az0) - T - 0.006, mats["porta"])
+            _puxador_h(cxg, -depA - T / 2, az0 + 0.05, largA * 0.5, mats["pux"])
+        borda_dir = mx.x + lat + 0.08
 
-    # COOKTOP e COIFA — no módulo marcado com recorte de cooktop
+    # COOKTOP EMBUTIDO + COIFA — no módulo marcado com recorte de cooktop
     ck = next((m for m in bases if (m.get("configuracao", {}) or {}).get("tem_recorte_cooktop")), None)
     if ck:
         mx = ck["posicao_x_cm"] / 100.0 + ck["largura_cm"] / 200.0
         P = ck["profundidade_cm"] / 100.0
         A = ck["altura_cm"] / 100.0
         z_topo = RODAPE + A + BANC_ESP
+        # embutido: rebaixa o corpo p/ dentro do tampo; só o vidro fica rente
         colocar_asset(os.path.join(MODELS, "cooktop.blend"), cx=mx, alvo=0.56, eixo="larg",
-                      z_base=z_topo, y_centro=-P * 0.55)
+                      z_base=z_topo - 0.09, y_centro=-P * 0.55)
         # coifa: sobe o duto (gira 90° em X) e pendura acima do cooktop
         colocar_asset(os.path.join(MODELS, "coifa.blend"), cx=mx, alvo=0.60, eixo="larg",
                       rot=(1.5708, 0, 0), z_base=PISO_AEREO - 0.02, y_fundo=-0.05)
@@ -324,7 +345,7 @@ def eletros_reais(modulos):
         colocar_asset(os.path.join(MODELS, "micro.blend"), cx=tx, alvo=tL - 0.12, eixo="larg",
                       z_centro=RODAPE + 1.53, y_frente=-tP + 0.02)
 
-    return gx + 0.45   # borda direita aprox. (p/ o cômodo acomodar)
+    return borda_dir
 
 
 def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
@@ -494,7 +515,7 @@ def main():
         montar_modulo(m, mats)
     bancada_e_cooktops(modulos, mats)
     detalhes_promob(modulos, mats)
-    x_dir_eletro = eletros_reais(modulos)
+    x_dir_eletro = eletros_reais(modulos, mats)
 
     min_x = min(m.get("posicao_x_cm", 0) / 100.0 for m in modulos)
     max_x = max(m.get("posicao_x_cm", 0) / 100.0 + m["largura_cm"] / 100.0 for m in modulos)
