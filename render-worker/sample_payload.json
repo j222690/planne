@@ -75,7 +75,7 @@
         "num_gavetas": 0,
         "num_prateleiras": 1,
         "tipo_porta": "dobradica",
-        "tem_recorte_cuba": false,
+        "tem_recorte_cuba": true,
         "tem_recorte_cooktop": false,
         "tem_forno": false
       }

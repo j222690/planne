@@ -198,14 +198,7 @@ def bancada_e_cooktops(modulos, mats):
     z_bs0, z_bs1 = topo + BANC_ESP, PISO_AEREO
     if z_bs1 > z_bs0 + 0.05:
         box("backsplash", cx, 0.05, (z_bs0 + z_bs1) / 2, (x1 - x0), 0.02, z_bs1 - z_bs0, mats["backsplash"], bevel=False)
-    # cooktop (com bocas) / cuba nos módulos marcados
-    for m in bases:
-        cfg = m.get("configuracao", {}) or {}
-        mx = m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 200.0
-        # (cooktop real é inserido em eletros_reais — sem versão paramétrica)
-        if cfg.get("tem_recorte_cuba"):
-            box("cuba", mx, -P * 0.5, topo + BANC_ESP - 0.03, 0.44, 0.38, 0.06, mats["eletro"])
-            box("torneira", mx, -P * 0.28, topo + BANC_ESP + 0.13, 0.022, 0.022, 0.26, mats["pux"])
+    # cooktop e cuba REAIS são inseridos em eletros_reais (BlenderKit)
 
 
 def detalhes_promob(modulos, mats):
@@ -244,12 +237,19 @@ def _bbox(objs):
     return mn, mx
 
 
-def _importar(caminho, rot=(0, 0, 0)):
+def _importar(caminho, rot=(0, 0, 0), ignorar=("boolean",)):
     if not os.path.exists(caminho):
         print(f"[asset] não achei {caminho}"); return None, []
     with bpy.data.libraries.load(caminho, link=False) as (src, dst):
         dst.objects = list(src.objects)
-    objs = [o for o in dst.objects if o is not None]
+    # descarta cortadores/booleans que não são p/ renderizar (ex.: "Sink Boolean")
+    objs = []
+    for o in dst.objects:
+        if o is None:
+            continue
+        if any(t in o.name.lower() for t in ignorar):
+            bpy.data.objects.remove(o, do_unlink=True); continue
+        objs.append(o)
     if not objs:
         return None, []
     root = bpy.data.objects.new("asset_root", None)
@@ -336,6 +336,17 @@ def eletros_reais(modulos, mats):
         colocar_asset(os.path.join(MODELS, "coifa.blend"), cx=mx, alvo=0.60, eixo="larg",
                       rot=(1.5708, 0, 0), z_base=PISO_AEREO - 0.02, y_fundo=-0.05)
 
+    # CUBA + TORNEIRA reais — embutida no tampo do módulo marcado
+    cb = next((m for m in bases if (m.get("configuracao", {}) or {}).get("tem_recorte_cuba")), None)
+    if cb:
+        mxc = cb["posicao_x_cm"] / 100.0 + cb["largura_cm"] / 200.0
+        Pc = cb["profundidade_cm"] / 100.0
+        Ac = cb["altura_cm"] / 100.0
+        z_topo = RODAPE + Ac + BANC_ESP
+        # aro rente ao tampo, bojo p/ baixo, torneira p/ cima (alvo=0.70 → ~0.285 do fundo ao aro)
+        colocar_asset(os.path.join(MODELS, "cuba.blend"), cx=mxc, alvo=0.70, eixo="larg",
+                      z_base=z_topo - 0.285, y_centro=-Pc * 0.5)
+
     # MICRO — embutido na torre (recorte na frente do módulo tem_forno)
     torre = next((m for m in bases if (m.get("configuracao", {}) or {}).get("tem_forno")), None)
     if torre:
@@ -383,9 +394,9 @@ def camera_luz(cx, W, D, H, max_z):
     bpy.context.collection.objects.link(alvo)
     cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 35
     cam = bpy.data.objects.new("cam", cam_d)
-    # FORA da frente, enquadrando o MÓVEL (não a parede vazia); leve 3/4
-    dist = D + W * 0.32 + 0.45
-    cam.location = (cx - W * 0.08, -dist, max_z * 0.55 + 0.15)
+    # Vista 3/4: câmera deslocada p/ o lado (perspectiva, como no Promob)
+    dist = D + W * 0.30 + 0.45
+    cam.location = (cx - W * 0.34, -dist * 0.92, max_z * 0.55 + 0.15)
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
     trk = cam.constraints.new(type="TRACK_TO")
