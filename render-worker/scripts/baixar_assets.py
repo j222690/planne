@@ -13,16 +13,20 @@ RENDERS ao cliente (não a cena/modelo), o que a licença permite.
 """
 import os
 import json
+import uuid
 import urllib.request
+import urllib.parse
 from pathlib import Path
 
 API = "https://www.blenderkit.com/api/v1"
 DEST = Path(__file__).resolve().parent.parent / "assets" / "models"
+ADDON_VER = "3.12.3"
 
-# Curadoria (assetBaseId da busca). Escolhidos por casarem com o padrão BR.
+# Curadoria por NOME (a busca casa e a gente pega o assetBaseId). Padrão BR.
 ASSETS = {
-    "geladeira": "17579aa4-98fd-4c42-8e69-3e4303e3c97c",  # Electrolux French Door
-    "coifa": "b5ca85cf-94d8-4c25-b8d5-b7f35a081261",       # Whirlpool Range Hood
+    "geladeira": "Electrolux French Door Refrigerator",
+    "coifa": "Whirlpool Range Hood",
+    "cooktop": "Electrolux Black Cooktop Gas",
 }
 
 
@@ -44,33 +48,43 @@ def _get(url: str, key: str) -> dict:
         return json.loads(r.read().decode())
 
 
-def baixar(nome: str, base_id: str, key: str) -> None:
-    # 1) acha o asset e o arquivo .blend (menor resolução serve p/ eletro)
-    data = _get(f"{API}/search/?query=asset_base_id:{base_id}", key)
-    results = data.get("results") or []
+def _achar(query: str, key: str) -> dict | None:
+    q = urllib.parse.quote_plus(query + " asset_type:model")
+    data = _get(f"{API}/search/?query={q}&page_size=12", key)
+    results = [r for r in (data.get("results") or [])
+               if r.get("isFree") and r.get("canDownload")
+               and any(f.get("fileType") == "blend" for f in r.get("files", []))]
     if not results:
-        print(f"[{nome}] não encontrado ({base_id})"); return
-    a = results[0]
+        return None
+    alvo = query.strip().lower()
+    return next((r for r in results if (r.get("name") or "").strip().lower() == alvo), results[0])
+
+
+def baixar(nome: str, query: str, key: str) -> None:
+    a = _achar(query, key)
+    if not a:
+        print(f"[{nome}] não encontrado p/ '{query}'"); return
     blend = next((f for f in a.get("files", []) if f.get("fileType") == "blend"), None)
-    if not blend:
-        print(f"[{nome}] sem arquivo .blend"); return
-    # 2) resolve a URL de download assinada
-    dl = _get(blend["downloadUrl"], key)
-    file_url = dl.get("filePath") or dl.get("url")
+    # resolve a URL assinada (exige scene_uuid válido, como o addon)
+    su = str(uuid.uuid4())
+    dl = _get(f"{blend['downloadUrl']}?scene_uuid={su}&addon_version={ADDON_VER}", key)
+    file_url = dl.get("filePath")
     if not file_url:
         print(f"[{nome}] sem URL de download: {dl}"); return
-    # 3) baixa o .blend
     DEST.mkdir(parents=True, exist_ok=True)
     out = DEST / f"{nome}.blend"
-    urllib.request.urlretrieve(file_url, out)
-    print(f"[{nome}] OK -> {out}  ({out.stat().st_size // 1024} KB)")
+    # o CDN exige User-Agent (sem ele -> 403)
+    req = urllib.request.Request(file_url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=180) as r, open(out, "wb") as f:
+        f.write(r.read())
+    print(f"[{nome}] OK ({a.get('name')}) -> {out.name}  ({out.stat().st_size // 1024} KB)")
 
 
 def main() -> None:
     key = _key()
-    for nome, base_id in ASSETS.items():
+    for nome, query in ASSETS.items():
         try:
-            baixar(nome, base_id, key)
+            baixar(nome, query, key)
         except Exception as e:  # noqa: BLE001
             print(f"[{nome}] erro: {e}")
 

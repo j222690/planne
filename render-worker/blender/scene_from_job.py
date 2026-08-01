@@ -25,6 +25,7 @@ RODAPE = 0.10        # recuo dos pés (toe-kick) dos móveis de piso
 
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
 HDRI = os.path.join(ASSETS, "hdri", "studio_1k.hdr")
+MODELS = os.path.join(ASSETS, "models")   # eletros reais (BlenderKit, .blend)
 
 
 def tex_set(subdir, prefix):
@@ -224,6 +225,61 @@ def detalhes_promob(modulos, mats):
             (ax1 - ax0) - 0.06, ap * 0.55, 0.006, led, bevel=False)
 
 
+def _bbox(objs):
+    from mathutils import Vector
+    mn = Vector((1e9, 1e9, 1e9)); mx = Vector((-1e9, -1e9, -1e9))
+    for o in objs:
+        if o.type != "MESH":
+            continue
+        for c in o.bound_box:
+            wc = o.matrix_world @ Vector(c)
+            for i in range(3):
+                mn[i] = min(mn[i], wc[i]); mx[i] = max(mx[i], wc[i])
+    return mn, mx
+
+
+def inserir_asset(caminho, cx, alvo_A, y_fundo=-0.02, rot_z=0.0):
+    """Importa um .blend (eletro real), escala pela ALTURA alvo e posiciona:
+    centro em X=cx, base no piso, fundo encostado na parede (y=y_fundo)."""
+    if not os.path.exists(caminho):
+        print(f"[asset] não achei {caminho}"); return None
+    with bpy.data.libraries.load(caminho, link=False) as (src, dst):
+        dst.objects = list(src.objects)
+    objs = [o for o in dst.objects if o is not None]
+    if not objs:
+        return None
+    root = bpy.data.objects.new("asset_root", None)
+    bpy.context.collection.objects.link(root)
+    for o in objs:
+        bpy.context.collection.objects.link(o)
+        if o.parent is None:
+            o.parent = root
+    root.rotation_euler = (0, 0, rot_z)
+    bpy.context.view_layer.update()
+    mn, mx = _bbox(objs)
+    s = alvo_A / max(mx.z - mn.z, 1e-4)
+    root.scale = (s, s, s)
+    bpy.context.view_layer.update()
+    mn, mx = _bbox(objs)
+    root.location.x += cx - (mn.x + mx.x) / 2
+    root.location.z += 0.0 - mn.z          # base no chão
+    root.location.y += y_fundo - mx.y      # fundo (Y+) na parede
+    return root
+
+
+def eletros_reais(modulos):
+    """Encaixa eletros realistas (BlenderKit) na cena. Por ora: GELADEIRA
+    freestanding à direita do corrido, altura real ~1.85m."""
+    bases = [m for m in modulos if m.get("posicao_y_cm", 0) < 100]
+    if not bases:
+        return
+    x1 = max(m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 100.0 for m in bases)
+    gx = x1 + 0.50
+    inserir_asset(os.path.join(MODELS, "geladeira.blend"),
+                  cx=gx, alvo_A=1.85, y_fundo=-0.02, rot_z=0.0)
+    return gx + 0.45   # borda direita aprox. (p/ o cômodo acomodar)
+
+
 def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
     """Cômodo FECHADO: piso, teto, parede do fundo + 2 laterais (frente aberta
     para a câmera). Dimensões do projeto (medidas) ou envolvendo o móvel."""
@@ -379,7 +435,7 @@ def main():
         "pux": mat_pbr("puxador", (0.72, 0.73, 0.75, 1), 0.28, 0.9),
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
         "boca": mat_pbr("boca", (0.05, 0.05, 0.06, 1), 0.15, 0.3),
-        "rodape": mat_pbr("rodape", (0.18, 0.18, 0.2, 1), 0.5),
+        "rodape": mat_pbr("rodape", (0.03, 0.03, 0.035, 1), 0.45),
         "backsplash": mat_pbr("backsplash", (0.94, 0.94, 0.95, 1), 0.3),
         "parede": mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.9),
         "piso": mat_pbr("piso", (1, 1, 1, 1), 0.5, texset=t_pis, escala=0.45, nrm_forca=0.8),
@@ -389,9 +445,12 @@ def main():
         montar_modulo(m, mats)
     bancada_e_cooktops(modulos, mats)
     detalhes_promob(modulos, mats)
+    x_dir_eletro = eletros_reais(modulos)
 
     min_x = min(m.get("posicao_x_cm", 0) / 100.0 for m in modulos)
     max_x = max(m.get("posicao_x_cm", 0) / 100.0 + m["largura_cm"] / 100.0 for m in modulos)
+    if x_dir_eletro:
+        max_x = max(max_x, x_dir_eletro)
     max_z = max((PISO_AEREO if m.get("posicao_y_cm", 0) >= 100 else 0) + m["altura_cm"] / 100.0 for m in modulos)
     max_p = max(m["profundidade_cm"] / 100.0 for m in modulos)
     cx, W, D, H = montar_comodo(job, min_x, max_x, max_z, max_p, mats)
