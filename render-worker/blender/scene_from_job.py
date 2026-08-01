@@ -125,9 +125,7 @@ def montar_modulo(m, mats):
     box("base", cx, cy, z0 + T / 2, L, P, T, mats["corpo"])
     box("teto", cx, cy, z0 + A - T / 2, L, P, T, mats["corpo"])
     box("fundo", cx, -T / 2, z0 + A / 2, L - 2 * T, T, A - 2 * T, mats["corpo"])
-    # rodapé recuado (toe-kick escuro) nos móveis de piso
-    if not aereo:
-        box("rodape", cx, -(P - 0.06), RODAPE / 2, L - 2 * T, 0.03, RODAPE, mats["rodape"], bevel=False)
+    # (rodapé é contínuo — desenhado em detalhes_promob, não por módulo)
 
     # FORNO + MICRO embutidos na torre (insets escuros na frente)
     if cfg.get("tem_forno") and not aereo:
@@ -147,15 +145,21 @@ def montar_modulo(m, mats):
         for i in range(gavetas):
             gz = z0 + i * gh + gh / 2
             box(f"gav{i}", cx, y_fr, gz, L - 0.006, T, gh - 0.006, mats["porta"])
-            box(f"gpux{i}", cx, y_fr - T, gz, min(0.22, L * 0.55), 0.02, 0.014, mats["pux"])
+            # puxador perfil horizontal na borda superior da gaveta
+            _puxador_h(cx, y_fr, gz + gh / 2 - 0.02, min(L * 0.6, L - 0.08), mats["pux"])
     if portas:
         pz0, ph, pw = z0 + zona_gav, A - zona_gav, L / portas
         for d in range(portas):
             px = x0 + (d + 0.5) * pw
             box(f"porta{d}", px, y_fr, pz0 + ph / 2, pw - 0.006, T, ph - 0.006, mats["porta"])
-            beira = px + (pw / 2 - 0.035) * (1 if d % 2 == 0 else -1)
-            puxz = pz0 + (ph * 0.14 if aereo else ph * 0.86)
-            _puxador(beira, y_fr, puxz, min(0.22, ph * 0.55), mats["pux"])
+            # aéreo: perfil na borda INFERIOR; base: na borda SUPERIOR (puxador cava/perfil)
+            puxz = (pz0 + 0.03) if aereo else (pz0 + ph - 0.03)
+            _puxador_h(px, y_fr, puxz, pw * 0.55, mats["pux"])
+
+
+def _puxador_h(cx, y_fr, z, largura, mat):
+    """Puxador perfil de alumínio: barra fina HORIZONTAL, rente à frente."""
+    box("pux", cx, y_fr - T * 0.55, z, max(0.06, largura), 0.02, 0.014, mat, bevel=False)
 
 
 def _puxador(x, y_fr, z, alt, mat):
@@ -175,7 +179,11 @@ def bancada_e_cooktops(modulos, mats):
     cx = (x0 + x1) / 2
     topo = RODAPE + A                    # altura do topo do balcão
     z_banc = topo + BANC_ESP / 2
-    box("bancada", cx, -(P + 0.03) / 2, z_banc, (x1 - x0), P + 0.03, BANC_ESP, mats["banc"])
+    # tampo com OVERHANG frontal (~30mm) e saia aparente (engrosso) — granito
+    ov = 0.03
+    box("bancada", cx, -(P + ov) / 2, z_banc, (x1 - x0), P + ov, BANC_ESP, mats["banc"])
+    box("banc_saia", cx, -(P + ov) + 0.008, z_banc - BANC_ESP / 2 - 0.014,
+        (x1 - x0), 0.016, 0.03, mats["banc"], bevel=False)
     # frontão / backsplash entre a bancada e os aéreos
     z_bs0, z_bs1 = topo + BANC_ESP, PISO_AEREO
     if z_bs1 > z_bs0 + 0.05:
@@ -191,6 +199,29 @@ def bancada_e_cooktops(modulos, mats):
         if cfg.get("tem_recorte_cuba"):
             box("cuba", mx, -P * 0.5, topo + BANC_ESP - 0.03, 0.44, 0.38, 0.06, mats["eletro"])
             box("torneira", mx, -P * 0.28, topo + BANC_ESP + 0.13, 0.022, 0.022, 0.26, mats["pux"])
+
+
+def detalhes_promob(modulos, mats):
+    """Toques que aproximam do Promob: rodapé preto CONTÍNUO recuado + LED
+    quente sob os aéreos."""
+    bases = [m for m in modulos if m.get("posicao_y_cm", 0) < 100]
+    aereos = [m for m in modulos if m.get("posicao_y_cm", 0) >= 100]
+    if bases:
+        x0 = min(m["posicao_x_cm"] / 100.0 for m in bases)
+        x1 = max(m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 100.0 for m in bases)
+        P = max(m["profundidade_cm"] / 100.0 for m in bases)
+        box("rodape", (x0 + x1) / 2, -(P - 0.06), RODAPE / 2,
+            x1 - x0, 0.02, RODAPE, mats["rodape"], bevel=False)
+    if aereos:
+        ax0 = min(m["posicao_x_cm"] / 100.0 for m in aereos)
+        ax1 = max(m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 100.0 for m in aereos)
+        ap = max(m["profundidade_cm"] / 100.0 for m in aereos)
+        led = bpy.data.materials.new("led"); led.use_nodes = True
+        lb = led.node_tree.nodes.get("Principled BSDF")
+        lb.inputs["Emission Color"].default_value = (1.0, 0.86, 0.62, 1)
+        lb.inputs["Emission Strength"].default_value = 7.0
+        box("led", (ax0 + ax1) / 2, -ap + 0.02, PISO_AEREO - 0.008,
+            (ax1 - ax0) - 0.06, ap * 0.55, 0.006, led, bevel=False)
 
 
 def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
@@ -224,20 +255,27 @@ def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
 
 def camera_luz(cx, W, D, H, max_z):
     alvo = bpy.data.objects.new("alvo", None)
-    alvo.location = (cx, -D * 0.30, H * 0.42)
+    alvo.location = (cx, -D * 0.28, max_z * 0.5)
     bpy.context.collection.objects.link(alvo)
-    cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 30
+    cam_d = bpy.data.cameras.new("cam"); cam_d.lens = 35
     cam = bpy.data.objects.new("cam", cam_d)
-    # FORA da frente (aberta), longe o bastante p/ pegar o cômodo INTEIRO; leve 3/4
-    dist = D + W * 0.55 + 0.6
-    cam.location = (cx - W * 0.10, -dist, H * 0.58)
+    # FORA da frente, enquadrando o MÓVEL (não a parede vazia); leve 3/4
+    dist = D + W * 0.32 + 0.45
+    cam.location = (cx - W * 0.08, -dist, max_z * 0.55 + 0.15)
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
     trk = cam.constraints.new(type="TRACK_TO")
     trk.target, trk.track_axis, trk.up_axis = alvo, "TRACK_NEGATIVE_Z", "UP_Y"
+    # profundidade de campo suave (foco no móvel)
+    try:
+        cam_d.dof.use_dof = True
+        cam_d.dof.focus_object = alvo
+        cam_d.dof.aperture_fstop = 5.6
+    except Exception:
+        pass
     # Iluminação: softbox quente (key) + preenchimento frio; o HDRI dá o ambiente.
-    key = bpy.data.lights.new("key", type="AREA"); key.energy = 450; key.size = 6
-    key.color = (1.0, 0.96, 0.9)
+    key = bpy.data.lights.new("key", type="AREA"); key.energy = 500; key.size = 6
+    key.color = (1.0, 0.93, 0.82)  # luz quente (2900K aprox.)
     ko = bpy.data.objects.new("key", key)
     ko.location = (cx - W * 0.2, -D * 0.5, H - 0.05); ko.rotation_euler = (0.5, 0, 0)
     bpy.context.collection.objects.link(ko)
@@ -336,7 +374,8 @@ def main():
     mats = {
         "corpo": mat_pbr("chapa", branco, 0.45, texset=t_mad, use_color=False, escala=1.2, nrm_forca=0.30),
         "porta": mat_pbr("porta", branco, 0.40, texset=t_mad, use_color=False, escala=1.2, nrm_forca=0.30),
-        "banc": mat_pbr("bancada", (1, 1, 1, 1), 0.14, 0.0, texset=t_ban, escala=0.5, nrm_forca=0.6),
+        "banc": mat_pbr("bancada", hex_rgb(job.get("bancada_hex"), "2b2b2e"), 0.12, 0.0,
+                        texset=t_ban, use_color=False, escala=0.5, nrm_forca=0.35),
         "pux": mat_pbr("puxador", (0.72, 0.73, 0.75, 1), 0.28, 0.9),
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
         "boca": mat_pbr("boca", (0.05, 0.05, 0.06, 1), 0.15, 0.3),
@@ -349,6 +388,7 @@ def main():
     for m in modulos:
         montar_modulo(m, mats)
     bancada_e_cooktops(modulos, mats)
+    detalhes_promob(modulos, mats)
 
     min_x = min(m.get("posicao_x_cm", 0) / 100.0 for m in modulos)
     max_x = max(m.get("posicao_x_cm", 0) / 100.0 + m["largura_cm"] / 100.0 for m in modulos)
