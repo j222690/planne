@@ -128,15 +128,24 @@ def montar_modulo(m, mats):
     box("fundo", cx, -T / 2, z0 + A / 2, L - 2 * T, T, A - 2 * T, mats["corpo"])
     # (rodapé é contínuo — desenhado em detalhes_promob, não por módulo)
 
-    # FORNO + MICRO embutidos na torre (insets escuros na frente)
+    # TORRE de embutir: portas embaixo, FORNO (vidro preto) + nicho do MICRO,
+    # portas em cima (o micro-ondas real é inserido em eletros_reais).
     if cfg.get("tem_forno") and not aereo:
-        box("forno", cx, y_fr, z0 + 0.75, L - 0.10, T * 1.6, 0.58, mats["eletro"])
-        box("micro", cx, y_fr, z0 + 1.20, L - 0.14, T * 1.4, 0.34, mats["eletro"])
-        # restante em portas
-        for d, (zc, zh) in enumerate([(z0 + 0.30, 0.52), (z0 + 1.62, A - 1.72)]):
-            if zh > 0.1:
-                box(f"tp{d}", cx, y_fr, zc, L - 0.006, T, zh - 0.006, mats["porta"])
-        _puxador(cx, y_fr, z0 + 0.30, 0.4, mats["pux"])
+        # armário de baixo
+        box("tp_base", cx, y_fr, z0 + 0.35, L - 0.006, T, 0.70 - 0.006, mats["porta"])
+        _puxador_h(cx, y_fr, z0 + 0.70 - 0.03, L * 0.5, mats["pux"])
+        # forno — vidro preto recuado + painel inox + puxador
+        fz0, fh = z0 + 0.72, 0.58
+        box("forno_vidro", cx, y_fr + T * 0.4, fz0 + fh / 2, L - 0.08, T * 0.6, fh - 0.02, mats["boca"])
+        box("forno_painel", cx, y_fr, fz0 + fh - 0.05, L - 0.06, T, 0.06, mats["eletro"])
+        box("forno_pux", cx, y_fr - T * 0.7, fz0 + fh - 0.10, L * 0.6, 0.02, 0.016, mats["pux"], bevel=False)
+        # nicho do micro (fundo escuro)
+        mz0, mh = z0 + 1.34, 0.40
+        box("micro_fundo", cx, -T / 2, mz0 + mh / 2, L - 0.03, T, mh, mats["eletro"])
+        # portas de cima (fecha o topo aberto)
+        if A - 1.76 > 0.1:
+            box("tp_topo", cx, y_fr, z0 + 1.76 + (A - 1.76) / 2, L - 0.006, T, (A - 1.76) - 0.006, mats["porta"])
+            _puxador_h(cx, y_fr, z0 + 1.76 + 0.03, L * 0.5, mats["pux"])
         return
 
     # gavetas (faixa embaixo) + portas (acima)
@@ -193,10 +202,7 @@ def bancada_e_cooktops(modulos, mats):
     for m in bases:
         cfg = m.get("configuracao", {}) or {}
         mx = m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 200.0
-        if cfg.get("tem_recorte_cooktop"):
-            box("cooktop", mx, -P * 0.5, topo + BANC_ESP + 0.005, 0.58, 0.50, 0.01, mats["eletro"])
-            for dx, dy in [(-0.14, 0.12), (0.14, 0.12), (-0.14, -0.12), (0.14, -0.12)]:
-                box("boca", mx + dx, -P * 0.5 + dy, topo + BANC_ESP + 0.012, 0.11, 0.11, 0.008, mats["boca"], bevel=False)
+        # (cooktop real é inserido em eletros_reais — sem versão paramétrica)
         if cfg.get("tem_recorte_cuba"):
             box("cuba", mx, -P * 0.5, topo + BANC_ESP - 0.03, 0.44, 0.38, 0.06, mats["eletro"])
             box("torneira", mx, -P * 0.28, topo + BANC_ESP + 0.13, 0.022, 0.022, 0.26, mats["pux"])
@@ -238,45 +244,86 @@ def _bbox(objs):
     return mn, mx
 
 
-def inserir_asset(caminho, cx, alvo_A, y_fundo=-0.02, rot_z=0.0):
-    """Importa um .blend (eletro real), escala pela ALTURA alvo e posiciona:
-    centro em X=cx, base no piso, fundo encostado na parede (y=y_fundo)."""
+def _importar(caminho, rot=(0, 0, 0)):
     if not os.path.exists(caminho):
-        print(f"[asset] não achei {caminho}"); return None
+        print(f"[asset] não achei {caminho}"); return None, []
     with bpy.data.libraries.load(caminho, link=False) as (src, dst):
         dst.objects = list(src.objects)
     objs = [o for o in dst.objects if o is not None]
     if not objs:
-        return None
+        return None, []
     root = bpy.data.objects.new("asset_root", None)
     bpy.context.collection.objects.link(root)
     for o in objs:
         bpy.context.collection.objects.link(o)
         if o.parent is None:
             o.parent = root
-    root.rotation_euler = (0, 0, rot_z)
+    root.rotation_euler = rot
     bpy.context.view_layer.update()
+    return root, objs
+
+
+def colocar_asset(caminho, cx, alvo, eixo="alt", rot=(0, 0, 0),
+                  z_base=None, z_centro=None, y_fundo=None, y_frente=None, y_centro=None):
+    """Importa, escala por um eixo (larg/prof/alt) e ancora nas referências dadas."""
+    root, objs = _importar(caminho, rot)
+    if not root:
+        return None
     mn, mx = _bbox(objs)
-    s = alvo_A / max(mx.z - mn.z, 1e-4)
-    root.scale = (s, s, s)
+    idx = {"larg": 0, "prof": 1, "alt": 2}[eixo]
+    dim = (mx - mn)[idx]
+    root.scale = [alvo / max(dim, 1e-4)] * 3
     bpy.context.view_layer.update()
     mn, mx = _bbox(objs)
     root.location.x += cx - (mn.x + mx.x) / 2
-    root.location.z += 0.0 - mn.z          # base no chão
-    root.location.y += y_fundo - mx.y      # fundo (Y+) na parede
+    if z_base is not None:
+        root.location.z += z_base - mn.z
+    if z_centro is not None:
+        root.location.z += z_centro - (mn.z + mx.z) / 2
+    if y_fundo is not None:
+        root.location.y += y_fundo - mx.y
+    if y_frente is not None:
+        root.location.y += y_frente - mn.y
+    if y_centro is not None:
+        root.location.y += y_centro - (mn.y + mx.y) / 2
     return root
 
 
 def eletros_reais(modulos):
-    """Encaixa eletros realistas (BlenderKit) na cena. Por ora: GELADEIRA
-    freestanding à direita do corrido, altura real ~1.85m."""
+    """Encaixa eletros realistas (BlenderKit): geladeira, cooktop, coifa e o
+    micro-ondas embutido na torre."""
     bases = [m for m in modulos if m.get("posicao_y_cm", 0) < 100]
     if not bases:
-        return
+        return None
     x1 = max(m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 100.0 for m in bases)
+
+    # GELADEIRA — freestanding à direita do corrido (altura real ~1.85m)
     gx = x1 + 0.50
-    inserir_asset(os.path.join(MODELS, "geladeira.blend"),
-                  cx=gx, alvo_A=1.85, y_fundo=-0.02, rot_z=0.0)
+    colocar_asset(os.path.join(MODELS, "geladeira.blend"), cx=gx, alvo=1.85, eixo="alt",
+                  z_base=0.0, y_fundo=-0.02)
+
+    # COOKTOP e COIFA — no módulo marcado com recorte de cooktop
+    ck = next((m for m in bases if (m.get("configuracao", {}) or {}).get("tem_recorte_cooktop")), None)
+    if ck:
+        mx = ck["posicao_x_cm"] / 100.0 + ck["largura_cm"] / 200.0
+        P = ck["profundidade_cm"] / 100.0
+        A = ck["altura_cm"] / 100.0
+        z_topo = RODAPE + A + BANC_ESP
+        colocar_asset(os.path.join(MODELS, "cooktop.blend"), cx=mx, alvo=0.56, eixo="larg",
+                      z_base=z_topo, y_centro=-P * 0.55)
+        # coifa: sobe o duto (gira 90° em X) e pendura acima do cooktop
+        colocar_asset(os.path.join(MODELS, "coifa.blend"), cx=mx, alvo=0.60, eixo="larg",
+                      rot=(1.5708, 0, 0), z_base=PISO_AEREO - 0.02, y_fundo=-0.05)
+
+    # MICRO — embutido na torre (recorte na frente do módulo tem_forno)
+    torre = next((m for m in bases if (m.get("configuracao", {}) or {}).get("tem_forno")), None)
+    if torre:
+        tx = torre["posicao_x_cm"] / 100.0 + torre["largura_cm"] / 200.0
+        tL = torre["largura_cm"] / 100.0
+        tP = torre["profundidade_cm"] / 100.0
+        colocar_asset(os.path.join(MODELS, "micro.blend"), cx=tx, alvo=tL - 0.12, eixo="larg",
+                      z_centro=RODAPE + 1.53, y_frente=-tP + 0.02)
+
     return gx + 0.45   # borda direita aprox. (p/ o cômodo acomodar)
 
 
@@ -335,8 +382,8 @@ def camera_luz(cx, W, D, H, max_z):
     ko = bpy.data.objects.new("key", key)
     ko.location = (cx - W * 0.2, -D * 0.5, H - 0.05); ko.rotation_euler = (0.5, 0, 0)
     bpy.context.collection.objects.link(ko)
-    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 130; fill.size = 9
-    fill.color = (0.9, 0.94, 1.0)
+    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 150; fill.size = 9
+    fill.color = (1.0, 0.97, 0.92)  # preenchimento neutro-quente (menos "CG frio")
     fo = bpy.data.objects.new("fill", fill)
     fo.location = (cx + W * 0.4, -dist * 0.7, H * 0.8)
     bpy.context.collection.objects.link(fo)
@@ -347,7 +394,7 @@ def camera_luz(cx, W, D, H, max_z):
         env = w.node_tree.nodes.new("ShaderNodeTexEnvironment")
         env.image = bpy.data.images.load(HDRI)
         w.node_tree.links.new(env.outputs["Color"], bg.inputs["Color"])
-        bg.inputs["Strength"].default_value = 0.7
+        bg.inputs["Strength"].default_value = 0.85
     else:
         bg.inputs[0].default_value = (0.88, 0.89, 0.93, 1)
         bg.inputs[1].default_value = 0.4
@@ -426,6 +473,7 @@ def main():
     t_mad = tex_set("madeira", "Wood095")
     t_ban = tex_set("bancada", "Marble012")
     t_pis = tex_set("piso", "WoodFloor051")
+    t_azu = tex_set("azulejo", "Tiles107")
     branco = hex_rgb(job.get("chapa_hex"))
     mats = {
         "corpo": mat_pbr("chapa", branco, 0.45, texset=t_mad, use_color=False, escala=1.2, nrm_forca=0.30),
@@ -436,7 +484,8 @@ def main():
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
         "boca": mat_pbr("boca", (0.05, 0.05, 0.06, 1), 0.15, 0.3),
         "rodape": mat_pbr("rodape", (0.03, 0.03, 0.035, 1), 0.45),
-        "backsplash": mat_pbr("backsplash", (0.94, 0.94, 0.95, 1), 0.3),
+        "backsplash": mat_pbr("backsplash", (1, 1, 1, 1), 0.2, texset=t_azu,
+                              use_color=True, escala=1.6, nrm_forca=0.8),
         "parede": mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.9),
         "piso": mat_pbr("piso", (1, 1, 1, 1), 0.5, texset=t_pis, escala=0.45, nrm_forca=0.8),
     }

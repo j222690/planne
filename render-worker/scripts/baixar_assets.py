@@ -27,6 +27,8 @@ ASSETS = {
     "geladeira": "Electrolux French Door Refrigerator",
     "coifa": "Whirlpool Range Hood",
     "cooktop": "Electrolux Black Cooktop Gas",
+    "micro": "Microwave Oven",
+    "cuba": "Stainless steel kitchen sink with faucet",
 }
 
 
