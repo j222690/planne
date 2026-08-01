@@ -263,14 +263,33 @@ def camera_luz(cx, W, D, H, max_z):
 def setup_render(out, engine="eevee"):
     scn = bpy.context.scene
     if engine == "cycles":
-        # Fotorrealista (GI real). Mais lento; CPU por padrão.
+        # Fotorrealista (GI real). Tenta GPU; sempre com teto de tempo p/ não travar.
         scn.render.engine = "CYCLES"
+        usou_gpu = False
         try:
-            scn.cycles.device = "CPU"
-            scn.cycles.samples = 160
-            scn.cycles.use_denoising = True
+            prefs = bpy.context.preferences.addons["cycles"].preferences
+            for backend in ("OPTIX", "CUDA", "HIP", "ONEAPI", "METAL"):
+                try:
+                    prefs.compute_device_type = backend
+                    prefs.get_devices()
+                    ativos = [d for d in prefs.devices if d.type == backend]
+                    for d in prefs.devices:
+                        d.use = (d.type == backend)
+                    if ativos:
+                        usou_gpu = True; break
+                except Exception:
+                    continue
         except Exception:
             pass
+        try:
+            scn.cycles.device = "GPU" if usou_gpu else "CPU"
+            scn.cycles.samples = 96 if usou_gpu else 48
+            scn.cycles.use_denoising = True
+            scn.cycles.time_limit = 0 if usou_gpu else 150  # CPU: teto de 2m30 e finaliza
+            scn.cycles.use_adaptive_sampling = True
+        except Exception:
+            pass
+        print(f"[scene] Cycles em {'GPU' if usou_gpu else 'CPU (teto 150s)'}")
     else:
         for eng in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
             try:
