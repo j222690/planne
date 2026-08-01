@@ -391,6 +391,27 @@ def eletros_reais(modulos, mats):
     return borda_dir
 
 
+def decoracao(modulos):
+    """Toques de vida na bancada (props CC0): planta, fruteira e tábua."""
+    bases = [m for m in modulos if m.get("posicao_y_cm", 0) < 100
+             and not (m.get("configuracao", {}) or {}).get("tem_forno")]
+    if not bases:
+        return
+    x0 = min(m["posicao_x_cm"] / 100.0 for m in bases)
+    A = max(m["altura_cm"] / 100.0 for m in bases)
+    P = max(m["profundidade_cm"] / 100.0 for m in bases)
+    z_topo = RODAPE + A + BANC_ESP
+    # (arquivo, cx, alvo, eixo, y_centro) — na faixa livre do tampo
+    props = [
+        ("fruteira.blend", x0 + 0.62, 0.30, "larg", -P * 0.45),
+        ("tabua.blend", x0 + 0.95, 0.42, "larg", -P * 0.45),
+    ]
+    for arq, cx, alvo, eixo, yc in props:
+        caminho = os.path.join(MODELS, arq)
+        if os.path.exists(caminho):
+            colocar_asset(caminho, cx=cx, alvo=alvo, eixo=eixo, z_base=z_topo, y_centro=yc)
+
+
 def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
     """Cômodo FECHADO: piso, teto, parede do fundo + 2 laterais (frente aberta
     para a câmera). Dimensões do projeto (medidas) ou envolvendo o móvel."""
@@ -560,6 +581,7 @@ def main():
     bancada_e_cooktops(modulos, mats)
     detalhes_promob(modulos, mats)
     x_dir_eletro = eletros_reais(modulos, mats)
+    # decoracao(modulos)  # TODO: props high-poly travam o Eevee — reativar após otimizar/decimar
 
     min_x = min(m.get("posicao_x_cm", 0) / 100.0 for m in modulos)
     max_x = max(m.get("posicao_x_cm", 0) / 100.0 + m["largura_cm"] / 100.0 for m in modulos)
