@@ -106,6 +106,25 @@ def box(nome, cx, cy, cz, sx, sy, sz, mat, bevel=True):
     return ob
 
 
+def _furar_tampo(alvo, cx, cy, larg, prof, z):
+    """Abre um furo retangular no tampo (p/ cooktop/cuba embutidos)."""
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(cx, cy, z))
+    cut = bpy.context.active_object
+    cut.scale = (larg, prof, 0.30)
+    bpy.ops.object.transform_apply(scale=True)
+    m = alvo.modifiers.new("furo", type="BOOLEAN")
+    m.operation = "DIFFERENCE"; m.object = cut
+    try:
+        m.solver = "EXACT"
+    except Exception:
+        pass
+    bpy.ops.object.select_all(action="DESELECT")
+    alvo.select_set(True)
+    bpy.context.view_layer.objects.active = alvo
+    bpy.ops.object.modifier_apply(modifier=m.name)
+    bpy.data.objects.remove(cut, do_unlink=True)
+
+
 def montar_modulo(m, mats):
     L = m["largura_cm"] / 100.0
     A = m["altura_cm"] / 100.0
@@ -191,9 +210,18 @@ def bancada_e_cooktops(modulos, mats):
     z_banc = topo + BANC_ESP / 2
     # tampo com OVERHANG frontal (~30mm) e saia aparente (engrosso) — granito
     ov = 0.03
-    box("bancada", cx, -(P + ov) / 2, z_banc, (x1 - x0), P + ov, BANC_ESP, mats["banc"])
+    banc = box("bancada", cx, -(P + ov) / 2, z_banc, (x1 - x0), P + ov, BANC_ESP,
+               mats["banc"], bevel=False)
     box("banc_saia", cx, -(P + ov) + 0.008, z_banc - BANC_ESP / 2 - 0.014,
         (x1 - x0), 0.016, 0.03, mats["banc"], bevel=False)
+    # furos no tampo p/ cooktop e cuba embutidos
+    for m in bases:
+        cfg = m.get("configuracao", {}) or {}
+        mmx = m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 200.0
+        if cfg.get("tem_recorte_cooktop"):
+            _furar_tampo(banc, mmx, -P * 0.55, 0.50, 0.38, z_banc)
+        if cfg.get("tem_recorte_cuba"):
+            _furar_tampo(banc, mmx, -P * 0.50, 0.48, 0.36, z_banc)
     # frontão / backsplash entre a bancada e os aéreos
     z_bs0, z_bs1 = topo + BANC_ESP, PISO_AEREO
     if z_bs1 > z_bs0 + 0.05:
@@ -300,16 +328,20 @@ def eletros_reais(modulos, mats):
     atop = PISO_AEREO + max((m["altura_cm"] / 100.0 for m in aereos), default=0.70)
     x1 = max(m["posicao_x_cm"] / 100.0 + m["largura_cm"] / 100.0 for m in bases)
 
-    # GELADEIRA + TORRE DA GELADEIRA (laterais de acabamento + aéreo por cima)
-    gx = x1 + 0.55
+    # GELADEIRA + TORRE DA GELADEIRA (encostada no fim do corrido, sem vão)
+    lat = 0.018
+    gx = x1 + 0.40
     groot, gobjs = colocar_asset(os.path.join(MODELS, "geladeira.blend"), cx=gx, alvo=1.85,
                                  eixo="alt", z_base=0.0, y_fundo=-0.02)
     borda_dir = gx + 0.40
     if gobjs:
         mn, mx = _bbox(gobjs)
+        # encosta a lateral esquerda da torre logo após o corrido (sem espaço livre)
+        groot.location.x += (x1 + 0.02 + lat) - mn.x
+        bpy.context.view_layer.update()
+        mn, mx = _bbox(gobjs)
         cxg = (mn.x + mx.x) / 2
         prof = mx.y - mn.y
-        lat = 0.018
         for xx in (mn.x - lat / 2, mx.x + lat / 2):   # laterais chão->topo da torre
             box("torre_ger_lat", xx, (mn.y + mx.y) / 2, atop / 2, lat, prof, atop, mats["corpo"])
         az0 = mx.z + 0.04                              # aéreo sobre a geladeira
@@ -320,7 +352,7 @@ def eletros_reais(modulos, mats):
             box("torre_ger_porta", cxg, -depA - T / 2, (az0 + atop) / 2,
                 largA - 0.006, T, (atop - az0) - T - 0.006, mats["porta"])
             _puxador_h(cxg, -depA - T / 2, az0 + 0.05, largA * 0.5, mats["pux"])
-        borda_dir = mx.x + lat + 0.08
+        borda_dir = mx.x + lat + 0.03
 
     # COOKTOP EMBUTIDO + COIFA — no módulo marcado com recorte de cooktop
     ck = next((m for m in bases if (m.get("configuracao", {}) or {}).get("tem_recorte_cooktop")), None)
@@ -329,9 +361,9 @@ def eletros_reais(modulos, mats):
         P = ck["profundidade_cm"] / 100.0
         A = ck["altura_cm"] / 100.0
         z_topo = RODAPE + A + BANC_ESP
-        # embutido: rebaixa o corpo p/ dentro do tampo; só o vidro fica rente
+        # embutido no furo: corpo desce pelo tampo, vidro/bocas rente ao granito
         colocar_asset(os.path.join(MODELS, "cooktop.blend"), cx=mx, alvo=0.56, eixo="larg",
-                      z_base=z_topo - 0.09, y_centro=-P * 0.55)
+                      z_base=z_topo - 0.03, y_centro=-P * 0.55)
         # coifa: sobe o duto (gira 90° em X) e pendura acima do cooktop
         colocar_asset(os.path.join(MODELS, "coifa.blend"), cx=mx, alvo=0.60, eixo="larg",
                       rot=(1.5708, 0, 0), z_base=PISO_AEREO - 0.02, y_fundo=-0.05)
@@ -364,7 +396,8 @@ def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
     para a câmera). Dimensões do projeto (medidas) ou envolvendo o móvel."""
     med = job.get("medidas", {}) or {}
     cx = (min_x + max_x) / 2
-    W = max(max_x - min_x + 0.5, float(med.get("largura", 3.0)))
+    # sob medida: paredes praticamente coladas nas pontas do móvel (sem sobra)
+    W = (max_x - min_x) + 0.06
     D = max(max_p + 1.7, float(med.get("profundidade", 3.0)))
     H = max(max_z + 0.25, float(med.get("altura", 2.7)))
     x0, x1 = cx - W / 2, cx + W / 2
