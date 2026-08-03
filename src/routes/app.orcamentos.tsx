@@ -20,6 +20,7 @@ import {
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { analisarMovel, resumirProjeto } from "@/lib/base-conhecimento/analise-movel";
+import type { ChapaAlocada } from "@/lib/motor-parametrico/tipos";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -1132,6 +1133,30 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [motorChapas, setMotorChapas] = useState<ChapaCorte[]>([]);
   const [verCorte, setVerCorte] = useState(false);
   const [motorGerando, setMotorGerando] = useState(false);
+  const [baixarTudoLoading, setBaixarTudoLoading] = useState(false);
+
+  // "Baixar Tudo": zip com CSV, DXF, PDF da lista de corte e etiquetas c/ QR.
+  const handleBaixarTudo = async () => {
+    if (!motorChapas.length) return;
+    setBaixarTudoLoading(true);
+    try {
+      const { gerarPacoteCompleto } = await import("@/lib/exportacao-zip");
+      const numero = editOrc?.numero ?? "novo";
+      const blob = await gerarPacoteCompleto({
+        chapas: motorChapas as unknown as ChapaAlocada[],
+        projetoId: editOrc?.id ?? "",
+        numeroOrcamento: numero,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `producao_orcamento_${numero}.zip`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(msgErro(e, "Erro ao gerar o pacote de produção"));
+    } finally {
+      setBaixarTudoLoading(false);
+    }
+  };
 
   const gerarPeloMotor = async () => {
     const suportados = comodos.filter((c) => COMODO_TO_LAYOUT[c.tipo] && comodoValido(c));
@@ -1788,11 +1813,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 {/* Plano de corte visualizado — chapa + cada peça */}
                 {motorChapas.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-accent/20">
-                    <button type="button" onClick={() => setVerCorte((v) => !v)}
-                      className="text-[12px] font-medium text-accent inline-flex items-center gap-1.5">
-                      <Scissors className="size-3.5" />
-                      {verCorte ? "Ocultar" : "Ver"} plano de corte ({motorChapas.length} chapa{motorChapas.length > 1 ? "s" : ""})
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setVerCorte((v) => !v)}
+                        className="text-[12px] font-medium text-accent inline-flex items-center gap-1.5">
+                        <Scissors className="size-3.5" />
+                        {verCorte ? "Ocultar" : "Ver"} plano de corte ({motorChapas.length} chapa{motorChapas.length > 1 ? "s" : ""})
+                      </button>
+                      <button type="button" disabled={baixarTudoLoading} onClick={handleBaixarTudo}
+                        className="text-[12px] font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 disabled:opacity-60">
+                        {baixarTudoLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                        Baixar Tudo (CSV, DXF, PDF, etiquetas)
+                      </button>
+                    </div>
                     {verCorte && <div className="mt-2"><CutPlanVisualization chapas={motorChapas} /></div>}
                   </div>
                 )}
