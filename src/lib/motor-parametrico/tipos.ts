@@ -743,6 +743,10 @@ export interface PecaAlocada {
   comprimento_mm: Milimetros;
   rotacionada: boolean;
   etiqueta: string;
+  /** Sentido do veio da peça (p/ exibir no plano de corte). */
+  direcao_fio?: DirecaoFio;
+  /** Fita de borda por lado, na orientação NÃO rotacionada da peça. */
+  fita_borda?: FitaBorda;
 }
 
 export type TipoEtapa =

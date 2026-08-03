@@ -4369,7 +4369,9 @@ function prepararPorMaterial(pecas) {
         w_real: p.largura_mm,
         h_real: p.comprimento_mm,
         pode_rotacionar: podeRotacionar,
-        etiqueta: p.etiqueta_producao
+        etiqueta: p.etiqueta_producao,
+        direcao_fio: p.direcao_fio,
+        fita_borda: p.fita_borda
       });
     }
     grupos.set(chave, grupo);
@@ -4409,7 +4411,9 @@ function montarChapa(numero, material, bin, comSvg) {
     largura_mm: c.rotacionada ? c.peca.h_real : c.peca.w_real,
     comprimento_mm: c.rotacionada ? c.peca.w_real : c.peca.h_real,
     rotacionada: c.rotacionada,
-    etiqueta: c.peca.etiqueta
+    etiqueta: c.peca.etiqueta,
+    direcao_fio: c.peca.direcao_fio,
+    fita_borda: c.peca.fita_borda
   }));
   const areaChapa = bin.largura * bin.altura;
   const areaUtil = pecas_alocadas.reduce((s, p) => s + p.largura_mm * p.comprimento_mm, 0);

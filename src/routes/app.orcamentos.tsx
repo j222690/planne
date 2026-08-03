@@ -727,7 +727,8 @@ async function erroDaResposta(res: Response): Promise<string> {
 }
 
 // Plano de corte visualizável (chapa + peças encaixadas)
-type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string; peca_id?: string };
+type FitaLados = { esquerda: boolean; direita: boolean; topo: boolean; base: boolean };
+type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string; peca_id?: string; direcao_fio?: string; fita_borda?: FitaLados };
 type ChapaCorte = {
   numero_sequencial: number; largura_mm: number; comprimento_mm: number;
   pecas_alocadas: PecaAloc[]; comodo?: string;
@@ -775,6 +776,8 @@ function nomePeca(p: PecaAloc): { nome: string; movel: string } {
 // ─── Visualização do plano de corte (mesmo sistema do preview 2D) ────────────
 function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
   const [idx, setIdx] = useState(0);
+  const [verVeio, setVerVeio] = useState(true);
+  const [verFita, setVerFita] = useState(true);
   if (!chapas.length) return null;
   const ch = chapas[Math.min(idx, chapas.length - 1)];
   const W = ch.largura_mm || 2750, H = ch.comprimento_mm || 1830;
@@ -813,6 +816,21 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
           {espessuraAtual <= 6 ? " (fundos de armário e de gaveta)" : " (corpo, portas, frentes, laterais)"}
         </div>
       )}
+      <div className="flex items-center gap-3 text-[11px]">
+        <span className="text-muted-foreground">Exibir:</span>
+        <label className="flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox" checked={verVeio} onChange={(e) => setVerVeio(e.target.checked)} className="size-3" />
+          <span className="inline-flex items-center gap-1">Veio
+            <svg width="14" height="10" className="opacity-70"><line x1="7" y1="1" x2="7" y2="9" stroke="#0f172a" strokeWidth="1"/><path d="M5 3 L7 1 L9 3 M5 7 L7 9 L9 7" fill="none" stroke="#0f172a" strokeWidth="1"/></svg>
+          </span>
+        </label>
+        <label className="flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox" checked={verFita} onChange={(e) => setVerFita(e.target.checked)} className="size-3" />
+          <span className="inline-flex items-center gap-1">Lado fitado
+            <span className="inline-block w-3 h-0 border-t-[3px]" style={{ borderColor: "#ea580c" }} />
+          </span>
+        </label>
+      </div>
       <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
         <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} style={{ maxHeight: 420, display: "block" }}>
           <rect x={pad} y={pad} width={W * scale} height={H * scale} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1.5} />
@@ -843,9 +861,36 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
             const totalH = (linhas.length + 1) * lh;
             const startY = cy - totalH / 2 + lh / 2;
             const cabe = w > 22 && h > 14 && (linhas.length + 1) * (fs * 1.18) <= h;
+            // Veio: linhas tracejadas no sentido do fio (considera rotação).
+            const rot = !!p.rotacionada;
+            const grainVert = (p.direcao_fio === "paralelo_comprimento") !== rot;
+            const temVeio = verVeio && !!p.direcao_fio && p.direcao_fio !== "indiferente";
+            // Lado fitado: mapeia os 4 lados da peça p/ as arestas exibidas.
+            const fb = p.fita_borda;
+            const fitaEdges = verFita && fb ? {
+              top: rot ? fb.esquerda : fb.topo,
+              right: rot ? fb.topo : fb.direita,
+              bottom: rot ? fb.direita : fb.base,
+              left: rot ? fb.base : fb.esquerda,
+            } : null;
             return (
               <g key={i}>
                 <rect x={x} y={y} width={w} height={h} fill={cores[i % cores.length]} stroke="#475569" strokeWidth={0.6} />
+                {temVeio && (
+                  <g opacity={0.55}>
+                    {[1, 2, 3].map((k) => grainVert
+                      ? <line key={k} x1={x + (w * k) / 4} y1={y + 2} x2={x + (w * k) / 4} y2={y + h - 2} stroke="#475569" strokeWidth={0.4} strokeDasharray="1.5 2" />
+                      : <line key={k} x1={x + 2} y1={y + (h * k) / 4} x2={x + w - 2} y2={y + (h * k) / 4} stroke="#475569" strokeWidth={0.4} strokeDasharray="1.5 2" />)}
+                  </g>
+                )}
+                {fitaEdges && (
+                  <g stroke="#ea580c" strokeWidth={1.6} strokeLinecap="round">
+                    {fitaEdges.top && <line x1={x} y1={y} x2={x + w} y2={y} />}
+                    {fitaEdges.right && <line x1={x + w} y1={y} x2={x + w} y2={y + h} />}
+                    {fitaEdges.bottom && <line x1={x} y1={y + h} x2={x + w} y2={y + h} />}
+                    {fitaEdges.left && <line x1={x} y1={y} x2={x} y2={y + h} />}
+                  </g>
+                )}
                 {cabe ? (
                   <>
                     {linhas.map((ln, k) => (

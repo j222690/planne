@@ -22,6 +22,8 @@ import type {
   PlanoNesting,
   ChapaAlocada,
   PecaAlocada,
+  DirecaoFio,
+  FitaBorda,
 } from "./tipos";
 
 // ─── PARÂMETROS ───────────────────────────────────────────────────────────────
@@ -49,6 +51,8 @@ interface PecaNesting {
   h_real: number;
   pode_rotacionar: boolean;
   etiqueta: string;
+  direcao_fio: DirecaoFio;
+  fita_borda: FitaBorda;
 }
 
 interface Colocacao {
@@ -220,6 +224,8 @@ function prepararPorMaterial(pecas: Peca[]): Map<string, { material: Material; i
         h_real: p.comprimento_mm,
         pode_rotacionar: podeRotacionar,
         etiqueta: p.etiqueta_producao,
+        direcao_fio: p.direcao_fio,
+        fita_borda: p.fita_borda,
       });
     }
     grupos.set(chave, grupo);
@@ -300,6 +306,8 @@ function montarChapa(
     comprimento_mm: c.rotacionada ? c.peca.w_real : c.peca.h_real,
     rotacionada: c.rotacionada,
     etiqueta: c.peca.etiqueta,
+    direcao_fio: c.peca.direcao_fio,
+    fita_borda: c.peca.fita_borda,
   }));
 
   const areaChapa = bin.largura * bin.altura;
