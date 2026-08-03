@@ -775,41 +775,183 @@ function nomePeca(p: PecaAloc): { nome: string; movel: string } {
 }
 
 // ─── Visualização do plano de corte (mesmo sistema do preview 2D) ────────────
-function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
-  const [idx, setIdx] = useState(0);
-  const [verVeio, setVerVeio] = useState(true);
-  const [verFita, setVerFita] = useState(true);
-  if (!chapas.length) return null;
-  const ch = chapas[Math.min(idx, chapas.length - 1)];
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+const CORES_PECAS = ["#c7d2fe", "#bbf7d0", "#fde68a", "#fbcfe8", "#a5f3fc", "#fed7aa", "#ddd6fe", "#bef264"];
+
+// Markup de uma peça — string (não JSX) pra poder ser reaproveitado tanto na
+// tela (dangerouslySetInnerHTML) quanto no HTML gerado pra impressão.
+function pieceSVGMarkup(p: PecaAloc, i: number, scale: number, pad: number, verVeio: boolean, verFita: boolean): string {
+  const x = pad + (p.x_mm ?? 0) * scale, y = pad + (p.y_mm ?? 0) * scale;
+  const w = p.largura_mm * scale, h = p.comprimento_mm * scale;
+  const { nome } = nomePeca(p);
+  const cx = x + w / 2, cy = y + h / 2;
+  const dims = `${Math.round(p.largura_mm)}×${Math.round(p.comprimento_mm)}${p.rotacionada ? " ↻" : ""}`;
+  // Quebra o nome em linhas que cabem na largura; reduz a fonte até o
+  // nome inteiro + as medidas caberem na altura da peça (nada cortado).
+  const wrap = (fs: number) => {
+    const maxCh = Math.max(5, Math.floor(w / (fs * 0.56)));
+    const linhas: string[] = [];
+    let cur = "";
+    for (const wd of nome.split(" ")) {
+      const t = cur ? `${cur} ${wd}` : wd;
+      if (t.length <= maxCh) cur = t;
+      else { if (cur) linhas.push(cur); cur = wd.length > maxCh ? wd.slice(0, maxCh) : wd; }
+    }
+    if (cur) linhas.push(cur);
+    return linhas;
+  };
+  let fs = Math.min(9, w / 9);
+  let linhas = wrap(fs);
+  while (fs > 4.5 && (linhas.length + 1) * (fs * 1.18) > h - 3) { fs -= 0.5; linhas = wrap(fs); }
+  const lh = fs * 1.18;
+  const totalH = (linhas.length + 1) * lh;
+  const startY = cy - totalH / 2 + lh / 2;
+  const cabe = w > 22 && h > 14 && (linhas.length + 1) * (fs * 1.18) <= h;
+  // Veio: linhas tracejadas no sentido do fio (considera rotação).
+  const rot = !!p.rotacionada;
+  const grainVert = (p.direcao_fio === "paralelo_comprimento") !== rot;
+  const temVeio = verVeio && !!p.direcao_fio && p.direcao_fio !== "indiferente";
+  // Lado fitado: mapeia os 4 lados da peça p/ as arestas exibidas.
+  const fb = p.fita_borda;
+  const fitaEdges = verFita && fb ? {
+    top: rot ? fb.esquerda : fb.topo,
+    right: rot ? fb.topo : fb.direita,
+    bottom: rot ? fb.direita : fb.base,
+    left: rot ? fb.base : fb.esquerda,
+  } : null;
+
+  const partes: string[] = [];
+  partes.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${CORES_PECAS[i % CORES_PECAS.length]}" stroke="#475569" stroke-width="0.6"/>`);
+  if (temVeio) {
+    partes.push(`<g opacity="0.55">`);
+    for (const k of [1, 2, 3]) {
+      partes.push(grainVert
+        ? `<line x1="${x + (w * k) / 4}" y1="${y + 2}" x2="${x + (w * k) / 4}" y2="${y + h - 2}" stroke="#475569" stroke-width="0.4" stroke-dasharray="1.5 2"/>`
+        : `<line x1="${x + 2}" y1="${y + (h * k) / 4}" x2="${x + w - 2}" y2="${y + (h * k) / 4}" stroke="#475569" stroke-width="0.4" stroke-dasharray="1.5 2"/>`);
+    }
+    partes.push(`</g>`);
+  }
+  if (fitaEdges) {
+    partes.push(`<g stroke="#ea580c" stroke-width="1.6" stroke-linecap="round">`);
+    if (fitaEdges.top) partes.push(`<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}"/>`);
+    if (fitaEdges.right) partes.push(`<line x1="${x + w}" y1="${y}" x2="${x + w}" y2="${y + h}"/>`);
+    if (fitaEdges.bottom) partes.push(`<line x1="${x}" y1="${y + h}" x2="${x + w}" y2="${y + h}"/>`);
+    if (fitaEdges.left) partes.push(`<line x1="${x}" y1="${y}" x2="${x}" y2="${y + h}"/>`);
+    partes.push(`</g>`);
+  }
+  if (cabe) {
+    linhas.forEach((ln, k) => {
+      partes.push(`<text x="${cx}" y="${startY + k * lh}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" font-weight="600" fill="#0f172a">${escapeXml(ln)}</text>`);
+    });
+    partes.push(`<text x="${cx}" y="${startY + linhas.length * lh}" text-anchor="middle" dominant-baseline="middle" font-size="${fs * 0.85}" fill="#475569">${escapeXml(dims)}</text>`);
+  } else if (w > 18 && h > 9) {
+    partes.push(`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="${Math.max(5, Math.min(7.5, w / 12))}" fill="#1e293b">${escapeXml(dims)}</text>`);
+  }
+  return `<g>${partes.join("")}</g>`;
+}
+
+// Markup completo de uma chapa (fundo + peças). "Sobras" troca o fundo por
+// uma trama — o que sobra visível ao redor das peças É a sobra de material.
+function chapaSVGMarkup(ch: ChapaCorte, opts: { verVeio: boolean; verFita: boolean; verSobras: boolean }): string {
   const W = ch.largura_mm || 2750, H = ch.comprimento_mm || 1830;
   const SVG_W = 640, pad = 8;
   const scale = (SVG_W - pad * 2) / W;
   const svgH = H * scale + pad * 2;
-  const cores = ["#c7d2fe", "#bbf7d0", "#fde68a", "#fbcfe8", "#a5f3fc", "#fed7aa", "#ddd6fe", "#bef264"];
+  const patId = `hatch-${ch.numero_sequencial}`;
+  const defs = opts.verSobras
+    ? `<defs><pattern id="${patId}" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#f8fafc"/><line x1="0" y1="0" x2="0" y2="6" stroke="#cbd5e1" stroke-width="2"/></pattern></defs>`
+    : "";
+  const bg = opts.verSobras ? `url(#${patId})` : "#f8fafc";
+  const pecas = ch.pecas_alocadas.map((p, i) => pieceSVGMarkup(p, i, scale, pad, opts.verVeio, opts.verFita)).join("");
+  return `<svg width="100%" viewBox="0 0 ${SVG_W} ${svgH}" style="max-height:420px;display:block" xmlns="http://www.w3.org/2000/svg">${defs}<rect x="${pad}" y="${pad}" width="${W * scale}" height="${H * scale}" fill="${bg}" stroke="#94a3b8" stroke-width="1.5"/>${pecas}</svg>`;
+}
+
+function ordenarPorMaterial(chapas: ChapaCorte[]): { c: ChapaCorte; i: number }[] {
+  return chapas
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => {
+      const ma = a.c.material?.nome_display ?? "", mb = b.c.material?.nome_display ?? "";
+      if (ma !== mb) return ma.localeCompare(mb, "pt-BR");
+      return a.c.numero_sequencial - b.c.numero_sequencial;
+    });
+}
+
+function cabecalhoChapaTexto(c: ChapaCorte, total: number): string {
+  const partes = [`Chapa ${c.numero_sequencial}${total > 1 ? ` de ${total}` : ""}`];
+  if (c.comodo) partes.push(c.comodo);
+  partes.push(c.material?.nome_display ?? "—");
+  partes.push(`${c.largura_mm || 2750}×${c.comprimento_mm || 1830}mm`);
+  partes.push(`${c.pecas_alocadas.length} peças`);
+  return partes.join(" · ");
+}
+
+function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
+  const [idx, setIdx] = useState(0);
+  const [verVeio, setVerVeio] = useState(true);
+  const [verFita, setVerFita] = useState(true);
+  const [verSobras, setVerSobras] = useState(false);
+  const [verCabecalho, setVerCabecalho] = useState(true);
+  const [agruparMaterial, setAgruparMaterial] = useState(false);
+  if (!chapas.length) return null;
+  const ch = chapas[Math.min(idx, chapas.length - 1)];
   const espCh = (c: ChapaCorte) => c.material?.espessura_mm;
   const espessuraAtual = espCh(ch);
-  const materialAtual = ch.material?.nome_display;
   // Chapas de 6mm (fundos) são um MUNDO à parte — cor de destaque no seletor.
   const corEsp = (e?: number) => e && e <= 6 ? "amber" : "accent";
+  const ordenadas = agruparMaterial ? ordenarPorMaterial(chapas) : chapas.map((c, i) => ({ c, i }));
+
+  const handleImprimir = () => {
+    const ordenadasImpressao = agruparMaterial ? ordenarPorMaterial(chapas) : chapas.map((c, i) => ({ c, i }));
+    const paginas = ordenadasImpressao.map(({ c }) => `
+      <div class="pagina">
+        ${verCabecalho ? `<div class="cabecalho">${escapeXml(cabecalhoChapaTexto(c, chapas.length))}</div>` : ""}
+        ${chapaSVGMarkup(c, { verVeio, verFita, verSobras })}
+      </div>`).join("");
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Plano de corte</title>
+<style>
+  body{font-family:sans-serif;margin:0;padding:16px;color:#111}
+  .pagina{page-break-after:always;padding-bottom:16px}
+  .pagina:last-child{page-break-after:auto}
+  .cabecalho{font-size:12px;margin-bottom:8px;padding:6px 10px;background:#f1f5f9;border-radius:6px;color:#334155}
+  .no-print{margin-bottom:16px}
+  @media print{.no-print{display:none}}
+</style></head><body>
+<div class="no-print"><button onclick="window.print()" style="padding:8px 20px;background:#111;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir</button></div>
+${paginas}
+</body></html>`;
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 flex-wrap">
-        {chapas.map((c, i) => {
+        {ordenadas.map(({ c, i }, pos) => {
           const e = espCh(c);
           const sel = i === idx;
           const amber = corEsp(e) === "amber";
+          // Separador visual entre grupos de material (só quando agrupado).
+          const materialMudou = agruparMaterial && pos > 0 && (ordenadas[pos - 1].c.material?.nome_display ?? "") !== (c.material?.nome_display ?? "");
           return (
-            <button key={i} type="button" onClick={() => setIdx(i)}
-              className={`h-6 px-2 rounded text-[11px] border transition-colors ${sel
-                ? (amber ? "bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400" : "bg-accent/10 border-accent text-accent")
-                : "border-border text-muted-foreground hover:bg-secondary"}`}>
-              {c.comodo ? `${c.comodo} · ` : ""}Chapa {c.numero_sequencial}{e ? ` · ${e}mm` : ""}
-            </button>
+            <div key={i} className="flex items-center gap-1.5">
+              {materialMudou && <span className="w-px h-4 bg-border mx-0.5" />}
+              <button type="button" onClick={() => setIdx(i)}
+                className={`h-6 px-2 rounded text-[11px] border transition-colors ${sel
+                  ? (amber ? "bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400" : "bg-accent/10 border-accent text-accent")
+                  : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                {c.comodo ? `${c.comodo} · ` : ""}Chapa {c.numero_sequencial}{e ? ` · ${e}mm` : ""}
+              </button>
+            </div>
           );
         })}
-        <span className="ml-auto text-[11.5px] text-muted-foreground">
-          {materialAtual ? `${materialAtual} · ` : ""}{W}×{H}mm · {ch.pecas_alocadas.length} peças
-        </span>
+        <button type="button" onClick={handleImprimir}
+          className="ml-auto h-6 px-2 rounded text-[11px] border border-border text-muted-foreground hover:bg-secondary inline-flex items-center gap-1">
+          <Printer className="size-3" /> Imprimir
+        </button>
       </div>
       {espessuraAtual != null && (
         <div className="text-[11px] text-muted-foreground">
@@ -817,7 +959,7 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
           {espessuraAtual <= 6 ? " (fundos de armário e de gaveta)" : " (corpo, portas, frentes, laterais)"}
         </div>
       )}
-      <div className="flex items-center gap-3 text-[11px]">
+      <div className="flex items-center gap-3 text-[11px] flex-wrap">
         <span className="text-muted-foreground">Exibir:</span>
         <label className="flex items-center gap-1 cursor-pointer select-none">
           <input type="checkbox" checked={verVeio} onChange={(e) => setVerVeio(e.target.checked)} className="size-3" />
@@ -831,85 +973,26 @@ function CutPlanVisualization({ chapas }: { chapas: ChapaCorte[] }) {
             <span className="inline-block w-3 h-0 border-t-[3px]" style={{ borderColor: "#ea580c" }} />
           </span>
         </label>
+        <label className="flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox" checked={verSobras} onChange={(e) => setVerSobras(e.target.checked)} className="size-3" />
+          Sobras
+        </label>
+        <label className="flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox" checked={verCabecalho} onChange={(e) => setVerCabecalho(e.target.checked)} className="size-3" />
+          Cabeçalho
+        </label>
+        <label className="flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox" checked={agruparMaterial} onChange={(e) => setAgruparMaterial(e.target.checked)} className="size-3" />
+          Agrupar por material
+        </label>
       </div>
-      <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}>
-        <svg width="100%" viewBox={`0 0 ${SVG_W} ${svgH}`} style={{ maxHeight: 420, display: "block" }}>
-          <rect x={pad} y={pad} width={W * scale} height={H * scale} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1.5} />
-          {ch.pecas_alocadas.map((p, i) => {
-            const x = pad + (p.x_mm ?? 0) * scale, y = pad + (p.y_mm ?? 0) * scale;
-            const w = p.largura_mm * scale, h = p.comprimento_mm * scale;
-            const { nome } = nomePeca(p);
-            const cx = x + w / 2, cy = y + h / 2;
-            const dims = `${Math.round(p.largura_mm)}×${Math.round(p.comprimento_mm)}${p.rotacionada ? " ↻" : ""}`;
-            // Quebra o nome em linhas que cabem na largura; reduz a fonte até o
-            // nome inteiro + as medidas caberem na altura da peça (nada cortado).
-            const wrap = (fs: number) => {
-              const maxCh = Math.max(5, Math.floor(w / (fs * 0.56)));
-              const linhas: string[] = [];
-              let cur = "";
-              for (const wd of nome.split(" ")) {
-                const t = cur ? `${cur} ${wd}` : wd;
-                if (t.length <= maxCh) cur = t;
-                else { if (cur) linhas.push(cur); cur = wd.length > maxCh ? wd.slice(0, maxCh) : wd; }
-              }
-              if (cur) linhas.push(cur);
-              return linhas;
-            };
-            let fs = Math.min(9, w / 9);
-            let linhas = wrap(fs);
-            while (fs > 4.5 && (linhas.length + 1) * (fs * 1.18) > h - 3) { fs -= 0.5; linhas = wrap(fs); }
-            const lh = fs * 1.18;
-            const totalH = (linhas.length + 1) * lh;
-            const startY = cy - totalH / 2 + lh / 2;
-            const cabe = w > 22 && h > 14 && (linhas.length + 1) * (fs * 1.18) <= h;
-            // Veio: linhas tracejadas no sentido do fio (considera rotação).
-            const rot = !!p.rotacionada;
-            const grainVert = (p.direcao_fio === "paralelo_comprimento") !== rot;
-            const temVeio = verVeio && !!p.direcao_fio && p.direcao_fio !== "indiferente";
-            // Lado fitado: mapeia os 4 lados da peça p/ as arestas exibidas.
-            const fb = p.fita_borda;
-            const fitaEdges = verFita && fb ? {
-              top: rot ? fb.esquerda : fb.topo,
-              right: rot ? fb.topo : fb.direita,
-              bottom: rot ? fb.direita : fb.base,
-              left: rot ? fb.base : fb.esquerda,
-            } : null;
-            return (
-              <g key={i}>
-                <rect x={x} y={y} width={w} height={h} fill={cores[i % cores.length]} stroke="#475569" strokeWidth={0.6} />
-                {temVeio && (
-                  <g opacity={0.55}>
-                    {[1, 2, 3].map((k) => grainVert
-                      ? <line key={k} x1={x + (w * k) / 4} y1={y + 2} x2={x + (w * k) / 4} y2={y + h - 2} stroke="#475569" strokeWidth={0.4} strokeDasharray="1.5 2" />
-                      : <line key={k} x1={x + 2} y1={y + (h * k) / 4} x2={x + w - 2} y2={y + (h * k) / 4} stroke="#475569" strokeWidth={0.4} strokeDasharray="1.5 2" />)}
-                  </g>
-                )}
-                {fitaEdges && (
-                  <g stroke="#ea580c" strokeWidth={1.6} strokeLinecap="round">
-                    {fitaEdges.top && <line x1={x} y1={y} x2={x + w} y2={y} />}
-                    {fitaEdges.right && <line x1={x + w} y1={y} x2={x + w} y2={y + h} />}
-                    {fitaEdges.bottom && <line x1={x} y1={y + h} x2={x + w} y2={y + h} />}
-                    {fitaEdges.left && <line x1={x} y1={y} x2={x} y2={y + h} />}
-                  </g>
-                )}
-                {cabe ? (
-                  <>
-                    {linhas.map((ln, k) => (
-                      <text key={k} x={cx} y={startY + k * lh} textAnchor="middle" dominantBaseline="middle"
-                        fontSize={fs} fontWeight="600" fill="#0f172a">{ln}</text>
-                    ))}
-                    <text x={cx} y={startY + linhas.length * lh} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={fs * 0.85} fill="#475569">{dims}</text>
-                  </>
-                ) : w > 18 && h > 9 ? (
-                  <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.max(5, Math.min(7.5, w / 12))} fill="#1e293b">{dims}</text>
-                ) : null}
-              </g>
-            );
-          })}
-        </svg>
-      </div>
+      {verCabecalho && (
+        <div className="rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-[11px] text-foreground/80">
+          {cabecalhoChapaTexto(ch, chapas.length)}
+        </div>
+      )}
+      <div className="rounded-lg border border-border overflow-hidden" style={{ background: "var(--color-surface-2, #f8fafc)" }}
+        dangerouslySetInnerHTML={{ __html: chapaSVGMarkup(ch, { verVeio, verFita, verSobras }) }} />
     </div>
   );
 }
