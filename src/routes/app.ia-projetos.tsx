@@ -14,6 +14,7 @@ import { getEmpresaAtual, getClientes, upsertOrcamento } from "@/lib/db";
 import { checkAndConsumeCredito, getCreditosDisponiveis } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, exportSvgToPng, type MovelCanvas } from "@/components/planne/RoomCanvas";
+import { VistaExplodida3D } from "@/components/planne/VistaExplodida3D";
 
 export const Route = createFileRoute("/app/ia-projetos")({
   component: IAProjetoPage,
@@ -1818,6 +1819,7 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
   projetoId?: string | null;
 }) {
   const [renderJob, setRenderJob] = useState<{ status: "pending" | "processing" | "completed" | "error"; imageUrl?: string; error?: string } | null>(null);
+  const [moduloVista3D, setModuloVista3D] = useState<number | null>(null);
 
   const handleGerarRender3D = async () => {
     setRenderJob({ status: "pending" });
@@ -1919,16 +1921,44 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
               ].filter(Boolean).join(" · ");
               return (
                 <div key={i} className="flex items-center justify-between text-[11.5px] border-b border-border/40 last:border-0 py-0.5">
-                  <span className="font-medium truncate max-w-[55%]">{m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}</span>
+                  <span className="font-medium truncate max-w-[45%]">{m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {Math.round(m.largura_cm)}×{Math.round(m.altura_cm)}×{Math.round(m.profundidade_cm)}cm{detalhes ? ` · ${detalhes}` : ""}
                   </span>
+                  <button type="button" onClick={() => setModuloVista3D(i)}
+                    className="ml-2 text-[10.5px] text-accent hover:underline shrink-0 inline-flex items-center gap-0.5">
+                    <Layers className="size-3" /> 3D
+                  </button>
                 </div>
               );
             })}
           </div>
         </details>
       )}
+
+      {/* Vista explodida 3D — modal por módulo */}
+      {moduloVista3D !== null && data.projeto.modulos[moduloVista3D] && (() => {
+        const m = data.projeto.modulos[moduloVista3D] as unknown as {
+          nome_display?: string; nome?: string; largura_cm: number; altura_cm: number; profundidade_cm: number;
+          configuracao?: { num_portas?: number; num_gavetas?: number };
+          material_corpo?: { cor_hex?: string };
+        };
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setModuloVista3D(null)}>
+            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
+            <div className="relative w-full max-w-lg bg-surface border border-border rounded-lg shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[13px] font-semibold">{m.nome_display ?? m.nome ?? "Módulo"}</span>
+                <button type="button" onClick={() => setModuloVista3D(null)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+              </div>
+              <VistaExplodida3D
+                modulo={{ largura_cm: m.largura_cm, altura_cm: m.altura_cm, profundidade_cm: m.profundidade_cm, configuracao: m.configuracao ?? {} }}
+                corHex={m.material_corpo?.cor_hex ?? "#f2f0eb"}
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 3 versões de orçamento */}
       <div>
