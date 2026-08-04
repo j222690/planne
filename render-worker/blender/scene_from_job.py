@@ -152,7 +152,7 @@ def montar_modulo(m, mats):
     if cfg.get("tem_forno") and not aereo:
         # armário de baixo
         box("tp_base", cx, y_fr, z0 + 0.35, L - 0.006, T, 0.70 - 0.006, mats["porta"])
-        _puxador_h(cx, y_fr, z0 + 0.70 - 0.03, L * 0.5, mats["pux"])
+        _desenhar_puxador(cfg, cx, y_fr, z0 + 0.70 - 0.03, L * 0.5, mats["pux"])
         # forno — vidro preto recuado + painel inox + puxador
         fz0, fh = z0 + 0.72, 0.58
         box("forno_vidro", cx, y_fr + T * 0.4, fz0 + fh / 2, L - 0.08, T * 0.6, fh - 0.02, mats["boca"])
@@ -164,7 +164,7 @@ def montar_modulo(m, mats):
         # portas de cima (fecha o topo aberto)
         if A - 1.76 > 0.1:
             box("tp_topo", cx, y_fr, z0 + 1.76 + (A - 1.76) / 2, L - 0.006, T, (A - 1.76) - 0.006, mats["porta"])
-            _puxador_h(cx, y_fr, z0 + 1.76 + 0.03, L * 0.5, mats["pux"])
+            _desenhar_puxador(cfg, cx, y_fr, z0 + 1.76 + 0.03, L * 0.5, mats["pux"])
         return
 
     # gavetas (faixa embaixo) + portas (acima)
@@ -174,8 +174,8 @@ def montar_modulo(m, mats):
         for i in range(gavetas):
             gz = z0 + i * gh + gh / 2
             box(f"gav{i}", cx, y_fr, gz, L - 0.006, T, gh - 0.006, mats["porta"])
-            # puxador perfil horizontal na borda superior da gaveta
-            _puxador_h(cx, y_fr, gz + gh / 2 - 0.02, min(L * 0.6, L - 0.08), mats["pux"])
+            # puxador na borda superior da gaveta
+            _desenhar_puxador(cfg, cx, y_fr, gz + gh / 2 - 0.02, min(L * 0.6, L - 0.08), mats["pux"])
     if portas:
         pz0, ph, pw = z0 + zona_gav, A - zona_gav, L / portas
         for d in range(portas):
@@ -183,16 +183,31 @@ def montar_modulo(m, mats):
             box(f"porta{d}", px, y_fr, pz0 + ph / 2, pw - 0.006, T, ph - 0.006, mats["porta"])
             # aéreo: perfil na borda INFERIOR; base: na borda SUPERIOR (puxador cava/perfil)
             puxz = (pz0 + 0.03) if aereo else (pz0 + ph - 0.03)
-            _puxador_h(px, y_fr, puxz, pw * 0.55, mats["pux"])
+            _desenhar_puxador(cfg, px, y_fr, puxz, pw * 0.55, mats["pux"])
 
 
 def _puxador_h(cx, y_fr, z, largura, mat):
-    """Puxador perfil de alumínio: barra fina HORIZONTAL, rente à frente."""
+    """Puxador perfil de alumínio: barra fina HORIZONTAL, embutida rente à frente."""
     box("pux", cx, y_fr - T * 0.55, z, max(0.06, largura), 0.02, 0.014, mat, bevel=False)
 
 
-def _puxador(x, y_fr, z, alt, mat):
-    box("pux", x, y_fr - T * 0.7, z, 0.02, 0.03, alt, mat, bevel=False)
+def _puxador_barra(cx, y_fr, z, largura, mat):
+    """Puxador de barra (alça): mais grosso e afastado da porta — não acompanha
+    a largura toda do vão, fica centrado (puxador comprado, não perfil contínuo)."""
+    comp = max(0.10, min(largura, 0.18))
+    box("pux", cx, y_fr - T * 1.7, z, comp, 0.018, 0.018, mat, bevel=True)
+
+
+def _desenhar_puxador(cfg, cx, y_fr, z, largura, mat):
+    """Despacha pro estilo configurado (ConfiguracaoModulo.tipo_puxador). Sem
+    puxador algum em 'push_open'/'sem' — a porta abre por pressão."""
+    tipo = (cfg or {}).get("tipo_puxador", "perfil_aluminio")
+    if tipo in ("push_open", "sem"):
+        return
+    if tipo == "puxador_alu":
+        _puxador_barra(cx, y_fr, z, largura, mat)
+    else:  # perfil_aluminio (default) — também cobre valores desconhecidos
+        _puxador_h(cx, y_fr, z, largura, mat)
 
 
 def bancada_e_cooktops(modulos, mats):
