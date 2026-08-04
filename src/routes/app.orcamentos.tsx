@@ -5,7 +5,7 @@ import {
   ChevronRight, FileUp, Printer, Pencil, ImageUp, FolderPlus,
   ChevronDown, ChevronUp, Info, Search, FileText, Receipt, QrCode, Copy, CheckCheck,
   MessageCircle, MessageSquare, Download, Bot, LayoutGrid, Scissors, Lock,
-  ChevronsUpDown, ChevronsDownUp,
+  ChevronsUpDown, ChevronsDownUp, Camera,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -794,6 +794,17 @@ type ChapaCorte = {
   material?: { espessura_mm?: number; nome_display?: string };
 };
 
+// Payload do render3d_job — o worker (Blender/Modal) monta a cena a partir
+// disso; ver render-worker/blender/scene_from_job.py e sample_payload.json.
+type Render3DPayload = {
+  modulos: unknown[]; // ModuloInstanciado[] do motor — repassado como veio
+  chapa_codigo: string; chapa_hex: string; puxador_codigo: string;
+  ambiente: string; medidas: { largura: number; profundidade: number; altura: number };
+  bancada_hex: string;
+};
+type MotorRenderCandidato = { comodoNome: string; payload: Render3DPayload };
+type RenderJobEstado = { status: "pending" | "processing" | "completed" | "error"; imageUrl?: string; error?: string };
+
 // Apelido de marceneiro para o tipo de móvel (fala como na oficina).
 function apelidoMovel(movel: string): string {
   const m = movel.toLowerCase();
@@ -1275,6 +1286,9 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [verCorte, setVerCorte] = useState(false);
   const [motorGerando, setMotorGerando] = useState(false);
   const [baixarTudoLoading, setBaixarTudoLoading] = useState(false);
+  // Render 3D fotorrealista (Blender/Modal) — MVP só cozinha.
+  const [motorRenderCandidatos, setMotorRenderCandidatos] = useState<MotorRenderCandidato[]>([]);
+  const [renderJobs, setRenderJobs] = useState<Record<string, RenderJobEstado>>({});
 
   // "Baixar Tudo": zip com CSV, DXF, PDF da lista de corte, etiquetas c/ QR e
   // contrato (rascunho — valores ainda podem mudar até o orçamento ser salvo).
@@ -1307,6 +1321,62 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     }
   };
 
+  // Render 3D fotorrealista (Blender, GPU no Modal). Cria a linha na fila
+  // (render3d_job), aciona o worker via /api/render e faz poll até terminar.
+  const handleGerarRender3D = async (candidato: MotorRenderCandidato) => {
+    if (!empresaId) return;
+    const key = candidato.comodoNome;
+    setRenderJobs((prev) => ({ ...prev, [key]: { status: "pending" } }));
+    try {
+      const { data: job, error: insertErr } = await supabase
+        .from("render3d_job")
+        .insert({
+          empresa_id: empresaId,
+          origem: "orcamento",
+          origem_id: editOrc?.id ?? null,
+          status: "pending",
+          payload: candidato.payload,
+        })
+        .select("id")
+        .single();
+      if (insertErr || !job) throw new Error(insertErr?.message ?? "Falha ao criar o job de render");
+
+      const res = await fetch("/api/render", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "render3d_enqueue", job_id: job.id }),
+      });
+      const enqueueData = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok || !enqueueData.ok) throw new Error(enqueueData.error ?? "Falha ao acionar o worker de render");
+
+      setRenderJobs((prev) => ({ ...prev, [key]: { status: "processing" } }));
+
+      // Poll até completed/error (o worker roda na GPU do Modal — leva ~30-90s).
+      let tentativas = 0;
+      const poll = setInterval(async () => {
+        tentativas++;
+        const { data: row } = await supabase
+          .from("render3d_job")
+          .select("status, image_path, error")
+          .eq("id", job.id)
+          .single();
+        if (!row) return;
+        if (row.status === "completed" && row.image_path) {
+          clearInterval(poll);
+          const { data: pub } = supabase.storage.from("renders3d").getPublicUrl(row.image_path);
+          setRenderJobs((prev) => ({ ...prev, [key]: { status: "completed", imageUrl: pub.publicUrl } }));
+        } else if (row.status === "error") {
+          clearInterval(poll);
+          setRenderJobs((prev) => ({ ...prev, [key]: { status: "error", error: row.error ?? "Erro no render" } }));
+        } else if (tentativas > 60) { // ~3min
+          clearInterval(poll);
+          setRenderJobs((prev) => ({ ...prev, [key]: { status: "error", error: "Tempo esgotado aguardando o render." } }));
+        }
+      }, 3000);
+    } catch (e) {
+      setRenderJobs((prev) => ({ ...prev, [key]: { status: "error", error: msgErro(e, "Erro ao gerar render 3D") } }));
+    }
+  };
+
   const gerarPeloMotor = async () => {
     const suportados = comodos.filter((c) => COMODO_TO_LAYOUT[c.tipo] && comodoValido(c));
     if (suportados.length === 0) {
@@ -1321,6 +1391,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         premium: { itens: [], total: 0, custo: 0, margem: 0 },
       };
       const chapasAcc: ChapaCorte[] = [];
+      const renderAcc: MotorRenderCandidato[] = [];
       for (const c of suportados) {
         const res = await fetch("/api/motor?action=gerar", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -1379,6 +1450,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         const data = await res.json() as {
           orcamentos: Record<string, { itens: ItemMotorOrc[]; analise_financeira: { custo_total: number; preco_venda: number; margem_desejada_pct: number } }>;
           plano_corte?: { chapas?: ChapaCorte[] };
+          projeto?: { modulos?: (Record<string, unknown> & { modulo_template_codigo: string; material_corpo?: { codigo?: string; cor_hex?: string } })[] };
         };
         (["economica", "intermediaria", "premium"] as const).forEach((k) => {
           const ov = data.orcamentos[k];
@@ -1388,9 +1460,36 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
           acc[k].margem = ov.analise_financeira.margem_desejada_pct;
         });
         for (const ch of data.plano_corte?.chapas ?? []) chapasAcc.push({ ...ch, comodo: c.nome });
+        // Render 3D real (Blender) — MVP só cozinha; guarda o payload pronto
+        // pro job, sem chamar o worker ainda (o usuário aciona por cômodo).
+        const modulos = data.projeto?.modulos ?? [];
+        if (COMODO_TO_LAYOUT[c.tipo] === "cozinha_linear" && modulos.length > 0) {
+          const primeiroMaterial = modulos.find((m) => m.material_corpo)?.material_corpo;
+          renderAcc.push({
+            comodoNome: c.nome,
+            payload: {
+              modulos: modulos.map((m) => ({
+                ...m,
+                configuracao: {
+                  ...(m.configuracao as Record<string, unknown> ?? {}),
+                  tem_forno: m.modulo_template_codigo.startsWith("torre_forno"),
+                },
+              })),
+              chapa_codigo: primeiroMaterial?.codigo ?? "branco_tx",
+              chapa_hex: primeiroMaterial?.cor_hex ?? "#F2F0EB",
+              puxador_codigo: "perfil_alu",
+              ambiente: "Cozinha",
+              medidas: {
+                largura: c.largura || 4, profundidade: c.profundidade || 3, altura: c.altura || 2.7,
+              },
+              bancada_hex: "#2b2b2e",
+            },
+          });
+        }
       }
       setMotorVersoes(acc);
       setMotorChapas(chapasAcc);
+      setMotorRenderCandidatos(renderAcc);
       toast.success(`${suportados.length} cômodo(s) calculados pelo motor — 3 versões prontas.`);
     } catch (e) {
       toast.error(msgErro(e, "Erro no motor paramétrico"));
@@ -1979,6 +2078,31 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                     {verCorte && <div className="mt-2"><CutPlanVisualization chapas={motorChapas} /></div>}
                   </div>
                 )}
+
+                {/* Render 3D fotorrealista (Blender, GPU no Modal) — MVP só cozinha */}
+                {motorRenderCandidatos.map((cand) => {
+                  const job = renderJobs[cand.comodoNome];
+                  return (
+                    <div key={cand.comodoNome} className="mt-3 pt-3 border-t border-accent/20">
+                      <div className="flex items-center gap-3">
+                        <button type="button" disabled={job?.status === "pending" || job?.status === "processing"}
+                          onClick={() => handleGerarRender3D(cand)}
+                          className="text-[12px] font-medium text-accent inline-flex items-center gap-1.5 disabled:opacity-60">
+                          {job?.status === "pending" || job?.status === "processing"
+                            ? <Loader2 className="size-3.5 animate-spin" />
+                            : <Camera className="size-3.5" />}
+                          Gerar render 3D real ({cand.comodoNome})
+                        </button>
+                        {job?.status === "processing" && <span className="text-[11.5px] text-muted-foreground">renderizando na GPU… ~1 min</span>}
+                        {job?.status === "error" && <span className="text-[11.5px] text-destructive">{job.error}</span>}
+                      </div>
+                      {job?.status === "completed" && job.imageUrl && (
+                        <img src={job.imageUrl} alt={`Render 3D — ${cand.comodoNome}`}
+                          className="mt-2 rounded-lg border border-border w-full max-w-xl" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -316,6 +316,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "GET") return statusHandler(req, res);
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  // Render 3D fotorrealista (Blender, GPU no Modal) — dispara o worker pra um
+  // job já criado em render3d_job (o insert é feito pelo app, direto no
+  // Supabase, respeitando RLS). Aqui só repassamos o job_id pro Modal.
+  if ((req.body as { action?: string })?.action === "render3d_enqueue") {
+    return render3dEnqueueHandler(req, res);
+  }
+
   const body = req.body as Partial<RenderInput> & {
     moveis_nomes?: string[];
     // Imagem-guia (preview 2D/3D do projeto, base64 com ou sem prefixo data:) —
@@ -532,4 +539,37 @@ async function statusHandler(req: VercelRequest, res: VercelResponse) {
     return res.json({ status: "error", error: "FluxAPI não conseguiu gerar a imagem." });
   }
   return res.json({ status: "processing" });
+}
+
+// ─── Render 3D (Blender/Modal) — dispara o worker pra um job pendente ───────
+// POST /api/render { action: "render3d_enqueue", job_id }
+// O job já foi inserido em render3d_job pelo app; aqui só chamamos o endpoint
+// /enqueue do Modal (deploy: `modal deploy render-worker/modal_app.py`),
+// que dispara o render em background (spawn) e responde na hora.
+async function render3dEnqueueHandler(req: VercelRequest, res: VercelResponse) {
+  const { job_id } = (req.body ?? {}) as { job_id?: string };
+  if (!job_id) return res.status(400).json({ error: "job_id obrigatório" });
+
+  const modalUrl = process.env.MODAL_RENDER_ENQUEUE_URL;
+  if (!modalUrl) {
+    return res.status(500).json({
+      error: "Render 3D (Blender) ainda não foi implantado. Rode 'modal deploy render-worker/modal_app.py' "
+        + "e configure MODAL_RENDER_ENQUEUE_URL nas variáveis de ambiente da Vercel com a URL do endpoint /enqueue.",
+    });
+  }
+
+  try {
+    const response = await fetch(modalUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id }),
+    });
+    const data = await response.json().catch(() => ({})) as { ok?: boolean; erro?: string };
+    if (!response.ok || data.ok === false) {
+      return res.status(502).json({ error: `Modal (HTTP ${response.status}): ${data.erro ?? "falha ao acionar o worker"}` });
+    }
+    return res.json({ ok: true, job_id });
+  } catch (e) {
+    return res.status(502).json({ error: `Worker de render indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
+  }
 }
