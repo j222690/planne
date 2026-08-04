@@ -20,7 +20,8 @@ export type TipoPecaVisual =
   | "teto"
   | "fundo"
   | "porta"
-  | "gaveta";
+  | "gaveta"
+  | "prateleira";
 
 export interface PecaVisual3D {
   id: string;
@@ -42,10 +43,29 @@ export interface ModuloParaVista3D {
   largura_cm: number;
   altura_cm: number;
   profundidade_cm: number;
-  configuracao: { num_portas?: number; num_gavetas?: number };
+  configuracao: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
+}
+
+/** Módulo posicionado na parede — pra compor a cena inteira (calcularCenaCompleta). */
+export interface ModuloComPosicao extends ModuloParaVista3D {
+  posicao_x_cm: number;
+  /** ≥100 = aéreo (o motor usa esse limiar pra distinguir aéreo de base/piso). */
+  posicao_y_cm: number;
+  nome_display?: string;
+}
+
+export interface ModuloNaCena {
+  moduloIndex: number;
+  nome: string;
+  pecas: PecaVisual3D[];
+  /** Bounding box global do módulo (m) — útil pra enquadrar a câmera. */
+  origemX: number;
+  larguraM: number;
 }
 
 const T = 0.018; // espessura do painel (m) — mesma constante do render-worker
+const PISO_AEREO = 1.5; // altura do aéreo (m) — mesma constante do render-worker
+const RODAPE = 0.1; // recuo do rodapé nos móveis de piso — idem
 
 export function calcularVistaExplodida(modulo: ModuloParaVista3D): PecaVisual3D[] {
   const L = modulo.largura_cm / 100;
@@ -151,7 +171,56 @@ export function calcularVistaExplodida(modulo: ModuloParaVista3D): PecaVisual3D[
         comprimentoMm: Math.round(ph * 1000),
       });
     }
+
+    // Prateleiras internas — só fazem sentido atrás de porta (atrás de gaveta
+    // não existe prateleira). Distribuídas em partes iguais na zona da porta,
+    // reveladas no modo Raio-X ou com as portas escondidas.
+    const prateleiras = modulo.configuracao.num_prateleiras ?? 0;
+    for (let i = 0; i < prateleiras; i++) {
+      const pz = pz0 + ((i + 1) / (prateleiras + 1)) * ph;
+      pecas.push({
+        id: `prat${i}`,
+        tipo: "prateleira",
+        nome: `Prateleira ${i + 1}`,
+        posicao: [0, pz, 0],
+        tamanho: [Math.max(0.01, L - 2 * T - 0.004), T, Math.max(0.01, P - 2 * T - 0.01)],
+        direcaoExplosao: [0, 0, -1],
+        distanciaExplosao: distBase * 0.6,
+        larguraMm: Math.round(L * 1000),
+        comprimentoMm: Math.round(P * 1000),
+      });
+    }
   }
 
   return pecas;
+}
+
+/**
+ * Posiciona vários módulos ao longo da parede (mesma regra do render-worker:
+ * X = posicao_x_cm, aéreo sobe pra PISO_AEREO, piso sobe pelo RODAPE) — MVP
+ * de parede única (cozinha_linear), igual ao worker Blender hoje.
+ */
+export function calcularCenaCompleta(modulos: ModuloComPosicao[]): ModuloNaCena[] {
+  return modulos.map((m, moduloIndex) => {
+    const x0 = m.posicao_x_cm / 100;
+    const aereo = m.posicao_y_cm >= 100;
+    const y0 = aereo ? PISO_AEREO : RODAPE;
+    const L = m.largura_cm / 100;
+    const cx = x0 + L / 2;
+
+    const locais = calcularVistaExplodida(m);
+    const pecas = locais.map((p) => ({
+      ...p,
+      id: `m${moduloIndex}_${p.id}`,
+      posicao: [p.posicao[0] + cx, p.posicao[1] + y0, p.posicao[2]] as [number, number, number],
+    }));
+
+    return {
+      moduloIndex,
+      nome: m.nome_display ?? `Módulo ${moduloIndex + 1}`,
+      pecas,
+      origemX: x0,
+      larguraM: L,
+    };
+  });
 }

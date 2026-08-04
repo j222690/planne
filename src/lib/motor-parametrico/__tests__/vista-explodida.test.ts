@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { calcularVistaExplodida } from "../vista-explodida";
+import { calcularVistaExplodida, calcularCenaCompleta } from "../vista-explodida";
 
 describe("calcularVistaExplodida", () => {
   test("módulo com 2 portas e sem gaveta: 5 peças de carcaça + 2 portas", () => {
@@ -64,5 +64,102 @@ describe("calcularVistaExplodida", () => {
     for (const p of pecas) {
       for (const dim of p.tamanho) expect(dim).toBeGreaterThan(0);
     }
+  });
+
+  test("prateleiras só aparecem atrás de porta (não atrás de só gaveta)", () => {
+    const comPorta = calcularVistaExplodida({
+      largura_cm: 60,
+      altura_cm: 72,
+      profundidade_cm: 55,
+      configuracao: { num_portas: 2, num_gavetas: 0, num_prateleiras: 2 },
+    });
+    expect(comPorta.filter((p) => p.tipo === "prateleira")).toHaveLength(2);
+
+    const soGaveta = calcularVistaExplodida({
+      largura_cm: 60,
+      altura_cm: 72,
+      profundidade_cm: 55,
+      configuracao: { num_portas: 0, num_gavetas: 3, num_prateleiras: 2 },
+    });
+    expect(soGaveta.filter((p) => p.tipo === "prateleira")).toHaveLength(0);
+  });
+});
+
+describe("calcularCenaCompleta", () => {
+  test("2 módulos lado a lado ficam com centros em X diferentes, na ordem certa", () => {
+    const cena = calcularCenaCompleta([
+      {
+        largura_cm: 60,
+        altura_cm: 72,
+        profundidade_cm: 55,
+        configuracao: { num_portas: 2 },
+        posicao_x_cm: 0,
+        posicao_y_cm: 0,
+        nome_display: "Base A",
+      },
+      {
+        largura_cm: 80,
+        altura_cm: 72,
+        profundidade_cm: 55,
+        configuracao: { num_portas: 2 },
+        posicao_x_cm: 60,
+        posicao_y_cm: 0,
+        nome_display: "Base B",
+      },
+    ]);
+    expect(cena).toHaveLength(2);
+    expect(cena[0].origemX).toBe(0);
+    expect(cena[1].origemX).toBeCloseTo(0.6);
+    // o módulo B (à direita) tem todas as peças com X maior que o A
+    const maxXA = Math.max(...cena[0].pecas.map((p) => p.posicao[0]));
+    const minXB = Math.min(...cena[1].pecas.map((p) => p.posicao[0]));
+    expect(minXB).toBeGreaterThan(maxXA);
+  });
+
+  test("módulo aéreo (posicao_y_cm ≥ 100) fica mais alto que módulo de piso", () => {
+    const cena = calcularCenaCompleta([
+      {
+        largura_cm: 60,
+        altura_cm: 72,
+        profundidade_cm: 55,
+        configuracao: { num_portas: 2 },
+        posicao_x_cm: 0,
+        posicao_y_cm: 0,
+      },
+      {
+        largura_cm: 60,
+        altura_cm: 40,
+        profundidade_cm: 33,
+        configuracao: { num_portas: 2 },
+        posicao_x_cm: 0,
+        posicao_y_cm: 150,
+      },
+    ]);
+    const baseY = cena[0].pecas.find((p) => p.tipo === "base")!.posicao[1];
+    const aereoY = cena[1].pecas.find((p) => p.tipo === "base")!.posicao[1];
+    expect(aereoY).toBeGreaterThan(baseY);
+  });
+
+  test("ids das peças ficam únicos entre módulos (prefixados por módulo)", () => {
+    const cena = calcularCenaCompleta([
+      {
+        largura_cm: 60,
+        altura_cm: 72,
+        profundidade_cm: 55,
+        configuracao: { num_portas: 2 },
+        posicao_x_cm: 0,
+        posicao_y_cm: 0,
+      },
+      {
+        largura_cm: 60,
+        altura_cm: 72,
+        profundidade_cm: 55,
+        configuracao: { num_portas: 2 },
+        posicao_x_cm: 60,
+        posicao_y_cm: 0,
+      },
+    ]);
+    const todosIds = cena.flatMap((m) => m.pecas.map((p) => p.id));
+    expect(new Set(todosIds).size).toBe(todosIds.length);
   });
 });

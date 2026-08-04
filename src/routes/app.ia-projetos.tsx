@@ -1936,24 +1936,32 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
         </details>
       )}
 
-      {/* Vista explodida 3D — modal por módulo */}
+      {/* Vista explodida 3D — cena completa (todos os módulos), com foco no clicado */}
       {moduloVista3D !== null && data.projeto.modulos[moduloVista3D] && (() => {
-        const m = data.projeto.modulos[moduloVista3D] as unknown as {
+        type ModuloBruto = {
           nome_display?: string; nome?: string; largura_cm: number; altura_cm: number; profundidade_cm: number;
-          configuracao?: { num_portas?: number; num_gavetas?: number };
+          posicao_x_cm?: number; posicao_y_cm?: number;
+          configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
           material_corpo?: { cor_hex?: string };
         };
+        const brutos = data.projeto.modulos as unknown as ModuloBruto[];
+        const primeiroMaterial = brutos.find((m) => m.material_corpo)?.material_corpo;
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setModuloVista3D(null)}>
             <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
-            <div className="relative w-full max-w-lg bg-surface border border-border rounded-lg shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full max-w-2xl bg-surface border border-border rounded-lg shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-semibold">{m.nome_display ?? m.nome ?? "Módulo"}</span>
+                <span className="text-[13px] font-semibold">Cena 3D — {brutos.length} módulo(s)</span>
                 <button type="button" onClick={() => setModuloVista3D(null)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
               </div>
               <VistaExplodida3D
-                modulo={{ largura_cm: m.largura_cm, altura_cm: m.altura_cm, profundidade_cm: m.profundidade_cm, configuracao: m.configuracao ?? {} }}
-                corHex={m.material_corpo?.cor_hex ?? "#f2f0eb"}
+                modulos={brutos.map((m) => ({
+                  largura_cm: m.largura_cm, altura_cm: m.altura_cm, profundidade_cm: m.profundidade_cm,
+                  posicao_x_cm: m.posicao_x_cm ?? 0, posicao_y_cm: m.posicao_y_cm ?? 0,
+                  configuracao: m.configuracao ?? {}, nome_display: m.nome_display ?? m.nome,
+                }))}
+                corHex={primeiroMaterial?.cor_hex ?? "#f2f0eb"}
+                moduloFocoInicial={moduloVista3D}
               />
             </div>
           </div>
