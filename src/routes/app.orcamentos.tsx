@@ -727,6 +727,62 @@ async function erroDaResposta(res: Response): Promise<string> {
   return txt.slice(0, 200) || `HTTP ${res.status}`;
 }
 
+// Monta o HTML do contrato de fornecimento — usado tanto pelo botão "Gerar
+// Contrato" (orçamento já salvo) quanto pelo "Baixar Tudo" do editor (ainda
+// sem número/total definitivos, por isso são passados explicitamente).
+function gerarContratoHTML(p: {
+  numero: string; clienteNome: string; total: number;
+  empresaNome: string; logoUrl: string | null; listaMoveis?: string;
+}): string {
+  const totalFmt = p.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+  const metadeFmt = (p.total / 2).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+  const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Contrato — Orçamento ${p.numero}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:24px;line-height:1.75;color:#1a1a1a;font-size:13.5px}
+  h1{font-size:18px;text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+  .sub{text-align:center;font-size:12px;color:#666;margin-bottom:32px}
+  h2{font-size:12.5px;font-weight:bold;text-transform:uppercase;letter-spacing:.8px;margin:24px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px}
+  ul{margin:6px 0 6px 20px}li{margin:3px 0}
+  .total{font-size:16px;font-weight:bold;color:#145a32}
+  .assinaturas{margin-top:64px;display:flex;justify-content:space-between;gap:40px}
+  .assinatura{flex:1;text-align:center}
+  .linha{border-top:1px solid #333;padding-top:6px;font-size:12px}
+  @media print{.no-print{display:none}}
+</style></head><body>
+${p.logoUrl ? `<div style="text-align:center;margin-bottom:16px"><img src="${p.logoUrl}" style="max-height:60px;max-width:200px;object-fit:contain"></div>` : ""}
+<h1>Contrato de Fornecimento de Móveis Sob Medida</h1>
+<div class="sub">Orçamento Nº ${p.numero} · ${dataHoje}</div>
+<h2>1. Partes Contratantes</h2>
+<p><strong>Contratada:</strong> ${p.empresaNome}</p>
+<p><strong>Contratante:</strong> ${p.clienteNome}</p>
+<h2>2. Objeto do Contrato</h2>
+<p>A Contratada se compromete a fabricar e instalar os seguintes móveis sob medida conforme especificações aprovadas:</p>
+${p.listaMoveis ? `<ul>${p.listaMoveis}</ul>` : `<p>Conforme detalhamento do orçamento Nº ${p.numero}.</p>`}
+<h2>3. Valor e Forma de Pagamento</h2>
+<p>Valor total: <span class="total">R$ ${totalFmt}</span></p>
+<p>• 50% de entrada na aprovação do projeto: <strong>R$ ${metadeFmt}</strong></p>
+<p>• 50% na entrega e instalação: <strong>R$ ${metadeFmt}</strong></p>
+<p>Formas aceitas: Pix, transferência bancária ou dinheiro.</p>
+<h2>4. Prazo de Execução</h2>
+<p>O prazo estimado para fabricação e instalação é de <strong>____________ dias úteis</strong> após a aprovação do projeto e pagamento da entrada.</p>
+<h2>5. Garantia</h2>
+<p>Os móveis possuem garantia de <strong>12 (doze) meses</strong> contra defeitos de fabricação, contados a partir da data de instalação.</p>
+<h2>6. Disposições Gerais</h2>
+<p>Alterações no projeto após assinatura deste contrato poderão implicar em reajuste de prazo e valor, mediante acordo escrito entre as partes. Materiais especificados no projeto são de responsabilidade da Contratada. Instalação elétrica e hidráulica não estão incluídas neste contrato.</p>
+<div class="assinaturas">
+  <div class="assinatura"><div class="linha">${p.empresaNome}<br><span style="font-size:11px;color:#666">Contratada</span></div></div>
+  <div class="assinatura"><div class="linha">${p.clienteNome}<br><span style="font-size:11px;color:#666">Contratante</span></div></div>
+</div>
+<p style="text-align:center;font-size:11px;color:#999;margin-top:40px">Local: ________________________________ · Data: ${dataHoje}</p>
+<div class="no-print" style="text-align:center;margin-top:24px">
+  <button onclick="window.print()" style="padding:10px 28px;background:#1a1a1a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">Imprimir / Salvar como PDF</button>
+</div>
+</body></html>`;
+}
+
 // Plano de corte visualizável (chapa + peças encaixadas)
 type FitaLados = { esquerda: boolean; direita: boolean; topo: boolean; base: boolean };
 type PecaAloc = { x_mm: number; y_mm: number; largura_mm: number; comprimento_mm: number; rotacionada?: boolean; etiqueta?: string; peca_id?: string; direcao_fio?: string; fita_borda?: FitaLados };
@@ -1005,6 +1061,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [catalogo, setCatalogo] = useState<MatCatalog[]>([]);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [empresaNome, setEmpresaNome] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   // Padrões da empresa (herdados de Configurações) — o motor usa estes
   const [empresaParams, setEmpresaParams] = useState({
     mdf_custo_chapa: 85, mao_obra_hora: 45, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830,
@@ -1218,17 +1276,25 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [motorGerando, setMotorGerando] = useState(false);
   const [baixarTudoLoading, setBaixarTudoLoading] = useState(false);
 
-  // "Baixar Tudo": zip com CSV, DXF, PDF da lista de corte e etiquetas c/ QR.
+  // "Baixar Tudo": zip com CSV, DXF, PDF da lista de corte, etiquetas c/ QR e
+  // contrato (rascunho — valores ainda podem mudar até o orçamento ser salvo).
   const handleBaixarTudo = async () => {
     if (!motorChapas.length) return;
     setBaixarTudoLoading(true);
     try {
       const { gerarPacoteCompleto } = await import("@/lib/exportacao-zip");
       const numero = editOrc?.numero ?? "novo";
+      const total = itens.length ? subtotal : (motorVersoes?.intermediaria.total ?? 0);
+      const contratoHtml = gerarContratoHTML({
+        numero,
+        clienteNome: clientes.find((c) => c.id === clienteId)?.nome ?? "Cliente",
+        total, empresaNome, logoUrl,
+      });
       const blob = await gerarPacoteCompleto({
         chapas: motorChapas as unknown as ChapaAlocada[],
         projetoId: editOrc?.id ?? "",
         numeroOrcamento: numero,
+        contratoHtml,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1356,6 +1422,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       if (!empresa) return;
       const eid = (empresa as { id: string }).id;
       setEmpresaId(eid);
+      setEmpresaNome((empresa as unknown as { nome?: string }).nome ?? "");
+      setLogoUrl((empresa as { logo_url?: string | null }).logo_url ?? null);
       const p = (empresa as { parametros?: Record<string, unknown> }).parametros ?? {};
       setEmpresaParams({
         mdf_custo_chapa: Number(p.mdf_custo_chapa ?? 85),
@@ -3317,60 +3385,15 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
   };
 
   const handleGerarContrato = () => {
-    const clienteNome = orc.clientes?.nome ?? "Cliente";
-    const numero = orc.numero ?? "";
-    const total = (orc.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-    const metade = ((orc.total ?? 0) / 2).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-    const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
     const listaMoveis = (moveisCfg ?? []).map((m) =>
       `<li>${m.nome} — ${m.largura_cm}×${m.profundidade_cm}×${m.altura_cm} cm${m.portas > 0 ? `, ${m.portas} porta(s) ${m.tipo_porta}` : ""}${m.gavetas > 0 ? `, ${m.gavetas} gaveta(s)` : ""}${m.prateleiras > 0 ? `, ${m.prateleiras} prateleira(s)` : ""}</li>`
     ).join("");
-
-    const html = `<!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Contrato — Orçamento ${numero}</title>
-<style>
-  body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:24px;line-height:1.75;color:#1a1a1a;font-size:13.5px}
-  h1{font-size:18px;text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
-  .sub{text-align:center;font-size:12px;color:#666;margin-bottom:32px}
-  h2{font-size:12.5px;font-weight:bold;text-transform:uppercase;letter-spacing:.8px;margin:24px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px}
-  ul{margin:6px 0 6px 20px}li{margin:3px 0}
-  .total{font-size:16px;font-weight:bold;color:#145a32}
-  .assinaturas{margin-top:64px;display:flex;justify-content:space-between;gap:40px}
-  .assinatura{flex:1;text-align:center}
-  .linha{border-top:1px solid #333;padding-top:6px;font-size:12px}
-  @media print{.no-print{display:none}}
-</style></head><body>
-${logoUrl ? `<div style="text-align:center;margin-bottom:16px"><img src="${logoUrl}" style="max-height:60px;max-width:200px;object-fit:contain"></div>` : ""}
-<h1>Contrato de Fornecimento de Móveis Sob Medida</h1>
-<div class="sub">Orçamento Nº ${numero} · ${dataHoje}</div>
-<h2>1. Partes Contratantes</h2>
-<p><strong>Contratada:</strong> ${empresaNome}</p>
-<p><strong>Contratante:</strong> ${clienteNome}</p>
-<h2>2. Objeto do Contrato</h2>
-<p>A Contratada se compromete a fabricar e instalar os seguintes móveis sob medida conforme especificações aprovadas:</p>
-${listaMoveis ? `<ul>${listaMoveis}</ul>` : `<p>Conforme detalhamento do orçamento Nº ${numero}.</p>`}
-<h2>3. Valor e Forma de Pagamento</h2>
-<p>Valor total: <span class="total">R$ ${total}</span></p>
-<p>• 50% de entrada na aprovação do projeto: <strong>R$ ${metade}</strong></p>
-<p>• 50% na entrega e instalação: <strong>R$ ${metade}</strong></p>
-<p>Formas aceitas: Pix, transferência bancária ou dinheiro.</p>
-<h2>4. Prazo de Execução</h2>
-<p>O prazo estimado para fabricação e instalação é de <strong>____________ dias úteis</strong> após a aprovação do projeto e pagamento da entrada.</p>
-<h2>5. Garantia</h2>
-<p>Os móveis possuem garantia de <strong>12 (doze) meses</strong> contra defeitos de fabricação, contados a partir da data de instalação.</p>
-<h2>6. Disposições Gerais</h2>
-<p>Alterações no projeto após assinatura deste contrato poderão implicar em reajuste de prazo e valor, mediante acordo escrito entre as partes. Materiais especificados no projeto são de responsabilidade da Contratada. Instalação elétrica e hidráulica não estão incluídas neste contrato.</p>
-<div class="assinaturas">
-  <div class="assinatura"><div class="linha">${empresaNome}<br><span style="font-size:11px;color:#666">Contratada</span></div></div>
-  <div class="assinatura"><div class="linha">${clienteNome}<br><span style="font-size:11px;color:#666">Contratante</span></div></div>
-</div>
-<p style="text-align:center;font-size:11px;color:#999;margin-top:40px">Local: ________________________________ · Data: ${dataHoje}</p>
-<div class="no-print" style="text-align:center;margin-top:24px">
-  <button onclick="window.print()" style="padding:10px 28px;background:#1a1a1a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">Imprimir / Salvar como PDF</button>
-</div>
-</body></html>`;
-
+    const html = gerarContratoHTML({
+      numero: orc.numero ?? "",
+      clienteNome: orc.clientes?.nome ?? "Cliente",
+      total: orc.total ?? 0,
+      empresaNome, logoUrl, listaMoveis,
+    });
     const win = window.open("", "_blank");
     if (win) { win.document.write(html); win.document.close(); }
   };
