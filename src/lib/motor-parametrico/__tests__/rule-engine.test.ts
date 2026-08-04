@@ -214,6 +214,37 @@ describe("regra largura_modulo_valida", () => {
     const viol = r.violacoes.find(v => v.regra === "largura_modulo_valida");
     expect(viol).toBeUndefined();
   });
+
+  // Achado no QA de paridade (Sala/Escritório, 2026-08-04): painel ripado e
+  // bancada de trabalho passaram a acusar "porta larga demais empena" mesmo
+  // sem ter porta nenhuma — a regra só faz sentido pra porta de dobradiça.
+  test("módulo largo SEM porta (painel, bancada) não gera alerta de largura", () => {
+    const projeto = projetoSaudavel();
+    const mod = projeto.modulos[0];
+    const painelLargo: ModuloInstanciado = {
+      ...mod, largura_cm: 180, posicao_x_cm: 0,
+      configuracao: { ...mod.configuracao, num_portas: 0 },
+    };
+    const projetoOk: ProjetoFabricavel = { ...projeto, modulos: [painelLargo] };
+    const r = validarProjeto(projetoOk);
+
+    const viol = r.violacoes.find(v => v.regra === "largura_modulo_valida");
+    expect(viol).toBeUndefined();
+  });
+
+  test("módulo largo com porta de CORRER não gera alerta de largura (só dobradiça empena)", () => {
+    const projeto = projetoSaudavel();
+    const mod = projeto.modulos[0];
+    const portaCorrer: ModuloInstanciado = {
+      ...mod, largura_cm: 180, posicao_x_cm: 0,
+      configuracao: { ...mod.configuracao, num_portas: 2, tipo_porta: "correr" },
+    };
+    const projetoOk: ProjetoFabricavel = { ...projeto, modulos: [portaCorrer] };
+    const r = validarProjeto(projetoOk);
+
+    const viol = r.violacoes.find(v => v.regra === "largura_modulo_valida");
+    expect(viol).toBeUndefined();
+  });
 });
 
 // ─── Score e status ───────────────────────────────────────────────────────────

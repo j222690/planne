@@ -1167,7 +1167,7 @@ function regraLarguraModuloValida(_p, _a, modulos) {
         valor_encontrado: m.largura_cm,
         valor_esperado: LARGURA_MODULO_MIN_CM
       });
-    } else if (m.largura_cm > LARGURA_MODULO_MAX_CM) {
+    } else if (m.largura_cm > LARGURA_MODULO_MAX_CM && m.configuracao.num_portas > 0 && m.configuracao.tipo_porta === "dobradica") {
       violacoes.push({
         regra: "largura_modulo_valida",
         severidade: "alerta",

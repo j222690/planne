@@ -370,7 +370,14 @@ function regraLarguraModuloValida(
         valor_encontrado: m.largura_cm,
         valor_esperado: LARGURA_MODULO_MIN_CM,
       });
-    } else if (m.largura_cm > LARGURA_MODULO_MAX_CM) {
+    } else if (
+      m.largura_cm > LARGURA_MODULO_MAX_CM
+      && m.configuracao.num_portas > 0
+      && m.configuracao.tipo_porta === "dobradica"
+    ) {
+      // O empeno com o tempo é um problema de PORTA de dobradiça larga — não
+      // se aplica a módulos sem porta (painel ripado, bancada) nem a portas
+      // de correr, que não sofrem esse esforço.
       violacoes.push({
         regra: "largura_modulo_valida",
         severidade: "alerta",
