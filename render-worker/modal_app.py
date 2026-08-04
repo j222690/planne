@@ -44,7 +44,7 @@ image = (
         "mkdir -p /opt/blender && tar -xf /tmp/blender.tar.xz -C /opt/blender --strip-components=1",
         "ln -s /opt/blender/blender /usr/local/bin/blender",
     )
-    .pip_install("supabase>=2.4,<3")
+    .pip_install("supabase>=2.4,<3", "fastapi[standard]")
     .add_local_dir("render-worker/blender", remote_path="/app/blender")
     .add_local_dir("render-worker/assets", remote_path="/app/assets")
 )
