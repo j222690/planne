@@ -4,7 +4,7 @@ import {
   Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
   ImageIcon, Wand2, Building2, LayoutGrid, FileText,
   CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
-  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers, Plus, Check,
+  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers, Plus, Check, Camera,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1807,12 +1807,84 @@ function baixarArquivo(conteudo: string, nome: string, mime: string) {
 }
 
 // Painel que exibe o resultado completo do motor paramétrico
-function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao }: {
+function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao, ehCozinha, medidas, projetoId }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
   onCriarOrdem: () => void;
   criandoVersao: string | null;
+  /** Render 3D real (Blender) — MVP só cozinha, mesma regra do editor de orçamento. */
+  ehCozinha: boolean;
+  medidas: { largura: number; profundidade: number; altura: number };
+  projetoId?: string | null;
 }) {
+  const [renderJob, setRenderJob] = useState<{ status: "pending" | "processing" | "completed" | "error"; imageUrl?: string; error?: string } | null>(null);
+
+  const handleGerarRender3D = async () => {
+    setRenderJob({ status: "pending" });
+    try {
+      const empresa = await getEmpresaAtual();
+      const empresaId = (empresa as { id?: string } | null)?.id;
+      if (!empresaId) throw new Error("Empresa não encontrada");
+
+      const modulos = (data.projeto.modulos as unknown as (Record<string, unknown> & {
+        modulo_template_codigo: string;
+        material_corpo?: { codigo?: string; cor_hex?: string };
+      })[]);
+      const primeiroMaterial = modulos.find((m) => m.material_corpo)?.material_corpo;
+      const payload = {
+        modulos: modulos.map((m) => ({
+          ...m,
+          configuracao: {
+            ...(m.configuracao as Record<string, unknown> ?? {}),
+            tem_forno: m.modulo_template_codigo.startsWith("torre_forno"),
+          },
+        })),
+        chapa_codigo: primeiroMaterial?.codigo ?? "branco_tx",
+        chapa_hex: primeiroMaterial?.cor_hex ?? "#F2F0EB",
+        puxador_codigo: "perfil_alu",
+        ambiente: "Cozinha",
+        medidas,
+        bancada_hex: "#2b2b2e",
+      };
+
+      const { data: job, error: insertErr } = await supabase
+        .from("render3d_job")
+        .insert({ empresa_id: empresaId, origem: "ia_projetos", origem_id: projetoId ?? null, status: "pending", payload })
+        .select("id")
+        .single();
+      if (insertErr || !job) throw new Error(insertErr?.message ?? "Falha ao criar o job de render");
+
+      const res = await fetch("/api/render", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "render3d_enqueue", job_id: job.id }),
+      });
+      const enqueueData = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok || !enqueueData.ok) throw new Error(enqueueData.error ?? "Falha ao acionar o worker de render");
+
+      setRenderJob({ status: "processing" });
+      let tentativas = 0;
+      const poll = setInterval(async () => {
+        tentativas++;
+        const { data: row } = await supabase
+          .from("render3d_job").select("status, image_path, error").eq("id", job.id).single();
+        if (!row) return;
+        if (row.status === "completed" && row.image_path) {
+          clearInterval(poll);
+          const { data: pub } = supabase.storage.from("renders3d").getPublicUrl(row.image_path);
+          setRenderJob({ status: "completed", imageUrl: pub.publicUrl });
+        } else if (row.status === "error") {
+          clearInterval(poll);
+          setRenderJob({ status: "error", error: row.error ?? "Erro no render" });
+        } else if (tentativas > 60) {
+          clearInterval(poll);
+          setRenderJob({ status: "error", error: "Tempo esgotado aguardando o render." });
+        }
+      }, 3000);
+    } catch (e) {
+      setRenderJob({ status: "error", error: e instanceof Error ? e.message : "Erro ao gerar render 3D" });
+    }
+  };
+
   const statusClasse = data.validacao.status === "aprovado"
     ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
     : data.validacao.status === "reprovado"
@@ -1912,6 +1984,27 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao 
           </button>
         </div>
       </div>
+
+      {/* Render 3D fotorrealista (Blender, GPU no Modal) — MVP só cozinha */}
+      {ehCozinha && data.projeto?.modulos?.length > 0 && (
+        <div className="rounded-md border border-border p-2.5">
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={renderJob?.status === "pending" || renderJob?.status === "processing"}
+              onClick={handleGerarRender3D}
+              className="text-[12px] font-semibold text-accent inline-flex items-center gap-1.5 disabled:opacity-60">
+              {renderJob?.status === "pending" || renderJob?.status === "processing"
+                ? <Loader2 className="size-3.5 animate-spin" />
+                : <Camera className="size-3.5" />}
+              Gerar render 3D real
+            </button>
+            {renderJob?.status === "processing" && <span className="text-[11px] text-muted-foreground">renderizando na GPU… ~1 min</span>}
+            {renderJob?.status === "error" && <span className="text-[11px] text-destructive">{renderJob.error}</span>}
+          </div>
+          {renderJob?.status === "completed" && renderJob.imageUrl && (
+            <img src={renderJob.imageUrl} alt="Render 3D — Cozinha" className="mt-2 rounded-lg border border-border w-full" />
+          )}
+        </div>
+      )}
 
       {/* Recomendações técnicas */}
       {recs.length > 0 && (
@@ -2299,7 +2392,14 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             {motorLoading && <span className="ml-auto text-[11.5px] text-muted-foreground inline-flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> gerando…</span>}
           </div>
           {wizard.motorResultado
-            ? <MotorResultadoPainel data={wizard.motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao} />
+            ? <MotorResultadoPainel data={wizard.motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao}
+                ehCozinha={AMBIENTE_TO_LAYOUT[wizard.form.ambiente] === "cozinha_linear"}
+                medidas={{
+                  largura: parseFloat(wizard.form.largura) || 4,
+                  profundidade: parseFloat(wizard.form.profundidade) || 3,
+                  altura: parseFloat(wizard.form.altura) || 2.7,
+                }}
+                projetoId={wizard.projetoId} />
             : <div className="text-[12.5px] text-muted-foreground py-6 text-center">Calculando módulos, validação, 3 orçamentos e plano de corte CNC…</div>}
         </Surface>
       )}
