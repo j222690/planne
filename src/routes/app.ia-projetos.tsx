@@ -2949,6 +2949,7 @@ function Step4Layout({
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
+  const [motorTipoDivisoria, setMotorTipoDivisoria] = useState<"rente" | "recuada">("rente");
   const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<
     "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"
   >("cozinha_linear");
@@ -3018,6 +3019,7 @@ function Step4Layout({
             tipo_porta_base: motorTipoPorta,
             tipo_porta_aereo: "dobradica",
             tipo_porta: motorTipoPorta,
+            tipo_divisoria: motorTipoDivisoria,
             versao_comercial: "intermediaria",
             acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
             com_torre_forno: comTorreForno,
@@ -3072,6 +3074,7 @@ function Step4Layout({
     motorParede,
     motorFerragem,
     motorTipoPorta,
+    motorTipoDivisoria,
     motorLayoutCozinha,
     acRodape,
     acRodaTeto,
@@ -3108,6 +3111,7 @@ function Step4Layout({
     motorParede,
     motorFerragem,
     motorTipoPorta,
+    motorTipoDivisoria,
     motorLayoutCozinha,
     acRodape,
     acRodaTeto,
@@ -3884,6 +3888,31 @@ function Step4Layout({
                   ))}
                 </div>
               </div>
+
+              {/* Tipo de divisória — só aparece em roupeiro/closet (quarto tem divisória interna) */}
+              {(tipoLayoutMotor === "dormitorio" || tipoLayoutMotor === "closet") && (
+                <div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Tipo de divisória</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(
+                      [
+                        ["rente", "Rente", "Encosta na face frontal"],
+                        ["recuada", "Recuada", "Recuo — porta larga fecha por cima sem interromper"],
+                      ] as const
+                    ).map(([v, l, sub]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setMotorTipoDivisoria(v)}
+                        className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorTipoDivisoria === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                      >
+                        <span className="font-medium">{l}</span>
+                        <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Layout de cozinha — só aparece quando o ambiente é Cozinha */}
               {wizard.form.ambiente === "Cozinha" && (

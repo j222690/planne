@@ -22,6 +22,9 @@ import { dobradicasPorAlturaMm } from "../base-conhecimento/parametros";
 const ESP: EspessuraMDF = 15;
 const FUNDO: EspessuraMDF = 6;
 
+/** Recuo (mm) da divisória "recuada" a partir da face frontal do móvel. */
+const RECUO_DIVISORIA_MM = 40;
+
 const ALTURA_GAVETA_PADRAO_CM = 16;
 /** Altura (mm) de cada frente de gaveta, configurável por módulo. */
 const alturaGavetaMm = (cfg: { altura_gaveta_cm?: number }) =>
@@ -119,7 +122,8 @@ export function regrasCorpo(opts: OpcoesCorpo = {}): RegraCorte[] {
       nome: "divisoria_vertical",
       grupo: "corpo",
       ativa_quando: (cfg) => cfg.num_divisorias > 0,
-      calcular_largura_mm: (_L, _A, P) => P - FUNDO,
+      calcular_largura_mm: (_L, _A, P, cfg) =>
+        P - FUNDO - (cfg.tipo_divisoria === "recuada" ? RECUO_DIVISORIA_MM : 0),
       calcular_comprimento_mm: (_L, A) => A - 2 * esp,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_divisorias,
       espessura_mm: esp,

@@ -189,6 +189,20 @@ describe("gerarLayoutDormitorio", () => {
     );
     expect(temTrilho).toBe(true);
   });
+
+  test("divisória recuada é mais estreita que rente (recuo a partir da frente)", () => {
+    const rRente = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, tipo_divisoria: "rente" });
+    const rRecuada = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, tipo_divisoria: "recuada" });
+    const largRente = rRente.projeto.modulos
+      .flatMap((m) => m.pecas)
+      .find((p) => p.regra_nome === "divisoria_vertical")?.largura_mm;
+    const largRecuada = rRecuada.projeto.modulos
+      .flatMap((m) => m.pecas)
+      .find((p) => p.regra_nome === "divisoria_vertical")?.largura_mm;
+    expect(largRente).toBeDefined();
+    expect(largRecuada).toBeDefined();
+    expect(largRecuada!).toBeLessThan(largRente!);
+  });
 });
 
 // ─── CLOSET ───────────────────────────────────────────────────────────────────

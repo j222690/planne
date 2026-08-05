@@ -282,6 +282,12 @@ export interface ConfiguracaoModulo {
    */
   altura_gaveta_cm?: Centimetros;
   num_divisorias: number;
+  /**
+   * Divisória vertical rente (encosta na face frontal, padrão) ou recuada
+   * (recuo a partir da frente — permite uma porta larga fechar por cima sem
+   * a divisória interromper visualmente o vão). Default "rente".
+   */
+  tipo_divisoria?: "rente" | "recuada";
   tem_cabideiro: boolean;
   tem_fundo: boolean;
   espessura_fundo_mm: 6 | 3;

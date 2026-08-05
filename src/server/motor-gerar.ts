@@ -73,6 +73,7 @@ interface RequestBody {
     tipo_porta_base?: "dobradica" | "correr";
     tipo_porta_aereo?: "dobradica" | "basculante";
     tipo_porta?: "dobradica" | "correr" | "espelho";
+    tipo_divisoria?: "rente" | "recuada";
     versao_comercial?: "economica" | "intermediaria" | "premium";
     com_aereos?: boolean;
     com_superior?: boolean;
@@ -344,6 +345,7 @@ function gerarLayout(
       const r = gerarLayoutDormitorio(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
+        tipo_divisoria: prefs.tipo_divisoria,
         paredes: prefs.paredes,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
@@ -352,6 +354,7 @@ function gerarLayout(
       const r = gerarLayoutCloset(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
+        tipo_divisoria: prefs.tipo_divisoria,
         paredes: prefs.paredes,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };

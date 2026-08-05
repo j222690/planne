@@ -48,6 +48,7 @@ function larguraFolhaExcede(largura_mm) {
 // src/lib/motor-parametrico/regras-corte-comuns.ts
 var ESP = 15;
 var FUNDO = 6;
+var RECUO_DIVISORIA_MM = 40;
 var ALTURA_GAVETA_PADRAO_CM = 16;
 var alturaGavetaMm = (cfg) => (cfg.altura_gaveta_cm ?? ALTURA_GAVETA_PADRAO_CM) * 10;
 var zonaGavetasMm = (cfg) => cfg.num_gavetas > 0 ? cfg.num_gavetas * alturaGavetaMm(cfg) : 0;
@@ -123,7 +124,7 @@ function regrasCorpo(opts = {}) {
       nome: "divisoria_vertical",
       grupo: "corpo",
       ativa_quando: (cfg) => cfg.num_divisorias > 0,
-      calcular_largura_mm: (_L, _A, P) => P - FUNDO,
+      calcular_largura_mm: (_L, _A, P, cfg) => P - FUNDO - (cfg.tipo_divisoria === "recuada" ? RECUO_DIVISORIA_MM : 0),
       calcular_comprimento_mm: (_L, A) => A - 2 * esp,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_divisorias,
       espessura_mm: esp,
@@ -2378,6 +2379,7 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
       num_portas: largura <= 50 ? 1 : 2,
       num_prateleiras: 3,
       num_divisorias: 1,
+      tipo_divisoria: prefs.tipo_divisoria ?? "rente",
       tem_cabideiro: true,
       tem_roda_teto: true,
       // roupeiro vai até o teto → moldura de roda-teto
@@ -5295,6 +5297,7 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
       const r = gerarLayoutDormitorio(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
+        tipo_divisoria: prefs.tipo_divisoria,
         paredes: prefs.paredes
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
@@ -5303,6 +5306,7 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
       const r = gerarLayoutCloset(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
+        tipo_divisoria: prefs.tipo_divisoria,
         paredes: prefs.paredes
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
