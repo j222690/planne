@@ -1940,7 +1940,7 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
       {moduloVista3D !== null && data.projeto.modulos[moduloVista3D] && (() => {
         type ModuloBruto = {
           nome_display?: string; nome?: string; largura_cm: number; altura_cm: number; profundidade_cm: number;
-          posicao_x_cm?: number; posicao_y_cm?: number;
+          posicao_x_cm?: number; posicao_y_cm?: number; parede?: "top" | "bottom" | "left" | "right";
           configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
           material_corpo?: { cor_hex?: string };
         };
@@ -1957,9 +1957,10 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
               <VistaExplodida3D
                 modulos={brutos.map((m) => ({
                   largura_cm: m.largura_cm, altura_cm: m.altura_cm, profundidade_cm: m.profundidade_cm,
-                  posicao_x_cm: m.posicao_x_cm ?? 0, posicao_y_cm: m.posicao_y_cm ?? 0,
+                  posicao_x_cm: m.posicao_x_cm ?? 0, posicao_y_cm: m.posicao_y_cm ?? 0, parede: m.parede,
                   configuracao: m.configuracao ?? {}, nome_display: m.nome_display ?? m.nome,
                 }))}
+                medidas={{ largura_cm: medidas.largura * 100, profundidade_cm: medidas.profundidade * 100 }}
                 corHex={primeiroMaterial?.cor_hex ?? "#f2f0eb"}
                 moduloFocoInicial={moduloVista3D}
               />

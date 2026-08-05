@@ -86,7 +86,7 @@ describe("calcularVistaExplodida", () => {
 });
 
 describe("calcularCenaCompleta", () => {
-  test("2 módulos lado a lado ficam com centros em X diferentes, na ordem certa", () => {
+  test("2 módulos lado a lado (parede top) ficam com centros de grupo em X diferentes, na ordem certa", () => {
     const cena = calcularCenaCompleta([
       {
         largura_cm: 60,
@@ -108,12 +108,10 @@ describe("calcularCenaCompleta", () => {
       },
     ]);
     expect(cena).toHaveLength(2);
-    expect(cena[0].origemX).toBe(0);
-    expect(cena[1].origemX).toBeCloseTo(0.6);
-    // o módulo B (à direita) tem todas as peças com X maior que o A
-    const maxXA = Math.max(...cena[0].pecas.map((p) => p.posicao[0]));
-    const minXB = Math.min(...cena[1].pecas.map((p) => p.posicao[0]));
-    expect(minXB).toBeGreaterThan(maxXA);
+    expect(cena[0].grupoRotacaoY).toBe(0); // parede "top" (default) = sem rotação
+    expect(cena[0].grupoPosicao[0]).toBeCloseTo(0.3); // centro do módulo A (60cm largura)
+    expect(cena[1].grupoPosicao[0]).toBeCloseTo(1.0); // 0.6 + 0.8/2
+    expect(cena[1].grupoPosicao[0]).toBeGreaterThan(cena[0].grupoPosicao[0]);
   });
 
   test("módulo aéreo (posicao_y_cm ≥ 100) fica mais alto que módulo de piso", () => {
@@ -135,9 +133,7 @@ describe("calcularCenaCompleta", () => {
         posicao_y_cm: 150,
       },
     ]);
-    const baseY = cena[0].pecas.find((p) => p.tipo === "base")!.posicao[1];
-    const aereoY = cena[1].pecas.find((p) => p.tipo === "base")!.posicao[1];
-    expect(aereoY).toBeGreaterThan(baseY);
+    expect(cena[1].grupoPosicao[1]).toBeGreaterThan(cena[0].grupoPosicao[1]);
   });
 
   test("ids das peças ficam únicos entre módulos (prefixados por módulo)", () => {
@@ -161,5 +157,55 @@ describe("calcularCenaCompleta", () => {
     ]);
     const todosIds = cena.flatMap((m) => m.pecas.map((p) => p.id));
     expect(new Set(todosIds).size).toBe(todosIds.length);
+  });
+
+  test("cozinha em L: módulo na parede 'left' fica rotacionado 90° e encostado em X=0", () => {
+    const cena = calcularCenaCompleta(
+      [
+        {
+          largura_cm: 60,
+          altura_cm: 72,
+          profundidade_cm: 55,
+          configuracao: { num_portas: 2 },
+          posicao_x_cm: 0,
+          posicao_y_cm: 0,
+          parede: "top",
+        },
+        {
+          largura_cm: 60,
+          altura_cm: 72,
+          profundidade_cm: 55,
+          configuracao: { num_portas: 2 },
+          posicao_x_cm: 55,
+          posicao_y_cm: 0,
+          parede: "left",
+        },
+      ],
+      { largura_cm: 300, profundidade_cm: 300 },
+    );
+    expect(cena[1].grupoRotacaoY).toBeCloseTo(Math.PI / 2);
+    // encostado na parede esquerda: X do grupo = metade da profundidade do módulo
+    expect(cena[1].grupoPosicao[0]).toBeCloseTo(0.275); // 0.55/2
+    // avança pela parede em Z (não em X, que é fixo pela parede)
+    expect(cena[1].grupoPosicao[2]).toBeCloseTo(0.55 + 0.3); // posicao_x_cm/100 + L/2
+  });
+
+  test("cozinha em U: módulo na parede 'right' fica rotacionado -90° e encostado na parede oposta", () => {
+    const cena = calcularCenaCompleta(
+      [
+        {
+          largura_cm: 60,
+          altura_cm: 72,
+          profundidade_cm: 55,
+          configuracao: { num_portas: 2 },
+          posicao_x_cm: 0,
+          posicao_y_cm: 0,
+          parede: "right",
+        },
+      ],
+      { largura_cm: 300, profundidade_cm: 300 },
+    );
+    expect(cena[0].grupoRotacaoY).toBeCloseTo(-Math.PI / 2);
+    expect(cena[0].grupoPosicao[0]).toBeCloseTo(3 - 0.275); // largura_amb - P/2
   });
 });

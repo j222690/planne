@@ -46,21 +46,28 @@ export interface ModuloParaVista3D {
   configuracao: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
 }
 
+export type ParedeId = "top" | "bottom" | "left" | "right";
+
 /** Módulo posicionado na parede — pra compor a cena inteira (calcularCenaCompleta). */
 export interface ModuloComPosicao extends ModuloParaVista3D {
   posicao_x_cm: number;
   /** ≥100 = aéreo (o motor usa esse limiar pra distinguir aéreo de base/piso). */
   posicao_y_cm: number;
+  /** Default "top" — cozinha linear (parede única). */
+  parede?: ParedeId;
   nome_display?: string;
 }
 
 export interface ModuloNaCena {
   moduloIndex: number;
   nome: string;
+  /** Peças em coordenadas LOCAIS do módulo (não rotacionadas/transladadas) —
+   * aplicar grupoPosicao/grupoRotacaoY (ex.: <group position rotation>) pra
+   * chegar na posição final na cena. Deixa o Three.js fazer a rotação. */
   pecas: PecaVisual3D[];
-  /** Bounding box global do módulo (m) — útil pra enquadrar a câmera. */
-  origemX: number;
-  larguraM: number;
+  grupoPosicao: [number, number, number];
+  /** Rotação em Y (radianos) — 0 pra parede "top", conforme a parede do módulo. */
+  grupoRotacaoY: number;
 }
 
 const T = 0.018; // espessura do painel (m) — mesma constante do render-worker
@@ -196,31 +203,61 @@ export function calcularVistaExplodida(modulo: ModuloParaVista3D): PecaVisual3D[
 }
 
 /**
- * Posiciona vários módulos ao longo da parede (mesma regra do render-worker:
- * X = posicao_x_cm, aéreo sobe pra PISO_AEREO, piso sobe pelo RODAPE) — MVP
- * de parede única (cozinha_linear), igual ao worker Blender hoje.
+ * Posiciona vários módulos na(s) parede(s) do ambiente — X = posicao_x_cm
+ * (distância do canto inicial da parede), aéreo sobe pra PISO_AEREO, piso
+ * sobe pelo RODAPE (mesmas regras do render-worker). Suporta L/U: cada
+ * módulo carrega sua `parede`, e a posição/rotação do grupo é calculada pra
+ * encostar o fundo do módulo na parede certa, com a frente voltada pro
+ * ambiente — a rotação em si fica por conta do Three.js (<group rotation>),
+ * as peças continuam em coordenadas locais.
+ *
+ * `medidas` = dimensões do ambiente (cm) — necessário só quando há módulos
+ * nas paredes "bottom" (frente) ou "right" (precisa saber onde é o fim da
+ * parede oposta). Módulos só em "top"/"left" funcionam sem isso.
  */
-export function calcularCenaCompleta(modulos: ModuloComPosicao[]): ModuloNaCena[] {
+export function calcularCenaCompleta(
+  modulos: ModuloComPosicao[],
+  medidas?: { largura_cm: number; profundidade_cm: number },
+): ModuloNaCena[] {
+  const larguraAmb = (medidas?.largura_cm ?? 0) / 100;
+  const profundidadeAmb = (medidas?.profundidade_cm ?? 0) / 100;
+
   return modulos.map((m, moduloIndex) => {
-    const x0 = m.posicao_x_cm / 100;
+    const px = m.posicao_x_cm / 100;
     const aereo = m.posicao_y_cm >= 100;
     const y0 = aereo ? PISO_AEREO : RODAPE;
     const L = m.largura_cm / 100;
-    const cx = x0 + L / 2;
+    const P = m.profundidade_cm / 100;
+    const parede = m.parede ?? "top";
 
-    const locais = calcularVistaExplodida(m);
-    const pecas = locais.map((p) => ({
-      ...p,
-      id: `m${moduloIndex}_${p.id}`,
-      posicao: [p.posicao[0] + cx, p.posicao[1] + y0, p.posicao[2]] as [number, number, number],
-    }));
+    let grupoPosicao: [number, number, number];
+    let grupoRotacaoY: number;
+    switch (parede) {
+      case "bottom":
+        grupoRotacaoY = Math.PI;
+        grupoPosicao = [px + L / 2, y0, profundidadeAmb - P / 2];
+        break;
+      case "left":
+        grupoRotacaoY = Math.PI / 2;
+        grupoPosicao = [P / 2, y0, px + L / 2];
+        break;
+      case "right":
+        grupoRotacaoY = -Math.PI / 2;
+        grupoPosicao = [larguraAmb - P / 2, y0, px + L / 2];
+        break;
+      default: // "top"
+        grupoRotacaoY = 0;
+        grupoPosicao = [px + L / 2, y0, P / 2];
+    }
+
+    const pecas = calcularVistaExplodida(m).map((p) => ({ ...p, id: `m${moduloIndex}_${p.id}` }));
 
     return {
       moduloIndex,
       nome: m.nome_display ?? `Módulo ${moduloIndex + 1}`,
       pecas,
-      origemX: x0,
-      larguraM: L,
+      grupoPosicao,
+      grupoRotacaoY,
     };
   });
 }
