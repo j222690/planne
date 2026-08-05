@@ -2502,6 +2502,8 @@ function MotorResultadoPainel({
   ehCozinha,
   medidas,
   projetoId,
+  onExportarGuilhotina,
+  exportandoGuilhotina,
 }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
@@ -2511,6 +2513,9 @@ function MotorResultadoPainel({
   ehCozinha: boolean;
   medidas: { largura: number; profundidade: number; altura: number };
   projetoId?: string | null;
+  /** Sequência de corte guilhotina (serra reta) — recalcula e baixa um .txt. */
+  onExportarGuilhotina?: () => void;
+  exportandoGuilhotina?: boolean;
 }) {
   const [renderJob, setRenderJob] = useState<{
     status: "pending" | "processing" | "completed" | "error";
@@ -2813,6 +2818,17 @@ function MotorResultadoPainel({
             >
               <Download className="size-3" /> DXF
             </button>
+            {onExportarGuilhotina && (
+              <button
+                type="button"
+                disabled={!!exportandoGuilhotina}
+                onClick={onExportarGuilhotina}
+                title="Sequência de cortes retos — compatível com serra reta/seccionadora (Giben, Holzma etc.)"
+                className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                <Scissors className="size-3" /> {exportandoGuilhotina ? "Gerando…" : "Serra reta"}
+              </button>
+            )}
           </div>
         </div>
         <div className="rounded-md border border-border p-2.5">
@@ -2966,6 +2982,68 @@ function Step4Layout({
 
   const tipoLayoutMotor = AMBIENTE_TO_LAYOUT[wizard.form.ambiente];
 
+  // Corpo do request ao motor — compartilhado entre a geração principal e
+  // exportações que precisam recalcular com uma opção extra (ex.: nesting
+  // guilhotina), sem duplicar a montagem de preferências/medidas/custos.
+  const montarPayloadMotor = (extra: Record<string, unknown> = {}) => ({
+    action: "gerar",
+    tipo_layout: wizard.form.ambiente === "Cozinha" ? motorLayoutCozinha : tipoLayoutMotor,
+    // Custos reais da empresa: mão de obra, preço de chapa e dimensões.
+    // mao_obra_hora escala todos os valores-hora por etapa proporcionalmente.
+    config_custo: (() => {
+      const f = (empresaParams.mao_obra_hora || 45) / 45;
+      return {
+        ...(Math.abs(f - 1) >= 0.01
+          ? {
+              valor_hora_corte: 45 * f,
+              valor_hora_bordagem: 40 * f,
+              valor_hora_usinagem: 50 * f,
+              valor_hora_montagem: 55 * f,
+              valor_hora_acabamento: 60 * f,
+              valor_hora_instalacao: 65 * f,
+            }
+          : {}),
+        preco_chapa_mdf_15: empresaParams.mdf_custo_chapa,
+        preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
+        chapa_largura_mm: empresaParams.chapa_largura_mm,
+        chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
+        preco_fita_borda_metro: empresaParams.custo_fita_metro,
+        custo_fixo_diario: empresaParams.custo_fixo_diario,
+      };
+    })(),
+    // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real
+    // (paredes/portas/janelas) — a Rule Engine respeita as aberturas. Caso
+    // contrário, cai para as medidas manuais (retângulo).
+    ...(wizard.ambienteGeometrico
+      ? { ambiente_geometrico: wizard.ambienteGeometrico }
+      : {
+          medidas: {
+            largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
+            profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
+            altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
+            porta_parede: wizard.form.porta_parede,
+            janelas_paredes: wizard.form.janelas,
+          },
+        }),
+    preferencias: {
+      parede_principal: motorParede,
+      cor_mdf_hex: wizard.form.cor_mdf,
+      ferragem: motorFerragem,
+      tipo_porta_base: motorTipoPorta,
+      tipo_porta_aereo: "dobradica",
+      tipo_porta: motorTipoPorta,
+      tipo_divisoria: motorTipoDivisoria,
+      espessura_padrao_mm: motorEspessura,
+      versao_comercial: "intermediaria",
+      acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
+      com_torre_forno: comTorreForno,
+      com_cooktop: comCooktop,
+      com_porta_temperos: comPortaTemperos,
+      tampo_pedra: tampoPedra,
+    },
+    ...extra,
+  });
+
   // Gera o projeto fabricável pelo motor determinístico (protagonista do fluxo)
   const gerarMotor = useCallback(async () => {
     if (!tipoLayoutMotor) return;
@@ -2974,63 +3052,7 @@ function Step4Layout({
       const res = await fetch("/api/motor?action=gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "gerar",
-          tipo_layout: wizard.form.ambiente === "Cozinha" ? motorLayoutCozinha : tipoLayoutMotor,
-          // Custos reais da empresa: mão de obra, preço de chapa e dimensões.
-          // mao_obra_hora escala todos os valores-hora por etapa proporcionalmente.
-          config_custo: (() => {
-            const f = (empresaParams.mao_obra_hora || 45) / 45;
-            return {
-              ...(Math.abs(f - 1) >= 0.01
-                ? {
-                    valor_hora_corte: 45 * f,
-                    valor_hora_bordagem: 40 * f,
-                    valor_hora_usinagem: 50 * f,
-                    valor_hora_montagem: 55 * f,
-                    valor_hora_acabamento: 60 * f,
-                    valor_hora_instalacao: 65 * f,
-                  }
-                : {}),
-              preco_chapa_mdf_15: empresaParams.mdf_custo_chapa,
-              preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
-              chapa_largura_mm: empresaParams.chapa_largura_mm,
-              chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
-              preco_fita_borda_metro: empresaParams.custo_fita_metro,
-              custo_fixo_diario: empresaParams.custo_fixo_diario,
-            };
-          })(),
-          // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real
-          // (paredes/portas/janelas) — a Rule Engine respeita as aberturas. Caso
-          // contrário, cai para as medidas manuais (retângulo).
-          ...(wizard.ambienteGeometrico
-            ? { ambiente_geometrico: wizard.ambienteGeometrico }
-            : {
-                medidas: {
-                  largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
-                  profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
-                  altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
-                  porta_parede: wizard.form.porta_parede,
-                  janelas_paredes: wizard.form.janelas,
-                },
-              }),
-          preferencias: {
-            parede_principal: motorParede,
-            cor_mdf_hex: wizard.form.cor_mdf,
-            ferragem: motorFerragem,
-            tipo_porta_base: motorTipoPorta,
-            tipo_porta_aereo: "dobradica",
-            tipo_porta: motorTipoPorta,
-            tipo_divisoria: motorTipoDivisoria,
-            espessura_padrao_mm: motorEspessura,
-            versao_comercial: "intermediaria",
-            acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
-            com_torre_forno: comTorreForno,
-            com_cooktop: comCooktop,
-            com_porta_temperos: comPortaTemperos,
-            tampo_pedra: tampoPedra,
-          },
-        }),
+        body: JSON.stringify(montarPayloadMotor()),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
       const data = (await res.json()) as MotorResultado;
@@ -3090,6 +3112,42 @@ function Step4Layout({
     tampoPedra,
     empresaParams,
   ]);
+
+  // Exporta a sequência de corte guilhotina (compatível com serra reta —
+  // Giben, Holzma, seccionadora manual) — recalcula com a opção extra em vez
+  // de guardar no wizard.motorResultado (é uma exportação auxiliar, não o
+  // resultado principal do nesting CNC livre).
+  const [gerandoGuilhotina, setGerandoGuilhotina] = useState(false);
+  // Handler de clique simples (não useCallback): precisa sempre da closure
+  // atual de montarPayloadMotor (preferências correntes), não de uma travada
+  // na criação — não é dependência de efeito, então não precisa memoizar.
+  const handleExportarGuilhotina = async () => {
+    if (!tipoLayoutMotor) return;
+    setGerandoGuilhotina(true);
+    try {
+      const res = await fetch("/api/motor?action=gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(montarPayloadMotor({ incluir_nesting_guilhotina: true })),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
+      const data = (await res.json()) as MotorResultado & {
+        plano_corte_guilhotina?: { resumo: { total_chapas: number; desperdicio_pct: number } };
+        sequencia_corte_checklist?: string;
+      };
+      if (!data.sequencia_corte_checklist || !data.plano_corte_guilhotina) {
+        throw new Error("Motor não retornou a sequência de corte guilhotina.");
+      }
+      baixarArquivo(data.sequencia_corte_checklist, "sequencia-corte-guilhotina.txt", "text/plain");
+      toast.success(
+        `Sequência de corte gerada · ${data.plano_corte_guilhotina.resumo.total_chapas} chapas · ${data.plano_corte_guilhotina.resumo.desperdicio_pct}% desperdício`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar sequência de corte guilhotina");
+    } finally {
+      setGerandoGuilhotina(false);
+    }
+  };
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
@@ -3428,6 +3486,8 @@ function Step4Layout({
                 altura: parseFloat(wizard.form.altura) || 2.7,
               }}
               projetoId={wizard.projetoId}
+              onExportarGuilhotina={handleExportarGuilhotina}
+              exportandoGuilhotina={gerandoGuilhotina}
             />
           ) : (
             <div className="text-[12.5px] text-muted-foreground py-6 text-center">

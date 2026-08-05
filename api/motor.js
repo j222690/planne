@@ -4587,6 +4587,231 @@ function gerarSvgChapa(numero, material, largura_mm, comprimento_mm, pecas) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" stroke="#000" stroke-width="1"/>` + rects + `<text x="4" y="10" font-size="7" fill="#666">Chapa ${numero} \u2014 ${material.nome_display}</text></svg>`;
 }
 
+// src/lib/motor-parametrico/nesting-guilhotina.ts
+var GuillotineBin = class {
+  largura;
+  altura;
+  livres;
+  colocacoes = [];
+  cortes = [];
+  ordemCorte = 0;
+  constructor(largura, altura) {
+    this.largura = largura;
+    this.altura = altura;
+    this.livres = [{
+      x: MARGEM_CHAPA_MM,
+      y: MARGEM_CHAPA_MM,
+      w: largura - 2 * MARGEM_CHAPA_MM,
+      h: altura - 2 * MARGEM_CHAPA_MM
+    }];
+  }
+  inserir(peca) {
+    const escolha = this.melhorPosicao(peca);
+    if (!escolha) return false;
+    this.colocar(escolha);
+    return true;
+  }
+  /** Best Area Fit: escolhe o menor retângulo livre onde a peça cabe. */
+  melhorPosicao(peca) {
+    let melhor = null;
+    let melhorArea = Infinity;
+    this.livres.forEach((livre, idx) => {
+      if (peca.w <= livre.w && peca.h <= livre.h) {
+        const area = livre.w * livre.h;
+        if (area < melhorArea) {
+          melhorArea = area;
+          melhor = { peca, x: livre.x, y: livre.y, w: peca.w, h: peca.h, rotacionada: false, livreIdx: idx };
+        }
+      }
+      if (peca.pode_rotacionar && peca.h <= livre.w && peca.w <= livre.h) {
+        const area = livre.w * livre.h;
+        if (area < melhorArea) {
+          melhorArea = area;
+          melhor = { peca, x: livre.x, y: livre.y, w: peca.h, h: peca.w, rotacionada: true, livreIdx: idx };
+        }
+      }
+    });
+    return melhor;
+  }
+  /**
+   * Coloca a peça no retângulo livre e divide o restante em 2 via UM corte
+   * reto — heurística "shorter leftover axis": corta no eixo que sobra menos,
+   * deixando o maior retângulo contíguo pra próximas peças.
+   */
+  colocar(c) {
+    const livre = this.livres[c.livreIdx];
+    this.livres.splice(c.livreIdx, 1);
+    const sobraDireita = livre.w - c.w;
+    const sobraCima = livre.h - c.h;
+    if (sobraDireita === 0 && sobraCima === 0) {
+    } else if (sobraDireita <= sobraCima) {
+      this.registrarCorte("horizontal", livre.y + c.h, livre);
+      if (sobraCima > 0) this.livres.push({ x: livre.x, y: livre.y + c.h, w: livre.w, h: sobraCima });
+      if (sobraDireita > 0) {
+        this.registrarCorte("vertical", livre.x + c.w, { x: livre.x, y: livre.y, w: livre.w, h: c.h });
+        this.livres.push({ x: livre.x + c.w, y: livre.y, w: sobraDireita, h: c.h });
+      }
+    } else {
+      this.registrarCorte("vertical", livre.x + c.w, livre);
+      if (sobraDireita > 0) this.livres.push({ x: livre.x + c.w, y: livre.y, w: sobraDireita, h: livre.h });
+      if (sobraCima > 0) {
+        this.registrarCorte("horizontal", livre.y + c.h, { x: livre.x, y: livre.y, w: c.w, h: livre.h });
+        this.livres.push({ x: livre.x, y: livre.y + c.h, w: c.w, h: sobraCima });
+      }
+    }
+    this.livres = this.livres.filter((r) => r.w > 1 && r.h > 1);
+    this.colocacoes.push(c);
+  }
+  registrarCorte(eixo, posicao_mm, sobre) {
+    this.cortes.push({ ordem: this.ordemCorte++, eixo, posicao_mm, sobre });
+  }
+};
+var NAO_CHAPA2 = /vidro|espelho|maci/i;
+function prepararPorMaterial2(pecas) {
+  const grupos = /* @__PURE__ */ new Map();
+  for (const p of pecas) {
+    if (NAO_CHAPA2.test(p.material.nome_display)) continue;
+    const chave = `${p.material.id}|${p.espessura_mm}`;
+    const grupo = grupos.get(chave) ?? { material: p.material, itens: [] };
+    const podeRotacionar = p.direcao_fio === "indiferente";
+    for (let i = 0; i < p.quantidade; i++) {
+      grupo.itens.push({
+        peca_id: `${p.id}#${i}`,
+        w: p.largura_mm + KERF_MM,
+        h: p.comprimento_mm + KERF_MM,
+        w_real: p.largura_mm,
+        h_real: p.comprimento_mm,
+        pode_rotacionar: podeRotacionar,
+        etiqueta: p.etiqueta_producao,
+        direcao_fio: p.direcao_fio,
+        fita_borda: p.fita_borda
+      });
+    }
+    grupos.set(chave, grupo);
+  }
+  return grupos;
+}
+function gerarPlanoNestingGuilhotina(pecas, metrosFitaTotal = 0, opcoes = {}) {
+  const grupos = prepararPorMaterial2(pecas);
+  const chapas = [];
+  const cortesPorChapa = {};
+  let numeroChapa = 0;
+  for (const { material, itens } of grupos.values()) {
+    itens.sort((a, b) => b.w * b.h - a.w * a.h);
+    const larguraChapa = material.largura_chapa_mm;
+    const alturaChapa = material.comprimento_chapa_mm;
+    let pendentes = [...itens];
+    while (pendentes.length > 0) {
+      const bin = new GuillotineBin(larguraChapa, alturaChapa);
+      const naoCabe = [];
+      for (const peca of pendentes) {
+        if ((peca.w > larguraChapa - 2 * MARGEM_CHAPA_MM || peca.h > alturaChapa - 2 * MARGEM_CHAPA_MM) && (peca.h > larguraChapa - 2 * MARGEM_CHAPA_MM || peca.w > alturaChapa - 2 * MARGEM_CHAPA_MM)) {
+          continue;
+        }
+        if (!bin.inserir(peca)) naoCabe.push(peca);
+      }
+      if (bin.colocacoes.length === 0) break;
+      const chapa = montarChapa2(++numeroChapa, material, bin, opcoes.com_svg !== false);
+      chapas.push(chapa);
+      cortesPorChapa[chapa.id] = bin.cortes;
+      pendentes = naoCabe;
+    }
+  }
+  return { plano: montarPlano2(chapas, metrosFitaTotal), cortes_por_chapa: cortesPorChapa };
+}
+function montarChapa2(numero, material, bin, comSvg) {
+  const pecas_alocadas = bin.colocacoes.map((c) => ({
+    peca_id: c.peca.peca_id,
+    x_mm: c.x,
+    y_mm: c.y,
+    largura_mm: c.rotacionada ? c.peca.h_real : c.peca.w_real,
+    comprimento_mm: c.rotacionada ? c.peca.w_real : c.peca.h_real,
+    rotacionada: c.rotacionada,
+    etiqueta: c.peca.etiqueta,
+    direcao_fio: c.peca.direcao_fio,
+    fita_borda: c.peca.fita_borda
+  }));
+  const areaChapa = bin.largura * bin.altura;
+  const areaUtil = pecas_alocadas.reduce((s, p) => s + p.largura_mm * p.comprimento_mm, 0);
+  const eficiencia = Math.round(areaUtil / areaChapa * 1e3) / 10;
+  return {
+    id: `chapa_g_${numero}`,
+    numero_sequencial: numero,
+    material,
+    largura_mm: bin.largura,
+    comprimento_mm: bin.altura,
+    pecas_alocadas,
+    area_util_mm2: Math.round(areaUtil),
+    area_desperdicada_mm2: Math.round(areaChapa - areaUtil),
+    eficiencia_pct: eficiencia,
+    svg_layout: comSvg ? gerarSvgChapa(numero, material, bin.largura, bin.altura, pecas_alocadas) : ""
+  };
+}
+function montarPlano2(chapas, metrosFitaTotal) {
+  const totalPecas = chapas.reduce((s, c) => s + c.pecas_alocadas.length, 0);
+  const areaUtil = chapas.reduce((s, c) => s + c.area_util_mm2, 0);
+  const areaTotal = chapas.reduce((s, c) => s + c.largura_mm * c.comprimento_mm, 0);
+  const areaDesperdicada = areaTotal - areaUtil;
+  const desperdicioPct = areaTotal > 0 ? Math.round(areaDesperdicada / areaTotal * 1e3) / 10 : 0;
+  return {
+    algoritmo: "guillotine",
+    chapas,
+    resumo: {
+      total_pecas: totalPecas,
+      total_chapas: chapas.length,
+      area_util_total_m2: Math.round(areaUtil / 1e6 * 100) / 100,
+      area_desperdicada_m2: Math.round(areaDesperdicada / 1e6 * 100) / 100,
+      desperdicio_pct: desperdicioPct,
+      metros_fita_total: Math.round(metrosFitaTotal * 10) / 10
+    },
+    exportacoes: {
+      csv_operador: ""
+    },
+    calculado_em: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+
+// src/lib/motor-parametrico/exportacao-guilhotina.ts
+function gerarSequenciaCorteTexto(chapas, cortesPorChapa) {
+  const linhas = [
+    "Chapa;Material;Corte N\xBA;Eixo;Posi\xE7\xE3o (mm);Ret\xE2ngulo cortado (LxA mm, x,y)"
+  ];
+  chapas.forEach((chapa) => {
+    const cortes = cortesPorChapa[chapa.id] ?? [];
+    cortes.forEach((c) => {
+      const eixoLabel = c.eixo === "vertical" ? "Vertical (guilhotina)" : "Horizontal (transversal)";
+      const retangulo2 = `${Math.round(c.sobre.w)}x${Math.round(c.sobre.h)} @ (${Math.round(c.sobre.x)},${Math.round(c.sobre.y)})`;
+      linhas.push(
+        [
+          chapa.numero_sequencial,
+          chapa.material.nome_display,
+          c.ordem + 1,
+          eixoLabel,
+          Math.round(c.posicao_mm),
+          retangulo2
+        ].join(";")
+      );
+    });
+  });
+  return linhas.join("\n");
+}
+function gerarSequenciaCorteChecklist(chapas, cortesPorChapa) {
+  const blocos = [];
+  chapas.forEach((chapa) => {
+    const cortes = cortesPorChapa[chapa.id] ?? [];
+    const linhas = [
+      `CHAPA ${chapa.numero_sequencial} \u2014 ${chapa.material.nome_display} (${chapa.largura_mm}\xD7${chapa.comprimento_mm}mm)`,
+      `${cortes.length} corte(s) reto(s) em sequ\xEAncia:`,
+      ...cortes.map((c, i) => {
+        const dir = c.eixo === "vertical" ? "corte VERTICAL (de cima a baixo)" : "corte HORIZONTAL (de lado a lado)";
+        return `  ${i + 1}. ${dir} a ${Math.round(c.posicao_mm)}mm, no peda\xE7o de ${Math.round(c.sobre.w)}\xD7${Math.round(c.sobre.h)}mm`;
+      })
+    ];
+    blocos.push(linhas.join("\n"));
+  });
+  return blocos.join("\n\n");
+}
+
 // src/lib/motor-parametrico/exportacao-corte.ts
 function gerarCSVCorte(plano) {
   const sep = ";";
@@ -5324,6 +5549,15 @@ async function gerarHandler(req, res) {
     const todasPecas = resultado.projeto.modulos.flatMap((m) => m.pecas);
     const planoBruto = gerarPlanoNesting(todasPecas, resultado.projeto.metricas.metros_fita_borda);
     const { plano: plano_corte, exportacoes: exportacoes_corte } = gerarExportacoes(planoBruto, resultado.projeto.id);
+    let plano_corte_guilhotina;
+    let sequencia_corte_texto;
+    let sequencia_corte_checklist;
+    if (body.incluir_nesting_guilhotina) {
+      const g = gerarPlanoNestingGuilhotina(todasPecas, resultado.projeto.metricas.metros_fita_borda);
+      plano_corte_guilhotina = g.plano;
+      sequencia_corte_texto = gerarSequenciaCorteTexto(g.plano.chapas, g.cortes_por_chapa);
+      sequencia_corte_checklist = gerarSequenciaCorteChecklist(g.plano.chapas, g.cortes_por_chapa);
+    }
     const lista_compras = gerarListaCompras(resultado.projeto);
     const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
     const analise_tecnica = analisarProjeto(resultado.projeto);
@@ -5341,6 +5575,8 @@ async function gerarHandler(req, res) {
       // Plano de corte com nesting MaxRects + exportações (Fase 8)
       plano_corte,
       exportacoes_corte,
+      // Plano de corte guilhotina (opt-in) — compatível com serra reta
+      ...plano_corte_guilhotina ? { plano_corte_guilhotina, sequencia_corte_texto, sequencia_corte_checklist } : {},
       // PCP: cronograma + etapas + lista de compras (Fase 9)
       pcp: {
         numero: pcpResultado.ordem.numero,

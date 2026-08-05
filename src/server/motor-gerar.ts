@@ -32,6 +32,8 @@ import { gerarEngenharia } from "../lib/motor-parametrico/engenharia";
 import { gerarTresVersoes, CONFIG_CUSTO_PADRAO } from "../lib/motor-parametrico/orcamento-inteligente";
 import type { ConfiguracaoCusto } from "../lib/motor-parametrico/orcamento-inteligente";
 import { gerarPlanoNesting } from "../lib/motor-parametrico/nesting";
+import { gerarPlanoNestingGuilhotina } from "../lib/motor-parametrico/nesting-guilhotina";
+import { gerarSequenciaCorteTexto, gerarSequenciaCorteChecklist } from "../lib/motor-parametrico/exportacao-guilhotina";
 import { gerarExportacoes } from "../lib/motor-parametrico/exportacao-corte";
 import { gerarOrdemProducao } from "../lib/motor-parametrico/pcp";
 import { gerarListaCompras } from "../lib/motor-parametrico/engenharia";
@@ -51,6 +53,13 @@ interface RequestBody {
   // 3.5: custos reais da empresa (valores-hora, overhead, etc.). Merge com os
   // padrões de mercado; só os campos enviados sobrescrevem.
   config_custo?: Partial<ConfiguracaoCusto>;
+
+  /**
+   * Também gera o plano de corte guilhotina (compatível com serra reta —
+   * Giben, Holzma, seccionadora manual). Opt-in: mais lento e normalmente
+   * desnecessário (o MaxRects padrão já cobre corte CNC livre).
+   */
+  incluir_nesting_guilhotina?: boolean;
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
   ambiente_geometrico?: AmbienteGeometrico;
@@ -239,6 +248,20 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
     const planoBruto = gerarPlanoNesting(todasPecas, resultado.projeto.metricas.metros_fita_borda);
     const { plano: plano_corte, exportacoes: exportacoes_corte } = gerarExportacoes(planoBruto, resultado.projeto.id);
 
+    // 7.1: nesting guilhotina (opt-in) — compatível com serra reta/seccionadora.
+    // Formato de máquina específico (Giben .AC, INMES, SCM) não é gerado aqui —
+    // exige arquivo de exemplo real da máquina pra confirmar a especificação
+    // exata; o que dá pra garantir sem isso é a sequência de cortes retos.
+    let plano_corte_guilhotina: ReturnType<typeof gerarPlanoNestingGuilhotina>["plano"] | undefined;
+    let sequencia_corte_texto: string | undefined;
+    let sequencia_corte_checklist: string | undefined;
+    if (body.incluir_nesting_guilhotina) {
+      const g = gerarPlanoNestingGuilhotina(todasPecas, resultado.projeto.metricas.metros_fita_borda);
+      plano_corte_guilhotina = g.plano;
+      sequencia_corte_texto = gerarSequenciaCorteTexto(g.plano.chapas, g.cortes_por_chapa);
+      sequencia_corte_checklist = gerarSequenciaCorteChecklist(g.plano.chapas, g.cortes_por_chapa);
+    }
+
     // 8. Gerar PCP (Fase 9): ordem de produção com cronograma + lista de compras
     const lista_compras = gerarListaCompras(resultado.projeto);
     const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
@@ -261,6 +284,8 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       // Plano de corte com nesting MaxRects + exportações (Fase 8)
       plano_corte,
       exportacoes_corte,
+      // Plano de corte guilhotina (opt-in) — compatível com serra reta
+      ...(plano_corte_guilhotina ? { plano_corte_guilhotina, sequencia_corte_texto, sequencia_corte_checklist } : {}),
       // PCP: cronograma + etapas + lista de compras (Fase 9)
       pcp: {
         numero: pcpResultado.ordem.numero,
