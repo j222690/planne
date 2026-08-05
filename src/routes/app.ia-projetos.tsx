@@ -2960,6 +2960,7 @@ function Step4Layout({
   const [acEngrosso, setAcEngrosso] = useState(empresaParams.acab_engrosso);
   const [comTorreForno, setComTorreForno] = useState(true);
   const [comCooktop, setComCooktop] = useState(true);
+  const [comPortaTemperos, setComPortaTemperos] = useState(false);
   const [tampoPedra, setTampoPedra] = useState(false);
   const navigateMotor = useNavigate();
 
@@ -3026,6 +3027,7 @@ function Step4Layout({
             acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
             com_torre_forno: comTorreForno,
             com_cooktop: comCooktop,
+            com_porta_temperos: comPortaTemperos,
             tampo_pedra: tampoPedra,
           },
         }),
@@ -3084,6 +3086,7 @@ function Step4Layout({
     acEngrosso,
     comTorreForno,
     comCooktop,
+    comPortaTemperos,
     tampoPedra,
     empresaParams,
   ]);
@@ -3122,6 +3125,7 @@ function Step4Layout({
     acEngrosso,
     comTorreForno,
     comCooktop,
+    comPortaTemperos,
     tampoPedra,
   ]);
 
@@ -4014,6 +4018,12 @@ function Step4Layout({
                               comCooktop,
                               setComCooktop,
                               "Módulo central com recorte de cooktop",
+                            ] as const,
+                            [
+                              "Porta-temperos",
+                              comPortaTemperos,
+                              setComPortaTemperos,
+                              "Módulo estreito (15cm) com cestos aramados deslizantes",
                             ] as const,
                             [
                               "Tampo de pedra",

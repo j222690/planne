@@ -849,6 +849,63 @@ function criarModuloTorreForno(largura_cm = 60) {
   };
 }
 var MODULO_TORRE_FORNO = criarModuloTorreForno(60);
+var PORTA_TEMPEROS_LARGURA_CM = 15;
+var regrasCestoAramado = [
+  {
+    tipo: "cesto_aramado_porta_temperos",
+    ativa_quando: () => true,
+    calcular_quantidade: () => 3,
+    descricao_tecnica: "3 cestos aramados deslizantes por m\xF3dulo porta-temperos"
+  }
+];
+function criarModuloPortaTemperos(largura_cm = PORTA_TEMPEROS_LARGURA_CM) {
+  return {
+    id: `porta_temperos_${largura_cm}`,
+    codigo: `porta_temperos_${largura_cm}`,
+    nome: `Porta-Temperos ${largura_cm}cm`,
+    versao: 1,
+    categorias: ["cozinha"],
+    tipo: "despenseiro",
+    largura: { min_cm: 15, max_cm: 20, padrao_cm: largura_cm, passo_cm: 5 },
+    altura: { min_cm: BASE_ALTURA_CM, max_cm: BASE_ALTURA_CM, padrao_cm: BASE_ALTURA_CM, passo_cm: 0 },
+    profundidade: { min_cm: BASE_PROFUNDIDADE_CM, max_cm: BASE_PROFUNDIDADE_CM, padrao_cm: BASE_PROFUNDIDADE_CM, passo_cm: 0 },
+    configuracao_padrao: {
+      ...cfgBase,
+      num_portas: 1,
+      num_prateleiras: 0,
+      // cestos aramados substituem prateleiras de MDF
+      tem_engrosso_tampo: true
+    },
+    limites: {
+      num_portas: { min: 1, max: 1 },
+      num_gavetas: { min: 0, max: 0 },
+      num_prateleiras: { min: 0, max: 0 },
+      tipos_porta_validos: ["dobradica"],
+      permite_espelho: false,
+      permite_iluminacao_led: false,
+      permite_ripado: false
+    },
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
+    regras_ferragens: [
+      ...regrasDobradica,
+      ...regrasPuxador,
+      ...regrasMinifix,
+      ...regrasPes,
+      ...regrasCestoAramado
+    ],
+    restricoes_placement: {
+      altura_piso_padrao_cm: 0,
+      folga_teto_min_cm: 0,
+      afastamento_lateral_cm: 0,
+      permite_sequencia: true
+    },
+    norma_referencia: "Porta-temperos: m\xF3dulo de nicho, cestos aramados deslizantes em vez de prateleira fixa",
+    altura_trabalho_cm: 90,
+    ativo: true,
+    publicado_em: "2026-08-05T00:00:00Z"
+  };
+}
+var MODULO_PORTA_TEMPEROS = criarModuloPortaTemperos(15);
 var MODULOS_BASE_COZINHA = [
   criarModuloBase(30),
   criarModuloBase(40),
@@ -1686,11 +1743,14 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
   const modulosBase = [];
   const modulosAereo = [];
   const modulosTorre = [];
+  const modulosPortaTemperos = [];
   let larguraOcupada = 0;
   let ordem = 0;
   for (const seg of segmentos) {
     const torreNesteSeg = preferencias.com_torre_forno !== false && seg === maiorSeg && seg.comprimento_cm >= TORRE_LARGURA_CM + 90;
-    const offset = torreNesteSeg ? TORRE_LARGURA_CM : 0;
+    const offsetTorre = torreNesteSeg ? TORRE_LARGURA_CM : 0;
+    const portaTemperosNesteSeg = preferencias.com_porta_temperos === true && seg === maiorSeg && seg.comprimento_cm >= offsetTorre + PORTA_TEMPEROS_LARGURA_CM + 90;
+    const offset = offsetTorre + (portaTemperosNesteSeg ? PORTA_TEMPEROS_LARGURA_CM : 0);
     const largurasBases = encaixarModulos(seg.comprimento_cm - offset);
     if (largurasBases.length === 0) continue;
     larguraOcupada += largurasBases.reduce((s, l) => s + l, 0);
@@ -1775,6 +1835,32 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       ordem += torre.length;
       modulosTorre.push(...torre);
     }
+    if (portaTemperosNesteSeg) {
+      const portaTemperos = instanciarModulos([PORTA_TEMPEROS_LARGURA_CM], {
+        parede: paredeId,
+        inicio_cm: seg.inicio_cm + offsetTorre,
+        posicao_y_cm: 0,
+        altura_cm: BASE_ALTURA_CM,
+        profundidade_cm: BASE_PROFUNDIDADE_CM,
+        prefixo: "porta_temperos",
+        materialCorpo,
+        materialFundo,
+        getTemplate: () => MODULO_PORTA_TEMPEROS,
+        templateFallback: MODULO_PORTA_TEMPEROS,
+        espessura_padrao_mm: preferencias.espessura_padrao_mm,
+        configDe: () => configPadrao({
+          tipo_porta: "dobradica",
+          ferragem: preferencias.ferragem,
+          num_portas: 1,
+          num_prateleiras: 0,
+          tem_engrosso_tampo: true
+        }),
+        rotuloParede: "Porta-temperos",
+        ordemInicial: ordem
+      });
+      ordem += portaTemperos.length;
+      modulosPortaTemperos.push(...portaTemperos);
+    }
   }
   const torreAtiva = modulosTorre.length > 0;
   if (preferencias.com_cooktop !== false && modulosBase.length > 0) {
@@ -1785,7 +1871,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     m.pecas = calcularPecas(m, tpl);
     m.nome_display = `${m.nome_display} (cooktop)`;
   }
-  const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
+  const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre, ...modulosPortaTemperos];
   const aproveitamento = larguraDisponivel > 0 ? Math.round(larguraOcupada / larguraDisponivel * 100) : 0;
   if (aproveitamento < 85 && modulosBase.length > 0) {
     avisos.push(
@@ -4060,7 +4146,8 @@ var PRECO_FERRAGEM_REF = {
   perfil_led_1m: 60,
   amortecedor_soft_close: 8,
   minifix_15mm: 0.8,
-  cavilha_8x30mm: 0.15
+  cavilha_8x30mm: 0.15,
+  cesto_aramado_porta_temperos: 65
 };
 var CONFIG_CUSTO_PADRAO = {
   valor_hora_corte: 45,
@@ -5377,6 +5464,7 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
         tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
         com_torre_forno: prefs.com_torre_forno,
         com_cooktop: prefs.com_cooktop,
+        com_porta_temperos: prefs.com_porta_temperos,
         tampo_pedra: prefs.tampo_pedra
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };

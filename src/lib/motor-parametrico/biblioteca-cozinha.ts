@@ -443,6 +443,74 @@ function criarModuloTorreForno(largura_cm = 60): ModuloParametrico {
 /** Template padrão de torre de forno (60cm). */
 export const MODULO_TORRE_FORNO: ModuloParametrico = criarModuloTorreForno(60);
 
+// ─── PORTA-TEMPEROS (armário estreito de cestos deslizantes) ──────────────────
+
+export const PORTA_TEMPEROS_LARGURA_CM = 15;
+
+const regrasCestoAramado: RegraFerragem[] = [
+  {
+    tipo: "cesto_aramado_porta_temperos",
+    ativa_quando: () => true,
+    calcular_quantidade: () => 3,
+    descricao_tecnica: "3 cestos aramados deslizantes por módulo porta-temperos",
+  },
+];
+
+/**
+ * Porta-temperos: armário base estreito (15cm) com 1 porta e cestos aramados
+ * (não prateleiras de MDF) para condimentos — item de nicho, comum em cozinhas
+ * planejadas BR. Mesma altura/profundidade do gabinete base.
+ */
+function criarModuloPortaTemperos(largura_cm = PORTA_TEMPEROS_LARGURA_CM): ModuloParametrico {
+  return {
+    id: `porta_temperos_${largura_cm}`,
+    codigo: `porta_temperos_${largura_cm}`,
+    nome: `Porta-Temperos ${largura_cm}cm`,
+    versao: 1,
+    categorias: ["cozinha"],
+    tipo: "despenseiro",
+    largura: { min_cm: 15, max_cm: 20, padrao_cm: largura_cm, passo_cm: 5 },
+    altura: { min_cm: BASE_ALTURA_CM, max_cm: BASE_ALTURA_CM, padrao_cm: BASE_ALTURA_CM, passo_cm: 0 },
+    profundidade: { min_cm: BASE_PROFUNDIDADE_CM, max_cm: BASE_PROFUNDIDADE_CM, padrao_cm: BASE_PROFUNDIDADE_CM, passo_cm: 0 },
+    configuracao_padrao: {
+      ...cfgBase,
+      num_portas: 1,
+      num_prateleiras: 0,   // cestos aramados substituem prateleiras de MDF
+      tem_engrosso_tampo: true,
+    },
+    limites: {
+      num_portas: { min: 1, max: 1 },
+      num_gavetas: { min: 0, max: 0 },
+      num_prateleiras: { min: 0, max: 0 },
+      tipos_porta_validos: ["dobradica"],
+      permite_espelho: false,
+      permite_iluminacao_led: false,
+      permite_ripado: false,
+    },
+    regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
+    regras_ferragens: [
+      ...regrasDobradica,
+      ...regrasPuxador,
+      ...regrasMinifix,
+      ...regrasPes,
+      ...regrasCestoAramado,
+    ],
+    restricoes_placement: {
+      altura_piso_padrao_cm: 0,
+      folga_teto_min_cm: 0,
+      afastamento_lateral_cm: 0,
+      permite_sequencia: true,
+    },
+    norma_referencia: "Porta-temperos: módulo de nicho, cestos aramados deslizantes em vez de prateleira fixa",
+    altura_trabalho_cm: 90,
+    ativo: true,
+    publicado_em: "2026-08-05T00:00:00Z",
+  };
+}
+
+/** Template padrão de porta-temperos (15cm). */
+export const MODULO_PORTA_TEMPEROS: ModuloParametrico = criarModuloPortaTemperos(15);
+
 // ─── BIBLIOTECAS EXPORTADAS ───────────────────────────────────────────────────
 
 /** Módulos base padrão para cozinha linear (larguras em cm). */

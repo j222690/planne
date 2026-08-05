@@ -83,6 +83,7 @@ interface RequestBody {
     com_gaveteiro?: boolean;
     com_torre_forno?: boolean;
     com_cooktop?: boolean;
+    com_porta_temperos?: boolean;
     tampo_pedra?: boolean;
     // Override de acabamentos por projeto (a marcenaria liga/desliga na tela).
     // Default: todos ligados (usa os padrões do motor).
@@ -405,6 +406,7 @@ function gerarLayout(
         tipo_porta_aereo: prefs.tipo_porta_aereo ?? "dobradica",
         com_torre_forno: prefs.com_torre_forno,
         com_cooktop: prefs.com_cooktop,
+        com_porta_temperos: prefs.com_porta_temperos,
         tampo_pedra: prefs.tampo_pedra,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };

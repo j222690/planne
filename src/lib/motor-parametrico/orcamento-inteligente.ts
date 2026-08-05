@@ -50,6 +50,7 @@ const PRECO_FERRAGEM_REF: Record<TipoFerragem, number> = {
   amortecedor_soft_close: 8.0,
   minifix_15mm: 0.8,
   cavilha_8x30mm: 0.15,
+  cesto_aramado_porta_temperos: 65.0,
 };
 
 // ─── CONFIGURAÇÃO DE CUSTO (por empresa) ──────────────────────────────────────

@@ -21,6 +21,8 @@ import {
   MODULOS_BASE_COZINHA,
   MODULOS_AEREOS_COZINHA,
   MODULO_TORRE_FORNO,
+  MODULO_PORTA_TEMPEROS,
+  PORTA_TEMPEROS_LARGURA_CM,
   getTemplateBase,
   getTemplateAereo,
   BASE_ALTURA_CM,
@@ -61,6 +63,8 @@ export interface PreferenciasCozinha {
   espessura_padrao_mm?: 15 | 18;
   /** Tampo de pedra (granito/quartzo) em vez de MDF. Default: false. */
   tampo_pedra?: boolean;
+  /** Inclui módulo porta-temperos (15cm, cestos aramados) quando houver espaço. Default: false (opt-in). */
+  com_porta_temperos?: boolean;
   criado_por?: string;
   empresa_id?: string;
   cliente_id?: string;
@@ -116,13 +120,17 @@ export function gerarLayoutCozinhaLinear(
   const modulosBase: ModuloInstanciado[] = [];
   const modulosAereo: ModuloInstanciado[] = [];
   const modulosTorre: ModuloInstanciado[] = [];
+  const modulosPortaTemperos: ModuloInstanciado[] = [];
   let larguraOcupada = 0;
   let ordem = 0;
 
   for (const seg of segmentos) {
     const torreNesteSeg = preferencias.com_torre_forno !== false
       && seg === maiorSeg && seg.comprimento_cm >= TORRE_LARGURA_CM + 90;
-    const offset = torreNesteSeg ? TORRE_LARGURA_CM : 0;
+    const offsetTorre = torreNesteSeg ? TORRE_LARGURA_CM : 0;
+    const portaTemperosNesteSeg = preferencias.com_porta_temperos === true
+      && seg === maiorSeg && seg.comprimento_cm >= offsetTorre + PORTA_TEMPEROS_LARGURA_CM + 90;
+    const offset = offsetTorre + (portaTemperosNesteSeg ? PORTA_TEMPEROS_LARGURA_CM : 0);
     const largurasBases = encaixarModulos(seg.comprimento_cm - offset);
     if (largurasBases.length === 0) continue;
     larguraOcupada += largurasBases.reduce((s, l) => s + l, 0);
@@ -214,6 +222,33 @@ export function gerarLayoutCozinhaLinear(
       ordem += torre.length;
       modulosTorre.push(...torre);
     }
+
+    if (portaTemperosNesteSeg) {
+      const portaTemperos = instanciarModulos([PORTA_TEMPEROS_LARGURA_CM], {
+        parede: paredeId,
+        inicio_cm: seg.inicio_cm + offsetTorre,
+        posicao_y_cm: 0,
+        altura_cm: BASE_ALTURA_CM,
+        profundidade_cm: BASE_PROFUNDIDADE_CM,
+        prefixo: "porta_temperos",
+        materialCorpo,
+        materialFundo,
+        getTemplate: () => MODULO_PORTA_TEMPEROS,
+        templateFallback: MODULO_PORTA_TEMPEROS,
+        espessura_padrao_mm: preferencias.espessura_padrao_mm,
+        configDe: () => configPadrao({
+          tipo_porta: "dobradica",
+          ferragem: preferencias.ferragem,
+          num_portas: 1,
+          num_prateleiras: 0,
+          tem_engrosso_tampo: true,
+        }),
+        rotuloParede: "Porta-temperos",
+        ordemInicial: ordem,
+      });
+      ordem += portaTemperos.length;
+      modulosPortaTemperos.push(...portaTemperos);
+    }
   }
 
   const torreAtiva = modulosTorre.length > 0;
@@ -229,7 +264,7 @@ export function gerarLayoutCozinhaLinear(
     m.nome_display = `${m.nome_display} (cooktop)`;
   }
 
-  const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre];
+  const modulos = [...modulosBase, ...modulosAereo, ...modulosTorre, ...modulosPortaTemperos];
 
   // 7. Aproveitamento (larguraOcupada somada no loop dos segmentos)
   const aproveitamento = larguraDisponivel > 0

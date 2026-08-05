@@ -170,6 +170,23 @@ describe("gerarLayoutCozinhaLinear — critério de aceite do roadmap", () => {
     }
   });
 
+  test("com_porta_temperos ausente/false → sem módulo porta-temperos", () => {
+    const amb = ambiente(400);
+    const { projeto } = gerarLayoutCozinhaLinear(amb, prefsPadrao);
+    const pt = projeto.modulos.filter((m) => m.modulo_template_codigo.startsWith("porta_temperos_"));
+    expect(pt.length).toBe(0);
+  });
+
+  test("com_porta_temperos: true → gera módulo de 15cm com 3 cestos aramados", () => {
+    const amb = ambiente(400);
+    const { projeto } = gerarLayoutCozinhaLinear(amb, { ...prefsPadrao, com_porta_temperos: true });
+    const pt = projeto.modulos.filter((m) => m.modulo_template_codigo.startsWith("porta_temperos_"));
+    expect(pt.length).toBe(1);
+    expect(pt[0].largura_cm).toBe(15);
+    const cestos = pt[0].ferragens.find((f) => f.tipo === "cesto_aramado_porta_temperos");
+    expect(cestos?.quantidade).toBe(3);
+  });
+
   test("aproveitamento ≥ 85% para paredes de 300-500cm", () => {
     for (const largura of [300, 320, 360, 400, 450, 480, 500]) {
       const amb = ambiente(largura);
