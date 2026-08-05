@@ -1,10 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface } from "@/components/planne/primitives";
 import {
-  Sparkles, Upload, X, ChevronRight, ChevronLeft, Loader2,
-  ImageIcon, Wand2, Building2, LayoutGrid, FileText,
-  CheckCircle2, Zap, AlertCircle, DollarSign, Package, Scissors,
-  Settings2, Palette, Map, Factory, Download, RefreshCw, Layers, Plus, Check, Camera,
+  Sparkles,
+  Upload,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Loader2,
+  ImageIcon,
+  Wand2,
+  Building2,
+  LayoutGrid,
+  FileText,
+  CheckCircle2,
+  Zap,
+  AlertCircle,
+  DollarSign,
+  Package,
+  Scissors,
+  Settings2,
+  Palette,
+  Map,
+  Factory,
+  Download,
+  RefreshCw,
+  Layers,
+  Plus,
+  Check,
+  Camera,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -72,7 +95,13 @@ interface PecaCorte {
 
 interface ListaCorteResult {
   pecas: PecaCorte[];
-  pecas_invalidas?: { peca: string; material: string; largura_mm: number; comprimento_mm: number; motivo: string }[];
+  pecas_invalidas?: {
+    peca: string;
+    material: string;
+    largura_mm: number;
+    comprimento_mm: number;
+    motivo: string;
+  }[];
   resumo: { total_pecas: number; chapas_estimadas: number; metros_fita: number };
 }
 
@@ -94,22 +123,36 @@ const MDF_CORES = [
 type PardeType = "top" | "bottom" | "left" | "right";
 
 type PlantaSalva = {
-  nome: string; largura_cm: number; profundidade_cm: number; altura_cm: number;
-  porta_principal?: { parede: string }; janelas?: { parede: string }[];
+  nome: string;
+  largura_cm: number;
+  profundidade_cm: number;
+  altura_cm: number;
+  porta_principal?: { parede: string };
+  janelas?: { parede: string }[];
 };
 
 interface ComodoVersaoResumo {
   total: number;
   custo: number;
-  itens: { descricao: string; quantidade: number; preco_custo: number; preco_unitario: number; total: number }[];
+  itens: {
+    descricao: string;
+    quantidade: number;
+    preco_custo: number;
+    preco_unitario: number;
+    total: number;
+  }[];
 }
 interface ComodoWizard {
   id: string;
-  nome: string;   // instância nomeada: "Cozinha", "Quarto Maria"
-  tipo: string;   // tipo de ambiente
+  nome: string; // instância nomeada: "Cozinha", "Quarto Maria"
+  tipo: string; // tipo de ambiente
   feito: boolean; // já gerou projeto?
   // 3.4: resumo das 3 versões do motor por cômodo (para consolidação)
-  motorVersoes?: { economica: ComodoVersaoResumo; intermediaria: ComodoVersaoResumo; premium: ComodoVersaoResumo };
+  motorVersoes?: {
+    economica: ComodoVersaoResumo;
+    intermediaria: ComodoVersaoResumo;
+    premium: ComodoVersaoResumo;
+  };
 }
 
 interface WizardState {
@@ -139,7 +182,7 @@ interface WizardState {
   analise: AnaliseIA | null;
   moveis: Movel[];
   renderUrl: string | null;
-  renderUrls: string[];   // múltiplas vistas do ambiente (galeria)
+  renderUrls: string[]; // múltiplas vistas do ambiente (galeria)
   motorResultado: MotorResultado | null;
   renderLoading: boolean;
   renderJobId: string | null;
@@ -154,14 +197,39 @@ interface WizardState {
 }
 
 type SavedProject = {
-  id: string; nome: string; ambiente: string; estilo: string;
-  created_at: string; render_url: string | null;
+  id: string;
+  nome: string;
+  ambiente: string;
+  estilo: string;
+  created_at: string;
+  render_url: string | null;
 };
 
-const AMBIENTES = ["Sala de estar", "Quarto casal", "Quarto solteiro", "Cozinha", "Home office", "Closet", "Banheiro", "Lavanderia", "Área gourmet", "Escritório"];
-const ESTILOS = ["Moderno Minimalista", "Contemporâneo", "Clássico", "Industrial", "Escandinavo", "Boho Chic", "Rústico", "Luxo"];
+const AMBIENTES = [
+  "Sala de estar",
+  "Quarto casal",
+  "Quarto solteiro",
+  "Cozinha",
+  "Home office",
+  "Closet",
+  "Banheiro",
+  "Lavanderia",
+  "Área gourmet",
+  "Escritório",
+];
+const ESTILOS = [
+  "Moderno Minimalista",
+  "Contemporâneo",
+  "Clássico",
+  "Industrial",
+  "Escandinavo",
+  "Boho Chic",
+  "Rústico",
+  "Luxo",
+];
 
-const BRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const BRL = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -190,7 +258,11 @@ async function svgParaPngDataUri(svg: SVGSVGElement, maxW = 1000): Promise<strin
     const scale = Math.min(1.5, maxW / w);
     const src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
     const img = new Image();
-    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = src; });
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = rej;
+      img.src = src;
+    });
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(w * scale);
     canvas.height = Math.round(h * scale);
@@ -200,16 +272,27 @@ async function svgParaPngDataUri(svg: SVGSVGElement, maxW = 1000): Promise<strin
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL("image/png");
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function DropZone({
-  label, accept, onFile, preview, multiple, files,
+  label,
+  accept,
+  onFile,
+  preview,
+  multiple,
+  files,
 }: {
-  label: string; accept: string; onFile: (f: File | File[]) => void;
-  preview?: string; multiple?: boolean; files?: File[];
+  label: string;
+  accept: string;
+  onFile: (f: File | File[]) => void;
+  preview?: string;
+  multiple?: boolean;
+  files?: File[];
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -219,7 +302,9 @@ function DropZone({
     if (files?.length) {
       const urls = files.map((f) => URL.createObjectURL(f));
       setPreviews(urls);
-      return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+      return () => {
+        urls.forEach((u) => URL.revokeObjectURL(u));
+      };
     }
     setPreviews(preview ? [preview] : []);
   }, [files, preview]);
@@ -238,7 +323,10 @@ function DropZone({
         dragOver ? "border-accent bg-accent/5" : "border-border hover:border-border-strong"
       }`}
       onClick={() => ref.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
@@ -264,7 +352,9 @@ function DropZone({
         <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
           <ImageIcon className="size-8 text-muted-foreground/50 mb-2" />
           <div className="text-[13px] font-medium text-muted-foreground">{label}</div>
-          <div className="text-[11.5px] text-muted-foreground/70 mt-1">Arraste ou clique para selecionar</div>
+          <div className="text-[11.5px] text-muted-foreground/70 mt-1">
+            Arraste ou clique para selecionar
+          </div>
         </div>
       )}
     </div>
@@ -283,13 +373,15 @@ function StepIndicator({ step }: { step: number }) {
     <div className="flex items-center gap-1 mb-6">
       {steps.map((s, i) => (
         <div key={s.n} className="flex items-center">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium transition-all ${
-            s.n === step
-              ? "bg-foreground text-background"
-              : s.n < step
-              ? "bg-accent/20 text-accent"
-              : "text-muted-foreground"
-          }`}>
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium transition-all ${
+              s.n === step
+                ? "bg-foreground text-background"
+                : s.n < step
+                  ? "bg-accent/20 text-accent"
+                  : "text-muted-foreground"
+            }`}
+          >
             {s.n < step ? <CheckCircle2 className="size-3" /> : <span>{s.n}</span>}
             <span className="hidden sm:inline">{s.label}</span>
           </div>
@@ -309,7 +401,17 @@ function IAProjetoPage() {
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [plantasSalvas, setPlantasSalvas] = useState<Record<string, PlantaSalva>>({});
-  const [empresaParams, setEmpresaParams] = useState({ mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 300, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830, acab_rodape: true, acab_roda_teto: true, acab_engrosso: true, ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele" });
+  const [empresaParams, setEmpresaParams] = useState({
+    mdf_custo_chapa: 85,
+    mao_obra_hora: 45,
+    margem_padrao: 300,
+    chapa_largura_mm: 2750,
+    chapa_comprimento_mm: 1830,
+    acab_rodape: true,
+    acab_roda_teto: true,
+    acab_engrosso: true,
+    ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele",
+  });
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const navigate = useNavigate();
 
@@ -356,7 +458,18 @@ function IAProjetoPage() {
       projetoId: null,
       comodos: [],
       comodoAtivoId: null,
-      form: { nome: "", ambiente: "Sala de estar", estilo: "Moderno Minimalista", largura: "4", profundidade: "3", altura: "2.7", descricao: "", cor_mdf: "#f5f3f0", porta_parede: "bottom", janelas: [] },
+      form: {
+        nome: "",
+        ambiente: "Sala de estar",
+        estilo: "Moderno Minimalista",
+        largura: "4",
+        profundidade: "3",
+        altura: "2.7",
+        descricao: "",
+        cor_mdf: "#f5f3f0",
+        porta_parede: "bottom",
+        janelas: [],
+      },
       planta: null,
       ambienteGeometrico: null,
       referencias: [],
@@ -378,7 +491,7 @@ function IAProjetoPage() {
       error: null,
     });
 
-  const update = (patch: Partial<WizardState>) => setWizard((w) => w ? { ...w, ...patch } : w);
+  const update = (patch: Partial<WizardState>) => setWizard((w) => (w ? { ...w, ...patch } : w));
 
   // ── Step 3: Analyze ──────────────────────────────────────────────────────
 
@@ -399,11 +512,20 @@ function IAProjetoPage() {
           nome: wizard.form.nome,
           ambiente: wizard.form.ambiente,
           estilo: wizard.form.estilo,
-          medidas: { largura: parseFloat(wizard.form.largura) || 4, profundidade: parseFloat(wizard.form.profundidade) || 3, altura: parseFloat(wizard.form.altura) || 2.7 },
+          medidas: {
+            largura: parseFloat(wizard.form.largura) || 4,
+            profundidade: parseFloat(wizard.form.profundidade) || 3,
+            altura: parseFloat(wizard.form.altura) || 2.7,
+          },
           analise_ia: {},
         };
-        let ins = await supabase.from("room_projects").insert({ ...base, status: "analisando" }).select("id").single();
-        if (ins.error) ins = await supabase.from("room_projects").insert(base).select("id").single();
+        let ins = await supabase
+          .from("room_projects")
+          .insert({ ...base, status: "analisando" })
+          .select("id")
+          .single();
+        if (ins.error)
+          ins = await supabase.from("room_projects").insert(base).select("id").single();
         projetoId = ins.data?.id ?? null;
         if (projetoId) update({ projetoId });
       }
@@ -411,7 +533,9 @@ function IAProjetoPage() {
       const planta_b64 = wizard.planta ? await fileToBase64(wizard.planta) : undefined;
       const referencias_b64 = await Promise.all(wizard.referencias.map(fileToBase64));
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada");
 
       // 2.1: quando há planta, extrair o AmbienteGeometrico real (paredes,
@@ -453,11 +577,11 @@ function IAProjetoPage() {
       const [res, ambienteGeometrico] = await Promise.all([visionPromise, ambientePromise]);
 
       if (!res.ok) {
-        const err = await res.json() as { error: string };
+        const err = (await res.json()) as { error: string };
         throw new Error(err.error ?? "Erro na análise");
       }
 
-      const { analise } = await res.json() as { analise: AnaliseIA };
+      const { analise } = (await res.json()) as { analise: AnaliseIA };
 
       // 3.7: persiste o resultado no projeto criado no início (UPDATE). Se não
       // houver projeto (sem empresa, ou criação inicial falhou), cria agora.
@@ -469,17 +593,29 @@ function IAProjetoPage() {
       };
       try {
         if (projetoId) {
-          const upd = await supabase.from("room_projects").update({ ...dadosProjeto, status: "pronto" }).eq("id", projetoId);
-          if (upd.error) await supabase.from("room_projects").update(dadosProjeto).eq("id", projetoId);
+          const upd = await supabase
+            .from("room_projects")
+            .update({ ...dadosProjeto, status: "pronto" })
+            .eq("id", projetoId);
+          if (upd.error)
+            await supabase.from("room_projects").update(dadosProjeto).eq("id", projetoId);
         } else if (eidInicial) {
-          const { data: proj } = await supabase.from("room_projects").insert({
-            empresa_id: eidInicial,
-            nome: wizard.form.nome,
-            ambiente: wizard.form.ambiente,
-            estilo: wizard.form.estilo,
-            medidas: { largura: parseFloat(wizard.form.largura) || 4, profundidade: parseFloat(wizard.form.profundidade) || 3, altura: parseFloat(wizard.form.altura) || 2.7 },
-            ...dadosProjeto,
-          }).select("id").single();
+          const { data: proj } = await supabase
+            .from("room_projects")
+            .insert({
+              empresa_id: eidInicial,
+              nome: wizard.form.nome,
+              ambiente: wizard.form.ambiente,
+              estilo: wizard.form.estilo,
+              medidas: {
+                largura: parseFloat(wizard.form.largura) || 4,
+                profundidade: parseFloat(wizard.form.profundidade) || 3,
+                altura: parseFloat(wizard.form.altura) || 2.7,
+              },
+              ...dadosProjeto,
+            })
+            .select("id")
+            .single();
           projetoId = proj?.id ?? null;
         }
       } catch {
@@ -490,12 +626,27 @@ function IAProjetoPage() {
       const comodosAtualizados = (wizard.comodos ?? []).map((c) =>
         c.id === wizard.comodoAtivoId ? { ...c, feito: true } : c,
       );
-      update({ analisando: false, analise, moveis: analise.moveis ?? [], step: 4, projetoId, comodos: comodosAtualizados, ambienteGeometrico });
+      update({
+        analisando: false,
+        analise,
+        moveis: analise.moveis ?? [],
+        step: 4,
+        projetoId,
+        comodos: comodosAtualizados,
+        ambienteGeometrico,
+      });
     } catch (e) {
       // 3.7: marca o projeto como erro (tolerante à coluna status) em vez de
       // deixá-lo "analisando" para sempre. Não bloqueia o toast de erro.
       if (projetoId) {
-        supabase.from("room_projects").update({ status: "erro" }).eq("id", projetoId).then(() => {}, () => {});
+        supabase
+          .from("room_projects")
+          .update({ status: "erro" })
+          .eq("id", projetoId)
+          .then(
+            () => {},
+            () => {},
+          );
       }
       update({ analisando: false, error: e instanceof Error ? e.message : "Erro" });
     }
@@ -503,136 +654,191 @@ function IAProjetoPage() {
 
   // ── Step 5: Generate render ──────────────────────────────────────────────
 
-  const gerarRender = useCallback(async (mode: "schnell" | "pro" = "pro") => {
-    if (!wizard?.analise) return;
+  const gerarRender = useCallback(
+    async (mode: "schnell" | "pro" = "pro") => {
+      if (!wizard?.analise) return;
 
-    // BUG 3: crédito de render só é DEBITADO quando o render conclui com sucesso.
-    // Aqui apenas verificamos disponibilidade (sem consumir) — assim, se o render
-    // falhar (timeout, erro, fila), o crédito não é perdido. O débito acontece em
-    // consumirCreditoRender(), chamado nos pontos de conclusão.
-    let empresaIdRender: string | null = null;
-    if (mode === "pro") {
-      try {
-        const empresa = await getEmpresaAtual();
-        if (empresa) {
-          empresaIdRender = (empresa as { id: string }).id;
-          const saldo = await getCreditosDisponiveis(empresaIdRender, "render");
-          if (saldo <= 0) { toast.error("Sem créditos de render. Recarregue em Configurações."); return; }
-        }
-      } catch { /* não bloqueia */ }
-    }
-
-    // Debita 1 crédito pelo CONJUNTO de vistas (não por imagem), só no 1º sucesso.
-    let creditoDebitado = false;
-    const consumirCreditoRender = async () => {
-      if (mode !== "pro" || !empresaIdRender || creditoDebitado) return;
-      creditoDebitado = true;
-      try {
-        const result = await checkAndConsumeCredito(empresaIdRender, "render");
-        if (result.ok) toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
-      } catch { /* não bloqueia a exibição do render já gerado */ }
-    };
-
-    const medidasPayload = {
-      largura: parseFloat(wizard.form.largura) || 4,
-      profundidade: parseFloat(wizard.form.profundidade) || 3,
-      altura: parseFloat(wizard.form.altura) || 2.7,
-    };
-    const moveisPayload = wizard.analise.moveis.map((m) => ({
-      nome: m.nome, categoria: m.categoria, cor_hex: m.cor_hex,
-      largura_cm: m.largura_cm, profundidade_cm: m.profundidade_cm, altura_cm: m.altura_cm,
-      x_pct: m.x_pct, y_pct: m.y_pct, parede: m.parede, tipo_elemento: m.tipo_elemento,
-    }));
-
-    // Imagem-guia: o layout 2D vira PNG e vai como DIREÇÃO exata para o Gemini.
-    let guia_b64: string | undefined;
-    try {
-      const svg = document.getElementById("layout-2d-guia") as SVGSVGElement | null;
-      if (svg) guia_b64 = (await svgParaPngDataUri(svg)) ?? undefined;
-    } catch { /* sem guia → cai no render por texto */ }
-
-    // Materiais/ferragens do projeto (trilho, chapa, puxador...) para o render.
-    const materiais_txt = [
-      "corpo e portas em MDF melamínico",
-      "puxadores perfil de alumínio embutido, dobradiças de caneco soft-close, corrediças telescópicas (trilho) soft-close",
-      "rodapé recuado sobre pés, roda-teto de arremate no topo, engrosso de 30mm em tampos e frentes aparentes, fundo MDF 6mm",
-      wizard.form.descricao ? wizard.form.descricao.slice(0, 160) : "",
-    ].filter(Boolean).join(", ");
-
-    // Polling de um job até concluir → resolve com a URL (ou null em falha).
-    const pollRenderJob = (jobId: string): Promise<string | null> => new Promise((resolve) => {
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
+      // BUG 3: crédito de render só é DEBITADO quando o render conclui com sucesso.
+      // Aqui apenas verificamos disponibilidade (sem consumir) — assim, se o render
+      // falhar (timeout, erro, fila), o crédito não é perdido. O débito acontece em
+      // consumirCreditoRender(), chamado nos pontos de conclusão.
+      let empresaIdRender: string | null = null;
+      if (mode === "pro") {
         try {
-          const r = await fetch(`/api/render?job_id=${jobId}`);
-          if (!r.ok) { clearInterval(poll); resolve(null); return; }
-          const s = await r.json() as { status: string; url?: string; error?: string };
-          if (s.status === "completed" && s.url) { clearInterval(poll); resolve(s.url); }
-          else if (s.status === "error" || s.error) { clearInterval(poll); resolve(null); }
-          else if (attempts > 40) { clearInterval(poll); resolve(null); }
-        } catch { clearInterval(poll); resolve(null); }
-      }, 3000);
-    });
-
-    // Gera uma vista (ângulo de câmera) e resolve com a URL final.
-    const gerarVista = async (vista: string): Promise<string | null> => {
-      try {
-        const res = await fetch("/api/render", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode, vista,
-            ambiente: wizard.form.ambiente,
-            estilo: wizard.form.estilo,
-            estilo_detectado: wizard.analise!.estilo_detectado,
-            medidas: medidasPayload,
-            moveis: moveisPayload,
-            descricao: wizard.analise!.resumo,
-            descricao_comercial: wizard.analise!.descricao_comercial,
-            guia_b64,
-            materiais_txt,
-          }),
-        });
-        if (!res.ok) return null;
-        const data = await res.json() as { url?: string; job_id?: string; status: string };
-        if (data.status === "completed" && data.url) return data.url;
-        if (data.job_id) return await pollRenderJob(data.job_id);
-        return null;
-      } catch { return null; }
-    };
-
-    // Preview rápido (schnell): 1 vista geral. Premium (pro): 4 vistas que cobrem
-    // o espaço interno inteiro (entrada, parede principal, canto oposto, lateral).
-    if (mode === "schnell") {
-      update({ renderLoading: true, renderMode: mode, error: null });
-      const url = await gerarVista("geral");
-      if (url) { update({ previewUrl: url, renderLoading: false }); toast.success("Preview gerado!"); }
-      else update({ renderLoading: false, error: "Não foi possível gerar o preview." });
-      return;
-    }
-
-    update({ renderLoading: true, renderMode: mode, error: null, renderUrls: [] });
-    const vistas = ["geral", "frontal", "canto", "lateral"];
-    const urls: string[] = [];
-    await Promise.all(vistas.map(async (vista) => {
-      const url = await gerarVista(vista);
-      if (url) {
-        urls.push(url);
-        await consumirCreditoRender();
-        update({ renderUrls: [...urls] }); // mostra as imagens conforme ficam prontas
+          const empresa = await getEmpresaAtual();
+          if (empresa) {
+            empresaIdRender = (empresa as { id: string }).id;
+            const saldo = await getCreditosDisponiveis(empresaIdRender, "render");
+            if (saldo <= 0) {
+              toast.error("Sem créditos de render. Recarregue em Configurações.");
+              return;
+            }
+          }
+        } catch {
+          /* não bloqueia */
+        }
       }
-    }));
 
-    if (urls.length === 0) {
-      update({ renderLoading: false, error: "Não foi possível gerar as imagens. Tente novamente." });
-      return;
-    }
-    if (wizard.projetoId) {
-      try { await supabase.from("room_projects").update({ render_url: urls[0] }).eq("id", wizard.projetoId); } catch { /* não bloqueia */ }
-    }
-    update({ renderUrls: urls, renderUrl: urls[0], renderLoading: false, step: 5 });
-    toast.success(`${urls.length} vista(s) do ambiente geradas!`);
-  }, [wizard]);
+      // Debita 1 crédito pelo CONJUNTO de vistas (não por imagem), só no 1º sucesso.
+      let creditoDebitado = false;
+      const consumirCreditoRender = async () => {
+        if (mode !== "pro" || !empresaIdRender || creditoDebitado) return;
+        creditoDebitado = true;
+        try {
+          const result = await checkAndConsumeCredito(empresaIdRender, "render");
+          if (result.ok)
+            toast.info(`Crédito utilizado. Restam ${result.restantes} créditos de render.`);
+        } catch {
+          /* não bloqueia a exibição do render já gerado */
+        }
+      };
+
+      const medidasPayload = {
+        largura: parseFloat(wizard.form.largura) || 4,
+        profundidade: parseFloat(wizard.form.profundidade) || 3,
+        altura: parseFloat(wizard.form.altura) || 2.7,
+      };
+      const moveisPayload = wizard.analise.moveis.map((m) => ({
+        nome: m.nome,
+        categoria: m.categoria,
+        cor_hex: m.cor_hex,
+        largura_cm: m.largura_cm,
+        profundidade_cm: m.profundidade_cm,
+        altura_cm: m.altura_cm,
+        x_pct: m.x_pct,
+        y_pct: m.y_pct,
+        parede: m.parede,
+        tipo_elemento: m.tipo_elemento,
+      }));
+
+      // Imagem-guia: o layout 2D vira PNG e vai como DIREÇÃO exata para o Gemini.
+      let guia_b64: string | undefined;
+      try {
+        const svg = document.getElementById("layout-2d-guia") as SVGSVGElement | null;
+        if (svg) guia_b64 = (await svgParaPngDataUri(svg)) ?? undefined;
+      } catch {
+        /* sem guia → cai no render por texto */
+      }
+
+      // Materiais/ferragens do projeto (trilho, chapa, puxador...) para o render.
+      const materiais_txt = [
+        "corpo e portas em MDF melamínico",
+        "puxadores perfil de alumínio embutido, dobradiças de caneco soft-close, corrediças telescópicas (trilho) soft-close",
+        "rodapé recuado sobre pés, roda-teto de arremate no topo, engrosso de 30mm em tampos e frentes aparentes, fundo MDF 6mm",
+        wizard.form.descricao ? wizard.form.descricao.slice(0, 160) : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      // Polling de um job até concluir → resolve com a URL (ou null em falha).
+      const pollRenderJob = (jobId: string): Promise<string | null> =>
+        new Promise((resolve) => {
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            try {
+              const r = await fetch(`/api/render?job_id=${jobId}`);
+              if (!r.ok) {
+                clearInterval(poll);
+                resolve(null);
+                return;
+              }
+              const s = (await r.json()) as { status: string; url?: string; error?: string };
+              if (s.status === "completed" && s.url) {
+                clearInterval(poll);
+                resolve(s.url);
+              } else if (s.status === "error" || s.error) {
+                clearInterval(poll);
+                resolve(null);
+              } else if (attempts > 40) {
+                clearInterval(poll);
+                resolve(null);
+              }
+            } catch {
+              clearInterval(poll);
+              resolve(null);
+            }
+          }, 3000);
+        });
+
+      // Gera uma vista (ângulo de câmera) e resolve com a URL final.
+      const gerarVista = async (vista: string): Promise<string | null> => {
+        try {
+          const res = await fetch("/api/render", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode,
+              vista,
+              ambiente: wizard.form.ambiente,
+              estilo: wizard.form.estilo,
+              estilo_detectado: wizard.analise!.estilo_detectado,
+              medidas: medidasPayload,
+              moveis: moveisPayload,
+              descricao: wizard.analise!.resumo,
+              descricao_comercial: wizard.analise!.descricao_comercial,
+              guia_b64,
+              materiais_txt,
+            }),
+          });
+          if (!res.ok) return null;
+          const data = (await res.json()) as { url?: string; job_id?: string; status: string };
+          if (data.status === "completed" && data.url) return data.url;
+          if (data.job_id) return await pollRenderJob(data.job_id);
+          return null;
+        } catch {
+          return null;
+        }
+      };
+
+      // Preview rápido (schnell): 1 vista geral. Premium (pro): 4 vistas que cobrem
+      // o espaço interno inteiro (entrada, parede principal, canto oposto, lateral).
+      if (mode === "schnell") {
+        update({ renderLoading: true, renderMode: mode, error: null });
+        const url = await gerarVista("geral");
+        if (url) {
+          update({ previewUrl: url, renderLoading: false });
+          toast.success("Preview gerado!");
+        } else update({ renderLoading: false, error: "Não foi possível gerar o preview." });
+        return;
+      }
+
+      update({ renderLoading: true, renderMode: mode, error: null, renderUrls: [] });
+      const vistas = ["geral", "frontal", "canto", "lateral"];
+      const urls: string[] = [];
+      await Promise.all(
+        vistas.map(async (vista) => {
+          const url = await gerarVista(vista);
+          if (url) {
+            urls.push(url);
+            await consumirCreditoRender();
+            update({ renderUrls: [...urls] }); // mostra as imagens conforme ficam prontas
+          }
+        }),
+      );
+
+      if (urls.length === 0) {
+        update({
+          renderLoading: false,
+          error: "Não foi possível gerar as imagens. Tente novamente.",
+        });
+        return;
+      }
+      if (wizard.projetoId) {
+        try {
+          await supabase
+            .from("room_projects")
+            .update({ render_url: urls[0] })
+            .eq("id", wizard.projetoId);
+        } catch {
+          /* não bloqueia */
+        }
+      }
+      update({ renderUrls: urls, renderUrl: urls[0], renderLoading: false, step: 5 });
+      toast.success(`${urls.length} vista(s) do ambiente geradas!`);
+    },
+    [wizard],
+  );
 
   const gerarListaCorte = useCallback(async () => {
     if (!wizard?.analise?.moveis?.length) return;
@@ -666,12 +872,15 @@ function IAProjetoPage() {
         }),
       });
       if (!res.ok) throw new Error("Erro ao gerar lista de corte");
-      const data = await res.json() as ListaCorteResult;
+      const data = (await res.json()) as ListaCorteResult;
       update({ listaCorte: data, listaCorteLoading: false });
       if (wizard.projetoId) {
-        await supabase.from("room_projects").update({
-          analise_ia: { ...wizard.analise, lista_corte: data },
-        }).eq("id", wizard.projetoId);
+        await supabase
+          .from("room_projects")
+          .update({
+            analise_ia: { ...wizard.analise, lista_corte: data },
+          })
+          .eq("id", wizard.projetoId);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao gerar lista de corte");
@@ -683,52 +892,63 @@ function IAProjetoPage() {
   // re-renders pois é ref, não estado.
   const criandoOrcRef = useRef(false);
 
-  const criarOrcamentoFormal = useCallback(async (clienteIdOverride?: string) => {
-    if (!wizard?.analise) return;
-    // BUG 4: guard síncrono contra duplo-clique / loading lento. O ref bloqueia
-    // antes do próximo render (disabled de estado só aplicaria no re-render),
-    // evitando criar N orçamentos idênticos.
-    if (criandoOrcRef.current) return;
-    criandoOrcRef.current = true;
-    const cid = clienteIdOverride ?? wizard.clienteId;
-    try {
-      const empresa = await getEmpresaAtual();
-      if (!empresa) throw new Error("Empresa não encontrada");
-      const eid = (empresa as { id: string }).id;
+  const criarOrcamentoFormal = useCallback(
+    async (clienteIdOverride?: string) => {
+      if (!wizard?.analise) return;
+      // BUG 4: guard síncrono contra duplo-clique / loading lento. O ref bloqueia
+      // antes do próximo render (disabled de estado só aplicaria no re-render),
+      // evitando criar N orçamentos idênticos.
+      if (criandoOrcRef.current) return;
+      criandoOrcRef.current = true;
+      const cid = clienteIdOverride ?? wizard.clienteId;
+      try {
+        const empresa = await getEmpresaAtual();
+        if (!empresa) throw new Error("Empresa não encontrada");
+        const eid = (empresa as { id: string }).id;
 
-      const orc = await upsertOrcamento(eid, {
-        status: "rascunho",
-        margem_pct: wizard.analise.orcamento.margem_pct,
-        subtotal: wizard.analise.orcamento.subtotal,
-        total: wizard.analise.orcamento.total,
-        observacoes: wizard.analise.descricao_comercial,
-        cliente_id: cid ?? null,
-      });
+        const orc = await upsertOrcamento(eid, {
+          status: "rascunho",
+          margem_pct: wizard.analise.orcamento.margem_pct,
+          subtotal: wizard.analise.orcamento.subtotal,
+          total: wizard.analise.orcamento.total,
+          observacoes: wizard.analise.descricao_comercial,
+          cliente_id: cid ?? null,
+        });
 
-      const itensData = (wizard.analise.moveis ?? [])
-        .filter((m) => m.customizado !== false && m.tipo_elemento !== "porta" && m.tipo_elemento !== "janela" && m.preco_estimado > 0)
-        .map((m) => ({
-          orcamento_id: orc.id,
-          descricao: m.nome,
-          quantidade: 1,
-          unidade: "un",
-          preco_custo: Math.round(m.preco_estimado / Math.max(wizard.analise!.orcamento.margem_pct / 100, 0.01)),
-          preco_unitario: m.preco_estimado,
-          total: m.preco_estimado,
-        }));
+        const itensData = (wizard.analise.moveis ?? [])
+          .filter(
+            (m) =>
+              m.customizado !== false &&
+              m.tipo_elemento !== "porta" &&
+              m.tipo_elemento !== "janela" &&
+              m.preco_estimado > 0,
+          )
+          .map((m) => ({
+            orcamento_id: orc.id,
+            descricao: m.nome,
+            quantidade: 1,
+            unidade: "un",
+            preco_custo: Math.round(
+              m.preco_estimado / Math.max(wizard.analise!.orcamento.margem_pct / 100, 0.01),
+            ),
+            preco_unitario: m.preco_estimado,
+            total: m.preco_estimado,
+          }));
 
-      if (itensData.length > 0) {
-        await supabase.from("orcamento_itens").insert(itensData);
+        if (itensData.length > 0) {
+          await supabase.from("orcamento_itens").insert(itensData);
+        }
+
+        toast.success(`Orçamento ${orc.numero} criado com sucesso!`);
+        navigate({ to: "/app/orcamentos" });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
+      } finally {
+        criandoOrcRef.current = false;
       }
-
-      toast.success(`Orçamento ${orc.numero} criado com sucesso!`);
-      navigate({ to: "/app/orcamentos" });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
-    } finally {
-      criandoOrcRef.current = false;
-    }
-  }, [wizard, navigate]);
+    },
+    [wizard, navigate],
+  );
 
   const criarOrdemProducao = useCallback(async () => {
     if (!wizard?.listaCorte || !wizard.analise) return;
@@ -737,11 +957,15 @@ function IAProjetoPage() {
       const empresa = await getEmpresaAtual();
       if (!empresa) throw new Error("Empresa não encontrada");
       const eid = (empresa as { id: string }).id;
-      const { data: ordem } = await supabase.from("ordens_producao").insert({
-        empresa_id: eid,
-        status: "aberta",
-        observacoes: `Gerado por IA Projetos — ${wizard.form.nome || wizard.form.ambiente}. ${wizard.listaCorte.resumo.total_pecas} peças · ${wizard.listaCorte.resumo.chapas_estimadas} chapas · ${wizard.listaCorte.resumo.metros_fita}m fita.`,
-      }).select("id,numero").single();
+      const { data: ordem } = await supabase
+        .from("ordens_producao")
+        .insert({
+          empresa_id: eid,
+          status: "aberta",
+          observacoes: `Gerado por IA Projetos — ${wizard.form.nome || wizard.form.ambiente}. ${wizard.listaCorte.resumo.total_pecas} peças · ${wizard.listaCorte.resumo.chapas_estimadas} chapas · ${wizard.listaCorte.resumo.metros_fita}m fita.`,
+        })
+        .select("id,numero")
+        .single();
       if (!ordem) throw new Error("Erro ao criar ordem");
 
       // Salvar peças como cortes na ordem (tabela lista_corte)
@@ -770,7 +994,10 @@ function IAProjetoPage() {
     }
   }, [wizard]);
 
-  if (!wizard) return <LandingPage onStart={initWizard} savedProjects={savedProjects} loading={loadingProjects} />;
+  if (!wizard)
+    return (
+      <LandingPage onStart={initWizard} savedProjects={savedProjects} loading={loadingProjects} />
+    );
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -798,11 +1025,31 @@ function IAProjetoPage() {
           exit={{ opacity: 0, x: -12 }}
           transition={{ duration: 0.2 }}
         >
-          {wizard.step === 1 && <Step1Form wizard={wizard} update={update} plantasSalvas={plantasSalvas} />}
+          {wizard.step === 1 && (
+            <Step1Form wizard={wizard} update={update} plantasSalvas={plantasSalvas} />
+          )}
           {wizard.step === 2 && <Step2Upload wizard={wizard} update={update} />}
           {wizard.step === 3 && <Step3Analyzing wizard={wizard} analisar={analisar} />}
-          {wizard.step === 4 && <Step4Layout wizard={wizard} update={update} gerarRender={gerarRender} criarOrcamento={criarOrcamentoFormal} gerarListaCorte={gerarListaCorte} criarOrdem={criarOrdemProducao} clientes={clientes} empresaParams={empresaParams} />}
-          {wizard.step === 5 && <Step5Render wizard={wizard} update={update} criarOrcamento={() => criarOrcamentoFormal(wizard.clienteId ?? undefined)} gerarRender={gerarRender} />}
+          {wizard.step === 4 && (
+            <Step4Layout
+              wizard={wizard}
+              update={update}
+              gerarRender={gerarRender}
+              criarOrcamento={criarOrcamentoFormal}
+              gerarListaCorte={gerarListaCorte}
+              criarOrdem={criarOrdemProducao}
+              clientes={clientes}
+              empresaParams={empresaParams}
+            />
+          )}
+          {wizard.step === 5 && (
+            <Step5Render
+              wizard={wizard}
+              update={update}
+              criarOrcamento={() => criarOrcamentoFormal(wizard.clienteId ?? undefined)}
+              gerarRender={gerarRender}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -812,11 +1059,18 @@ function IAProjetoPage() {
 // ─── Step 1: Ambiente & Medidas ───────────────────────────────────────────────
 
 const WALL_LABELS: Record<string, string> = {
-  top: "Parede de cima", bottom: "Parede de baixo", left: "Parede esquerda", right: "Parede direita",
+  top: "Parede de cima",
+  bottom: "Parede de baixo",
+  left: "Parede esquerda",
+  right: "Parede direita",
 };
 const WALL_ICON: Record<string, string> = { top: "↑", bottom: "↓", left: "←", right: "→" };
 
-function Step1Form({ wizard, update, plantasSalvas }: {
+function Step1Form({
+  wizard,
+  update,
+  plantasSalvas,
+}: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   plantasSalvas: Record<string, PlantaSalva>;
@@ -826,11 +1080,14 @@ function Step1Form({ wizard, update, plantasSalvas }: {
 
   const toggleJanela = (wall: PardeType) => {
     const has = f.janelas.includes(wall);
-    update({ form: { ...f, janelas: has ? f.janelas.filter((w) => w !== wall) : [...f.janelas, wall] } });
+    update({
+      form: { ...f, janelas: has ? f.janelas.filter((w) => w !== wall) : [...f.janelas, wall] },
+    });
   };
 
   const usarPlanta = (planta: PlantaSalva) => {
-    const toParede = (s?: string): PardeType => (["top", "bottom", "left", "right"].includes(s ?? "") ? (s as PardeType) : "bottom");
+    const toParede = (s?: string): PardeType =>
+      ["top", "bottom", "left", "right"].includes(s ?? "") ? (s as PardeType) : "bottom";
     update({
       form: {
         ...f,
@@ -838,7 +1095,9 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         profundidade: String(planta.profundidade_cm / 100),
         altura: planta.altura_cm ? String(planta.altura_cm / 100) : f.altura,
         porta_parede: toParede(planta.porta_principal?.parede),
-        janelas: (planta.janelas ?? []).map((j) => toParede(j.parede)).filter((w, i, a) => a.indexOf(w) === i),
+        janelas: (planta.janelas ?? [])
+          .map((j) => toParede(j.parede))
+          .filter((w, i, a) => a.indexOf(w) === i),
       },
     });
     toast.success(`Medidas de "${planta.nome}" aplicadas`);
@@ -854,7 +1113,12 @@ function Step1Form({ wizard, update, plantasSalvas }: {
     if (!tipo) return;
     const mesmoTipo = comodos.filter((c) => c.tipo === tipo).length;
     const nome = mesmoTipo > 0 ? `${tipo} ${mesmoTipo + 1}` : tipo;
-    const novo: ComodoWizard = { id: Math.random().toString(36).slice(2), nome, tipo, feito: false };
+    const novo: ComodoWizard = {
+      id: Math.random().toString(36).slice(2),
+      nome,
+      tipo,
+      feito: false,
+    };
     update({
       comodos: [...comodos, novo],
       comodoAtivoId: novo.id,
@@ -876,41 +1140,69 @@ function Step1Form({ wizard, update, plantasSalvas }: {
 
   return (
     <Surface className="space-y-5 max-w-2xl">
-
       {/* ── Cômodos do projeto — escolher quais ambientes terão móveis ── */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <Label>Cômodos do projeto <span className="text-muted-foreground font-normal">— cada um tem sua medida/planta</span></Label>
-          {comodos.length > 0 && <span className="text-[11px] text-muted-foreground">{comodos.length} cômodo(s)</span>}
+          <Label>
+            Cômodos do projeto{" "}
+            <span className="text-muted-foreground font-normal">
+              — cada um tem sua medida/planta
+            </span>
+          </Label>
+          {comodos.length > 0 && (
+            <span className="text-[11px] text-muted-foreground">{comodos.length} cômodo(s)</span>
+          )}
         </div>
         {comodos.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {comodos.map((c) => (
-              <div key={c.id}
+              <div
+                key={c.id}
                 className={`group inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-md border text-[12px] font-medium transition-colors cursor-pointer ${wizard.comodoAtivoId === c.id ? "border-accent bg-accent/10 text-accent" : "border-border hover:bg-secondary"}`}
-                onClick={() => selecionarComodo(c)}>
+                onClick={() => selecionarComodo(c)}
+              >
                 {c.feito && <CheckCircle2 className="size-3 text-emerald-500" />}
                 {c.nome}
-                <button type="button" onClick={(e) => { e.stopPropagation(); removerComodo(c.id); }}
-                  className="text-muted-foreground/60 hover:text-destructive"><X className="size-3" /></button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removerComodo(c.id);
+                  }}
+                  className="text-muted-foreground/60 hover:text-destructive"
+                >
+                  <X className="size-3" />
+                </button>
               </div>
             ))}
           </div>
         )}
         <div className="flex items-center gap-2">
-          <select value={novoComodoTipo} onChange={(e) => setNovoComodoTipo(e.target.value)}
-            className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none text-foreground">
+          <select
+            value={novoComodoTipo}
+            onChange={(e) => setNovoComodoTipo(e.target.value)}
+            className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none text-foreground"
+          >
             <option value="">Adicionar cômodo...</option>
-            {AMBIENTES.map((a) => <option key={a} value={a}>{a}</option>)}
+            {AMBIENTES.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
           </select>
-          <button type="button" onClick={() => addComodo(novoComodoTipo)} disabled={!novoComodoTipo}
-            className="h-8 px-3 rounded-md border border-border text-[12.5px] font-medium hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => addComodo(novoComodoTipo)}
+            disabled={!novoComodoTipo}
+            className="h-8 px-3 rounded-md border border-border text-[12.5px] font-medium hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1.5"
+          >
             <Plus className="size-3.5" /> Adicionar
           </button>
         </div>
         {comodos.length > 0 && (
           <p className="text-[11px] text-muted-foreground mt-1.5">
-            Trabalhe um cômodo por vez: selecione um chip acima, preencha medidas/planta e gere o projeto. Depois volte e faça o próximo.
+            Trabalhe um cômodo por vez: selecione um chip acima, preencha medidas/planta e gere o
+            projeto. Depois volte e faça o próximo.
           </p>
         )}
       </div>
@@ -920,7 +1212,9 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         <div className="flex items-center justify-between mb-1.5">
           <Label>
             Planta baixa do ambiente
-            <span className="ml-1 text-accent font-medium">(recomendado — a IA lê medidas, portas, janelas e vigas)</span>
+            <span className="ml-1 text-accent font-medium">
+              (recomendado — a IA lê medidas, portas, janelas e vigas)
+            </span>
           </Label>
           {wizard.planta && (
             <button
@@ -940,22 +1234,26 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         />
         {wizard.planta && (
           <div className="flex items-center gap-1.5 mt-1.5 text-[12px] text-emerald-600">
-            <CheckCircle2 className="size-3.5" /> {wizard.planta.name} — a IA vai analisar esta planta
+            <CheckCircle2 className="size-3.5" /> {wizard.planta.name} — a IA vai analisar esta
+            planta
           </div>
         )}
         {!wizard.planta && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {temPlantas && Object.values(plantasSalvas).map((p) => (
-              <button
-                key={p.nome}
-                type="button"
-                onClick={() => usarPlanta(p)}
-                className="h-7 px-2.5 rounded-md border border-accent/40 text-[11.5px] font-medium hover:bg-accent/10 transition-colors inline-flex items-center gap-1.5"
-              >
-                <Map className="size-3 text-accent" /> {p.nome}
-                <span className="text-muted-foreground font-normal">{p.largura_cm / 100}×{p.profundidade_cm / 100}m</span>
-              </button>
-            ))}
+            {temPlantas &&
+              Object.values(plantasSalvas).map((p) => (
+                <button
+                  key={p.nome}
+                  type="button"
+                  onClick={() => usarPlanta(p)}
+                  className="h-7 px-2.5 rounded-md border border-accent/40 text-[11.5px] font-medium hover:bg-accent/10 transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Map className="size-3 text-accent" /> {p.nome}
+                  <span className="text-muted-foreground font-normal">
+                    {p.largura_cm / 100}×{p.profundidade_cm / 100}m
+                  </span>
+                </button>
+              ))}
             {!temPlantas && (
               <span className="text-[11px] text-muted-foreground italic">
                 Sem planta? Preencha as medidas abaixo manualmente.
@@ -979,14 +1277,30 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Tipo de ambiente</Label>
-            <select value={f.ambiente} onChange={(e) => set("ambiente", e.target.value)} className="input">
-              {AMBIENTES.map((a) => <option key={a} value={a}>{a}</option>)}
+            <select
+              value={f.ambiente}
+              onChange={(e) => set("ambiente", e.target.value)}
+              className="input"
+            >
+              {AMBIENTES.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
             </select>
           </div>
           <div>
             <Label>Estilo desejado</Label>
-            <select value={f.estilo} onChange={(e) => set("estilo", e.target.value)} className="input">
-              {ESTILOS.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select
+              value={f.estilo}
+              onChange={(e) => set("estilo", e.target.value)}
+              className="input"
+            >
+              {ESTILOS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -1001,7 +1315,11 @@ function Step1Form({ wizard, update, plantasSalvas }: {
             )}
           </div>
           <div className="grid grid-cols-3 gap-3">
-            {[["largura", "Largura (m)"], ["profundidade", "Profundidade (m)"], ["altura", "Pé-direito (m)"]].map(([k, lbl]) => (
+            {[
+              ["largura", "Largura (m)"],
+              ["profundidade", "Profundidade (m)"],
+              ["altura", "Pé-direito (m)"],
+            ].map(([k, lbl]) => (
               <div key={k}>
                 <div className="text-[11px] text-muted-foreground mb-1">{lbl}</div>
                 <input
@@ -1028,7 +1346,10 @@ function Step1Form({ wizard, update, plantasSalvas }: {
                 onClick={() => set("cor_mdf", c.hex)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-[12px] transition-all ${f.cor_mdf === c.hex ? "border-accent ring-1 ring-accent font-medium" : "border-border hover:border-border-strong"}`}
               >
-                <span className="size-3.5 rounded-sm shrink-0 border border-black/10" style={{ background: c.hex }} />
+                <span
+                  className="size-3.5 rounded-sm shrink-0 border border-black/10"
+                  style={{ background: c.hex }}
+                />
                 {c.nome}
               </button>
             ))}
@@ -1036,16 +1357,26 @@ function Step1Form({ wizard, update, plantasSalvas }: {
         </div>
 
         {/* Porta + Janelas — layout do cômodo */}
-        <div className={`grid grid-cols-2 gap-4 p-3 rounded-lg border ${wizard.planta ? "bg-accent/5 border-accent/30" : "bg-secondary/40 border-border"}`}>
+        <div
+          className={`grid grid-cols-2 gap-4 p-3 rounded-lg border ${wizard.planta ? "bg-accent/5 border-accent/30" : "bg-secondary/40 border-border"}`}
+        >
           {wizard.planta && (
             <div className="col-span-2 flex items-center gap-1.5 text-[11.5px] text-accent mb-1">
               <CheckCircle2 className="size-3.5" />
-              <span>Com planta enviada, a IA vai detectar porta e janelas automaticamente. Preencha só se quiser sobrescrever.</span>
+              <span>
+                Com planta enviada, a IA vai detectar porta e janelas automaticamente. Preencha só
+                se quiser sobrescrever.
+              </span>
             </div>
           )}
           {/* Porta */}
           <div>
-            <Label>Porta principal {wizard.planta && <span className="text-muted-foreground font-normal">(opcional)</span>}</Label>
+            <Label>
+              Porta principal{" "}
+              {wizard.planta && (
+                <span className="text-muted-foreground font-normal">(opcional)</span>
+              )}
+            </Label>
             <div className="text-[11px] text-muted-foreground mb-2">Em qual parede fica?</div>
             <div className="grid grid-cols-2 gap-1.5">
               {(["top", "bottom", "left", "right"] as PardeType[]).map((wall) => (
@@ -1067,7 +1398,12 @@ function Step1Form({ wizard, update, plantasSalvas }: {
 
           {/* Janelas */}
           <div>
-            <Label>Janelas {wizard.planta && <span className="text-muted-foreground font-normal">(opcional)</span>}</Label>
+            <Label>
+              Janelas{" "}
+              {wizard.planta && (
+                <span className="text-muted-foreground font-normal">(opcional)</span>
+              )}
+            </Label>
             <div className="text-[11px] text-muted-foreground mb-2">Em quais paredes?</div>
             <div className="grid grid-cols-2 gap-1.5">
               {(["top", "bottom", "left", "right"] as PardeType[]).map((wall) => (
@@ -1115,15 +1451,27 @@ function Step1Form({ wizard, update, plantasSalvas }: {
 
 // ─── Step 2: Referências visuais ─────────────────────────────────────────────
 
-function Step2Upload({ wizard, update }: { wizard: WizardState; update: (p: Partial<WizardState>) => void }) {
+function Step2Upload({
+  wizard,
+  update,
+}: {
+  wizard: WizardState;
+  update: (p: Partial<WizardState>) => void;
+}) {
   return (
     <Surface className="space-y-5 max-w-2xl">
       {/* Resumo da planta se já enviada */}
       {wizard.planta && (
         <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-[12.5px] text-emerald-700 dark:text-emerald-400">
           <CheckCircle2 className="size-3.5 shrink-0" />
-          <span>Planta enviada: <strong>{wizard.planta.name}</strong> — a IA vai ler as medidas e o layout.</span>
-          <button onClick={() => update({ planta: null })} className="ml-auto text-muted-foreground hover:text-destructive">
+          <span>
+            Planta enviada: <strong>{wizard.planta.name}</strong> — a IA vai ler as medidas e o
+            layout.
+          </span>
+          <button
+            onClick={() => update({ planta: null })}
+            className="ml-auto text-muted-foreground hover:text-destructive"
+          >
             <X className="size-3" />
           </button>
         </div>
@@ -1131,13 +1479,24 @@ function Step2Upload({ wizard, update }: { wizard: WizardState; update: (p: Part
       {!wizard.planta && (
         <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[12.5px] text-amber-700 dark:text-amber-400">
           <AlertCircle className="size-3.5 shrink-0" />
-          <span>Você não enviou a planta baixa. A IA usará apenas as medidas digitadas. <button onClick={() => update({ step: 1 })} className="underline font-medium">Voltar para adicionar</button>.</span>
+          <span>
+            Você não enviou a planta baixa. A IA usará apenas as medidas digitadas.{" "}
+            <button onClick={() => update({ step: 1 })} className="underline font-medium">
+              Voltar para adicionar
+            </button>
+            .
+          </span>
         </div>
       )}
 
       <div className="grid gap-4">
         <div>
-          <Label>Referências visuais <span className="text-muted-foreground font-normal">(até 3 fotos de estilo/inspiração)</span></Label>
+          <Label>
+            Referências visuais{" "}
+            <span className="text-muted-foreground font-normal">
+              (até 3 fotos de estilo/inspiração)
+            </span>
+          </Label>
           <DropZone
             label="Adicione fotos de referência do estilo desejado"
             accept="image/*"
@@ -1152,7 +1511,10 @@ function Step2Upload({ wizard, update }: { wizard: WizardState; update: (p: Part
             <div className="flex items-center gap-2 mt-1.5 text-[12px] text-muted-foreground">
               <CheckCircle2 className="size-3.5 text-emerald-500" />
               {wizard.referencias.length} referência(s) adicionada(s)
-              <button onClick={() => update({ referencias: [] })} className="ml-auto hover:text-destructive">
+              <button
+                onClick={() => update({ referencias: [] })}
+                className="ml-auto hover:text-destructive"
+              >
                 <X className="size-3" />
               </button>
             </div>
@@ -1162,11 +1524,17 @@ function Step2Upload({ wizard, update }: { wizard: WizardState; update: (p: Part
 
       <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-[12.5px] text-amber-700 dark:text-amber-400 flex items-start gap-2">
         <Sparkles className="size-3.5 mt-0.5 shrink-0" />
-        <span>A IA analisará planta + referências + medidas para gerar um projeto completo. Quanto mais informações, melhor o resultado.</span>
+        <span>
+          A IA analisará planta + referências + medidas para gerar um projeto completo. Quanto mais
+          informações, melhor o resultado.
+        </span>
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
-        <button onClick={() => update({ step: 1 })} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center gap-1.5">
+        <button
+          onClick={() => update({ step: 1 })}
+          className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary inline-flex items-center gap-1.5"
+        >
           <ChevronLeft className="size-4" /> Voltar
         </button>
         <button
@@ -1201,10 +1569,17 @@ function Step3Analyzing({ wizard, analisar }: { wizard: WizardState; analisar: (
           </div>
           <div className="text-center">
             <div className="text-[15px] font-semibold">Analisando com GPT-4o Vision…</div>
-            <div className="text-[13px] text-muted-foreground mt-1">Interpretando planta, sugerindo móveis e calculando orçamento</div>
+            <div className="text-[13px] text-muted-foreground mt-1">
+              Interpretando planta, sugerindo móveis e calculando orçamento
+            </div>
           </div>
           <div className="flex flex-wrap justify-center gap-2 mt-2">
-            {["Interpretando planta", "Dimensionando móveis", "Calculando MDF", "Estimando orçamento"].map((s, i) => (
+            {[
+              "Interpretando planta",
+              "Dimensionando móveis",
+              "Calculando MDF",
+              "Estimando orçamento",
+            ].map((s, i) => (
               <motion.span
                 key={s}
                 initial={{ opacity: 0, y: 4 }}
@@ -1221,7 +1596,9 @@ function Step3Analyzing({ wizard, analisar }: { wizard: WizardState; analisar: (
         <div className="flex flex-col items-center py-12 gap-3">
           <AlertCircle className="size-10 text-destructive" />
           <div className="text-[14px] font-medium">Erro na análise</div>
-          <div className="text-[13px] text-muted-foreground text-center max-w-sm">{wizard.error}</div>
+          <div className="text-[13px] text-muted-foreground text-center max-w-sm">
+            {wizard.error}
+          </div>
           <button
             onClick={analisar}
             className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90"
@@ -1254,16 +1631,31 @@ const MDF_CORES_COMPLETO = [
 // ─── Detecção de mismatch de ambiente ────────────────────────────────────────
 
 const AMBIENTE_KEYWORDS: Record<string, string[]> = {
-  "Cozinha":       ["bancada", "arm-sup", "arm-inf", "armário superior", "armário inferior", "geladeira", "fogão", "cooktop", "pia", "despenseiro", "paneleiro"],
+  Cozinha: [
+    "bancada",
+    "arm-sup",
+    "arm-inf",
+    "armário superior",
+    "armário inferior",
+    "geladeira",
+    "fogão",
+    "cooktop",
+    "pia",
+    "despenseiro",
+    "paneleiro",
+  ],
   "Sala de estar": ["rack", "painel tv", "sofá", "estante", "aparador", "home theater"],
-  "Quarto casal":  ["roupeiro", "cama", "criado", "cabeceira", "cômoda", "guarda-roupa"],
-  "Quarto solteiro":["roupeiro", "cama solteiro", "escrivaninha", "estante", "guarda-roupa"],
-  "Home office":   ["escrivaninha", "mesa de trabalho", "estante", "arquivo", "cadeira"],
-  "Banheiro":      ["gabinete", "espelheira", "nicho", "cuba", "armário banheiro"],
-  "Closet":        ["roupeiro", "cabideiro", "nicho", "gavetas", "sapatos"],
+  "Quarto casal": ["roupeiro", "cama", "criado", "cabeceira", "cômoda", "guarda-roupa"],
+  "Quarto solteiro": ["roupeiro", "cama solteiro", "escrivaninha", "estante", "guarda-roupa"],
+  "Home office": ["escrivaninha", "mesa de trabalho", "estante", "arquivo", "cadeira"],
+  Banheiro: ["gabinete", "espelheira", "nicho", "cuba", "armário banheiro"],
+  Closet: ["roupeiro", "cabideiro", "nicho", "gavetas", "sapatos"],
 };
 
-function detectarMismatch(ambienteSelecionado: string, moveis: { nome: string; categoria: string }[]): string | null {
+function detectarMismatch(
+  ambienteSelecionado: string,
+  moveis: { nome: string; categoria: string }[],
+): string | null {
   const texto = moveis.map((m) => (m.nome + " " + m.categoria).toLowerCase()).join(" ");
   for (const [amb, kws] of Object.entries(AMBIENTE_KEYWORDS)) {
     if (amb === ambienteSelecionado) continue;
@@ -1275,19 +1667,32 @@ function detectarMismatch(ambienteSelecionado: string, moveis: { nome: string; c
 
 // ─── Helpers de cálculo (Promob-like) ────────────────────────────────────────
 
-function calcChapasPorConfig(largura: number, altura: number, profundidade: number, cfg: {
-  num_portas: number; num_prateleiras: number; num_gavetas: number; divisorias: number;
-}): number {
+function calcChapasPorConfig(
+  largura: number,
+  altura: number,
+  profundidade: number,
+  cfg: {
+    num_portas: number;
+    num_prateleiras: number;
+    num_gavetas: number;
+    divisorias: number;
+  },
+): number {
   const A_CHAPA = 2.75 * 1.83; // m²
   const lat = (profundidade / 100) * (altura / 100) * 2;
   const horiz = (largura / 100) * (profundidade / 100) * (2 + cfg.num_prateleiras);
-  const portas = cfg.num_portas * ((largura / cfg.num_portas) / 100) * (altura / 100);
+  const portas = cfg.num_portas * (largura / cfg.num_portas / 100) * (altura / 100);
   const gavetas = cfg.num_gavetas * (largura / 100) * 0.22;
   const divis = cfg.divisorias * (profundidade / 100) * (altura / 100) * 0.5;
-  return Math.max(1, Math.ceil((lat + horiz + portas + gavetas + divis) * 1.12 / A_CHAPA));
+  return Math.max(1, Math.ceil(((lat + horiz + portas + gavetas + divis) * 1.12) / A_CHAPA));
 }
 
-function calcPrecoPorMovel(chapas: number, cfg: { ferragem?: string }, custoChapa = 85, margem = 3): number {
+function calcPrecoPorMovel(
+  chapas: number,
+  cfg: { ferragem?: string },
+  custoChapa = 85,
+  margem = 3,
+): number {
   const ferragemMult = cfg.ferragem === "blum" ? 1.5 : cfg.ferragem === "hafele" ? 2.0 : 1.0;
   const mdf = chapas * custoChapa * 1.15;
   const ferr = mdf * 0.28 * ferragemMult;
@@ -1296,10 +1701,18 @@ function calcPrecoPorMovel(chapas: number, cfg: { ferragem?: string }, custoChap
 }
 
 const NOME_COR: Record<string, string> = {
-  "#f5f3f0": "Branco TX", "#f0ebe0": "Off White", "#d4d0cc": "Cinza Claro",
-  "#5a5a5a": "Cinza Grafite", "#2c2c2c": "Preto Fosco", "#c8a87a": "Carvalho Natural",
-  "#b8824a": "Freijó", "#8b6340": "Nogueira", "#7a5530": "Imbuia",
-  "#5a6a4a": "Verde Musgo", "#2a4a5a": "Azul Petróleo", "#b56a4a": "Terracota",
+  "#f5f3f0": "Branco TX",
+  "#f0ebe0": "Off White",
+  "#d4d0cc": "Cinza Claro",
+  "#5a5a5a": "Cinza Grafite",
+  "#2c2c2c": "Preto Fosco",
+  "#c8a87a": "Carvalho Natural",
+  "#b8824a": "Freijó",
+  "#8b6340": "Nogueira",
+  "#7a5530": "Imbuia",
+  "#5a6a4a": "Verde Musgo",
+  "#2a4a5a": "Azul Petróleo",
+  "#b56a4a": "Terracota",
 };
 
 // ─── Vista de Elevação por Parede ─────────────────────────────────────────────
@@ -1311,28 +1724,39 @@ function WallElevationSection({ wizard }: { wizard: WizardState }) {
   const altM = parseFloat(wizard.form.altura) || 2.7;
   const { moveis } = wizard;
 
-  const paredeW = (paredeAtiva === "top" || paredeAtiva === "bottom") ? largM : profM;
-  const customMoveis = moveis.filter(m => m.tipo_elemento === "movel" && m.customizado !== false);
+  const paredeW = paredeAtiva === "top" || paredeAtiva === "bottom" ? largM : profM;
+  const customMoveis = moveis.filter((m) => m.tipo_elemento === "movel" && m.customizado !== false);
 
-  const moveisDaParede = customMoveis.filter(m => {
+  const moveisDaParede = customMoveis.filter((m) => {
     const limiar = 0.45;
     switch (paredeAtiva) {
-      case "top":    return m.y_pct * profM < limiar;
-      case "bottom": return (m.y_pct + m.profundidade_cm / 100 / profM) > 1 - limiar / profM;
-      case "left":   return m.x_pct * largM < limiar;
-      case "right":  return (m.x_pct + m.largura_cm / 100 / largM) > 1 - limiar / largM;
+      case "top":
+        return m.y_pct * profM < limiar;
+      case "bottom":
+        return m.y_pct + m.profundidade_cm / 100 / profM > 1 - limiar / profM;
+      case "left":
+        return m.x_pct * largM < limiar;
+      case "right":
+        return m.x_pct + m.largura_cm / 100 / largM > 1 - limiar / largM;
     }
   });
 
-  const SVG_W = 880; const SVG_H = 310;
-  const ML = 52; const MR = 16; const MT = 16; const MB = 44;
+  const SVG_W = 880;
+  const SVG_H = 310;
+  const ML = 52;
+  const MR = 16;
+  const MT = 16;
+  const MB = 44;
   const drawW = SVG_W - ML - MR;
   const drawH = SVG_H - MT - MB;
   const scaleX = drawW / (paredeW * 100);
   const scaleY = drawH / (altM * 100);
 
   const paredeLabels: Record<string, string> = {
-    bottom: "Parede frontal (entrada)", top: "Parede de fundo", left: "Parede esquerda", right: "Parede direita"
+    bottom: "Parede frontal (entrada)",
+    top: "Parede de fundo",
+    left: "Parede esquerda",
+    right: "Parede direita",
   };
 
   return (
@@ -1344,74 +1768,214 @@ function WallElevationSection({ wizard }: { wizard: WizardState }) {
           <span className="text-[12px] text-muted-foreground">{paredeLabels[paredeAtiva]}</span>
         </div>
         <div className="flex gap-1">
-          {([["bottom", "Frente"], ["top", "Fundo"], ["left", "Esquerda"], ["right", "Direita"]] as const).map(([k, l]) => (
-            <button key={k} type="button" onClick={() => setParedeAtiva(k)}
+          {(
+            [
+              ["bottom", "Frente"],
+              ["top", "Fundo"],
+              ["left", "Esquerda"],
+              ["right", "Direita"],
+            ] as const
+          ).map(([k, l]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setParedeAtiva(k)}
               className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-colors ${
-                paredeAtiva === k ? "bg-foreground text-background" : "border border-border hover:bg-secondary text-muted-foreground"
-              }`}>{l}</button>
+                paredeAtiva === k
+                  ? "bg-foreground text-background"
+                  : "border border-border hover:bg-secondary text-muted-foreground"
+              }`}
+            >
+              {l}
+            </button>
           ))}
         </div>
       </div>
 
       <div className="bg-secondary/20 rounded-lg border border-border overflow-hidden">
-        <svg id="layout-2d-guia" viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ maxHeight: 310 }}>
+        <svg
+          id="layout-2d-guia"
+          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+          className="w-full"
+          style={{ maxHeight: 310 }}
+        >
           {/* Chão */}
-          <line x1={ML} y1={MT + drawH} x2={ML + drawW} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
+          <line
+            x1={ML}
+            y1={MT + drawH}
+            x2={ML + drawW}
+            y2={MT + drawH}
+            stroke="#374151"
+            strokeWidth="2.5"
+          />
           {/* Teto (tracejado) */}
-          <line x1={ML} y1={MT} x2={ML + drawW} y2={MT} stroke="#9ca3af" strokeWidth="1" strokeDasharray="6 4" />
+          <line
+            x1={ML}
+            y1={MT}
+            x2={ML + drawW}
+            y2={MT}
+            stroke="#9ca3af"
+            strokeWidth="1"
+            strokeDasharray="6 4"
+          />
           {/* Paredes laterais */}
           <line x1={ML} y1={MT} x2={ML} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
-          <line x1={ML + drawW} y1={MT} x2={ML + drawW} y2={MT + drawH} stroke="#374151" strokeWidth="2.5" />
+          <line
+            x1={ML + drawW}
+            y1={MT}
+            x2={ML + drawW}
+            y2={MT + drawH}
+            stroke="#374151"
+            strokeWidth="2.5"
+          />
           {/* Cota largura total */}
-          <line x1={ML} y1={MT + drawH + 22} x2={ML + drawW} y2={MT + drawH + 22} stroke="#9ca3af" strokeWidth="0.8" markerEnd="url(#arr)" />
-          <line x1={ML} y1={MT + drawH + 16} x2={ML} y2={MT + drawH + 28} stroke="#9ca3af" strokeWidth="0.8" />
-          <line x1={ML + drawW} y1={MT + drawH + 16} x2={ML + drawW} y2={MT + drawH + 28} stroke="#9ca3af" strokeWidth="0.8" />
-          <text x={ML + drawW / 2} y={MT + drawH + 38} textAnchor="middle" fontSize="11" fill="#6b7280">{paredeW.toFixed(1)}m</text>
+          <line
+            x1={ML}
+            y1={MT + drawH + 22}
+            x2={ML + drawW}
+            y2={MT + drawH + 22}
+            stroke="#9ca3af"
+            strokeWidth="0.8"
+            markerEnd="url(#arr)"
+          />
+          <line
+            x1={ML}
+            y1={MT + drawH + 16}
+            x2={ML}
+            y2={MT + drawH + 28}
+            stroke="#9ca3af"
+            strokeWidth="0.8"
+          />
+          <line
+            x1={ML + drawW}
+            y1={MT + drawH + 16}
+            x2={ML + drawW}
+            y2={MT + drawH + 28}
+            stroke="#9ca3af"
+            strokeWidth="0.8"
+          />
+          <text
+            x={ML + drawW / 2}
+            y={MT + drawH + 38}
+            textAnchor="middle"
+            fontSize="11"
+            fill="#6b7280"
+          >
+            {paredeW.toFixed(1)}m
+          </text>
           {/* Cota altura */}
-          <text x={ML - 8} y={MT + drawH / 2 + 4} textAnchor="middle" fontSize="11" fill="#6b7280"
-            transform={`rotate(-90,${ML - 8},${MT + drawH / 2})`}>{altM}m</text>
+          <text
+            x={ML - 8}
+            y={MT + drawH / 2 + 4}
+            textAnchor="middle"
+            fontSize="11"
+            fill="#6b7280"
+            transform={`rotate(-90,${ML - 8},${MT + drawH / 2})`}
+          >
+            {altM}m
+          </text>
 
           {/* Grade horizontal */}
-          {[0.25, 0.5, 0.75].map(f => (
-            <line key={f} x1={ML} y1={MT + drawH * (1 - f)} x2={ML + drawW} y2={MT + drawH * (1 - f)}
-              stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="3 4" />
+          {[0.25, 0.5, 0.75].map((f) => (
+            <line
+              key={f}
+              x1={ML}
+              y1={MT + drawH * (1 - f)}
+              x2={ML + drawW}
+              y2={MT + drawH * (1 - f)}
+              stroke="#e5e7eb"
+              strokeWidth="0.5"
+              strokeDasharray="3 4"
+            />
           ))}
 
           {/* Móveis */}
           {moveisDaParede.map((m) => {
-            const posAlong_cm = (paredeAtiva === "left" || paredeAtiva === "right")
-              ? m.y_pct * profM * 100 : m.x_pct * largM * 100;
-            const wCm = (paredeAtiva === "left" || paredeAtiva === "right") ? m.profundidade_cm : m.largura_cm;
+            const posAlong_cm =
+              paredeAtiva === "left" || paredeAtiva === "right"
+                ? m.y_pct * profM * 100
+                : m.x_pct * largM * 100;
+            const wCm =
+              paredeAtiva === "left" || paredeAtiva === "right" ? m.profundidade_cm : m.largura_cm;
             const hCm = m.altura_cm || 220;
             const rx = ML + posAlong_cm * scaleX;
             const ry = MT + drawH - hCm * scaleY;
             const rw = wCm * scaleX;
             const rh = hCm * scaleY;
-            const textColor = parseInt((m.cor_hex || "#f5f3f0").slice(1), 16) > 0x888888 ? "#374151" : "#f9fafb";
+            const textColor =
+              parseInt((m.cor_hex || "#f5f3f0").slice(1), 16) > 0x888888 ? "#374151" : "#f9fafb";
 
             return (
               <g key={m.id}>
-                <rect x={rx} y={ry} width={rw} height={rh} fill={m.cor_hex || "#f5f3f0"}
-                  stroke="#6b7280" strokeWidth="0.8" rx="1" />
+                <rect
+                  x={rx}
+                  y={ry}
+                  width={rw}
+                  height={rh}
+                  fill={m.cor_hex || "#f5f3f0"}
+                  stroke="#6b7280"
+                  strokeWidth="0.8"
+                  rx="1"
+                />
                 {/* Nome */}
                 {rw > 45 && (
-                  <text x={rx + rw / 2} y={ry + 14} textAnchor="middle" fontSize="9.5" fill={textColor}>
+                  <text
+                    x={rx + rw / 2}
+                    y={ry + 14}
+                    textAnchor="middle"
+                    fontSize="9.5"
+                    fill={textColor}
+                  >
                     {m.nome.length > 14 ? m.nome.slice(0, 13) + "…" : m.nome}
                   </text>
                 )}
                 {/* Largura */}
                 {rw > 40 && (
-                  <text x={rx + rw / 2} y={ry + rh - 5} textAnchor="middle" fontSize="9" fill={textColor} opacity="0.75">
+                  <text
+                    x={rx + rw / 2}
+                    y={ry + rh - 5}
+                    textAnchor="middle"
+                    fontSize="9"
+                    fill={textColor}
+                    opacity="0.75"
+                  >
                     {wCm}cm
                   </text>
                 )}
                 {/* Cotas externas */}
-                <line x1={rx} y1={MT + drawH + 8} x2={rx + rw} y2={MT + drawH + 8} stroke="#d1d5db" strokeWidth="0.6" />
-                <line x1={rx} y1={MT + drawH + 4} x2={rx} y2={MT + drawH + 13} stroke="#d1d5db" strokeWidth="0.6" />
-                <line x1={rx + rw} y1={MT + drawH + 4} x2={rx + rw} y2={MT + drawH + 13} stroke="#d1d5db" strokeWidth="0.6" />
+                <line
+                  x1={rx}
+                  y1={MT + drawH + 8}
+                  x2={rx + rw}
+                  y2={MT + drawH + 8}
+                  stroke="#d1d5db"
+                  strokeWidth="0.6"
+                />
+                <line
+                  x1={rx}
+                  y1={MT + drawH + 4}
+                  x2={rx}
+                  y2={MT + drawH + 13}
+                  stroke="#d1d5db"
+                  strokeWidth="0.6"
+                />
+                <line
+                  x1={rx + rw}
+                  y1={MT + drawH + 4}
+                  x2={rx + rw}
+                  y2={MT + drawH + 13}
+                  stroke="#d1d5db"
+                  strokeWidth="0.6"
+                />
                 {/* Cota altura à esquerda */}
                 {rh > 40 && (
-                  <text x={rx - 3} y={ry + rh / 2 + 3} textAnchor="end" fontSize="8.5" fill="#9ca3af">
+                  <text
+                    x={rx - 3}
+                    y={ry + rh / 2 + 3}
+                    textAnchor="end"
+                    fontSize="8.5"
+                    fill="#9ca3af"
+                  >
                     {hCm}cm
                   </text>
                 )}
@@ -1420,7 +1984,13 @@ function WallElevationSection({ wizard }: { wizard: WizardState }) {
           })}
 
           {moveisDaParede.length === 0 && (
-            <text x={SVG_W / 2} y={MT + drawH / 2 + 4} textAnchor="middle" fontSize="13" fill="#9ca3af">
+            <text
+              x={SVG_W / 2}
+              y={MT + drawH / 2 + 4}
+              textAnchor="middle"
+              fontSize="13"
+              fill="#9ca3af"
+            >
               Nenhum móvel nesta parede
             </text>
           )}
@@ -1433,10 +2003,11 @@ function WallElevationSection({ wizard }: { wizard: WizardState }) {
 // ─── Resumo de Materiais ──────────────────────────────────────────────────────
 
 function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: number }) {
-  const custom = moveis.filter(m => m.tipo_elemento === "movel" && m.customizado !== false);
+  const custom = moveis.filter((m) => m.tipo_elemento === "movel" && m.customizado !== false);
 
   const porCor: Record<string, { hex: string; nome: string; chapas: number }> = {};
-  let totalChapas = 0, totalFita = 0;
+  let totalChapas = 0,
+    totalFita = 0;
   const ferragens: Record<string, number> = { nacional: 0, blum: 0, hafele: 0 };
 
   for (const m of custom) {
@@ -1446,7 +2017,7 @@ function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: 
     porCor[hex].chapas += m.chapas_mdf;
     totalChapas += m.chapas_mdf;
     totalFita += m.chapas_mdf * 22;
-    ferragens[(m.ferragem ?? "nacional")] += (m.num_portas ?? 2) + (m.num_gavetas ?? 0) * 2;
+    ferragens[m.ferragem ?? "nacional"] += (m.num_portas ?? 2) + (m.num_gavetas ?? 0) * 2;
   }
 
   const valorTotal = totalChapas * custoChapa;
@@ -1460,11 +2031,16 @@ function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: 
       <div className="grid md:grid-cols-3 gap-4">
         {/* Chapas por cor */}
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">MDF por cor/acabamento</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+            MDF por cor/acabamento
+          </div>
           <div className="space-y-1.5">
-            {Object.values(porCor).map(c => (
+            {Object.values(porCor).map((c) => (
               <div key={c.hex} className="flex items-center gap-2 text-[12.5px]">
-                <span className="size-3.5 rounded shrink-0 border border-black/10" style={{ background: c.hex }} />
+                <span
+                  className="size-3.5 rounded shrink-0 border border-black/10"
+                  style={{ background: c.hex }}
+                />
                 <span className="flex-1 text-muted-foreground truncate">{c.nome}</span>
                 <span className="font-medium tabular-nums">{c.chapas} chp</span>
               </div>
@@ -1481,11 +2057,16 @@ function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: 
 
         {/* Fita de borda */}
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Fita de borda</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+            Fita de borda
+          </div>
           <div className="space-y-1.5">
-            {Object.values(porCor).map(c => (
+            {Object.values(porCor).map((c) => (
               <div key={c.hex} className="flex items-center gap-2 text-[12.5px]">
-                <span className="size-3.5 rounded shrink-0 border border-black/10" style={{ background: c.hex }} />
+                <span
+                  className="size-3.5 rounded shrink-0 border border-black/10"
+                  style={{ background: c.hex }}
+                />
                 <span className="flex-1 text-muted-foreground truncate">{c.nome}</span>
                 <span className="font-medium tabular-nums">{Math.round(c.chapas * 22)}m</span>
               </div>
@@ -1499,16 +2080,27 @@ function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: 
 
         {/* Ferragens */}
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Ferragens estimadas</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+            Ferragens estimadas
+          </div>
           <div className="space-y-1.5 text-[12.5px]">
             {ferragens.nacional > 0 && (
-              <div className="flex justify-between"><span className="text-muted-foreground">Nacional</span><span>{ferragens.nacional} peças</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Nacional</span>
+                <span>{ferragens.nacional} peças</span>
+              </div>
             )}
             {ferragens.blum > 0 && (
-              <div className="flex justify-between"><span className="text-muted-foreground">Blum (premium)</span><span>{ferragens.blum} peças</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Blum (premium)</span>
+                <span>{ferragens.blum} peças</span>
+              </div>
             )}
             {ferragens.hafele > 0 && (
-              <div className="flex justify-between"><span className="text-muted-foreground">Häfele (superior)</span><span>{ferragens.hafele} peças</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Häfele (superior)</span>
+                <span>{ferragens.hafele} peças</span>
+              </div>
             )}
             <div className="text-[11px] text-muted-foreground pt-1 border-t border-border leading-relaxed">
               Inclui dobradiças, corrediças, puxadores e ajustadores de pé.
@@ -1520,7 +2112,11 @@ function MateriaisResumo({ moveis, custoChapa }: { moveis: Movel[]; custoChapa: 
   );
 }
 
-function MovelConfigPanel({ movel, onChange, onClose }: {
+function MovelConfigPanel({
+  movel,
+  onChange,
+  onClose,
+}: {
   movel: Movel;
   onChange: (patch: Partial<Movel>) => void;
   onClose: () => void;
@@ -1534,7 +2130,8 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
           <Settings2 className="size-4 text-accent" />
           <span className="text-[13px] font-semibold">{movel.nome}</span>
           <span className="text-[11px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md">
-            {movel.largura_cm}×{movel.profundidade_cm}{movel.altura_cm ? `×${movel.altura_cm}` : ""}cm
+            {movel.largura_cm}×{movel.profundidade_cm}
+            {movel.altura_cm ? `×${movel.altura_cm}` : ""}cm
           </span>
         </div>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -1548,7 +2145,9 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
           <div>
             <div className="flex items-center gap-1.5 mb-2">
               <Palette className="size-3.5 text-muted-foreground" />
-              <span className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide">Cor / acabamento</span>
+              <span className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide">
+                Cor / acabamento
+              </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {MDF_CORES_COMPLETO.map((c) => (
@@ -1563,7 +2162,10 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
                       : "border-border hover:border-border-strong"
                   }`}
                 >
-                  <span className="size-3 rounded-sm shrink-0 border border-black/10" style={{ background: c.hex }} />
+                  <span
+                    className="size-3 rounded-sm shrink-0 border border-black/10"
+                    style={{ background: c.hex }}
+                  />
                   {c.nome}
                 </button>
               ))}
@@ -1572,7 +2174,9 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
 
           {/* Acabamentos */}
           <div>
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Acabamentos</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Acabamentos
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { key: "rodape", label: "Rodapé", desc: "Painel inferior de 10cm" },
@@ -1601,44 +2205,68 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
 
           {/* Tipo de porta */}
           <div>
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Tipo de portas</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Tipo de portas
+            </div>
             <div className="grid grid-cols-2 gap-1.5">
-              {([
-                { v: "dobradica", l: "Dobradiça" },
-                { v: "correr", l: "Corrediça" },
-                { v: "basculante", l: "Basculante" },
-                { v: "aberta", l: "Aberto / Nicho" },
-              ] as const).map(({ v, l }) => (
-                <button key={v} type="button" onClick={() => onChange({ tipo_porta: v })}
+              {(
+                [
+                  { v: "dobradica", l: "Dobradiça" },
+                  { v: "correr", l: "Corrediça" },
+                  { v: "basculante", l: "Basculante" },
+                  { v: "aberta", l: "Aberto / Nicho" },
+                ] as const
+              ).map(({ v, l }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => onChange({ tipo_porta: v })}
                   className={`h-8 rounded-md border text-[12px] transition-colors ${
                     movel.tipo_porta === v
                       ? "bg-accent/15 border-accent text-accent font-medium"
                       : "border-border hover:border-border-strong text-muted-foreground"
-                  }`}>{l}</button>
+                  }`}
+                >
+                  {l}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Interior do móvel */}
           <div>
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Interior do móvel</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Interior do móvel
+            </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {([
+              {[
                 { k: "num_portas" as const, l: "Portas", min: 1, max: 6 },
                 { k: "num_prateleiras" as const, l: "Prateleiras", min: 0, max: 8 },
                 { k: "num_gavetas" as const, l: "Gavetas", min: 0, max: 6 },
                 { k: "divisorias" as const, l: "Divisórias", min: 0, max: 4 },
-              ]).map(({ k, l, min, max }) => {
+              ].map(({ k, l, min, max }) => {
                 const val = (movel[k] ?? (k === "num_portas" ? 2 : 0)) as number;
                 return (
                   <div key={k} className="flex items-center justify-between">
                     <span className="text-[12px] text-muted-foreground">{l}</span>
                     <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => onChange({ [k]: Math.max(min, val - 1) })}
-                        className="size-6 rounded border border-border hover:bg-secondary text-[14px] text-muted-foreground grid place-items-center">−</button>
-                      <span className="w-6 text-center text-[13px] font-medium tabular-nums">{val}</span>
-                      <button type="button" onClick={() => onChange({ [k]: Math.min(max, val + 1) })}
-                        className="size-6 rounded border border-border hover:bg-secondary text-[14px] text-muted-foreground grid place-items-center">+</button>
+                      <button
+                        type="button"
+                        onClick={() => onChange({ [k]: Math.max(min, val - 1) })}
+                        className="size-6 rounded border border-border hover:bg-secondary text-[14px] text-muted-foreground grid place-items-center"
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-[13px] font-medium tabular-nums">
+                        {val}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onChange({ [k]: Math.min(max, val + 1) })}
+                        className="size-6 rounded border border-border hover:bg-secondary text-[14px] text-muted-foreground grid place-items-center"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                 );
@@ -1648,7 +2276,9 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
 
           {/* Dimensões editáveis */}
           <div>
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Dimensões (cm)</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Dimensões (cm)
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { k: "largura_cm", label: "Largura" },
@@ -1659,8 +2289,10 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
                   <div className="text-[10.5px] text-muted-foreground mb-1">{label}</div>
                   <input
                     type="number"
-                    value={(movel as unknown as Record<string, unknown>)[k] as number || ""}
-                    onChange={(e) => onChange({ [k]: parseInt(e.target.value) || 0 } as Partial<Movel>)}
+                    value={((movel as unknown as Record<string, unknown>)[k] as number) || ""}
+                    onChange={(e) =>
+                      onChange({ [k]: parseInt(e.target.value) || 0 } as Partial<Movel>)
+                    }
                     className="w-full rounded-md border border-border bg-surface-2 px-2 py-1 text-[12px] text-center outline-none focus:border-accent"
                   />
                 </div>
@@ -1670,19 +2302,25 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
 
           {/* Ferragens */}
           <div>
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Ferragens</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Ferragens
+            </div>
             <div className="grid grid-cols-3 gap-1.5">
-              {([
+              {[
                 { v: "nacional" as const, l: "Nacional", sub: "Padrão" },
                 { v: "blum" as const, l: "Blum", sub: "+50% custo" },
                 { v: "hafele" as const, l: "Häfele", sub: "+100% custo" },
-              ]).map(({ v, l, sub }) => (
-                <button key={v} type="button" onClick={() => onChange({ ferragem: v })}
+              ].map(({ v, l, sub }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => onChange({ ferragem: v })}
                   className={`rounded-md border p-2 text-left transition-all ${
                     (movel.ferragem ?? "nacional") === v
                       ? "border-accent bg-accent/10"
                       : "border-border hover:border-border-strong"
-                  }`}>
+                  }`}
+                >
                   <div className="text-[12px] font-medium">{l}</div>
                   <div className="text-[10.5px] text-muted-foreground">{sub}</div>
                 </button>
@@ -1692,38 +2330,46 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
 
           {/* Espelho + Recalcular */}
           <div className="flex items-center justify-between gap-2 pt-1">
-            <button type="button"
+            <button
+              type="button"
               onClick={() => onChange({ espelho: !movel.espelho })}
               className={`h-8 px-3 rounded-md border text-[12px] transition-colors ${
                 movel.espelho
                   ? "border-accent bg-accent/10 text-accent"
                   : "border-border hover:bg-secondary text-muted-foreground"
-              }`}>
+              }`}
+            >
               Espelho interno {movel.espelho ? "✓" : ""}
             </button>
-            <button type="button"
+            <button
+              type="button"
               onClick={() => {
                 const chapas = calcChapasPorConfig(
-                  movel.largura_cm, movel.altura_cm || 220, movel.profundidade_cm,
+                  movel.largura_cm,
+                  movel.altura_cm || 220,
+                  movel.profundidade_cm,
                   {
                     num_portas: movel.num_portas ?? 2,
                     num_prateleiras: movel.num_prateleiras ?? 0,
                     num_gavetas: movel.num_gavetas ?? 0,
                     divisorias: movel.divisorias ?? 0,
-                  }
+                  },
                 );
                 const preco = calcPrecoPorMovel(chapas, { ferragem: movel.ferragem });
                 onChange({ chapas_mdf: chapas, preco_estimado: preco });
                 toast.success(`Recalculado: ${chapas} chapas · ${BRL(preco)}`);
               }}
-              className="h-8 px-3 rounded-md border border-accent/40 bg-accent/5 text-accent text-[12px] font-medium hover:bg-accent/10 inline-flex items-center gap-1.5 transition-colors">
+              className="h-8 px-3 rounded-md border border-accent/40 bg-accent/5 text-accent text-[12px] font-medium hover:bg-accent/10 inline-flex items-center gap-1.5 transition-colors"
+            >
               <RefreshCw className="size-3.5" /> Recalcular chapas e preço
             </button>
           </div>
 
           {/* Nota */}
           <div>
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Observação</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+              Observação
+            </div>
             <input
               type="text"
               value={movel.nota ?? ""}
@@ -1739,7 +2385,8 @@ function MovelConfigPanel({ movel, onChange, onClose }: {
         <div className="text-[12.5px] text-muted-foreground">
           {movel.tipo_elemento === "porta" && "Porta — arraste no canvas para reposicionar."}
           {movel.tipo_elemento === "janela" && "Janela — arraste no canvas para reposicionar."}
-          {movel.tipo_elemento === "existente" && "Móvel existente (comprado) — não incluso no orçamento de marcenaria."}
+          {movel.tipo_elemento === "existente" &&
+            "Móvel existente (comprado) — não incluso no orçamento de marcenaria."}
         </div>
       )}
     </div>
@@ -1772,30 +2419,63 @@ interface ModuloMotor {
 interface MotorResultado {
   projeto: { modulos: ModuloMotor[] };
   validacao: { status: string; score: number; resumo: { erros: number; alertas: number } };
-  orcamentos: { economica: VersaoOrc; intermediaria: VersaoOrc; premium: VersaoOrc; comparativo: { preco_economica: number; preco_intermediaria: number; preco_premium: number } };
-  plano_corte: {
-    resumo: { total_chapas: number; total_pecas: number; desperdicio_pct: number; metros_fita_total: number };
-    chapas: { numero_sequencial: number; material: { nome_display: string }; pecas_alocadas: { peca_id: string; largura_mm: number; comprimento_mm: number; etiqueta: string; rotacionada: boolean }[] }[];
+  orcamentos: {
+    economica: VersaoOrc;
+    intermediaria: VersaoOrc;
+    premium: VersaoOrc;
+    comparativo: { preco_economica: number; preco_intermediaria: number; preco_premium: number };
   };
-  exportacoes_corte: { csv_operador: string; dxf_corte: string; etiquetas: { codigo: string; descricao: string }[] };
-  pcp: { numero: string; prazo_dias_uteis: number; duracao_total_horas: number; data_entrega_prometida: string; etapas: { tipo: string; duracao_estimada_horas: number; funcao_responsavel: string }[] };
-  analise_tecnica: { recomendacoes: { severidade: string; titulo: string; detalhe: string; referencia?: string }[]; resumo: { total: number; atencao: number; peso_total_kg: number } };
+  plano_corte: {
+    resumo: {
+      total_chapas: number;
+      total_pecas: number;
+      desperdicio_pct: number;
+      metros_fita_total: number;
+    };
+    chapas: {
+      numero_sequencial: number;
+      material: { nome_display: string };
+      pecas_alocadas: {
+        peca_id: string;
+        largura_mm: number;
+        comprimento_mm: number;
+        etiqueta: string;
+        rotacionada: boolean;
+      }[];
+    }[];
+  };
+  exportacoes_corte: {
+    csv_operador: string;
+    dxf_corte: string;
+    etiquetas: { codigo: string; descricao: string }[];
+  };
+  pcp: {
+    numero: string;
+    prazo_dias_uteis: number;
+    duracao_total_horas: number;
+    data_entrega_prometida: string;
+    etapas: { tipo: string; duracao_estimada_horas: number; funcao_responsavel: string }[];
+  };
+  analise_tecnica: {
+    recomendacoes: { severidade: string; titulo: string; detalhe: string; referencia?: string }[];
+    resumo: { total: number; atencao: number; peso_total_kg: number };
+  };
   resultado: { avisos: string[]; status_validacao: string; score_validacao: number };
 }
 
 // Ambientes do wizard → tipo de layout do motor paramétrico
 const AMBIENTE_TO_LAYOUT: Record<string, string> = {
-  "Cozinha": "cozinha_linear",
+  Cozinha: "cozinha_linear",
   "Área gourmet": "cozinha_linear",
   "Quarto casal": "dormitorio",
   "Quarto solteiro": "dormitorio",
-  "Closet": "closet",
-  "Banheiro": "banheiro",
-  "Lavanderia": "lavanderia",
-  "Sala": "sala",
+  Closet: "closet",
+  Banheiro: "banheiro",
+  Lavanderia: "lavanderia",
+  Sala: "sala",
   "Sala de estar": "sala",
   "Home theater": "sala",
-  "Escritório": "escritorio",
+  Escritório: "escritorio",
   "Home office": "escritorio",
 };
 
@@ -1803,12 +2483,22 @@ function baixarArquivo(conteudo: string, nome: string, mime: string) {
   const blob = new Blob([conteudo], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = nome; a.click();
+  a.href = url;
+  a.download = nome;
+  a.click();
   URL.revokeObjectURL(url);
 }
 
 // Painel que exibe o resultado completo do motor paramétrico
-function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao, ehCozinha, medidas, projetoId }: {
+function MotorResultadoPainel({
+  data,
+  onUsarVersao,
+  onCriarOrdem,
+  criandoVersao,
+  ehCozinha,
+  medidas,
+  projetoId,
+}: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
   onCriarOrdem: () => void;
@@ -1818,7 +2508,11 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
   medidas: { largura: number; profundidade: number; altura: number };
   projetoId?: string | null;
 }) {
-  const [renderJob, setRenderJob] = useState<{ status: "pending" | "processing" | "completed" | "error"; imageUrl?: string; error?: string } | null>(null);
+  const [renderJob, setRenderJob] = useState<{
+    status: "pending" | "processing" | "completed" | "error";
+    imageUrl?: string;
+    error?: string;
+  } | null>(null);
   const [moduloVista3D, setModuloVista3D] = useState<number | null>(null);
 
   const handleGerarRender3D = async () => {
@@ -1828,16 +2522,16 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
       const empresaId = (empresa as { id?: string } | null)?.id;
       if (!empresaId) throw new Error("Empresa não encontrada");
 
-      const modulos = (data.projeto.modulos as unknown as (Record<string, unknown> & {
+      const modulos = data.projeto.modulos as unknown as (Record<string, unknown> & {
         modulo_template_codigo: string;
         material_corpo?: { codigo?: string; cor_hex?: string };
-      })[]);
+      })[];
       const primeiroMaterial = modulos.find((m) => m.material_corpo)?.material_corpo;
       const payload = {
         modulos: modulos.map((m) => ({
           ...m,
           configuracao: {
-            ...(m.configuracao as Record<string, unknown> ?? {}),
+            ...((m.configuracao as Record<string, unknown>) ?? {}),
             tem_forno: m.modulo_template_codigo.startsWith("torre_forno"),
           },
         })),
@@ -1851,24 +2545,36 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
 
       const { data: job, error: insertErr } = await supabase
         .from("render3d_job")
-        .insert({ empresa_id: empresaId, origem: "ia_projetos", origem_id: projetoId ?? null, status: "pending", payload })
+        .insert({
+          empresa_id: empresaId,
+          origem: "ia_projetos",
+          origem_id: projetoId ?? null,
+          status: "pending",
+          payload,
+        })
         .select("id")
         .single();
-      if (insertErr || !job) throw new Error(insertErr?.message ?? "Falha ao criar o job de render");
+      if (insertErr || !job)
+        throw new Error(insertErr?.message ?? "Falha ao criar o job de render");
 
       const res = await fetch("/api/render", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "render3d_enqueue", job_id: job.id }),
       });
-      const enqueueData = await res.json() as { ok?: boolean; error?: string };
-      if (!res.ok || !enqueueData.ok) throw new Error(enqueueData.error ?? "Falha ao acionar o worker de render");
+      const enqueueData = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !enqueueData.ok)
+        throw new Error(enqueueData.error ?? "Falha ao acionar o worker de render");
 
       setRenderJob({ status: "processing" });
       let tentativas = 0;
       const poll = setInterval(async () => {
         tentativas++;
         const { data: row } = await supabase
-          .from("render3d_job").select("status, image_path, error").eq("id", job.id).single();
+          .from("render3d_job")
+          .select("status, image_path, error")
+          .eq("id", job.id)
+          .single();
         if (!row) return;
         if (row.status === "completed" && row.image_path) {
           clearInterval(poll);
@@ -1883,17 +2589,23 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
         }
       }, 3000);
     } catch (e) {
-      setRenderJob({ status: "error", error: e instanceof Error ? e.message : "Erro ao gerar render 3D" });
+      setRenderJob({
+        status: "error",
+        error: e instanceof Error ? e.message : "Erro ao gerar render 3D",
+      });
     }
   };
 
-  const statusClasse = data.validacao.status === "aprovado"
-    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-    : data.validacao.status === "reprovado"
-      ? "bg-red-500/10 text-red-700 dark:text-red-400"
-      : "bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  const statusClasse =
+    data.validacao.status === "aprovado"
+      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+      : data.validacao.status === "reprovado"
+        ? "bg-red-500/10 text-red-700 dark:text-red-400"
+        : "bg-amber-500/10 text-amber-700 dark:text-amber-400";
   const c = data.orcamentos.comparativo;
-  const recs = data.analise_tecnica.recomendacoes.filter((r) => r.severidade !== "info").slice(0, 4);
+  const recs = data.analise_tecnica.recomendacoes
+    .filter((r) => r.severidade !== "info")
+    .slice(0, 4);
 
   return (
     <div className="space-y-3 pt-3 border-t border-border">
@@ -1902,14 +2614,17 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
         <CheckCircle2 className="size-4" />
         <span className="font-semibold capitalize">{data.validacao.status.replace(/_/g, " ")}</span>
         <span>· score {data.validacao.score}/100</span>
-        {data.validacao.resumo.alertas > 0 && <span className="text-amber-600">· {data.validacao.resumo.alertas} alerta(s)</span>}
+        {data.validacao.resumo.alertas > 0 && (
+          <span className="text-amber-600">· {data.validacao.resumo.alertas} alerta(s)</span>
+        )}
       </div>
 
       {/* 3.2: módulos do projeto fabricável — visibilidade do que o motor gerou */}
       {data.projeto?.modulos?.length > 0 && (
         <details className="rounded-md border border-border">
           <summary className="cursor-pointer select-none px-2.5 py-2 text-[12px] font-semibold flex items-center gap-1.5">
-            <Package className="size-3.5 text-accent" /> Módulos do projeto ({data.projeto.modulos.length})
+            <Package className="size-3.5 text-accent" /> Módulos do projeto (
+            {data.projeto.modulos.length})
           </summary>
           <div className="px-2.5 pb-2.5 space-y-1 max-h-56 overflow-auto">
             {data.projeto.modulos.map((m, i) => {
@@ -1918,15 +2633,26 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
                 cfg.num_portas ? `${cfg.num_portas} porta(s)` : "",
                 cfg.num_gavetas ? `${cfg.num_gavetas} gaveta(s)` : "",
                 cfg.num_prateleiras ? `${cfg.num_prateleiras} prat.` : "",
-              ].filter(Boolean).join(" · ");
+              ]
+                .filter(Boolean)
+                .join(" · ");
               return (
-                <div key={i} className="flex items-center justify-between text-[11.5px] border-b border-border/40 last:border-0 py-0.5">
-                  <span className="font-medium truncate max-w-[45%]">{m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {Math.round(m.largura_cm)}×{Math.round(m.altura_cm)}×{Math.round(m.profundidade_cm)}cm{detalhes ? ` · ${detalhes}` : ""}
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-[11.5px] border-b border-border/40 last:border-0 py-0.5"
+                >
+                  <span className="font-medium truncate max-w-[45%]">
+                    {m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}
                   </span>
-                  <button type="button" onClick={() => setModuloVista3D(i)}
-                    className="ml-2 text-[10.5px] text-accent hover:underline shrink-0 inline-flex items-center gap-0.5">
+                  <span className="text-muted-foreground tabular-nums">
+                    {Math.round(m.largura_cm)}×{Math.round(m.altura_cm)}×
+                    {Math.round(m.profundidade_cm)}cm{detalhes ? ` · ${detalhes}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setModuloVista3D(i)}
+                    className="ml-2 text-[10.5px] text-accent hover:underline shrink-0 inline-flex items-center gap-0.5"
+                  >
                     <Layers className="size-3" /> 3D
                   </button>
                 </div>
@@ -1937,56 +2663,104 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
       )}
 
       {/* Vista explodida 3D — cena completa (todos os módulos), com foco no clicado */}
-      {moduloVista3D !== null && data.projeto.modulos[moduloVista3D] && (() => {
-        type ModuloBruto = {
-          nome_display?: string; nome?: string; largura_cm: number; altura_cm: number; profundidade_cm: number;
-          posicao_x_cm?: number; posicao_y_cm?: number; parede?: "top" | "bottom" | "left" | "right";
-          configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
-          material_corpo?: { cor_hex?: string };
-          ferragens?: { tipo: string; quantidade: number }[];
-        };
-        const brutos = data.projeto.modulos as unknown as ModuloBruto[];
-        const primeiroMaterial = brutos.find((m) => m.material_corpo)?.material_corpo;
-        return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setModuloVista3D(null)}>
-            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
-            <div className="relative w-full max-w-2xl bg-surface border border-border rounded-lg shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-semibold">Cena 3D — {brutos.length} módulo(s)</span>
-                <button type="button" onClick={() => setModuloVista3D(null)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+      {moduloVista3D !== null &&
+        data.projeto.modulos[moduloVista3D] &&
+        (() => {
+          type ModuloBruto = {
+            nome_display?: string;
+            nome?: string;
+            largura_cm: number;
+            altura_cm: number;
+            profundidade_cm: number;
+            posicao_x_cm?: number;
+            posicao_y_cm?: number;
+            parede?: "top" | "bottom" | "left" | "right";
+            configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
+            material_corpo?: { cor_hex?: string };
+            ferragens?: { tipo: string; quantidade: number }[];
+          };
+          const brutos = data.projeto.modulos as unknown as ModuloBruto[];
+          const primeiroMaterial = brutos.find((m) => m.material_corpo)?.material_corpo;
+          return (
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+              onClick={() => setModuloVista3D(null)}
+            >
+              <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
+              <div
+                className="relative w-full max-w-2xl bg-surface border border-border rounded-lg shadow-xl p-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[13px] font-semibold">
+                    Cena 3D — {brutos.length} módulo(s)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setModuloVista3D(null)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <VistaExplodida3D
+                  modulos={brutos.map((m) => ({
+                    largura_cm: m.largura_cm,
+                    altura_cm: m.altura_cm,
+                    profundidade_cm: m.profundidade_cm,
+                    posicao_x_cm: m.posicao_x_cm ?? 0,
+                    posicao_y_cm: m.posicao_y_cm ?? 0,
+                    parede: m.parede,
+                    configuracao: m.configuracao ?? {},
+                    nome_display: m.nome_display ?? m.nome,
+                    ferragens: m.ferragens,
+                  }))}
+                  medidas={{
+                    largura_cm: medidas.largura * 100,
+                    profundidade_cm: medidas.profundidade * 100,
+                  }}
+                  corHex={primeiroMaterial?.cor_hex ?? "#f2f0eb"}
+                  moduloFocoInicial={moduloVista3D}
+                />
               </div>
-              <VistaExplodida3D
-                modulos={brutos.map((m) => ({
-                  largura_cm: m.largura_cm, altura_cm: m.altura_cm, profundidade_cm: m.profundidade_cm,
-                  posicao_x_cm: m.posicao_x_cm ?? 0, posicao_y_cm: m.posicao_y_cm ?? 0, parede: m.parede,
-                  configuracao: m.configuracao ?? {}, nome_display: m.nome_display ?? m.nome,
-                  ferragens: m.ferragens,
-                }))}
-                medidas={{ largura_cm: medidas.largura * 100, profundidade_cm: medidas.profundidade * 100 }}
-                corHex={primeiroMaterial?.cor_hex ?? "#f2f0eb"}
-                moduloFocoInicial={moduloVista3D}
-              />
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* 3 versões de orçamento */}
       <div>
-        <div className="text-[12px] font-semibold mb-1.5 flex items-center gap-1.5"><DollarSign className="size-3.5 text-accent" /> 3 versões de orçamento</div>
+        <div className="text-[12px] font-semibold mb-1.5 flex items-center gap-1.5">
+          <DollarSign className="size-3.5 text-accent" /> 3 versões de orçamento
+        </div>
         <div className="grid grid-cols-3 gap-2">
-          {([["economica", "Econômica", c.preco_economica], ["intermediaria", "Intermediária", c.preco_intermediaria], ["premium", "Premium", c.preco_premium]] as const).map(([k, label, preco]) => {
+          {(
+            [
+              ["economica", "Econômica", c.preco_economica],
+              ["intermediaria", "Intermediária", c.preco_intermediaria],
+              ["premium", "Premium", c.preco_premium],
+            ] as const
+          ).map(([k, label, preco]) => {
             const v = data.orcamentos[k];
             return (
-              <div key={k} className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/5" : "border-border"}`}>
+              <div
+                key={k}
+                className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/5" : "border-border"}`}
+              >
                 <div className="text-[11px] text-muted-foreground">{label}</div>
                 <div className="text-[15px] font-bold mt-0.5">{BRL(preco)}</div>
                 <div className="text-[10.5px] text-muted-foreground mt-1">
-                  custo {BRL(v.analise_financeira.custo_total)} · margem {v.analise_financeira.margem_desejada_pct}%
+                  custo {BRL(v.analise_financeira.custo_total)} · margem{" "}
+                  {v.analise_financeira.margem_desejada_pct}%
                 </div>
-                <div className="text-[10.5px] text-muted-foreground">prazo {v.prazo_producao_dias} dias</div>
-                <button type="button" disabled={!!criandoVersao} onClick={() => onUsarVersao(k)}
-                  className={`mt-2 h-7 rounded-md text-[11.5px] font-medium transition-opacity disabled:opacity-50 ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}>
+                <div className="text-[10.5px] text-muted-foreground">
+                  prazo {v.prazo_producao_dias} dias
+                </div>
+                <button
+                  type="button"
+                  disabled={!!criandoVersao}
+                  onClick={() => onUsarVersao(k)}
+                  className={`mt-2 h-7 rounded-md text-[11.5px] font-medium transition-opacity disabled:opacity-50 ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}
+                >
                   {criandoVersao === k ? "Criando…" : "Usar esta versão"}
                 </button>
               </div>
@@ -1998,30 +2772,72 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
       {/* Plano de corte + PCP */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-md border border-border p-2.5">
-          <div className="text-[12px] font-semibold mb-1 flex items-center gap-1.5"><Scissors className="size-3.5 text-accent" /> Plano de corte</div>
+          <div className="text-[12px] font-semibold mb-1 flex items-center gap-1.5">
+            <Scissors className="size-3.5 text-accent" /> Plano de corte
+          </div>
           <div className="text-[11px] text-muted-foreground space-y-0.5">
-            <div>{data.plano_corte.resumo.total_chapas} chapas · {data.plano_corte.resumo.total_pecas} peças</div>
-            <div>{data.plano_corte.resumo.desperdicio_pct}% desperdício · {data.plano_corte.resumo.metros_fita_total}m fita</div>
+            <div>
+              {data.plano_corte.resumo.total_chapas} chapas · {data.plano_corte.resumo.total_pecas}{" "}
+              peças
+            </div>
+            <div>
+              {data.plano_corte.resumo.desperdicio_pct}% desperdício ·{" "}
+              {data.plano_corte.resumo.metros_fita_total}m fita
+            </div>
             <div>{data.exportacoes_corte.etiquetas.length} etiquetas QR</div>
           </div>
           <div className="flex gap-1.5 mt-2">
-            <button type="button" onClick={() => baixarArquivo(data.exportacoes_corte.csv_operador, "plano-corte.csv", "text/csv")}
-              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1"><Download className="size-3" /> CSV</button>
-            <button type="button" onClick={() => baixarArquivo(data.exportacoes_corte.dxf_corte, "plano-corte.dxf", "application/dxf")}
-              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1"><Download className="size-3" /> DXF</button>
+            <button
+              type="button"
+              onClick={() =>
+                baixarArquivo(data.exportacoes_corte.csv_operador, "plano-corte.csv", "text/csv")
+              }
+              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1"
+            >
+              <Download className="size-3" /> CSV
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                baixarArquivo(
+                  data.exportacoes_corte.dxf_corte,
+                  "plano-corte.dxf",
+                  "application/dxf",
+                )
+              }
+              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1"
+            >
+              <Download className="size-3" /> DXF
+            </button>
           </div>
         </div>
         <div className="rounded-md border border-border p-2.5">
-          <div className="text-[12px] font-semibold mb-1 flex items-center gap-1.5"><Factory className="size-3.5 text-accent" /> Produção (PCP)</div>
+          <div className="text-[12px] font-semibold mb-1 flex items-center gap-1.5">
+            <Factory className="size-3.5 text-accent" /> Produção (PCP)
+          </div>
           <div className="text-[11px] text-muted-foreground space-y-0.5">
             <div>Ordem {data.pcp.numero}</div>
-            <div>{data.pcp.etapas.length} etapas · {data.pcp.duracao_total_horas}h</div>
+            <div>
+              {data.pcp.etapas.length} etapas · {data.pcp.duracao_total_horas}h
+            </div>
             <div>prazo {data.pcp.prazo_dias_uteis} dias úteis</div>
-            <div>entrega {new Date(data.pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}</div>
+            <div>
+              entrega {new Date(data.pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}
+            </div>
           </div>
-          <button type="button" disabled={!!criandoVersao} onClick={onCriarOrdem}
-            className="mt-2 w-full h-7 rounded-md bg-foreground text-background text-[11.5px] font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1">
-            {criandoVersao === "ordem" ? "Criando…" : <><Factory className="size-3" /> Criar ordem de produção</>}
+          <button
+            type="button"
+            disabled={!!criandoVersao}
+            onClick={onCriarOrdem}
+            className="mt-2 w-full h-7 rounded-md bg-foreground text-background text-[11.5px] font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+          >
+            {criandoVersao === "ordem" ? (
+              "Criando…"
+            ) : (
+              <>
+                <Factory className="size-3" /> Criar ordem de produção
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -2030,19 +2846,32 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
       {ehCozinha && data.projeto?.modulos?.length > 0 && (
         <div className="rounded-md border border-border p-2.5">
           <div className="flex items-center gap-3">
-            <button type="button" disabled={renderJob?.status === "pending" || renderJob?.status === "processing"}
+            <button
+              type="button"
+              disabled={renderJob?.status === "pending" || renderJob?.status === "processing"}
               onClick={handleGerarRender3D}
-              className="text-[12px] font-semibold text-accent inline-flex items-center gap-1.5 disabled:opacity-60">
-              {renderJob?.status === "pending" || renderJob?.status === "processing"
-                ? <Loader2 className="size-3.5 animate-spin" />
-                : <Camera className="size-3.5" />}
+              className="text-[12px] font-semibold text-accent inline-flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {renderJob?.status === "pending" || renderJob?.status === "processing" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Camera className="size-3.5" />
+              )}
               Gerar render 3D real
             </button>
-            {renderJob?.status === "processing" && <span className="text-[11px] text-muted-foreground">renderizando na GPU… ~1 min</span>}
-            {renderJob?.status === "error" && <span className="text-[11px] text-destructive">{renderJob.error}</span>}
+            {renderJob?.status === "processing" && (
+              <span className="text-[11px] text-muted-foreground">renderizando na GPU… ~1 min</span>
+            )}
+            {renderJob?.status === "error" && (
+              <span className="text-[11px] text-destructive">{renderJob.error}</span>
+            )}
           </div>
           {renderJob?.status === "completed" && renderJob.imageUrl && (
-            <img src={renderJob.imageUrl} alt="Render 3D — Cozinha" className="mt-2 rounded-lg border border-border w-full" />
+            <img
+              src={renderJob.imageUrl}
+              alt="Render 3D — Cozinha"
+              className="mt-2 rounded-lg border border-border w-full"
+            />
           )}
         </div>
       )}
@@ -2050,12 +2879,21 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
       {/* Recomendações técnicas */}
       {recs.length > 0 && (
         <div className="rounded-md border border-border p-2.5">
-          <div className="text-[12px] font-semibold mb-1.5 flex items-center gap-1.5"><AlertCircle className="size-3.5 text-amber-500" /> Recomendações técnicas · {data.analise_tecnica.resumo.peso_total_kg}kg</div>
+          <div className="text-[12px] font-semibold mb-1.5 flex items-center gap-1.5">
+            <AlertCircle className="size-3.5 text-amber-500" /> Recomendações técnicas ·{" "}
+            {data.analise_tecnica.resumo.peso_total_kg}kg
+          </div>
           <div className="space-y-1">
             {recs.map((r, i) => (
               <div key={i} className="text-[11px] text-muted-foreground">
-                <span className={`font-medium ${r.severidade === "atencao" ? "text-amber-600" : "text-foreground"}`}>{r.titulo}</span>
-                {r.referencia && <span className="text-[10px] ml-1 opacity-60">[{r.referencia}]</span>}
+                <span
+                  className={`font-medium ${r.severidade === "atencao" ? "text-amber-600" : "text-foreground"}`}
+                >
+                  {r.titulo}
+                </span>
+                {r.referencia && (
+                  <span className="text-[10px] ml-1 opacity-60">[{r.referencia}]</span>
+                )}
                 <span className="block opacity-80">{r.detalhe}</span>
               </div>
             ))}
@@ -2066,7 +2904,16 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
   );
 }
 
-function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCorte, criarOrdem, clientes, empresaParams }: {
+function Step4Layout({
+  wizard,
+  update,
+  gerarRender,
+  criarOrcamento,
+  gerarListaCorte,
+  criarOrdem,
+  clientes,
+  empresaParams,
+}: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   gerarRender: (mode?: "schnell" | "pro") => void;
@@ -2074,17 +2921,31 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   gerarListaCorte: () => void;
   criarOrdem: () => void;
   clientes: { id: string; nome: string }[];
-  empresaParams: { mdf_custo_chapa: number; mao_obra_hora: number; margem_padrao: number; chapa_largura_mm: number; chapa_comprimento_mm: number; acab_rodape: boolean; acab_roda_teto: boolean; acab_engrosso: boolean; ferragem_padrao: "nacional" | "blum" | "hafele" };
+  empresaParams: {
+    mdf_custo_chapa: number;
+    mao_obra_hora: number;
+    margem_padrao: number;
+    chapa_largura_mm: number;
+    chapa_comprimento_mm: number;
+    acab_rodape: boolean;
+    acab_roda_teto: boolean;
+    acab_engrosso: boolean;
+    ferragem_padrao: "nacional" | "blum" | "hafele";
+  };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const [motorAberto, setMotorAberto] = useState(false);
   const [motorLoading, setMotorLoading] = useState(false);
   const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
-  const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">(empresaParams.ferragem_padrao);
+  const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">(
+    empresaParams.ferragem_padrao,
+  );
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
-  const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<"cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha">("cozinha_linear");
+  const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<
+    "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"
+  >("cozinha_linear");
   // Acabamentos editáveis por projeto (padrão: todos ligados)
   const [acRodape, setAcRodape] = useState(empresaParams.acab_rodape);
   const [acRodaTeto, setAcRodaTeto] = useState(empresaParams.acab_roda_teto);
@@ -2112,14 +2973,16 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           config_custo: (() => {
             const f = (empresaParams.mao_obra_hora || 45) / 45;
             return {
-              ...(Math.abs(f - 1) >= 0.01 ? {
-                valor_hora_corte: 45 * f,
-                valor_hora_bordagem: 40 * f,
-                valor_hora_usinagem: 50 * f,
-                valor_hora_montagem: 55 * f,
-                valor_hora_acabamento: 60 * f,
-                valor_hora_instalacao: 65 * f,
-              } : {}),
+              ...(Math.abs(f - 1) >= 0.01
+                ? {
+                    valor_hora_corte: 45 * f,
+                    valor_hora_bordagem: 40 * f,
+                    valor_hora_usinagem: 50 * f,
+                    valor_hora_montagem: 55 * f,
+                    valor_hora_acabamento: 60 * f,
+                    valor_hora_instalacao: 65 * f,
+                  }
+                : {}),
               preco_chapa_mdf_15: empresaParams.mdf_custo_chapa,
               preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
               chapa_largura_mm: empresaParams.chapa_largura_mm,
@@ -2155,15 +3018,18 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           },
         }),
       });
-      if (!res.ok) throw new Error((await res.json() as { error: string }).error);
-      const data = await res.json() as MotorResultado;
+      if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
+      const data = (await res.json()) as MotorResultado;
       update({ motorResultado: data });
       setMotorAberto(false);
 
       // 3.4: guarda o resumo das 3 versões no cômodo ativo, para consolidação.
       if (wizard.comodoAtivoId) {
         const cmp = data.orcamentos.comparativo;
-        const resumo = (k: "economica" | "intermediaria" | "premium", preco: number): ComodoVersaoResumo => ({
+        const resumo = (
+          k: "economica" | "intermediaria" | "premium",
+          preco: number,
+        ): ComodoVersaoResumo => ({
           total: preco,
           custo: data.orcamentos[k].analise_financeira.custo_total,
           itens: data.orcamentos[k].itens ?? [],
@@ -2173,16 +3039,40 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           intermediaria: resumo("intermediaria", cmp.preco_intermediaria),
           premium: resumo("premium", cmp.preco_premium),
         };
-        update({ comodos: wizard.comodos.map((cm) => cm.id === wizard.comodoAtivoId ? { ...cm, motorVersoes, feito: true } : cm) });
+        update({
+          comodos: wizard.comodos.map((cm) =>
+            cm.id === wizard.comodoAtivoId ? { ...cm, motorVersoes, feito: true } : cm,
+          ),
+        });
       }
 
-      toast.success(`Projeto fabricável gerado · validação ${data.validacao.status} (${data.validacao.score})`);
+      toast.success(
+        `Projeto fabricável gerado · validação ${data.validacao.status} (${data.validacao.score})`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro no motor paramétrico");
     } finally {
       setMotorLoading(false);
     }
-  }, [tipoLayoutMotor, wizard.form, wizard.ambienteGeometrico, wizard.comodoAtivoId, wizard.comodos, update, motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno, comCooktop, tampoPedra, empresaParams]);
+  }, [
+    tipoLayoutMotor,
+    wizard.form,
+    wizard.ambienteGeometrico,
+    wizard.comodoAtivoId,
+    wizard.comodos,
+    update,
+    motorParede,
+    motorFerragem,
+    motorTipoPorta,
+    motorLayoutCozinha,
+    acRodape,
+    acRodaTeto,
+    acEngrosso,
+    comTorreForno,
+    comCooktop,
+    tampoPedra,
+    empresaParams,
+  ]);
 
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
@@ -2197,51 +3087,70 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
   const ajusteInicial = useRef(true);
   useEffect(() => {
     if (!tipoLayoutMotor || !wizard.motorResultado) return;
-    if (ajusteInicial.current) { ajusteInicial.current = false; return; }
-    const t = setTimeout(() => { gerarMotor(); }, 800);
+    if (ajusteInicial.current) {
+      ajusteInicial.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      gerarMotor();
+    }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motorParede, motorFerragem, motorTipoPorta, motorLayoutCozinha, acRodape, acRodaTeto, acEngrosso, comTorreForno, comCooktop, tampoPedra]);
+  }, [
+    motorParede,
+    motorFerragem,
+    motorTipoPorta,
+    motorLayoutCozinha,
+    acRodape,
+    acRodaTeto,
+    acEngrosso,
+    comTorreForno,
+    comCooktop,
+    tampoPedra,
+  ]);
 
   // Cria o orçamento formal a partir de uma das 3 versões reais do motor
-  const criarOrcamentoDoMotor = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
-    if (!wizard.motorResultado) return;
-    const v = wizard.motorResultado.orcamentos[versao];
-    setCriandoVersao(versao);
-    try {
-      const empresa = await getEmpresaAtual();
-      if (!empresa) throw new Error("Empresa não encontrada");
-      const eid = (empresa as { id: string }).id;
-      // BUG 7: o campo margem_pct é MULTIPLICADOR (venda/custo × 100) em todo o
-      // sistema. O motor usa markup internamente (margem_desejada_pct); converte-se
-      // para o multiplicador real para não poluir dashboard/edição.
-      const fin = v.analise_financeira;
-      const orc = await upsertOrcamento(eid, {
-        status: "rascunho",
-        margem_pct: Math.round((fin.preco_venda / Math.max(1, fin.custo_total)) * 100),
-        subtotal: fin.custo_total,
-        total: fin.preco_venda,
-        observacoes: `${wizard.form.nome || wizard.form.ambiente} — versão ${versao} (motor paramétrico). Prazo ${v.prazo_producao_dias} dias.`,
-        cliente_id: wizard.clienteId ?? null,
-      });
-      const itens = (v.itens ?? []).map((it) => ({
-        orcamento_id: orc.id,
-        descricao: it.descricao,
-        quantidade: it.quantidade,
-        unidade: "un",
-        preco_custo: it.preco_custo,
-        preco_unitario: it.preco_unitario,
-        total: it.total,
-      }));
-      if (itens.length > 0) await supabase.from("orcamento_itens").insert(itens);
-      toast.success(`Orçamento ${orc.numero} criado (versão ${versao})!`);
-      navigateMotor({ to: "/app/orcamentos" });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
-    } finally {
-      setCriandoVersao(null);
-    }
-  }, [wizard.motorResultado, wizard.form, wizard.clienteId, navigateMotor]);
+  const criarOrcamentoDoMotor = useCallback(
+    async (versao: "economica" | "intermediaria" | "premium") => {
+      if (!wizard.motorResultado) return;
+      const v = wizard.motorResultado.orcamentos[versao];
+      setCriandoVersao(versao);
+      try {
+        const empresa = await getEmpresaAtual();
+        if (!empresa) throw new Error("Empresa não encontrada");
+        const eid = (empresa as { id: string }).id;
+        // BUG 7: o campo margem_pct é MULTIPLICADOR (venda/custo × 100) em todo o
+        // sistema. O motor usa markup internamente (margem_desejada_pct); converte-se
+        // para o multiplicador real para não poluir dashboard/edição.
+        const fin = v.analise_financeira;
+        const orc = await upsertOrcamento(eid, {
+          status: "rascunho",
+          margem_pct: Math.round((fin.preco_venda / Math.max(1, fin.custo_total)) * 100),
+          subtotal: fin.custo_total,
+          total: fin.preco_venda,
+          observacoes: `${wizard.form.nome || wizard.form.ambiente} — versão ${versao} (motor paramétrico). Prazo ${v.prazo_producao_dias} dias.`,
+          cliente_id: wizard.clienteId ?? null,
+        });
+        const itens = (v.itens ?? []).map((it) => ({
+          orcamento_id: orc.id,
+          descricao: it.descricao,
+          quantidade: it.quantidade,
+          unidade: "un",
+          preco_custo: it.preco_custo,
+          preco_unitario: it.preco_unitario,
+          total: it.total,
+        }));
+        if (itens.length > 0) await supabase.from("orcamento_itens").insert(itens);
+        toast.success(`Orçamento ${orc.numero} criado (versão ${versao})!`);
+        navigateMotor({ to: "/app/orcamentos" });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento");
+      } finally {
+        setCriandoVersao(null);
+      }
+    },
+    [wizard.motorResultado, wizard.form, wizard.clienteId, navigateMotor],
+  );
 
   // Cria a ordem de produção a partir do plano de corte (nesting) + PCP do motor
   const criarOrdemDoMotor = useCallback(async () => {
@@ -2254,12 +3163,17 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       const pc = wizard.motorResultado.plano_corte;
       const pcp = wizard.motorResultado.pcp;
 
-      const { data: ordem } = await supabase.from("ordens_producao").insert({
-        empresa_id: eid,
-        status: "aberta",
-        observacoes: `${wizard.form.nome || wizard.form.ambiente} (motor paramétrico) · ${pc.resumo.total_chapas} chapas · ${pc.resumo.total_pecas} peças · ${pc.resumo.desperdicio_pct}% desperdício · ${pc.resumo.metros_fita_total}m fita. ` +
-          `PCP: ${pcp.etapas.length} etapas, ${pcp.duracao_total_horas}h, prazo ${pcp.prazo_dias_uteis} dias úteis (entrega ${new Date(pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}).`,
-      }).select("id,numero").single();
+      const { data: ordem } = await supabase
+        .from("ordens_producao")
+        .insert({
+          empresa_id: eid,
+          status: "aberta",
+          observacoes:
+            `${wizard.form.nome || wizard.form.ambiente} (motor paramétrico) · ${pc.resumo.total_chapas} chapas · ${pc.resumo.total_pecas} peças · ${pc.resumo.desperdicio_pct}% desperdício · ${pc.resumo.metros_fita_total}m fita. ` +
+            `PCP: ${pcp.etapas.length} etapas, ${pcp.duracao_total_horas}h, prazo ${pcp.prazo_dias_uteis} dias úteis (entrega ${new Date(pcp.data_entrega_prometida).toLocaleDateString("pt-BR")}).`,
+        })
+        .select("id,numero")
+        .single();
       if (!ordem) throw new Error("Erro ao criar ordem");
 
       // Peças do plano de corte real (nesting MaxRects), com etiqueta e chapa
@@ -2280,7 +3194,9 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       );
       if (pecas.length > 0) await supabase.from("lista_corte").insert(pecas).throwOnError();
 
-      toast.success(`Ordem #${ordem.numero ?? ""} criada com ${pecas.length} peças (plano de corte do motor)!`);
+      toast.success(
+        `Ordem #${ordem.numero ?? ""} criada com ${pecas.length} peças (plano de corte do motor)!`,
+      );
       navigateMotor({ to: "/app/producao" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao criar ordem");
@@ -2291,51 +3207,71 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
   // 3.4: orçamento consolidado — soma os itens de todos os cômodos (uma versão).
   const comodosConsolidaveis = wizard.comodos.filter((c) => c.motorVersoes);
-  const criarOrcamentoConsolidado = useCallback(async (versao: "economica" | "intermediaria" | "premium") => {
-    const comodos = wizard.comodos.filter((c) => c.motorVersoes);
-    if (comodos.length === 0) return;
-    setCriandoVersao(`consolidado-${versao}`);
-    try {
-      const empresa = await getEmpresaAtual();
-      if (!empresa) throw new Error("Empresa não encontrada");
-      const eid = (empresa as { id: string }).id;
-      let totalVenda = 0, totalCusto = 0;
-      const itensTodos: { descricao: string; quantidade: number; preco_custo: number; preco_unitario: number; total: number }[] = [];
-      for (const c of comodos) {
-        const v = c.motorVersoes![versao];
-        totalVenda += v.total; totalCusto += v.custo;
-        itensTodos.push(...v.itens.map((it) => ({ ...it, descricao: `${c.nome} — ${it.descricao}` })));
+  const criarOrcamentoConsolidado = useCallback(
+    async (versao: "economica" | "intermediaria" | "premium") => {
+      const comodos = wizard.comodos.filter((c) => c.motorVersoes);
+      if (comodos.length === 0) return;
+      setCriandoVersao(`consolidado-${versao}`);
+      try {
+        const empresa = await getEmpresaAtual();
+        if (!empresa) throw new Error("Empresa não encontrada");
+        const eid = (empresa as { id: string }).id;
+        let totalVenda = 0,
+          totalCusto = 0;
+        const itensTodos: {
+          descricao: string;
+          quantidade: number;
+          preco_custo: number;
+          preco_unitario: number;
+          total: number;
+        }[] = [];
+        for (const c of comodos) {
+          const v = c.motorVersoes![versao];
+          totalVenda += v.total;
+          totalCusto += v.custo;
+          itensTodos.push(
+            ...v.itens.map((it) => ({ ...it, descricao: `${c.nome} — ${it.descricao}` })),
+          );
+        }
+        const orc = await upsertOrcamento(eid, {
+          status: "rascunho",
+          margem_pct: Math.round((totalVenda / Math.max(1, totalCusto)) * 100),
+          subtotal: totalCusto,
+          total: totalVenda,
+          observacoes: `Projeto completo (${versao}): ${comodos.map((c) => c.nome).join(", ")}.`,
+          cliente_id: wizard.clienteId ?? null,
+        });
+        const itens = itensTodos.map((it) => ({
+          orcamento_id: orc.id,
+          descricao: it.descricao,
+          quantidade: it.quantidade,
+          unidade: "un",
+          preco_custo: it.preco_custo,
+          preco_unitario: it.preco_unitario,
+          total: it.total,
+        }));
+        if (itens.length > 0) await supabase.from("orcamento_itens").insert(itens);
+        toast.success(`Orçamento consolidado ${orc.numero} criado (${comodos.length} cômodos)!`);
+        navigateMotor({ to: "/app/orcamentos" });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento consolidado");
+      } finally {
+        setCriandoVersao(null);
       }
-      const orc = await upsertOrcamento(eid, {
-        status: "rascunho",
-        margem_pct: Math.round((totalVenda / Math.max(1, totalCusto)) * 100),
-        subtotal: totalCusto,
-        total: totalVenda,
-        observacoes: `Projeto completo (${versao}): ${comodos.map((c) => c.nome).join(", ")}.`,
-        cliente_id: wizard.clienteId ?? null,
-      });
-      const itens = itensTodos.map((it) => ({
-        orcamento_id: orc.id, descricao: it.descricao, quantidade: it.quantidade,
-        unidade: "un", preco_custo: it.preco_custo, preco_unitario: it.preco_unitario, total: it.total,
-      }));
-      if (itens.length > 0) await supabase.from("orcamento_itens").insert(itens);
-      toast.success(`Orçamento consolidado ${orc.numero} criado (${comodos.length} cômodos)!`);
-      navigateMotor({ to: "/app/orcamentos" });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao criar orçamento consolidado");
-    } finally {
-      setCriandoVersao(null);
-    }
-  }, [wizard.comodos, wizard.clienteId, navigateMotor]);
+    },
+    [wizard.comodos, wizard.clienteId, navigateMotor],
+  );
 
   const { analise, moveis } = wizard;
   if (!analise) return null;
   const { orcamento, descricao_comercial, observacoes_tecnicas } = analise;
 
-  const selectedMovel = selectedMovelId ? moveis.find((m) => m.id === selectedMovelId) ?? null : null;
+  const selectedMovel = selectedMovelId
+    ? (moveis.find((m) => m.id === selectedMovelId) ?? null)
+    : null;
 
   const updateMovel = (id: string, patch: Partial<Movel>) => {
-    update({ moveis: moveis.map((m) => m.id === id ? { ...m, ...patch } : m) });
+    update({ moveis: moveis.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   };
 
   const linhasOrc = [
@@ -2355,11 +3291,20 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/8 px-4 py-3 text-[12.5px] text-amber-800 dark:text-amber-300">
           <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <span className="font-semibold">Possível ambiente incorreto.</span>{" "}
-            A IA identificou elementos típicos de <strong>{ambienteDetectado}</strong>, mas o projeto foi criado como <strong>{wizard.form.ambiente}</strong>.
-            {" "}Verifique se o tipo de ambiente está correto antes de prosseguir.
+            <span className="font-semibold">Possível ambiente incorreto.</span> A IA identificou
+            elementos típicos de <strong>{ambienteDetectado}</strong>, mas o projeto foi criado como{" "}
+            <strong>{wizard.form.ambiente}</strong>. Verifique se o tipo de ambiente está correto
+            antes de prosseguir.
             <button
-              onClick={() => update({ form: { ...wizard.form, ambiente: ambienteDetectado as typeof wizard.form.ambiente }, step: 1 })}
+              onClick={() =>
+                update({
+                  form: {
+                    ...wizard.form,
+                    ambiente: ambienteDetectado as typeof wizard.form.ambiente,
+                  },
+                  step: 1,
+                })
+              }
               className="ml-2 underline font-medium hover:opacity-80"
             >
               Corrigir para "{ambienteDetectado}"
@@ -2373,7 +3318,12 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-[12.5px] text-destructive">
           <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <span>{wizard.error}</span>
-          <button onClick={() => update({ error: null })} className="ml-auto shrink-0 hover:opacity-70"><X className="size-3.5" /></button>
+          <button
+            onClick={() => update({ error: null })}
+            className="ml-auto shrink-0 hover:opacity-70"
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
       )}
 
@@ -2381,7 +3331,13 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
       {wizard.renderLoading && (
         <div className="flex items-center gap-3 rounded-md border border-violet-400/30 bg-violet-50 dark:bg-violet-950/20 px-4 py-3 text-[12.5px] text-violet-700 dark:text-violet-300">
           <Loader2 className="size-4 animate-spin shrink-0" />
-          <span>{wizard.renderMode === "schnell" ? "Gerando preview rápido… aguarde ~10s" : wizard.renderUrls.length > 0 ? `Gerando render premium… ${wizard.renderUrls.length}/4 vistas prontas` : "Gerando render premium… pode levar até 60s"}</span>
+          <span>
+            {wizard.renderMode === "schnell"
+              ? "Gerando preview rápido… aguarde ~10s"
+              : wizard.renderUrls.length > 0
+                ? `Gerando render premium… ${wizard.renderUrls.length}/4 vistas prontas`
+                : "Gerando render premium… pode levar até 60s"}
+          </span>
         </div>
       )}
 
@@ -2391,7 +3347,8 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           <div>
             <div className="text-[14px] font-semibold">Layout 2D — Vista superior</div>
             <div className="text-[12px] text-muted-foreground mt-0.5">
-              {wizard.form.ambiente} · {wizard.form.largura}m × {wizard.form.profundidade}m · {moveis.length} móveis
+              {wizard.form.ambiente} · {wizard.form.largura}m × {wizard.form.profundidade}m ·{" "}
+              {moveis.length} móveis
             </div>
           </div>
           <div className="text-[11.5px] text-muted-foreground">Arraste para reposicionar</div>
@@ -2429,66 +3386,105 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           <div className="flex items-center gap-2">
             <Settings2 className="size-4 text-emerald-500" />
             <span className="text-[14px] font-semibold">Projeto fabricável</span>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">Motor Paramétrico</span>
-            {motorLoading && <span className="ml-auto text-[11.5px] text-muted-foreground inline-flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> gerando…</span>}
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
+              Motor Paramétrico
+            </span>
+            {motorLoading && (
+              <span className="ml-auto text-[11.5px] text-muted-foreground inline-flex items-center gap-1">
+                <Loader2 className="size-3 animate-spin" /> gerando…
+              </span>
+            )}
           </div>
-          {wizard.motorResultado
-            ? <MotorResultadoPainel data={wizard.motorResultado} onUsarVersao={criarOrcamentoDoMotor} onCriarOrdem={criarOrdemDoMotor} criandoVersao={criandoVersao}
-                ehCozinha={AMBIENTE_TO_LAYOUT[wizard.form.ambiente] === "cozinha_linear"}
-                medidas={{
-                  largura: parseFloat(wizard.form.largura) || 4,
-                  profundidade: parseFloat(wizard.form.profundidade) || 3,
-                  altura: parseFloat(wizard.form.altura) || 2.7,
-                }}
-                projetoId={wizard.projetoId} />
-            : <div className="text-[12.5px] text-muted-foreground py-6 text-center">Calculando módulos, validação, 3 orçamentos e plano de corte CNC…</div>}
+          {wizard.motorResultado ? (
+            <MotorResultadoPainel
+              data={wizard.motorResultado}
+              onUsarVersao={criarOrcamentoDoMotor}
+              onCriarOrdem={criarOrdemDoMotor}
+              criandoVersao={criandoVersao}
+              ehCozinha={AMBIENTE_TO_LAYOUT[wizard.form.ambiente] === "cozinha_linear"}
+              medidas={{
+                largura: parseFloat(wizard.form.largura) || 4,
+                profundidade: parseFloat(wizard.form.profundidade) || 3,
+                altura: parseFloat(wizard.form.altura) || 2.7,
+              }}
+              projetoId={wizard.projetoId}
+            />
+          ) : (
+            <div className="text-[12.5px] text-muted-foreground py-6 text-center">
+              Calculando módulos, validação, 3 orçamentos e plano de corte CNC…
+            </div>
+          )}
         </Surface>
       )}
 
       {/* 3.4: consolidação multi-cômodo — projeto completo somando todos os cômodos */}
-      {comodosConsolidaveis.length >= 2 && (() => {
-        const soma = (v: "economica" | "intermediaria" | "premium") =>
-          comodosConsolidaveis.reduce((s, c) => s + (c.motorVersoes![v].total), 0);
-        return (
-          <Surface className="space-y-3 border-accent/40 bg-accent/5">
-            <div className="flex items-center gap-2">
-              <Package className="size-4 text-accent" />
-              <span className="text-[14px] font-semibold">Projeto completo</span>
-              <span className="text-[11px] text-muted-foreground">{comodosConsolidaveis.length} cômodos</span>
-            </div>
-            <div className="space-y-1">
-              {comodosConsolidaveis.map((c) => (
-                <div key={c.id} className="flex items-center justify-between text-[12px]">
-                  <span className="text-muted-foreground">{c.nome}</span>
-                  <span className="tabular-nums">{BRL(c.motorVersoes!.intermediaria.total)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border">
-              {([["economica", "Econômica"], ["intermediaria", "Intermediária"], ["premium", "Premium"]] as const).map(([k, label]) => (
-                <div key={k} className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/10" : "border-border"}`}>
-                  <div className="text-[11px] text-muted-foreground">{label} · total</div>
-                  <div className="text-[15px] font-bold mt-0.5">{BRL(soma(k))}</div>
-                  <button type="button" disabled={!!criandoVersao} onClick={() => criarOrcamentoConsolidado(k)}
-                    className={`mt-2 h-7 rounded-md text-[11.5px] font-medium disabled:opacity-50 ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}>
-                    {criandoVersao === `consolidado-${k}` ? "Criando…" : "Orçar tudo"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Surface>
-        );
-      })()}
+      {comodosConsolidaveis.length >= 2 &&
+        (() => {
+          const soma = (v: "economica" | "intermediaria" | "premium") =>
+            comodosConsolidaveis.reduce((s, c) => s + c.motorVersoes![v].total, 0);
+          return (
+            <Surface className="space-y-3 border-accent/40 bg-accent/5">
+              <div className="flex items-center gap-2">
+                <Package className="size-4 text-accent" />
+                <span className="text-[14px] font-semibold">Projeto completo</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {comodosConsolidaveis.length} cômodos
+                </span>
+              </div>
+              <div className="space-y-1">
+                {comodosConsolidaveis.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between text-[12px]">
+                    <span className="text-muted-foreground">{c.nome}</span>
+                    <span className="tabular-nums">{BRL(c.motorVersoes!.intermediaria.total)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border">
+                {(
+                  [
+                    ["economica", "Econômica"],
+                    ["intermediaria", "Intermediária"],
+                    ["premium", "Premium"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <div
+                    key={k}
+                    className={`rounded-md border p-2.5 flex flex-col ${k === "intermediaria" ? "border-accent bg-accent/10" : "border-border"}`}
+                  >
+                    <div className="text-[11px] text-muted-foreground">{label} · total</div>
+                    <div className="text-[15px] font-bold mt-0.5">{BRL(soma(k))}</div>
+                    <button
+                      type="button"
+                      disabled={!!criandoVersao}
+                      onClick={() => criarOrcamentoConsolidado(k)}
+                      className={`mt-2 h-7 rounded-md text-[11.5px] font-medium disabled:opacity-50 ${k === "intermediaria" ? "bg-accent text-white" : "border border-border hover:bg-secondary"}`}
+                    >
+                      {criandoVersao === `consolidado-${k}` ? "Criando…" : "Orçar tudo"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Surface>
+          );
+        })()}
 
       <div className="grid md:grid-cols-2 gap-5">
         {/* Estimativa rápida da IA (referência) — o valor final vem do Motor acima */}
         <Surface>
           <div className="flex items-center gap-2 mb-4">
             <DollarSign className="size-4 text-muted-foreground" />
-            <span className="text-[14px] font-semibold">{wizard.motorResultado ? "Estimativa rápida da IA" : "Orçamento estimado"}</span>
-            {wizard.motorResultado
-              ? <span className="ml-auto text-[10.5px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">referência</span>
-              : <span className="ml-auto text-[11.5px] text-muted-foreground">Margem: {orcamento.margem_pct}%</span>}
+            <span className="text-[14px] font-semibold">
+              {wizard.motorResultado ? "Estimativa rápida da IA" : "Orçamento estimado"}
+            </span>
+            {wizard.motorResultado ? (
+              <span className="ml-auto text-[10.5px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                referência
+              </span>
+            ) : (
+              <span className="ml-auto text-[11.5px] text-muted-foreground">
+                Margem: {orcamento.margem_pct}%
+              </span>
+            )}
           </div>
           <div className="space-y-2">
             {linhasOrc.map((l) => (
@@ -2512,8 +3508,14 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         <Surface>
           <div className="flex items-center gap-2 mb-4">
             <Package className="size-4 text-accent" />
-            <span className="text-[14px] font-semibold">{wizard.motorResultado ? "Módulos fabricáveis" : "Móveis sugeridos"}</span>
-            {wizard.motorResultado && <span className="ml-auto text-[10.5px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">Motor</span>}
+            <span className="text-[14px] font-semibold">
+              {wizard.motorResultado ? "Módulos fabricáveis" : "Móveis sugeridos"}
+            </span>
+            {wizard.motorResultado && (
+              <span className="ml-auto text-[10.5px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
+                Motor
+              </span>
+            )}
           </div>
           <div className="space-y-1.5 max-h-64 overflow-auto">
             {wizard.motorResultado
@@ -2523,28 +3525,41 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                     cfg.num_portas ? `${cfg.num_portas}p` : "",
                     cfg.num_gavetas ? `${cfg.num_gavetas}g` : "",
                     cfg.num_prateleiras ? `${cfg.num_prateleiras}prat` : "",
-                  ].filter(Boolean).join(" · ");
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
                   return (
                     <div key={i} className="flex items-start gap-2 text-[12px]">
                       <div className="size-3 rounded-sm shrink-0 mt-0.5 bg-emerald-500/30 border border-emerald-500/40" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}</div>
-                        <div className="text-muted-foreground">{Math.round(m.largura_cm)}×{Math.round(m.profundidade_cm)}×{Math.round(m.altura_cm)}cm{detalhe ? ` · ${detalhe}` : ""}</div>
+                        <div className="font-medium truncate">
+                          {m.nome_display ?? m.nome ?? `Módulo ${i + 1}`}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {Math.round(m.largura_cm)}×{Math.round(m.profundidade_cm)}×
+                          {Math.round(m.altura_cm)}cm{detalhe ? ` · ${detalhe}` : ""}
+                        </div>
                       </div>
                     </div>
                   );
                 })
               : moveis.map((m) => (
                   <div key={m.id} className="flex items-start gap-2 text-[12px]">
-                    <div className="size-3 rounded-sm shrink-0 mt-0.5" style={{ background: m.cor_hex || "#ccc" }} />
+                    <div
+                      className="size-3 rounded-sm shrink-0 mt-0.5"
+                      style={{ background: m.cor_hex || "#ccc" }}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{m.nome}</div>
-                      <div className="text-muted-foreground">{m.largura_cm}×{m.profundidade_cm}×{m.altura_cm}cm · {m.chapas_mdf} chapas</div>
+                      <div className="text-muted-foreground">
+                        {m.largura_cm}×{m.profundidade_cm}×{m.altura_cm}cm · {m.chapas_mdf} chapas
+                      </div>
                     </div>
-                    <div className="shrink-0 tabular-nums text-muted-foreground">{BRL(m.preco_estimado)}</div>
+                    <div className="shrink-0 tabular-nums text-muted-foreground">
+                      {BRL(m.preco_estimado)}
+                    </div>
                   </div>
-                ))
-            }
+                ))}
           </div>
         </Surface>
       </div>
@@ -2553,124 +3568,158 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           Com motor, o plano de corte (nesting MaxRects) + CSV/DXF já estão no
           painel do projeto fabricável no topo. */}
       {!AMBIENTE_TO_LAYOUT[wizard.form.ambiente] && (
-      <Surface>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Scissors className="size-4 text-accent" />
-            <span className="text-[14px] font-semibold">Lista de corte</span>
-            {wizard.listaCorte && (
-              <span className="text-[11.5px] text-muted-foreground">
-                {wizard.listaCorte.resumo.total_pecas} peças · {wizard.listaCorte.resumo.chapas_estimadas} chapas · {wizard.listaCorte.resumo.metros_fita}m fita
-              </span>
+        <Surface>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Scissors className="size-4 text-accent" />
+              <span className="text-[14px] font-semibold">Lista de corte</span>
+              {wizard.listaCorte && (
+                <span className="text-[11.5px] text-muted-foreground">
+                  {wizard.listaCorte.resumo.total_pecas} peças ·{" "}
+                  {wizard.listaCorte.resumo.chapas_estimadas} chapas ·{" "}
+                  {wizard.listaCorte.resumo.metros_fita}m fita
+                </span>
+              )}
+            </div>
+            {!wizard.listaCorte && (
+              <button
+                onClick={gerarListaCorte}
+                disabled={wizard.listaCorteLoading}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] font-medium hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5"
+              >
+                {wizard.listaCorteLoading ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" /> Gerando…
+                  </>
+                ) : (
+                  <>
+                    <Scissors className="size-3.5" /> Gerar lista
+                  </>
+                )}
+              </button>
             )}
           </div>
-          {!wizard.listaCorte && (
-            <button
-              onClick={gerarListaCorte}
-              disabled={wizard.listaCorteLoading}
-              className="h-8 px-3 rounded-md border border-border text-[12.5px] font-medium hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-1.5"
-            >
-              {wizard.listaCorteLoading
-                ? <><Loader2 className="size-3.5 animate-spin" /> Gerando…</>
-                : <><Scissors className="size-3.5" /> Gerar lista</>}
-            </button>
-          )}
-        </div>
 
-        {wizard.listaCorteLoading && (
-          <div className="flex items-center gap-2 py-6 justify-center text-[13px] text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> Calculando lista de corte…
-          </div>
-        )}
-
-        {wizard.listaCorte?.pecas_invalidas && wizard.listaCorte.pecas_invalidas.length > 0 && (
-          <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5">
-            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
-              <AlertCircle className="size-3.5" /> {wizard.listaCorte.pecas_invalidas.length} peça(s) maior(es) que a chapa — precisam de emenda ou revisão
+          {wizard.listaCorteLoading && (
+            <div className="flex items-center gap-2 py-6 justify-center text-[13px] text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Calculando lista de corte…
             </div>
-            <ul className="mt-1 space-y-0.5">
-              {wizard.listaCorte.pecas_invalidas.map((p, i) => (
-                <li key={i} className="text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">{p.peca}</span> — {p.largura_mm}×{p.comprimento_mm}mm ({p.material})
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+          )}
 
-        {wizard.listaCorte && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[12px] min-w-[680px]">
-              <thead className="text-[10.5px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                <tr>
-                  <th className="text-left font-medium px-2 py-1.5">Móvel</th>
-                  <th className="text-left font-medium px-2 py-1.5">Peça</th>
-                  <th className="text-left font-medium px-2 py-1.5">Material</th>
-                  <th className="text-right font-medium px-2 py-1.5">L (mm)</th>
-                  <th className="text-right font-medium px-2 py-1.5">C (mm)</th>
-                  <th className="text-center font-medium px-2 py-1.5">Qtd</th>
-                  <th className="text-center font-medium px-2 py-1.5">Fita</th>
-                </tr>
-              </thead>
-              <tbody>
-                {wizard.listaCorte.pecas.map((p, i) => (
-                  <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-secondary/30">
-                    <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[120px]">{p.movel}</td>
-                    <td className="px-2 py-1.5 font-medium">{p.peca}</td>
-                    <td className="px-2 py-1.5 text-muted-foreground">{p.material}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{p.largura_mm}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{p.comprimento_mm}</td>
-                    <td className="px-2 py-1.5 text-center tabular-nums">{p.quantidade}</td>
-                    <td className="px-2 py-1.5 text-center text-[10px] font-mono text-muted-foreground">
-                      {[p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"].filter(Boolean).join("·") || "—"}
-                    </td>
-                  </tr>
+          {wizard.listaCorte?.pecas_invalidas && wizard.listaCorte.pecas_invalidas.length > 0 && (
+            <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5">
+              <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+                <AlertCircle className="size-3.5" /> {wizard.listaCorte.pecas_invalidas.length}{" "}
+                peça(s) maior(es) que a chapa — precisam de emenda ou revisão
+              </div>
+              <ul className="mt-1 space-y-0.5">
+                {wizard.listaCorte.pecas_invalidas.map((p, i) => (
+                  <li key={i} className="text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">{p.peca}</span> — {p.largura_mm}×
+                    {p.comprimento_mm}mm ({p.material})
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </ul>
+            </div>
+          )}
 
-        {!wizard.listaCorte && !wizard.listaCorteLoading && (
-          <div className="py-6 text-center text-[12.5px] text-muted-foreground">
-            Clique em "Gerar lista" para calcular peças, chapas e fita de borda automaticamente.
-          </div>
-        )}
+          {wizard.listaCorte && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px] min-w-[680px]">
+                <thead className="text-[10.5px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <tr>
+                    <th className="text-left font-medium px-2 py-1.5">Móvel</th>
+                    <th className="text-left font-medium px-2 py-1.5">Peça</th>
+                    <th className="text-left font-medium px-2 py-1.5">Material</th>
+                    <th className="text-right font-medium px-2 py-1.5">L (mm)</th>
+                    <th className="text-right font-medium px-2 py-1.5">C (mm)</th>
+                    <th className="text-center font-medium px-2 py-1.5">Qtd</th>
+                    <th className="text-center font-medium px-2 py-1.5">Fita</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wizard.listaCorte.pecas.map((p, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-border/50 last:border-0 hover:bg-secondary/30"
+                    >
+                      <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[120px]">
+                        {p.movel}
+                      </td>
+                      <td className="px-2 py-1.5 font-medium">{p.peca}</td>
+                      <td className="px-2 py-1.5 text-muted-foreground">{p.material}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{p.largura_mm}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{p.comprimento_mm}</td>
+                      <td className="px-2 py-1.5 text-center tabular-nums">{p.quantidade}</td>
+                      <td className="px-2 py-1.5 text-center text-[10px] font-mono text-muted-foreground">
+                        {[p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"]
+                          .filter(Boolean)
+                          .join("·") || "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {wizard.listaCorte && (
-          <div className="flex items-center justify-between pt-2 border-t border-border gap-2">
-            <button
-              onClick={() => {
-                const rows = [
-                  ["Móvel", "Peça", "Material", "Largura(mm)", "Comprimento(mm)", "Qtd", "Fita"],
-                  ...wizard.listaCorte!.pecas.map((p) => [
-                    p.movel, p.peca, p.material, p.largura_mm, p.comprimento_mm, p.quantidade,
-                    [p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"].filter(Boolean).join("|") || "",
-                  ]),
-                ];
-                const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-                const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url; a.download = "lista-corte-planne.csv"; a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5"
-            >
-              <Download className="size-3.5" /> Exportar CSV
-            </button>
-            <button
-              onClick={criarOrdem}
-              disabled={wizard.criandoOrdem}
-              className="h-8 px-3 rounded-md bg-emerald-600 text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
-            >
-              {wizard.criandoOrdem
-                ? <><Loader2 className="size-3.5 animate-spin" /> Criando…</>
-                : <><Factory className="size-3.5" /> Criar ordem de produção</>}
-            </button>
-          </div>
-        )}
-      </Surface>
+          {!wizard.listaCorte && !wizard.listaCorteLoading && (
+            <div className="py-6 text-center text-[12.5px] text-muted-foreground">
+              Clique em "Gerar lista" para calcular peças, chapas e fita de borda automaticamente.
+            </div>
+          )}
+
+          {wizard.listaCorte && (
+            <div className="flex items-center justify-between pt-2 border-t border-border gap-2">
+              <button
+                onClick={() => {
+                  const rows = [
+                    ["Móvel", "Peça", "Material", "Largura(mm)", "Comprimento(mm)", "Qtd", "Fita"],
+                    ...wizard.listaCorte!.pecas.map((p) => [
+                      p.movel,
+                      p.peca,
+                      p.material,
+                      p.largura_mm,
+                      p.comprimento_mm,
+                      p.quantidade,
+                      [p.fita_l && "E", p.fita_r && "D", p.fita_t && "T", p.fita_b && "B"]
+                        .filter(Boolean)
+                        .join("|") || "",
+                    ]),
+                  ];
+                  const csv = rows
+                    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+                    .join("\n");
+                  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "lista-corte-planne.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="h-8 px-3 rounded-md border border-border text-[12.5px] hover:bg-secondary inline-flex items-center gap-1.5"
+              >
+                <Download className="size-3.5" /> Exportar CSV
+              </button>
+              <button
+                onClick={criarOrdem}
+                disabled={wizard.criandoOrdem}
+                className="h-8 px-3 rounded-md bg-emerald-600 text-white text-[12.5px] font-medium hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1.5"
+              >
+                {wizard.criandoOrdem ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" /> Criando…
+                  </>
+                ) : (
+                  <>
+                    <Factory className="size-3.5" /> Criar ordem de produção
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </Surface>
       )}
 
       {/* Vistas de elevação */}
@@ -2686,13 +3735,22 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             <div className="flex items-center gap-2">
               <Zap className="size-4 text-violet-500" />
               <span className="text-[14px] font-semibold">Preview rápido — Flux Schnell</span>
-              <span className="text-[11.5px] text-muted-foreground">Qualidade de visualização — use Render Premium para o cliente</span>
+              <span className="text-[11.5px] text-muted-foreground">
+                Qualidade de visualização — use Render Premium para o cliente
+              </span>
             </div>
-            <button onClick={() => update({ previewUrl: null })} className="text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => update({ previewUrl: null })}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <X className="size-4" />
             </button>
           </div>
-          <img src={wizard.previewUrl} alt="Preview" className="w-full object-cover max-h-[400px]" />
+          <img
+            src={wizard.previewUrl}
+            alt="Preview"
+            className="w-full object-cover max-h-[400px]"
+          />
         </Surface>
       )}
 
@@ -2702,14 +3760,21 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
           <FileText className="size-4 text-accent" />
           <span className="text-[14px] font-semibold">Descrição comercial gerada pela IA</span>
         </div>
-        <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-line">{descricao_comercial}</p>
+        <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-line">
+          {descricao_comercial}
+        </p>
 
         {observacoes_tecnicas?.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
-            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Observações técnicas</div>
+            <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+              Observações técnicas
+            </div>
             <ul className="space-y-1">
               {observacoes_tecnicas.map((o, i) => (
-                <li key={i} className="flex items-start gap-1.5 text-[12.5px] text-muted-foreground">
+                <li
+                  key={i}
+                  className="flex items-start gap-1.5 text-[12.5px] text-muted-foreground"
+                >
                   <ChevronRight className="size-3.5 shrink-0 mt-0.5 text-muted-foreground/50" /> {o}
                 </li>
               ))}
@@ -2725,11 +3790,13 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             <div className="flex items-center gap-2">
               <Settings2 className="size-4 text-emerald-500" />
               <span className="text-[14px] font-semibold">Ajustar projeto fabricável</span>
-              <span className="text-[11px] text-muted-foreground">parede principal · ferragens</span>
+              <span className="text-[11px] text-muted-foreground">
+                parede principal · ferragens
+              </span>
             </div>
             <button
               type="button"
-              onClick={() => setMotorAberto(v => !v)}
+              onClick={() => setMotorAberto((v) => !v)}
               className="text-[12px] text-muted-foreground hover:text-foreground"
             >
               {motorAberto ? "Fechar" : "Configurar"}
@@ -2742,21 +3809,43 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                 <div>
                   <div className="text-[11.5px] text-muted-foreground mb-1.5">Parede principal</div>
                   <div className="grid grid-cols-2 gap-1">
-                    {(["top", "bottom", "left", "right"] as const).map(p => (
-                      <button key={p} type="button" onClick={() => setMotorParede(p)}
-                        className={`h-8 text-[12px] rounded-md border transition-colors ${motorParede === p ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}>
-                        {p === "top" ? "↑ Fundo" : p === "bottom" ? "↓ Entrada" : p === "left" ? "← Esq." : "→ Dir."}
+                    {(["top", "bottom", "left", "right"] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setMotorParede(p)}
+                        className={`h-8 text-[12px] rounded-md border transition-colors ${motorParede === p ? "bg-foreground text-background border-foreground" : "border-border hover:bg-secondary"}`}
+                      >
+                        {p === "top"
+                          ? "↑ Fundo"
+                          : p === "bottom"
+                            ? "↓ Entrada"
+                            : p === "left"
+                              ? "← Esq."
+                              : "→ Dir."}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Qualidade das ferragens</div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">
+                    Qualidade das ferragens
+                  </div>
                   <div className="space-y-1">
-                    {([["nacional", "Nacional", "Padrão"], ["blum", "Blum", "+50% custo"], ["hafele", "Häfele", "+100% custo"]] as const).map(([v, l, sub]) => (
-                      <button key={v} type="button" onClick={() => setMotorFerragem(v)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border text-[12px] transition-all ${motorFerragem === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                    {(
+                      [
+                        ["nacional", "Nacional", "Padrão"],
+                        ["blum", "Blum", "+50% custo"],
+                        ["hafele", "Häfele", "+100% custo"],
+                      ] as const
+                    ).map(([v, l, sub]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setMotorFerragem(v)}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border text-[12px] transition-all ${motorFerragem === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                      >
                         <span className="font-medium">{l}</span>
                         <span className="text-muted-foreground text-[11px]">{sub}</span>
                       </button>
@@ -2769,9 +3858,18 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               <div>
                 <div className="text-[11.5px] text-muted-foreground mb-1.5">Tipo de porta</div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {([["dobradica", "Dobradiça", "Abre para fora"], ["correr", "Corrediça", "Desliza lateralmente"]] as const).map(([v, l, sub]) => (
-                    <button key={v} type="button" onClick={() => setMotorTipoPorta(v)}
-                      className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorTipoPorta === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                  {(
+                    [
+                      ["dobradica", "Dobradiça", "Abre para fora"],
+                      ["correr", "Corrediça", "Desliza lateralmente"],
+                    ] as const
+                  ).map(([v, l, sub]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setMotorTipoPorta(v)}
+                      className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorTipoPorta === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                    >
                       <span className="font-medium">{l}</span>
                       <span className="text-[10.5px] text-muted-foreground">{sub}</span>
                     </button>
@@ -2782,16 +3880,24 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               {/* Layout de cozinha — só aparece quando o ambiente é Cozinha */}
               {wizard.form.ambiente === "Cozinha" && (
                 <div>
-                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Layout da cozinha</div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">
+                    Layout da cozinha
+                  </div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {([
-                      ["cozinha_linear", "Linear", "Módulos numa parede só"],
-                      ["cozinha_l", "Em L", "Duas paredes perpendiculares"],
-                      ["cozinha_u", "Em U", "Três paredes — máximo espaço"],
-                      ["ilha", "Com ilha", "Bancada central no ambiente"],
-                    ] as const).map(([v, l, sub]) => (
-                      <button key={v} type="button" onClick={() => setMotorLayoutCozinha(v)}
-                        className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorLayoutCozinha === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
+                    {(
+                      [
+                        ["cozinha_linear", "Linear", "Módulos numa parede só"],
+                        ["cozinha_l", "Em L", "Duas paredes perpendiculares"],
+                        ["cozinha_u", "Em U", "Três paredes — máximo espaço"],
+                        ["ilha", "Com ilha", "Bancada central no ambiente"],
+                      ] as const
+                    ).map(([v, l, sub]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setMotorLayoutCozinha(v)}
+                        className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorLayoutCozinha === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                      >
                         <span className="font-medium">{l}</span>
                         <span className="text-[10.5px] text-muted-foreground">{sub}</span>
                       </button>
@@ -2803,25 +3909,67 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               {/* Acabamentos — editáveis por projeto */}
               <div>
                 <div className="flex items-baseline justify-between mb-2">
-                  <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide">Acabamentos deste projeto</div>
-                  <span className="text-[10px] text-muted-foreground/70">herdado da empresa · edite só se precisar</span>
+                  <div className="text-[11.5px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Acabamentos deste projeto
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/70">
+                    herdado da empresa · edite só se precisar
+                  </span>
                 </div>
                 <div className="space-y-1.5">
-                  {([
-                    ["Rodapé + pés reguláveis", acRodape, setAcRodape, "Rodapé clipado nos módulos de piso"],
-                    ["Roda-teto (arremate)", acRodaTeto, setAcRodaTeto, "Moldura no topo dos armários que vão ao teto"],
-                    ["Engrosso 30mm (dupla chapa)", acEngrosso, setAcEngrosso, "Tampos de bancada e frentes aparentes"],
-                    ...(wizard.form.ambiente === "Cozinha"
-                      ? [
-                          ["Torre de forno", comTorreForno, setComTorreForno, "Paneleiro alto p/ forno e micro-ondas"] as const,
-                          ["Gabinete de cooktop", comCooktop, setComCooktop, "Módulo central com recorte de cooktop"] as const,
-                          ["Tampo de pedra", tampoPedra, setTampoPedra, "Granito/quartzo — desliga engrosso MDF, orça pedra à parte"] as const,
-                        ]
-                      : []),
-                  ] as const).map(([label, val, setter, sub]) => (
-                    <button key={label} type="button" onClick={() => setter(!val)}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border text-left transition-all ${val ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}>
-                      <span className={`shrink-0 size-4 rounded border flex items-center justify-center ${val ? "bg-accent border-accent" : "border-border-strong"}`}>
+                  {(
+                    [
+                      [
+                        "Rodapé + pés reguláveis",
+                        acRodape,
+                        setAcRodape,
+                        "Rodapé clipado nos módulos de piso",
+                      ],
+                      [
+                        "Roda-teto (arremate)",
+                        acRodaTeto,
+                        setAcRodaTeto,
+                        "Moldura no topo dos armários que vão ao teto",
+                      ],
+                      [
+                        "Engrosso 30mm (dupla chapa)",
+                        acEngrosso,
+                        setAcEngrosso,
+                        "Tampos de bancada e frentes aparentes",
+                      ],
+                      ...(wizard.form.ambiente === "Cozinha"
+                        ? [
+                            [
+                              "Torre de forno",
+                              comTorreForno,
+                              setComTorreForno,
+                              "Paneleiro alto p/ forno e micro-ondas",
+                            ] as const,
+                            [
+                              "Gabinete de cooktop",
+                              comCooktop,
+                              setComCooktop,
+                              "Módulo central com recorte de cooktop",
+                            ] as const,
+                            [
+                              "Tampo de pedra",
+                              tampoPedra,
+                              setTampoPedra,
+                              "Granito/quartzo — desliga engrosso MDF, orça pedra à parte",
+                            ] as const,
+                          ]
+                        : []),
+                    ] as const
+                  ).map(([label, val, setter, sub]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setter(!val)}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border text-left transition-all ${val ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                    >
+                      <span
+                        className={`shrink-0 size-4 rounded border flex items-center justify-center ${val ? "bg-accent border-accent" : "border-border-strong"}`}
+                      >
                         {val && <Check className="size-3 text-white" />}
                       </span>
                       <span className="flex flex-col">
@@ -2839,9 +3987,18 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
                 onClick={gerarMotor}
                 className="w-full h-10 rounded-md bg-emerald-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-opacity"
               >
-                {motorLoading
-                  ? <><Loader2 className="size-4 animate-spin" /> Gerando projeto fabricável…</>
-                  : <><Settings2 className="size-4" /> {wizard.motorResultado ? "Refazer com estas configurações" : "Gerar projeto fabricável"}</>}
+                {motorLoading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Gerando projeto fabricável…
+                  </>
+                ) : (
+                  <>
+                    <Settings2 className="size-4" />{" "}
+                    {wizard.motorResultado
+                      ? "Refazer com estas configurações"
+                      : "Gerar projeto fabricável"}
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -2864,7 +4021,9 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
         {/* Client picker */}
         {clientes.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-[11.5px] text-muted-foreground shrink-0">Cliente do orçamento:</label>
+            <label className="text-[11.5px] text-muted-foreground shrink-0">
+              Cliente do orçamento:
+            </label>
             <select
               value={wizard.clienteId ?? ""}
               onChange={(e) => {
@@ -2874,7 +4033,11 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               className="flex-1 h-8 rounded-md border border-border bg-surface-2 px-2.5 text-[12.5px] outline-none"
             >
               <option value="">Sem cliente (rascunho)</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
             </select>
           </div>
         )}
@@ -2884,17 +4047,22 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
               intermediária por padrão; as 3 versões ficam no painel do topo).
               O fluxo Vision só é usado quando o motor não rodou. */}
           <button
-            onClick={() => wizard.motorResultado
-              ? criarOrcamentoDoMotor("intermediaria")
-              : criarOrcamento(wizard.clienteId ?? undefined)}
+            onClick={() =>
+              wizard.motorResultado
+                ? criarOrcamentoDoMotor("intermediaria")
+                : criarOrcamento(wizard.clienteId ?? undefined)
+            }
             disabled={!!criandoVersao}
             className="h-10 px-4 rounded-md border border-border text-[13px] font-medium hover:bg-secondary disabled:opacity-60 inline-flex items-center gap-2"
           >
-            <FileText className="size-4" /> {criandoVersao === "intermediaria"
+            <FileText className="size-4" />{" "}
+            {criandoVersao === "intermediaria"
               ? "Criando…"
               : wizard.motorResultado
                 ? "Criar orçamento (intermediária)"
-                : (wizard.clienteNome ? `Criar orçamento — ${wizard.clienteNome}` : "Criar orçamento")}
+                : wizard.clienteNome
+                  ? `Criar orçamento — ${wizard.clienteNome}`
+                  : "Criar orçamento"}
           </button>
 
           <button
@@ -2903,9 +4071,15 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             className="h-10 px-4 rounded-md border border-violet-400 text-violet-700 dark:text-violet-300 text-[13px] font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 disabled:opacity-60 inline-flex items-center gap-2"
             title="Preview rápido — gerado em ~10s, sem consumir crédito premium"
           >
-            {wizard.renderLoading && wizard.renderMode === "schnell"
-              ? <><Loader2 className="size-4 animate-spin" /> Gerando preview…</>
-              : <><Zap className="size-4" /> Preview rápido</>}
+            {wizard.renderLoading && wizard.renderMode === "schnell" ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Gerando preview…
+              </>
+            ) : (
+              <>
+                <Zap className="size-4" /> Preview rápido
+              </>
+            )}
           </button>
 
           <button
@@ -2914,9 +4088,15 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
             className="h-10 px-5 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-2 shadow-lg shadow-violet-500/20"
             title="Render premium — alta qualidade 1792×1024px, consome 1 crédito"
           >
-            {wizard.renderLoading && wizard.renderMode === "pro"
-              ? <><Loader2 className="size-4 animate-spin" /> Renderizando…</>
-              : <><Sparkles className="size-4" /> Render Premium</>}
+            {wizard.renderLoading && wizard.renderMode === "pro" ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Renderizando…
+              </>
+            ) : (
+              <>
+                <Sparkles className="size-4" /> Render Premium
+              </>
+            )}
           </button>
         </div>
       </Surface>
@@ -2926,13 +4106,22 @@ function Step4Layout({ wizard, update, gerarRender, criarOrcamento, gerarListaCo
 
 // ─── Step 5: Render ───────────────────────────────────────────────────────────
 
-function Step5Render({ wizard, update, criarOrcamento, gerarRender }: {
+function Step5Render({
+  wizard,
+  update,
+  criarOrcamento,
+  gerarRender,
+}: {
   wizard: WizardState;
   update: (p: Partial<WizardState>) => void;
   criarOrcamento: () => void;
   gerarRender: (mode?: "schnell" | "pro") => void;
 }) {
-  const galeria = wizard.renderUrls?.length ? wizard.renderUrls : (wizard.renderUrl ? [wizard.renderUrl] : []);
+  const galeria = wizard.renderUrls?.length
+    ? wizard.renderUrls
+    : wizard.renderUrl
+      ? [wizard.renderUrl]
+      : [];
   const rotulos = ["Visão geral (entrada)", "Parede principal", "Canto oposto", "Vista lateral"];
   // Total preferencial: usa o motor (intermediária) quando disponível — mais preciso que Vision
   const totalMotor = wizard.motorResultado?.orcamentos.comparativo.preco_intermediaria;
@@ -2955,28 +4144,53 @@ function Step5Render({ wizard, update, criarOrcamento, gerarRender }: {
             className="h-8 px-3 rounded-md border border-violet-400 text-violet-700 dark:text-violet-300 text-[12px] font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 disabled:opacity-60 inline-flex items-center gap-1.5"
             title="Gerar novo set de 4 vistas — consome 1 crédito"
           >
-            {wizard.renderLoading
-              ? <><Loader2 className="size-3.5 animate-spin" /> {galeria.length}/4</>
-              : <><RefreshCw className="size-3.5" /> Novo render</>}
+            {wizard.renderLoading ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" /> {galeria.length}/4
+              </>
+            ) : (
+              <>
+                <RefreshCw className="size-3.5" /> Novo render
+              </>
+            )}
           </button>
         </div>
         {galeria.length > 0 ? (
           <div>
             <div className="grid grid-cols-2 gap-1.5 p-1.5">
               {galeria.map((url, i) => (
-                <a key={i} href={url} download={`render-planne-${i + 1}.jpg`} target="_blank" rel="noopener noreferrer"
-                  className="group relative block overflow-hidden rounded-md">
-                  <img src={url} alt={rotulos[i] ?? `Vista ${i + 1}`} className="w-full object-cover aspect-[4/3]" />
-                  <span className="absolute bottom-1 left-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded">{rotulos[i] ?? `Vista ${i + 1}`}</span>
-                  <span className="absolute top-1 right-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 inline-flex items-center gap-1"><ImageIcon className="size-2.5" /> baixar</span>
+                <a
+                  key={i}
+                  href={url}
+                  download={`render-planne-${i + 1}.jpg`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative block overflow-hidden rounded-md"
+                >
+                  <img
+                    src={url}
+                    alt={rotulos[i] ?? `Vista ${i + 1}`}
+                    className="w-full object-cover aspect-[4/3]"
+                  />
+                  <span className="absolute bottom-1 left-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded">
+                    {rotulos[i] ?? `Vista ${i + 1}`}
+                  </span>
+                  <span className="absolute top-1 right-1 text-[10px] bg-black/55 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 inline-flex items-center gap-1">
+                    <ImageIcon className="size-2.5" /> baixar
+                  </span>
                 </a>
               ))}
               {/* Placeholders enquanto restam vistas chegando */}
-              {wizard.renderLoading && galeria.length < 4 && Array.from({ length: 4 - galeria.length }).map((_, i) => (
-                <div key={`ph-${i}`} className="aspect-[4/3] rounded-md bg-secondary/60 grid place-items-center">
-                  <Loader2 className="size-5 animate-spin text-muted-foreground/50" />
-                </div>
-              ))}
+              {wizard.renderLoading &&
+                galeria.length < 4 &&
+                Array.from({ length: 4 - galeria.length }).map((_, i) => (
+                  <div
+                    key={`ph-${i}`}
+                    className="aspect-[4/3] rounded-md bg-secondary/60 grid place-items-center"
+                  >
+                    <Loader2 className="size-5 animate-spin text-muted-foreground/50" />
+                  </div>
+                ))}
             </div>
             {wizard.renderLoading && (
               <div className="px-4 py-2 text-[12px] text-muted-foreground inline-flex items-center gap-1.5">
@@ -2996,7 +4210,9 @@ function Step5Render({ wizard, update, criarOrcamento, gerarRender }: {
           <div className="flex flex-col items-center py-20 gap-4">
             <Loader2 className="size-8 animate-spin text-accent" />
             <div className="text-[14px] font-medium">Gerando vistas do ambiente…</div>
-            <div className="text-[13px] text-muted-foreground">4 ângulos que mostram o espaço inteiro · pode levar ~1 min</div>
+            <div className="text-[13px] text-muted-foreground">
+              4 ângulos que mostram o espaço inteiro · pode levar ~1 min
+            </div>
           </div>
         )}
       </Surface>
@@ -3005,21 +4221,34 @@ function Step5Render({ wizard, update, criarOrcamento, gerarRender }: {
         <div className="grid md:grid-cols-2 gap-4">
           <Surface padded={false} className="p-4">
             <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-1">
-              Total do projeto {isMotorTotal && <span className="text-emerald-600 normal-case">(motor paramétrico)</span>}
+              Total do projeto{" "}
+              {isMotorTotal && (
+                <span className="text-emerald-600 normal-case">(motor paramétrico)</span>
+              )}
             </div>
             <div className="text-[28px] font-bold text-accent tabular-nums">
               {BRL(totalExibido)}
             </div>
-            {isMotorTotal
-              ? <div className="text-[12px] text-muted-foreground mt-1">Versão intermediária · {wizard.motorResultado!.projeto.modulos.length} módulos</div>
-              : <div className="text-[12px] text-muted-foreground mt-1">Margem: {wizard.analise?.orcamento.margem_pct ?? 0}% · {wizard.moveis.length} móveis</div>
-            }
+            {isMotorTotal ? (
+              <div className="text-[12px] text-muted-foreground mt-1">
+                Versão intermediária · {wizard.motorResultado!.projeto.modulos.length} módulos
+              </div>
+            ) : (
+              <div className="text-[12px] text-muted-foreground mt-1">
+                Margem: {wizard.analise?.orcamento.margem_pct ?? 0}% · {wizard.moveis.length} móveis
+              </div>
+            )}
           </Surface>
           <Surface padded={false} className="p-4">
-            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-3">Próximos passos</div>
+            <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground mb-3">
+              Próximos passos
+            </div>
             <div className="space-y-2">
               {["Apresentar proposta ao cliente", "Gerar PDF com render + orçamento"].map((s) => (
-                <div key={s} className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+                <div
+                  key={s}
+                  className="flex items-center gap-2 text-[12.5px] text-muted-foreground"
+                >
                   <ChevronRight className="size-3.5 shrink-0" /> {s}
                 </div>
               ))}
@@ -3045,7 +4274,11 @@ function Step5Render({ wizard, update, criarOrcamento, gerarRender }: {
 
 // ─── Landing ──────────────────────────────────────────────────────────────────
 
-function LandingPage({ onStart, savedProjects, loading }: {
+function LandingPage({
+  onStart,
+  savedProjects,
+  loading,
+}: {
   onStart: () => void;
   savedProjects: SavedProject[];
   loading: boolean;
@@ -3059,9 +4292,21 @@ function LandingPage({ onStart, savedProjects, loading }: {
       />
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         {[
-          { icon: Building2, title: "Planta → Projeto", desc: "Envie a planta baixa e a IA entende medidas, circulação e espaço" },
-          { icon: LayoutGrid, title: "Layout 2D automático", desc: "Móveis posicionados automaticamente no canvas. Ajuste com drag & drop" },
-          { icon: Zap, title: "Render cinematográfico", desc: "Gere imagens fotorrealistas com Flux Pro ou DALL-E 3 sob aprovação" },
+          {
+            icon: Building2,
+            title: "Planta → Projeto",
+            desc: "Envie a planta baixa e a IA entende medidas, circulação e espaço",
+          },
+          {
+            icon: LayoutGrid,
+            title: "Layout 2D automático",
+            desc: "Móveis posicionados automaticamente no canvas. Ajuste com drag & drop",
+          },
+          {
+            icon: Zap,
+            title: "Render cinematográfico",
+            desc: "Gere imagens fotorrealistas com Flux Pro ou DALL-E 3 sob aprovação",
+          },
         ].map((c) => (
           <Surface key={c.title} className="flex flex-col gap-2">
             <div className="size-9 rounded-md bg-accent/10 grid place-items-center">
@@ -3094,15 +4339,22 @@ function LandingPage({ onStart, savedProjects, loading }: {
           <div className="text-[13px] font-semibold mb-4">Projetos salvos</div>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
             {savedProjects.map((p) => (
-              <div key={p.id} className="rounded-lg border border-border overflow-hidden hover:border-border-strong transition-colors">
+              <div
+                key={p.id}
+                className="rounded-lg border border-border overflow-hidden hover:border-border-strong transition-colors"
+              >
                 <div className="h-28 bg-surface-2 grid place-items-center overflow-hidden">
-                  {p.render_url
-                    ? <img src={p.render_url} alt={p.nome} className="size-full object-cover" />
-                    : <Sparkles className="size-6 text-muted-foreground/40" />}
+                  {p.render_url ? (
+                    <img src={p.render_url} alt={p.nome} className="size-full object-cover" />
+                  ) : (
+                    <Sparkles className="size-6 text-muted-foreground/40" />
+                  )}
                 </div>
                 <div className="p-2.5">
                   <div className="text-[12.5px] font-medium truncate">{p.nome}</div>
-                  <div className="text-[11.5px] text-muted-foreground">{p.ambiente} · {p.estilo}</div>
+                  <div className="text-[11.5px] text-muted-foreground">
+                    {p.ambiente} · {p.estilo}
+                  </div>
                   <div className="text-[10.5px] text-muted-foreground/60 mt-0.5">
                     {new Date(p.created_at).toLocaleDateString("pt-BR")}
                   </div>
