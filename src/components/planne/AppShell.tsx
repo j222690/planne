@@ -5,7 +5,7 @@ import {
   Hammer, Wallet, Settings, Search, Bell, Command, ChevronsUpDown,
   Folder, LogOut, Menu, X, Sun, Moon, Wand2,
   CalendarDays, GitBranch, BarChart3, History, CreditCard,
-  CheckCheck, FileText as FileText2, UserPlus, FolderPlus,
+  CheckCheck, FileText as FileText2, UserPlus, FolderPlus, BookOpen,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,7 @@ const nav = [
     { to: "/app/ia", label: "Grat — Assistente", icon: Sparkles },
     { to: "/app/dashboard-ia", label: "Dashboard IA", icon: BarChart3 },
     { to: "/app/financeiro", label: "Financeiro", icon: Wallet },
+    { to: "/app/central-conhecimento", label: "Central de Conhecimento", icon: BookOpen },
   ]},
 ];
 

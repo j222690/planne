@@ -27,6 +27,7 @@ import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
 import { Route as AppDashboardIaRouteImport } from './routes/app.dashboard-ia'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppCentralConhecimentoRouteImport } from './routes/app.central-conhecimento'
 import { Route as AppCalendarioRouteImport } from './routes/app.calendario'
 import { Route as AppBuscaLeadRouteImport } from './routes/app.busca-lead'
 
@@ -120,6 +121,11 @@ const AppClientesRoute = AppClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCentralConhecimentoRoute = AppCentralConhecimentoRouteImport.update({
+  id: '/central-conhecimento',
+  path: '/central-conhecimento',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCalendarioRoute = AppCalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/app/busca-lead': typeof AppBuscaLeadRoute
   '/app/calendario': typeof AppCalendarioRoute
+  '/app/central-conhecimento': typeof AppCentralConhecimentoRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/dashboard-ia': typeof AppDashboardIaRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/app/busca-lead': typeof AppBuscaLeadRoute
   '/app/calendario': typeof AppCalendarioRoute
+  '/app/central-conhecimento': typeof AppCentralConhecimentoRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/dashboard-ia': typeof AppDashboardIaRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/app/busca-lead': typeof AppBuscaLeadRoute
   '/app/calendario': typeof AppCalendarioRoute
+  '/app/central-conhecimento': typeof AppCentralConhecimentoRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/dashboard-ia': typeof AppDashboardIaRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/busca-lead'
     | '/app/calendario'
+    | '/app/central-conhecimento'
     | '/app/clientes'
     | '/app/configuracoes'
     | '/app/dashboard-ia'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/busca-lead'
     | '/app/calendario'
+    | '/app/central-conhecimento'
     | '/app/clientes'
     | '/app/configuracoes'
     | '/app/dashboard-ia'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/busca-lead'
     | '/app/calendario'
+    | '/app/central-conhecimento'
     | '/app/clientes'
     | '/app/configuracoes'
     | '/app/dashboard-ia'
@@ -399,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/central-conhecimento': {
+      id: '/app/central-conhecimento'
+      path: '/central-conhecimento'
+      fullPath: '/app/central-conhecimento'
+      preLoaderRoute: typeof AppCentralConhecimentoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/calendario': {
       id: '/app/calendario'
       path: '/calendario'
@@ -419,6 +438,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppBuscaLeadRoute: typeof AppBuscaLeadRoute
   AppCalendarioRoute: typeof AppCalendarioRoute
+  AppCentralConhecimentoRoute: typeof AppCentralConhecimentoRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppDashboardIaRoute: typeof AppDashboardIaRoute
@@ -439,6 +459,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppBuscaLeadRoute: AppBuscaLeadRoute,
   AppCalendarioRoute: AppCalendarioRoute,
+  AppCentralConhecimentoRoute: AppCentralConhecimentoRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppDashboardIaRoute: AppDashboardIaRoute,
