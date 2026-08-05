@@ -111,6 +111,7 @@ function montarParede(
     materialFundo,
     getTemplate: getTemplateBase,
     templateFallback: MODULOS_BASE_COZINHA[4],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base,
       ferragem: prefs.ferragem,
@@ -134,6 +135,7 @@ function montarParede(
       materialFundo,
       getTemplate: getTemplateAereo,
       templateFallback: MODULOS_AEREOS_COZINHA[4],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: prefs.tipo_porta_aereo as ConfiguracaoModulo["tipo_porta"],
         ferragem: prefs.ferragem,

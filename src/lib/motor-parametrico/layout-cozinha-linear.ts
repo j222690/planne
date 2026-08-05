@@ -57,6 +57,8 @@ export interface PreferenciasCozinha {
   com_torre_forno?: boolean;
   /** Marca um gabinete central com recorte de cooktop. Default: true. */
   com_cooktop?: boolean;
+  /** Espessura padrão do corpo/porta (mm) — preferência de projeto. Default 15mm. */
+  espessura_padrao_mm?: 15 | 18;
   /** Tampo de pedra (granito/quartzo) em vez de MDF. Default: false. */
   tampo_pedra?: boolean;
   criado_por?: string;
@@ -136,6 +138,7 @@ export function gerarLayoutCozinhaLinear(
       materialFundo,
       getTemplate: getTemplateBase,
       templateFallback: MODULOS_BASE_COZINHA[4],
+      espessura_padrao_mm: preferencias.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: preferencias.tipo_porta_base,
         ferragem: preferencias.ferragem,
@@ -168,6 +171,7 @@ export function gerarLayoutCozinhaLinear(
       materialFundo,
       getTemplate: getTemplateAereo,
       templateFallback: MODULOS_AEREOS_COZINHA[4],
+      espessura_padrao_mm: preferencias.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: preferencias.tipo_porta_aereo as ConfiguracaoModulo["tipo_porta"],
         ferragem: preferencias.ferragem,
@@ -195,6 +199,7 @@ export function gerarLayoutCozinhaLinear(
         materialFundo,
         getTemplate: () => MODULO_TORRE_FORNO,
         templateFallback: MODULO_TORRE_FORNO,
+        espessura_padrao_mm: preferencias.espessura_padrao_mm,
         configDe: () => configPadrao({
           tipo_porta: "dobradica",
           ferragem: preferencias.ferragem,

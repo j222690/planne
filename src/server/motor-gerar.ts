@@ -74,6 +74,8 @@ interface RequestBody {
     tipo_porta_aereo?: "dobradica" | "basculante";
     tipo_porta?: "dobradica" | "correr" | "espelho";
     tipo_divisoria?: "rente" | "recuada";
+    /** Espessura padrão do corpo/porta (mm) — preferência de projeto. Default 15mm. */
+    espessura_padrao_mm?: 15 | 18;
     versao_comercial?: "economica" | "intermediaria" | "premium";
     com_aereos?: boolean;
     com_superior?: boolean;
@@ -150,6 +152,7 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       cor_mdf_hex: prefs.cor_mdf_hex ?? "#f5f3f0",
       ferragem: prefs.ferragem ?? "nacional" as const,
       versao_comercial: prefs.versao_comercial ?? "intermediaria" as const,
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       nome: prefs.nome,
       empresa_id: prefs.empresa_id,
       cliente_id: prefs.cliente_id,

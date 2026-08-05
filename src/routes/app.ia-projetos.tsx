@@ -2950,6 +2950,7 @@ function Step4Layout({
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
   const [motorTipoDivisoria, setMotorTipoDivisoria] = useState<"rente" | "recuada">("rente");
+  const [motorEspessura, setMotorEspessura] = useState<15 | 18>(15);
   const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<
     "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"
   >("cozinha_linear");
@@ -3020,6 +3021,7 @@ function Step4Layout({
             tipo_porta_aereo: "dobradica",
             tipo_porta: motorTipoPorta,
             tipo_divisoria: motorTipoDivisoria,
+            espessura_padrao_mm: motorEspessura,
             versao_comercial: "intermediaria",
             acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
             com_torre_forno: comTorreForno,
@@ -3075,6 +3077,7 @@ function Step4Layout({
     motorFerragem,
     motorTipoPorta,
     motorTipoDivisoria,
+    motorEspessura,
     motorLayoutCozinha,
     acRodape,
     acRodaTeto,
@@ -3112,6 +3115,7 @@ function Step4Layout({
     motorFerragem,
     motorTipoPorta,
     motorTipoDivisoria,
+    motorEspessura,
     motorLayoutCozinha,
     acRodape,
     acRodaTeto,
@@ -3913,6 +3917,29 @@ function Step4Layout({
                   </div>
                 </div>
               )}
+
+              {/* Espessura do MDF — preferência de construção, vale para qualquer ambiente */}
+              <div>
+                <div className="text-[11.5px] text-muted-foreground mb-1.5">Espessura do MDF</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(
+                    [
+                      [15, "15mm", "Padrão — mais leve e barato"],
+                      [18, "18mm", "Mais robusto — módulos grandes/pesados"],
+                    ] as const
+                  ).map(([v, l, sub]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setMotorEspessura(v)}
+                      className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorEspessura === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                    >
+                      <span className="font-medium">{l}</span>
+                      <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Layout de cozinha — só aparece quando o ambiente é Cozinha */}
               {wizard.form.ambiente === "Cozinha" && (

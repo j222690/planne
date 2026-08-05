@@ -80,6 +80,7 @@ export function gerarLayoutSala(
     materialFundo,
     getTemplate: getTemplateRackTv,
     templateFallback: MODULOS_RACK_TV[1],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -105,6 +106,7 @@ export function gerarLayoutSala(
       materialFundo,
       getTemplate: getTemplatePainelRipado,
       templateFallback: MODULOS_PAINEL_RIPADO[1],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: () => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -132,6 +134,7 @@ export function gerarLayoutSala(
       materialFundo,
       getTemplate: getTemplateNichoSala,
       templateFallback: MODULOS_NICHO_SALA[1],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,

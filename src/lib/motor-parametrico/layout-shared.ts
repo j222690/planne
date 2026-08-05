@@ -36,6 +36,8 @@ export interface PreferenciasBase {
   cliente_id?: string;
   nome?: string;
   estilo?: string;
+  /** Espessura padrão do corpo/porta (mm) — preferência de projeto. Default 15mm. */
+  espessura_padrao_mm?: 15 | 18;
 }
 
 // ─── RESULTADO PADRÃO DE LAYOUT ───────────────────────────────────────────────
@@ -186,6 +188,12 @@ export interface OpcoesInstanciacao {
   rotuloParede?: string;
   /** Contador de ordem inicial. */
   ordemInicial?: number;
+  /**
+   * Espessura padrão do corpo/porta (mm) — preferência de projeto, sobrescreve
+   * o default de `configPadrao` (15mm) em corpo e porta de todos os módulos
+   * desta chamada. Omitido = mantém o que `configDe` já definiu.
+   */
+  espessura_padrao_mm?: 15 | 18;
 }
 
 /**
@@ -205,6 +213,10 @@ export function instanciarModulos(
   for (const largura of larguras) {
     const template = opcoes.getTemplate(largura) ?? opcoes.templateFallback;
     const cfg = opcoes.configDe(largura);
+    if (opcoes.espessura_padrao_mm) {
+      cfg.espessura_corpo_mm = opcoes.espessura_padrao_mm;
+      cfg.espessura_porta_mm = opcoes.espessura_padrao_mm;
+    }
     const rotulo = opcoes.rotuloParede ?? `Parede ${opcoes.parede}`;
 
     const instancia: ModuloInstanciado = {

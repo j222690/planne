@@ -1559,6 +1559,10 @@ function instanciarModulos(larguras, opcoes) {
   for (const largura of larguras) {
     const template = opcoes.getTemplate(largura) ?? opcoes.templateFallback;
     const cfg = opcoes.configDe(largura);
+    if (opcoes.espessura_padrao_mm) {
+      cfg.espessura_corpo_mm = opcoes.espessura_padrao_mm;
+      cfg.espessura_porta_mm = opcoes.espessura_padrao_mm;
+    }
     const rotulo = opcoes.rotuloParede ?? `Parede ${opcoes.parede}`;
     const instancia = {
       id: `${opcoes.prefixo}_${largura}_${opcoes.parede}_${Math.round(posX)}`,
@@ -1701,6 +1705,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       materialFundo,
       getTemplate: getTemplateBase,
       templateFallback: MODULOS_BASE_COZINHA[4],
+      espessura_padrao_mm: preferencias.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: preferencias.tipo_porta_base,
         ferragem: preferencias.ferragem,
@@ -1729,6 +1734,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       materialFundo,
       getTemplate: getTemplateAereo,
       templateFallback: MODULOS_AEREOS_COZINHA[4],
+      espessura_padrao_mm: preferencias.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: preferencias.tipo_porta_aereo,
         ferragem: preferencias.ferragem,
@@ -1754,6 +1760,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
         materialFundo,
         getTemplate: () => MODULO_TORRE_FORNO,
         templateFallback: MODULO_TORRE_FORNO,
+        espessura_padrao_mm: preferencias.espessura_padrao_mm,
         configDe: () => configPadrao({
           tipo_porta: "dobradica",
           ferragem: preferencias.ferragem,
@@ -1880,6 +1887,7 @@ function montarParede(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, avi
     materialFundo,
     getTemplate: getTemplateBase,
     templateFallback: MODULOS_BASE_COZINHA[4],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base,
       ferragem: prefs.ferragem,
@@ -1902,6 +1910,7 @@ function montarParede(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, avi
       materialFundo,
       getTemplate: getTemplateAereo,
       templateFallback: MODULOS_AEREOS_COZINHA[4],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: prefs.tipo_porta_aereo,
         ferragem: prefs.ferragem,
@@ -2043,6 +2052,7 @@ function gerarLayoutIlha(ambiente, prefs) {
     materialFundo,
     getTemplate: getTemplateBase,
     templateFallback: MODULOS_BASE_COZINHA[4],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base ?? "dobradica",
       ferragem: prefs.ferragem,
@@ -2373,6 +2383,7 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
     materialFundo,
     getTemplate: getTemplateRoupeiro,
     templateFallback: MODULOS_ROUPEIRO[3],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta ?? "dobradica",
       ferragem: prefs.ferragem,
@@ -2487,6 +2498,7 @@ function montarMixCloset(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, 
       materialFundo,
       getTemplate: getTpl,
       templateFallback: tpl ?? MODULOS_ROUPEIRO[3],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: () => configPadrao({ ferragem: prefs.ferragem, ...cfgExtra }),
       ordemInicial: ordem
     });
@@ -2812,6 +2824,7 @@ function gerarLayoutBanheiro(ambiente, prefs) {
     materialFundo,
     getTemplate: getTemplateGabinetePia,
     templateFallback: MODULOS_GABINETE_PIA[2],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -2833,6 +2846,7 @@ function gerarLayoutBanheiro(ambiente, prefs) {
       materialFundo,
       getTemplate: getTemplateEspelheira,
       templateFallback: MODULOS_ESPELHEIRA[2],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: "espelho",
         ferragem: prefs.ferragem,
@@ -2882,6 +2896,7 @@ function gerarLayoutLavanderia(ambiente, prefs) {
     materialFundo,
     getTemplate: getTemplateGabineteTanque,
     templateFallback: MODULOS_GABINETE_TANQUE[2],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -2903,6 +2918,7 @@ function gerarLayoutLavanderia(ambiente, prefs) {
       materialFundo,
       getTemplate: getTemplateArmarioServico,
       templateFallback: MODULOS_ARMARIO_SERVICO[2],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: largura <= 50 ? 1 : 2,
@@ -3160,6 +3176,7 @@ function gerarLayoutSala(ambiente, prefs) {
     materialFundo,
     getTemplate: getTemplateRackTv,
     templateFallback: MODULOS_RACK_TV[1],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -3182,6 +3199,7 @@ function gerarLayoutSala(ambiente, prefs) {
       materialFundo,
       getTemplate: getTemplatePainelRipado,
       templateFallback: MODULOS_PAINEL_RIPADO[1],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: () => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -3207,6 +3225,7 @@ function gerarLayoutSala(ambiente, prefs) {
       materialFundo,
       getTemplate: getTemplateNichoSala,
       templateFallback: MODULOS_NICHO_SALA[1],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -3466,6 +3485,7 @@ function gerarLayoutEscritorio(ambiente, prefs) {
       materialFundo,
       getTemplate: getTemplateGaveteiroEsc,
       templateFallback: MODULOS_GAVETEIRO_ESC[1],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: () => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -3489,6 +3509,7 @@ function gerarLayoutEscritorio(ambiente, prefs) {
     materialFundo,
     getTemplate: getTemplateEscrivaninha,
     templateFallback: MODULOS_ESCRIVANINHA[1],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: 0,
@@ -3511,6 +3532,7 @@ function gerarLayoutEscritorio(ambiente, prefs) {
       materialFundo,
       getTemplate: getTemplateEstanteEsc,
       templateFallback: MODULOS_ESTANTE_ESC[2],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: largura >= 80 ? 2 : 0,
@@ -5155,6 +5177,7 @@ async function gerarHandler(req, res) {
       cor_mdf_hex: prefs.cor_mdf_hex ?? "#f5f3f0",
       ferragem: prefs.ferragem ?? "nacional",
       versao_comercial: prefs.versao_comercial ?? "intermediaria",
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       nome: prefs.nome,
       empresa_id: prefs.empresa_id,
       cliente_id: prefs.cliente_id,

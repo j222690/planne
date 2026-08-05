@@ -103,6 +103,7 @@ export function gerarLayoutBanheiro(
     materialFundo,
     getTemplate: getTemplateGabinetePia,
     templateFallback: MODULOS_GABINETE_PIA[2],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -126,6 +127,7 @@ export function gerarLayoutBanheiro(
       materialFundo,
       getTemplate: getTemplateEspelheira,
       templateFallback: MODULOS_ESPELHEIRA[2],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         tipo_porta: "espelho",
         ferragem: prefs.ferragem,
@@ -188,6 +190,7 @@ export function gerarLayoutLavanderia(
     materialFundo,
     getTemplate: getTemplateGabineteTanque,
     templateFallback: MODULOS_GABINETE_TANQUE[2],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -211,6 +214,7 @@ export function gerarLayoutLavanderia(
       materialFundo,
       getTemplate: getTemplateArmarioServico,
       templateFallback: MODULOS_ARMARIO_SERVICO[2],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: largura <= 50 ? 1 : 2,

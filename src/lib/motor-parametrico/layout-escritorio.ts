@@ -82,6 +82,7 @@ export function gerarLayoutEscritorio(
       materialFundo,
       getTemplate: getTemplateGaveteiroEsc,
       templateFallback: MODULOS_GAVETEIRO_ESC[1],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: () => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -107,6 +108,7 @@ export function gerarLayoutEscritorio(
     materialFundo,
     getTemplate: getTemplateEscrivaninha,
     templateFallback: MODULOS_ESCRIVANINHA[1],
+    espessura_padrao_mm: prefs.espessura_padrao_mm,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: 0,
@@ -131,6 +133,7 @@ export function gerarLayoutEscritorio(
       materialFundo,
       getTemplate: getTemplateEstanteEsc,
       templateFallback: MODULOS_ESTANTE_ESC[2],
+      espessura_padrao_mm: prefs.espessura_padrao_mm,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: largura >= 80 ? 2 : 0,
