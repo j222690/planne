@@ -4054,6 +4054,7 @@ var CONFIG_CUSTO_PADRAO = {
   custo_por_km: 2.5,
   distancia_padrao_km: 20,
   overhead_pct: 18,
+  custo_fixo_diario: 120,
   regime_tributario: "Simples Nacional",
   aliquota_imposto_pct: 6,
   comissao_pct: 5,
@@ -4062,7 +4063,8 @@ var CONFIG_CUSTO_PADRAO = {
   chapa_largura_mm: 2750,
   chapa_comprimento_mm: 1850,
   preco_chapa_mdf_15: 85,
-  preco_chapa_mdf_18: 105
+  preco_chapa_mdf_18: 105,
+  preco_fita_borda_metro: 3.5
 };
 var AJUSTES_VERSAO = {
   economica: { mult_ferragem: 1, mult_material: 1, margem_pct: 35, rotulo: "Econ\xF4mica \u2014 ferragem nacional, MDF 15mm" },
@@ -4098,14 +4100,13 @@ function calcularCustoMateriais(projeto, cfg, ajuste) {
     preco_custo_unit: arredondar2(m.preco_custo_chapa * ajuste.mult_material),
     total: arredondar2(m.chapas_necessarias * m.preco_custo_chapa * ajuste.mult_material)
   }));
-  const custoFitaMetro = 3.5;
   linhas.push({
     descricao: "Fita de borda",
     material_id: "fita_borda",
     quantidade: eng.fita_borda.metros_com_desperdicio,
     unidade: "m",
-    preco_custo_unit: custoFitaMetro,
-    total: arredondar2(eng.fita_borda.metros_com_desperdicio * custoFitaMetro)
+    preco_custo_unit: cfg.preco_fita_borda_metro,
+    total: arredondar2(eng.fita_borda.metros_com_desperdicio * cfg.preco_fita_borda_metro)
   });
   const subtotal_chapas = arredondar2(linhas.reduce((s, l) => s + l.total, 0));
   const subtotal_ferragens = arredondar2(custoFerragensReferencia(projeto) * ajuste.mult_ferragem);
@@ -4147,12 +4148,14 @@ function calcularCustoInstalacao(projeto, cfg) {
     subtotal: arredondar2(custoMaoObra + custoDeslocamento)
   };
 }
-function calcularCustosIndiretos(baseDirecta, precoVendaEstimado, cfg) {
+function calcularCustosIndiretos(baseDirecta, precoVendaEstimado, prazoProducaoDias, cfg) {
   const overheadTotal = arredondar2(baseDirecta * (cfg.overhead_pct / 100));
+  const centroCustoDiarioTotal = arredondar2(cfg.custo_fixo_diario * prazoProducaoDias);
   const impostoTotal = arredondar2(precoVendaEstimado * (cfg.aliquota_imposto_pct / 100));
   const comissaoTotal = arredondar2(precoVendaEstimado * (cfg.comissao_pct / 100));
   return {
     overhead: { pct: cfg.overhead_pct, base: baseDirecta, total: overheadTotal },
+    centro_custo_diario: { valor_dia: cfg.custo_fixo_diario, dias: prazoProducaoDias, total: centroCustoDiarioTotal },
     impostos: {
       regime: cfg.regime_tributario,
       aliquota_pct: cfg.aliquota_imposto_pct,
@@ -4160,7 +4163,7 @@ function calcularCustosIndiretos(baseDirecta, precoVendaEstimado, cfg) {
       total: impostoTotal
     },
     comissao: { pct: cfg.comissao_pct, base: precoVendaEstimado, total: comissaoTotal },
-    subtotal: arredondar2(overheadTotal + impostoTotal + comissaoTotal)
+    subtotal: arredondar2(overheadTotal + centroCustoDiarioTotal + impostoTotal + comissaoTotal)
   };
 }
 function gerarItensComerciais(projeto, custoTotal, precoVenda) {
@@ -4189,14 +4192,17 @@ function calcularOrcamentoCompleto(projeto, versao = "intermediaria", config = C
   const custo_materiais = calcularCustoMateriais(projeto, config, ajuste);
   const custo_producao = calcularCustoProducao(projeto, config);
   const custo_instalacao = calcularCustoInstalacao(projeto, config);
+  const horasProducao = custo_producao.corte_cnc.horas_estimadas + custo_producao.bordagem.horas_estimadas + custo_producao.usinagem.horas_estimadas + custo_producao.montagem.horas_estimadas + custo_producao.acabamento.horas_estimadas;
+  const prazo_producao_dias = Math.max(3, Math.ceil(horasProducao / 8));
   const baseDirecta = arredondar2(
     custo_materiais.total + custo_producao.subtotal + custo_instalacao.subtotal
   );
   const margemPct = ajuste.margem_pct;
   const overheadPreliminar = baseDirecta * (config.overhead_pct / 100);
-  const custoComOverhead = baseDirecta + overheadPreliminar;
+  const centroCustoDiarioPreliminar = config.custo_fixo_diario * prazo_producao_dias;
+  const custoComOverhead = baseDirecta + overheadPreliminar + centroCustoDiarioPreliminar;
   const precoVendaPreliminar = custoComOverhead / (1 - margemPct / 100);
-  const custos_indiretos = calcularCustosIndiretos(baseDirecta, precoVendaPreliminar, config);
+  const custos_indiretos = calcularCustosIndiretos(baseDirecta, precoVendaPreliminar, prazo_producao_dias, config);
   const custo_total = arredondar2(baseDirecta + custos_indiretos.subtotal);
   const preco_venda = arredondar2(custo_total / (1 - margemPct / 100));
   const preco_minimo = arredondar2(custo_total * 1.05);
@@ -4212,8 +4218,6 @@ function calcularOrcamentoCompleto(projeto, versao = "intermediaria", config = C
     roi_estimado_dias: 0
   };
   const itens = gerarItensComerciais(projeto, custo_total, preco_venda);
-  const horasProducao = custo_producao.corte_cnc.horas_estimadas + custo_producao.bordagem.horas_estimadas + custo_producao.usinagem.horas_estimadas + custo_producao.montagem.horas_estimadas + custo_producao.acabamento.horas_estimadas;
-  const prazo_producao_dias = Math.max(3, Math.ceil(horasProducao / 8));
   const prazo_instalacao_dias = Math.max(1, Math.ceil(custo_instalacao.horas_equipe / 8));
   return {
     versao,

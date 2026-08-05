@@ -81,6 +81,7 @@ export interface ConfiguracaoCusto {
 
   // Indiretos
   overhead_pct: number;          // % sobre (material + produção)
+  custo_fixo_diario: number;     // R$/dia (aluguel, admin etc.) × prazo de produção — centro de custo estratificado à parte do overhead percentual
   regime_tributario: string;
   aliquota_imposto_pct: number;  // % sobre o preço de venda
   comissao_pct: number;          // % sobre o preço de venda
@@ -94,6 +95,7 @@ export interface ConfiguracaoCusto {
   chapa_comprimento_mm: number; // default 1850mm (base: Guararapes/Arauco)
   preco_chapa_mdf_15: number;  // R$/chapa 15mm (default R$85)
   preco_chapa_mdf_18: number;  // R$/chapa 18mm (default R$105)
+  preco_fita_borda_metro: number; // R$/m de fita de borda (default R$3,50)
 }
 
 /** Configuração padrão — médias de mercado BR 2026. */
@@ -116,6 +118,7 @@ export const CONFIG_CUSTO_PADRAO: ConfiguracaoCusto = {
   distancia_padrao_km: 20,
 
   overhead_pct: 18,
+  custo_fixo_diario: 120,
   regime_tributario: "Simples Nacional",
   aliquota_imposto_pct: 6,
   comissao_pct: 5,
@@ -127,6 +130,7 @@ export const CONFIG_CUSTO_PADRAO: ConfiguracaoCusto = {
   chapa_comprimento_mm: 1850,
   preco_chapa_mdf_15: 85,
   preco_chapa_mdf_18: 105,
+  preco_fita_borda_metro: 3.5,
 };
 
 // ─── MULTIPLICADORES DE VERSÃO ────────────────────────────────────────────────
@@ -209,14 +213,13 @@ function calcularCustoMateriais(
   }));
 
   // Fita de borda como linha de material
-  const custoFitaMetro = 3.5; // R$/m referência
   linhas.push({
     descricao: "Fita de borda",
     material_id: "fita_borda",
     quantidade: eng.fita_borda.metros_com_desperdicio,
     unidade: "m",
-    preco_custo_unit: custoFitaMetro,
-    total: arredondar(eng.fita_borda.metros_com_desperdicio * custoFitaMetro),
+    preco_custo_unit: cfg.preco_fita_borda_metro,
+    total: arredondar(eng.fita_borda.metros_com_desperdicio * cfg.preco_fita_borda_metro),
   });
 
   const subtotal_chapas = arredondar(linhas.reduce((s, l) => s + l.total, 0));
@@ -283,14 +286,17 @@ function calcularCustoInstalacao(
 function calcularCustosIndiretos(
   baseDirecta: number,
   precoVendaEstimado: number,
+  prazoProducaoDias: number,
   cfg: ConfiguracaoCusto,
 ): CustosIndiretos {
   const overheadTotal = arredondar(baseDirecta * (cfg.overhead_pct / 100));
+  const centroCustoDiarioTotal = arredondar(cfg.custo_fixo_diario * prazoProducaoDias);
   const impostoTotal = arredondar(precoVendaEstimado * (cfg.aliquota_imposto_pct / 100));
   const comissaoTotal = arredondar(precoVendaEstimado * (cfg.comissao_pct / 100));
 
   return {
     overhead: { pct: cfg.overhead_pct, base: baseDirecta, total: overheadTotal },
+    centro_custo_diario: { valor_dia: cfg.custo_fixo_diario, dias: prazoProducaoDias, total: centroCustoDiarioTotal },
     impostos: {
       regime: cfg.regime_tributario,
       aliquota_pct: cfg.aliquota_imposto_pct,
@@ -298,7 +304,7 @@ function calcularCustosIndiretos(
       total: impostoTotal,
     },
     comissao: { pct: cfg.comissao_pct, base: precoVendaEstimado, total: comissaoTotal },
-    subtotal: arredondar(overheadTotal + impostoTotal + comissaoTotal),
+    subtotal: arredondar(overheadTotal + centroCustoDiarioTotal + impostoTotal + comissaoTotal),
   };
 }
 
@@ -352,6 +358,14 @@ export function calcularOrcamentoCompleto(
   const custo_producao = calcularCustoProducao(projeto, config);
   const custo_instalacao = calcularCustoInstalacao(projeto, config);
 
+  // Prazo de produção calculado cedo — alimenta o centro de custo diário (indiretos)
+  const horasProducao = custo_producao.corte_cnc.horas_estimadas +
+    custo_producao.bordagem.horas_estimadas +
+    custo_producao.usinagem.horas_estimadas +
+    custo_producao.montagem.horas_estimadas +
+    custo_producao.acabamento.horas_estimadas;
+  const prazo_producao_dias = Math.max(3, Math.ceil(horasProducao / 8));
+
   // Base direta = material + produção + instalação
   const baseDirecta = arredondar(
     custo_materiais.total + custo_producao.subtotal + custo_instalacao.subtotal,
@@ -359,12 +373,13 @@ export function calcularOrcamentoCompleto(
 
   // Markup pela margem da versão para estimar preço de venda
   const margemPct = ajuste.margem_pct;
-  // preço de venda preliminar (antes de impostos/comissão) via markup sobre base+overhead
+  // preço de venda preliminar (antes de impostos/comissão) via markup sobre base+overhead+custo fixo diário
   const overheadPreliminar = baseDirecta * (config.overhead_pct / 100);
-  const custoComOverhead = baseDirecta + overheadPreliminar;
+  const centroCustoDiarioPreliminar = config.custo_fixo_diario * prazo_producao_dias;
+  const custoComOverhead = baseDirecta + overheadPreliminar + centroCustoDiarioPreliminar;
   const precoVendaPreliminar = custoComOverhead / (1 - margemPct / 100);
 
-  const custos_indiretos = calcularCustosIndiretos(baseDirecta, precoVendaPreliminar, config);
+  const custos_indiretos = calcularCustosIndiretos(baseDirecta, precoVendaPreliminar, prazo_producao_dias, config);
 
   const custo_total = arredondar(baseDirecta + custos_indiretos.subtotal);
 
@@ -386,13 +401,6 @@ export function calcularOrcamentoCompleto(
 
   const itens = gerarItensComerciais(projeto, custo_total, preco_venda);
 
-  // Prazos heurísticos
-  const horasProducao = custo_producao.corte_cnc.horas_estimadas +
-    custo_producao.bordagem.horas_estimadas +
-    custo_producao.usinagem.horas_estimadas +
-    custo_producao.montagem.horas_estimadas +
-    custo_producao.acabamento.horas_estimadas;
-  const prazo_producao_dias = Math.max(3, Math.ceil(horasProducao / 8));
   const prazo_instalacao_dias = Math.max(1, Math.ceil(custo_instalacao.horas_equipe / 8));
 
   return {

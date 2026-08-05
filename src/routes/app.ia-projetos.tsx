@@ -407,6 +407,8 @@ function IAProjetoPage() {
     margem_padrao: 300,
     chapa_largura_mm: 2750,
     chapa_comprimento_mm: 1830,
+    custo_fita_metro: 3.5,
+    custo_fixo_diario: 120,
     acab_rodape: true,
     acab_roda_teto: true,
     acab_engrosso: true,
@@ -438,6 +440,8 @@ function IAProjetoPage() {
         margem_padrao: Number(p.margem_padrao ?? 300),
         chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
         chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
+        custo_fita_metro: Number(p.custo_fita_metro ?? 3.5),
+        custo_fixo_diario: Number(p.custo_fixo_diario ?? 120),
         acab_rodape: p.acab_rodape !== false,
         acab_roda_teto: p.acab_roda_teto !== false,
         acab_engrosso: p.acab_engrosso !== false,
@@ -2927,6 +2931,8 @@ function Step4Layout({
     margem_padrao: number;
     chapa_largura_mm: number;
     chapa_comprimento_mm: number;
+    custo_fita_metro: number;
+    custo_fixo_diario: number;
     acab_rodape: boolean;
     acab_roda_teto: boolean;
     acab_engrosso: boolean;
@@ -2987,6 +2993,8 @@ function Step4Layout({
               preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
               chapa_largura_mm: empresaParams.chapa_largura_mm,
               chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
+              preco_fita_borda_metro: empresaParams.custo_fita_metro,
+              custo_fixo_diario: empresaParams.custo_fixo_diario,
             };
           })(),
           // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real

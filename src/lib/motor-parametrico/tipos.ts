@@ -614,6 +614,7 @@ export interface CustoInstalacao {
 
 export interface CustosIndiretos {
   overhead: { pct: number; base: number; total: number };
+  centro_custo_diario: { valor_dia: number; dias: number; total: number };
   impostos: { regime: string; aliquota_pct: number; base: number; total: number };
   comissao?: { pct: number; base: number; total: number };
   subtotal: number;

@@ -1077,6 +1077,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   // Padrões da empresa (herdados de Configurações) — o motor usa estes
   const [empresaParams, setEmpresaParams] = useState({
     mdf_custo_chapa: 85, mao_obra_hora: 45, chapa_largura_mm: 2750, chapa_comprimento_mm: 1830,
+    custo_fita_metro: 3.5, custo_fixo_diario: 120,
     acab_rodape: true, acab_roda_teto: true, acab_engrosso: true,
     ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele",
   });
@@ -1416,6 +1417,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                 preco_chapa_mdf_18: Math.round(empresaParams.mdf_custo_chapa * 1.235),
                 chapa_largura_mm: empresaParams.chapa_largura_mm,
                 chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
+                preco_fita_borda_metro: empresaParams.custo_fita_metro,
+                custo_fixo_diario: empresaParams.custo_fixo_diario,
               };
             })(),
             // Paredes A–D (se definidas): a mais longa vira a largura da parede
@@ -1529,6 +1532,8 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         mao_obra_hora: Number(p.mao_obra_hora ?? 45),
         chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
         chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
+        custo_fita_metro: Number(p.custo_fita_metro ?? 3.5),
+        custo_fixo_diario: Number(p.custo_fixo_diario ?? 120),
         acab_rodape: p.acab_rodape !== false,
         acab_roda_teto: p.acab_roda_teto !== false,
         acab_engrosso: p.acab_engrosso !== false,

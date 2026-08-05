@@ -79,6 +79,7 @@ function Configuracoes() {
     mdf_custo_chapa: 85, mao_obra_hora: 45, margem_padrao: 35,
     meta_faturamento: 0, meta_margem: 0,
     chapa_largura_mm: 2750, chapa_comprimento_mm: 1830,
+    custo_fita_metro: 3.5, custo_fixo_diario: 120,
   });
 
   // Padrões de marcenaria — decididos UMA vez; todo projeto herda daqui, então a
@@ -149,6 +150,8 @@ function Configuracoes() {
         meta_margem: Number(p.meta_margem ?? 0),
         chapa_largura_mm: Number(p.chapa_largura_mm ?? 2750),
         chapa_comprimento_mm: Number(p.chapa_comprimento_mm ?? 1830),
+        custo_fita_metro: Number(p.custo_fita_metro ?? 3.5),
+        custo_fixo_diario: Number(p.custo_fixo_diario ?? 120),
       });
       setPadroes({
         acab_rodape: p.acab_rodape !== false,
@@ -394,6 +397,8 @@ function Configuracoes() {
                 { label: "Multiplicador padrão (300 = 3× o custo)", key: "margem_padrao", step: "10" },
                 { label: "Chapa MDF — largura real (mm, padrão 2750)", key: "chapa_largura_mm", step: "10" },
                 { label: "Chapa MDF — comprimento real (mm, padrão 1830)", key: "chapa_comprimento_mm", step: "10" },
+                { label: "Fita de borda — custo por metro (R$)", key: "custo_fita_metro", step: "0.1" },
+                { label: "Centro de custo fixo — R$/dia de produção (aluguel, admin)", key: "custo_fixo_diario", step: "10" },
               ].map(({ label, key, step }) => (
                 <label key={key} className="block">
                   <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
