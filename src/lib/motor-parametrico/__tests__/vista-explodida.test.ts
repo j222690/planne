@@ -1,5 +1,9 @@
 import { describe, test, expect } from "vitest";
-import { calcularVistaExplodida, calcularCenaCompleta } from "../vista-explodida";
+import {
+  calcularVistaExplodida,
+  calcularCenaCompleta,
+  calcularPassosMontagem,
+} from "../vista-explodida";
 
 describe("calcularVistaExplodida", () => {
   test("módulo com 2 portas e sem gaveta: 5 peças de carcaça + 2 portas", () => {
@@ -207,5 +211,55 @@ describe("calcularCenaCompleta", () => {
     );
     expect(cena[0].grupoRotacaoY).toBeCloseTo(-Math.PI / 2);
     expect(cena[0].grupoPosicao[0]).toBeCloseTo(3 - 0.275); // largura_amb - P/2
+  });
+});
+
+describe("calcularPassosMontagem", () => {
+  test("gabinete com porta e sem gaveta/prateleira: 3 passos (caixa, fundo, portas)", () => {
+    const passos = calcularPassosMontagem({ num_portas: 2, num_gavetas: 0, num_prateleiras: 0 });
+    expect(passos.map((p) => p.titulo)).toEqual([
+      "Montar a caixa",
+      "Fixar o fundo",
+      "Instalar as portas",
+    ]);
+  });
+
+  test("gaveteiro com prateleira: passos na ordem caixa → fundo → prateleiras → gavetas", () => {
+    const passos = calcularPassosMontagem({ num_portas: 0, num_gavetas: 3, num_prateleiras: 1 });
+    expect(passos.map((p) => p.titulo)).toEqual([
+      "Montar a caixa",
+      "Fixar o fundo",
+      "Instalar as prateleiras",
+      "Instalar as gavetas",
+    ]);
+  });
+
+  test("todo módulo cobre todos os tipos de peça geradas (nenhuma peça fica sem passo)", () => {
+    const cfg = { num_portas: 2, num_gavetas: 2, num_prateleiras: 1 };
+    const pecas = calcularVistaExplodida({
+      largura_cm: 80,
+      altura_cm: 90,
+      profundidade_cm: 55,
+      configuracao: cfg,
+    });
+    const passos = calcularPassosMontagem(cfg);
+    const tiposCobertos = new Set(passos.flatMap((p) => p.tipos));
+    for (const peca of pecas) expect(tiposCobertos.has(peca.tipo)).toBe(true);
+  });
+
+  test("ferragens são separadas por passo certo (dobradiça só em portas, corrediça só em gavetas)", () => {
+    const ferragens = [
+      { tipo: "dobradica_35mm_110grau", quantidade: 4 },
+      { tipo: "corredicao_tandem_400mm", quantidade: 4 },
+      { tipo: "ajustador_pe_100mm", quantidade: 4 },
+    ];
+    const passos = calcularPassosMontagem({ num_portas: 2, num_gavetas: 2 }, ferragens);
+    const passoCaixa = passos.find((p) => p.titulo === "Montar a caixa")!;
+    const passoPortas = passos.find((p) => p.titulo === "Instalar as portas")!;
+    const passoGavetas = passos.find((p) => p.titulo === "Instalar as gavetas")!;
+    expect(passoCaixa.ferragens.some((f) => f.tipo.includes("Pé regulável"))).toBe(true);
+    expect(passoPortas.ferragens.some((f) => f.tipo.includes("Dobradiça"))).toBe(true);
+    expect(passoGavetas.ferragens.some((f) => f.tipo.includes("Corrediça"))).toBe(true);
+    expect(passoPortas.ferragens.some((f) => f.tipo.includes("Corrediça"))).toBe(false);
   });
 });

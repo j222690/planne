@@ -2,9 +2,16 @@ import { useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Edges } from "@react-three/drei";
-import { Camera, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import {
+  Camera,
+  ChevronDown,
+  ChevronRight as ChevronRightIcon,
+  ListChecks,
+  Printer,
+} from "lucide-react";
 import {
   calcularCenaCompleta,
+  calcularPassosMontagem,
   type ModuloComPosicao,
   type PecaVisual3D,
 } from "@/lib/motor-parametrico/vista-explodida";
@@ -15,6 +22,7 @@ function PecaMesh({
   corHex,
   selecionada,
   raioX,
+  destaque,
   onSelect,
 }: {
   peca: PecaVisual3D;
@@ -22,6 +30,7 @@ function PecaMesh({
   corHex: string;
   selecionada: boolean;
   raioX: boolean;
+  destaque: boolean;
   onSelect: () => void;
 }) {
   const pos: [number, number, number] = [
@@ -30,7 +39,7 @@ function PecaMesh({
     peca.posicao[2] + peca.direcaoExplosao[2] * peca.distanciaExplosao * explosao,
   ];
   const corFrente = peca.tipo === "porta" || peca.tipo === "gaveta";
-  const cor = selecionada ? "#3b82f6" : corFrente ? corHex : "#f2f0eb";
+  const cor = selecionada ? "#3b82f6" : destaque ? "#f59e0b" : corFrente ? corHex : "#f2f0eb";
   return (
     <mesh
       position={pos}
@@ -48,19 +57,58 @@ function PecaMesh({
         opacity={raioX ? (corFrente ? 0.06 : 0.12) : 1}
         depthWrite={!raioX}
       />
-      <Edges color={selecionada ? "#1d4ed8" : raioX ? "#1e293b" : "#64748b"} />
+      <Edges
+        color={selecionada ? "#1d4ed8" : destaque ? "#b45309" : raioX ? "#1e293b" : "#64748b"}
+      />
     </mesh>
   );
+}
+
+function imprimirManual(nomeModulo: string, passos: ReturnType<typeof calcularPassosMontagem>) {
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Manual de montagem — ${nomeModulo}</title>
+<style>
+  body{font-family:sans-serif;max-width:640px;margin:32px auto;padding:0 16px;color:#111}
+  h1{font-size:18px;margin-bottom:2px}
+  .sub{color:#666;font-size:12.5px;margin-bottom:24px}
+  .passo{border:1px solid #ddd;border-radius:8px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid}
+  .passo h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#111;color:#fff;font-size:12px;flex-shrink:0}
+  .ferragens{font-size:12.5px;color:#444;margin:0;padding-left:18px}
+  .sem-ferragem{font-size:12px;color:#999;font-style:italic}
+  .no-print{margin-bottom:20px}
+  @media print{.no-print{display:none}}
+</style></head><body>
+<div class="no-print"><button onclick="window.print()" style="padding:8px 20px;background:#111;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir</button></div>
+<h1>Manual de montagem</h1>
+<div class="sub">${nomeModulo} · ${passos.length} passo(s)</div>
+${passos
+  .map(
+    (p, i) => `
+  <div class="passo">
+    <h2><span class="n">${i + 1}</span> ${p.titulo}</h2>
+    ${
+      p.ferragens.length
+        ? `<ul class="ferragens">${p.ferragens.map((f) => `<li>${f.quantidade}× ${f.tipo}</li>`).join("")}</ul>`
+        : `<div class="sem-ferragem">Sem ferragem nesta etapa.</div>`
+    }
+  </div>`,
+  )
+  .join("")}
+</body></html>`;
+  const win = window.open("", "_blank");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
 }
 
 /**
  * Visualizador 3D interativo da cena inteira (todos os módulos, em quantas
  * paredes o ambiente tiver — L/U inclusive) — órbita/zoom, Raio-X,
  * ligar/desligar portas e gavetas, clique num módulo pra focar nele e
- * explodir com o slider. Geometria vem de calcularCenaCompleta() —
- * esquemática (caixas), não a chapa real. Cada módulo é um <group> próprio
- * (posição + rotação da parede) — a rotação em si fica por conta do
- * Three.js, as peças internas continuam em coordenadas locais.
+ * explodir com o slider, árvore de peças, Tirar Foto e Manual de montagem
+ * (passo a passo, com a ferragem de cada etapa). Geometria vem de
+ * calcularCenaCompleta() — esquemática (caixas), não a chapa real.
  */
 export function VistaExplodida3D({
   modulos,
@@ -81,10 +129,21 @@ export function VistaExplodida3D({
   const [mostrarPortas, setMostrarPortas] = useState(true);
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
   const [arvoreAberta, setArvoreAberta] = useState(false);
+  const [modoManual, setModoManual] = useState(false);
+  const [passoAtual, setPassoAtual] = useState(0);
   const glRef = useRef<HTMLCanvasElement | null>(null);
 
   const todasPecas = cena.flatMap((m) => m.pecas);
   const selecionada = todasPecas.find((p) => p.id === selecionadaId) ?? null;
+
+  const moduloFoco = focoIndex !== null ? modulos[focoIndex] : null;
+  const passos = useMemo(
+    () => (moduloFoco ? calcularPassosMontagem(moduloFoco.configuracao, moduloFoco.ferragens) : []),
+    [moduloFoco],
+  );
+  const passoAtualSeguro = Math.min(passoAtual, Math.max(0, passos.length - 1));
+  const tiposInstalados = new Set(passos.slice(0, passoAtualSeguro + 1).flatMap((p) => p.tipos));
+  const tiposDoPassoAtual = new Set(passos[passoAtualSeguro]?.tipos ?? []);
 
   // Enquadramento da câmera: usa as dimensões do ambiente quando disponíveis
   // (cobre L/U corretamente); sem elas, estima pela extensão dos grupos.
@@ -117,7 +176,15 @@ export function VistaExplodida3D({
     if (focoIndex !== moduloIndex) {
       setFocoIndex(moduloIndex);
       setExplosao(0.4);
+      setModoManual(false);
     }
+  };
+
+  const ligarManual = () => {
+    if (focoIndex === null) return;
+    setModoManual(true);
+    setPassoAtual(0);
+    setSelecionadaId(null);
   };
 
   const tirarFoto = () => {
@@ -157,13 +224,20 @@ export function VistaExplodida3D({
               >
                 {m.pecas
                   .filter((p) => mostrarPortas || (p.tipo !== "porta" && p.tipo !== "gaveta"))
+                  .filter(
+                    (p) =>
+                      !(modoManual && m.moduloIndex === focoIndex) || tiposInstalados.has(p.tipo),
+                  )
                   .map((p) => (
                     <PecaMesh
                       key={p.id}
                       peca={p}
-                      explosao={m.moduloIndex === focoIndex ? explosao : 0}
+                      explosao={modoManual ? 0 : m.moduloIndex === focoIndex ? explosao : 0}
                       corHex={corHex}
                       raioX={raioX}
+                      destaque={
+                        modoManual && m.moduloIndex === focoIndex && tiposDoPassoAtual.has(p.tipo)
+                      }
                       selecionada={p.id === selecionadaId}
                       onSelect={() => selecionarPeca(m.moduloIndex, p.id)}
                     />
@@ -201,6 +275,15 @@ export function VistaExplodida3D({
         >
           <Camera className="size-3" /> Tirar Foto
         </button>
+        {focoIndex !== null && !modoManual && (
+          <button
+            type="button"
+            onClick={ligarManual}
+            className="text-accent hover:underline inline-flex items-center gap-1"
+          >
+            <ListChecks className="size-3" /> Manual de montagem
+          </button>
+        )}
         {focoIndex !== null && (
           <button
             type="button"
@@ -208,6 +291,7 @@ export function VistaExplodida3D({
               setFocoIndex(null);
               setExplosao(0);
               setSelecionadaId(null);
+              setModoManual(false);
             }}
             className="ml-auto text-accent hover:underline"
           >
@@ -215,6 +299,76 @@ export function VistaExplodida3D({
           </button>
         )}
       </div>
+
+      {modoManual && moduloFoco ? (
+        <div className="rounded-md border border-accent/40 bg-accent/5 p-2.5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] font-semibold">
+              Passo {passoAtualSeguro + 1} de {passos.length} — {passos[passoAtualSeguro]?.titulo}
+            </span>
+            <button
+              type="button"
+              onClick={() => imprimirManual(moduloFoco.nome_display ?? "Módulo", passos)}
+              className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
+              <Printer className="size-3" /> Imprimir
+            </button>
+          </div>
+          {passos[passoAtualSeguro]?.ferragens.length ? (
+            <ul className="text-[11.5px] text-muted-foreground list-disc pl-4 space-y-0.5">
+              {passos[passoAtualSeguro].ferragens.map((f, i) => (
+                <li key={i}>
+                  {f.quantidade}× {f.tipo}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-[11px] text-muted-foreground italic">
+              Sem ferragem nesta etapa.
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={passoAtualSeguro === 0}
+              onClick={() => setPassoAtual((p) => Math.max(0, p - 1))}
+              className="h-7 px-3 rounded border border-border text-[11.5px] disabled:opacity-40 hover:bg-secondary"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              disabled={passoAtualSeguro >= passos.length - 1}
+              onClick={() => setPassoAtual((p) => Math.min(passos.length - 1, p + 1))}
+              className="h-7 px-3 rounded bg-accent text-white text-[11.5px] disabled:opacity-40"
+            >
+              Próximo
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoManual(false)}
+              className="ml-auto text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              Sair do manual
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-muted-foreground shrink-0">Montado</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(explosao * 100)}
+            disabled={focoIndex === null}
+            onChange={(e) => setExplosao(Number(e.target.value) / 100)}
+            className="flex-1 disabled:opacity-40"
+            aria-label="Nível de explosão"
+          />
+          <span className="text-[11px] text-muted-foreground shrink-0">Explodido</span>
+        </div>
+      )}
 
       <div className="rounded-md border border-border">
         <button
@@ -239,6 +393,7 @@ export function VistaExplodida3D({
                     setFocoIndex(m.moduloIndex);
                     setExplosao(0.4);
                     setSelecionadaId(null);
+                    setModoManual(false);
                   }}
                   className={`text-[11px] font-medium ${m.moduloIndex === focoIndex ? "text-accent" : "text-foreground"}`}
                 >
@@ -260,21 +415,6 @@ export function VistaExplodida3D({
             ))}
           </div>
         )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] text-muted-foreground shrink-0">Montado</span>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={Math.round(explosao * 100)}
-          disabled={focoIndex === null}
-          onChange={(e) => setExplosao(Number(e.target.value) / 100)}
-          className="flex-1 disabled:opacity-40"
-          aria-label="Nível de explosão"
-        />
-        <span className="text-[11px] text-muted-foreground shrink-0">Explodido</span>
       </div>
       <div className="text-[11.5px] text-muted-foreground bg-secondary/40 rounded px-2.5 py-1.5 min-h-[30px]">
         {selecionada ? (

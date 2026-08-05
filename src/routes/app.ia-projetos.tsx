@@ -1943,6 +1943,7 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
           posicao_x_cm?: number; posicao_y_cm?: number; parede?: "top" | "bottom" | "left" | "right";
           configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
           material_corpo?: { cor_hex?: string };
+          ferragens?: { tipo: string; quantidade: number }[];
         };
         const brutos = data.projeto.modulos as unknown as ModuloBruto[];
         const primeiroMaterial = brutos.find((m) => m.material_corpo)?.material_corpo;
@@ -1959,6 +1960,7 @@ function MotorResultadoPainel({ data, onUsarVersao, onCriarOrdem, criandoVersao,
                   largura_cm: m.largura_cm, altura_cm: m.altura_cm, profundidade_cm: m.profundidade_cm,
                   posicao_x_cm: m.posicao_x_cm ?? 0, posicao_y_cm: m.posicao_y_cm ?? 0, parede: m.parede,
                   configuracao: m.configuracao ?? {}, nome_display: m.nome_display ?? m.nome,
+                  ferragens: m.ferragens,
                 }))}
                 medidas={{ largura_cm: medidas.largura * 100, profundidade_cm: medidas.profundidade * 100 }}
                 corHex={primeiroMaterial?.cor_hex ?? "#f2f0eb"}

@@ -56,6 +56,8 @@ export interface ModuloComPosicao extends ModuloParaVista3D {
   /** Default "top" — cozinha linear (parede única). */
   parede?: ParedeId;
   nome_display?: string;
+  /** Pra calcularPassosMontagem() — sem isso os passos saem sem lista de hardware. */
+  ferragens?: { tipo: string; quantidade: number }[];
 }
 
 export interface ModuloNaCena {
@@ -200,6 +202,96 @@ export function calcularVistaExplodida(modulo: ModuloParaVista3D): PecaVisual3D[
   }
 
   return pecas;
+}
+
+// ─── MANUAL DE MONTAGEM ─────────────────────────────────────────────────────
+
+export interface FerragemResumo {
+  tipo: string;
+  quantidade: number;
+}
+
+export interface PassoMontagem {
+  titulo: string;
+  /** Tipos de peça que ficam visíveis a partir deste passo (cumulativo). */
+  tipos: TipoPecaVisual[];
+  ferragens: FerragemResumo[];
+}
+
+const NOME_FERRAGEM: Record<string, string> = {
+  dobradica_35mm_110grau: "Dobradiça 35mm 110°",
+  dobradica_35mm_165grau: "Dobradiça 35mm 165°",
+  dobradica_push_open: "Dobradiça Push-Open",
+  corredicao_tandem_300mm: "Corrediça 300mm",
+  corredicao_tandem_400mm: "Corrediça 400mm",
+  corredicao_tandem_500mm: "Corrediça 500mm",
+  corredicao_lateral_porta: "Trilho de correr",
+  puxador_perfil_alu_1200mm: "Perfil de alumínio (puxador)",
+  puxador_alu_128mm: "Puxador de alça",
+  puxador_push_open: "Puxador Push-Open",
+  ajustador_pe_100mm: "Pé regulável 100mm",
+  ajustador_pe_150mm: "Pé regulável 150mm",
+  rodape_pvc_100mm: "Rodapé PVC",
+  cabideiro_simples: "Cabideiro",
+  perfil_led_1m: "Perfil de LED",
+  minifix_15mm: "Minifix (conector)",
+};
+
+function nomeFerragem(tipo: string): string {
+  return NOME_FERRAGEM[tipo] ?? tipo.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/**
+ * Monta a sequência de montagem do módulo (caixa → fundo → prateleiras →
+ * gavetas → portas), cada passo com a ferragem correspondente — pra virar um
+ * guia passo a passo (destaca só as peças já "instaladas" até o passo atual).
+ * `ferragens` é opcional: sem ela, os passos saem sem lista de hardware
+ * (só a sequência de montagem das peças).
+ */
+export function calcularPassosMontagem(
+  configuracao: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number },
+  ferragens?: { tipo: string; quantidade: number }[],
+): PassoMontagem[] {
+  const porTipo = (prefixo: string) =>
+    (ferragens ?? [])
+      .filter((f) => f.tipo.startsWith(prefixo))
+      .map((f) => ({ tipo: nomeFerragem(f.tipo), quantidade: f.quantidade }));
+
+  const passos: PassoMontagem[] = [
+    {
+      titulo: "Montar a caixa",
+      tipos: ["lateral_esquerda", "lateral_direita", "base", "teto"],
+      ferragens: [...porTipo("minifix"), ...porTipo("ajustador_pe")],
+    },
+    {
+      titulo: "Fixar o fundo",
+      tipos: ["fundo"],
+      ferragens: [],
+    },
+  ];
+
+  if ((configuracao.num_prateleiras ?? 0) > 0) {
+    passos.push({ titulo: "Instalar as prateleiras", tipos: ["prateleira"], ferragens: [] });
+  }
+  if ((configuracao.num_gavetas ?? 0) > 0) {
+    passos.push({
+      titulo: "Instalar as gavetas",
+      tipos: ["gaveta"],
+      ferragens: [
+        ...porTipo("corredicao"),
+        ...((configuracao.num_portas ?? 0) === 0 ? porTipo("puxador") : []),
+      ],
+    });
+  }
+  if ((configuracao.num_portas ?? 0) > 0) {
+    passos.push({
+      titulo: "Instalar as portas",
+      tipos: ["porta"],
+      ferragens: [...porTipo("dobradica"), ...porTipo("puxador")],
+    });
+  }
+
+  return passos;
 }
 
 /**
