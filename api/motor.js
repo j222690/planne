@@ -165,6 +165,31 @@ function regraPortaCorrer() {
     usa_material: "porta"
   };
 }
+var RIPA_LARGURA_PADRAO_MM = 40;
+var RIPA_GAP_MM = 20;
+var ESPESSURAS_MDF_VALIDAS = [3, 6, 9, 12, 15, 18, 25];
+function espessuraRipaValida(mm) {
+  return mm && ESPESSURAS_MDF_VALIDAS.includes(mm) ? mm : 15;
+}
+function regraRipa() {
+  return {
+    nome: "ripa",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_ripado,
+    calcular_largura_mm: (_L, _A, _P, cfg) => cfg.ripa_largura_mm ?? RIPA_LARGURA_PADRAO_MM,
+    calcular_comprimento_mm: (_L, A) => A,
+    calcular_quantidade: (L, _A, _P, cfg) => {
+      const largura = cfg.ripa_largura_mm ?? RIPA_LARGURA_PADRAO_MM;
+      const passo = largura + RIPA_GAP_MM;
+      return Math.max(1, Math.floor((L + RIPA_GAP_MM) / passo));
+    },
+    espessura_mm: (cfg) => espessuraRipaValida(cfg.ripa_espessura_mm),
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: () => ({ esquerda: true, direita: true, topo: false, base: false }),
+    usa_material: "corpo",
+    observacao: "Ripas individuais \u2014 quantidade = largura do painel \xF7 (largura da ripa + v\xE3o entre ripas)"
+  };
+}
 function regrasGaveta() {
   return [
     {
@@ -3216,7 +3241,8 @@ function criarPainelRipado(largura_cm) {
       permite_ripado: true
     },
     regras_pecas: [
-      ...regrasCorpo()
+      ...regrasCorpo(),
+      regraRipa()
     ],
     regras_ferragens: [
       regraMinifix()

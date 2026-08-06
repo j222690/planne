@@ -62,6 +62,42 @@ describe("gerarLayoutSala", () => {
   });
 });
 
+// ─── PAINEL RIPADO — geometria real (não é mais uma caixa lisa) ───────────────
+
+describe("painel ripado — peças de ripa", () => {
+  test("gera peças individuais de ripa (não só a caixa genérica)", () => {
+    const { projeto } = gerarLayoutSala(ambiente(400, 350), prefsSala);
+    const painel = projeto.modulos.find((m) => m.id.startsWith("painel_ripado"))!;
+    const ripas = painel.pecas.filter((p) => p.regra_nome === "ripa");
+    expect(ripas.length).toBeGreaterThan(0);
+  });
+
+  test("nº de ripas bate com largura do painel ÷ (40mm + 20mm de vão)", () => {
+    const { projeto } = gerarLayoutSala(ambiente(400, 350), prefsSala);
+    const painel = projeto.modulos.find((m) => m.id.startsWith("painel_ripado"))!;
+    const ripas = painel.pecas.filter((p) => p.regra_nome === "ripa");
+    const larguraMm = painel.largura_cm * 10;
+    const esperado = Math.floor((larguraMm + 20) / 60);
+    expect(ripas.length).toBe(esperado);
+  });
+
+  test("cada ripa cobre a altura inteira do painel e tem 40mm de largura (default)", () => {
+    const { projeto } = gerarLayoutSala(ambiente(400, 350), prefsSala);
+    const painel = projeto.modulos.find((m) => m.id.startsWith("painel_ripado"))!;
+    const ripa = painel.pecas.find((p) => p.regra_nome === "ripa")!;
+    expect(ripa.largura_mm).toBe(40);
+    expect(ripa.comprimento_mm).toBe(painel.altura_cm * 10);
+  });
+
+  test("módulos sem tem_ripado (rack, nicho) não geram peça 'ripa'", () => {
+    const { projeto } = gerarLayoutSala(ambiente(400, 350), prefsSala);
+    const semRipado = projeto.modulos.filter((m) => !m.id.startsWith("painel_ripado"));
+    for (const m of semRipado) {
+      expect(m.pecas.some((p) => p.regra_nome === "ripa")).toBe(false);
+    }
+  });
+});
+
 // ─── ESCRITÓRIO ─────────────────────────────────────────────────────────────────
 
 describe("gerarLayoutEscritorio", () => {

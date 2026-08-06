@@ -16,6 +16,7 @@ import {
   regraPuxadores,
   regraMinifix,
   regraPes,
+  regraRipa,
 } from "./regras-corte-comuns";
 
 // ─── DIMENSÕES ────────────────────────────────────────────────────────────────
@@ -138,6 +139,7 @@ function criarPainelRipado(largura_cm: number): ModuloParametrico {
     },
     regras_pecas: [
       ...regrasCorpo(),
+      regraRipa(),
     ],
     regras_ferragens: [
       regraMinifix(),

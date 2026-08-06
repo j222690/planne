@@ -179,6 +179,45 @@ export function regraPortaCorrer(): RegraCorte {
   };
 }
 
+// ─── REGRA DE RIPADO ──────────────────────────────────────────────────────────
+
+/** Largura padrão de cada ripa (mm) quando o projeto não especifica. */
+const RIPA_LARGURA_PADRAO_MM = 40;
+/** Vão (mm) entre ripas consecutivas — visual "ripado" com respiro. */
+const RIPA_GAP_MM = 20;
+const ESPESSURAS_MDF_VALIDAS: readonly EspessuraMDF[] = [3, 6, 9, 12, 15, 18, 25];
+
+function espessuraRipaValida(mm?: number): EspessuraMDF {
+  return mm && (ESPESSURAS_MDF_VALIDAS as readonly number[]).includes(mm) ? (mm as EspessuraMDF) : 15;
+}
+
+/**
+ * Peças individuais de ripa (sarrafo) — usado em painéis ripados decorativos.
+ * Gera N peças estreitas cobrindo a largura do painel (largura da ripa + vão
+ * entre elas), cada uma com o comprimento total da altura do painel.
+ * `cfg.ripa_largura_mm`/`ripa_espessura_mm` sobrescrevem os defaults.
+ */
+export function regraRipa(): RegraCorte {
+  return {
+    nome: "ripa",
+    grupo: "detalhe",
+    ativa_quando: (cfg) => cfg.tem_ripado,
+    calcular_largura_mm: (_L, _A, _P, cfg) => cfg.ripa_largura_mm ?? RIPA_LARGURA_PADRAO_MM,
+    calcular_comprimento_mm: (_L, A) => A,
+    calcular_quantidade: (L, _A, _P, cfg) => {
+      const largura = cfg.ripa_largura_mm ?? RIPA_LARGURA_PADRAO_MM;
+      const passo = largura + RIPA_GAP_MM;
+      // +RIPA_GAP_MM no numerador: a última ripa não precisa de vão depois dela.
+      return Math.max(1, Math.floor((L + RIPA_GAP_MM) / passo));
+    },
+    espessura_mm: (cfg) => espessuraRipaValida(cfg.ripa_espessura_mm),
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: (): FitaBorda => ({ esquerda: true, direita: true, topo: false, base: false }),
+    usa_material: "corpo",
+    observacao: "Ripas individuais — quantidade = largura do painel ÷ (largura da ripa + vão entre ripas)",
+  };
+}
+
 // ─── REGRAS DE GAVETA ─────────────────────────────────────────────────────────
 
 /** Conjunto de peças de gaveta: frente, 2 laterais, traseira, fundo. */
