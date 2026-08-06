@@ -42,6 +42,13 @@ export const LARGURA_MODULO_MIN_CM: Centimetros = 30;
 /** Largura máxima de um módulo padrão. */
 export const LARGURA_MODULO_MAX_CM: Centimetros = 90;
 
+/**
+ * Vão mínimo por folha de porta (largura do módulo ÷ nº de portas). Abaixo
+ * disso a folha fica estreita demais pra fixar dobradiça/puxador com folga —
+ * na prática vira uma porta impraticável de fabricar/instalar.
+ */
+export const VAO_PORTA_MINIMO_CM: Centimetros = 20;
+
 /** Aproveitamento mínimo aceitável da parede antes de gerar alerta. */
 export const APROVEITAMENTO_MIN_PCT = 85;
 
@@ -110,6 +117,7 @@ export function validarProjeto(projeto: ProjetoFabricavel): ResultadoValidacao {
     regraBaseSobJanelaBaixa,
     regraAereoColideTeto,
     regraLarguraModuloValida,
+    regraVaoPortaMinimo,
     regraAproveitamentoParede,
     regraPontoHidraulicoAtendido,
   ];
@@ -386,6 +394,37 @@ function regraLarguraModuloValida(
         modulo_id: m.id,
         valor_encontrado: m.largura_cm,
         valor_esperado: LARGURA_MODULO_MAX_CM,
+      });
+    }
+  }
+
+  return violacoes;
+}
+
+// ─── REGRA 6.1: Vão mínimo por folha de porta ─────────────────────────────────
+
+function regraVaoPortaMinimo(
+  _p: ProjetoFabricavel,
+  _a: AmbienteGeometrico,
+  modulos: ModuloInstanciado[],
+): ViolacaoRegra[] {
+  const violacoes: ViolacaoRegra[] = [];
+
+  for (const m of modulos) {
+    const { num_portas, tipo_porta } = m.configuracao;
+    if (num_portas <= 0 || tipo_porta === "aberta") continue;
+
+    const vaoPorFolha = m.largura_cm / num_portas;
+    if (vaoPorFolha < VAO_PORTA_MINIMO_CM) {
+      violacoes.push({
+        regra: "vao_porta_minimo",
+        severidade: "alerta",
+        mensagem: `Módulo "${m.nome_display}": cada folha de porta ficaria com ${vaoPorFolha.toFixed(1)}cm ` +
+          `(${num_portas} porta(s) em ${m.largura_cm}cm), abaixo do mínimo prático de ${VAO_PORTA_MINIMO_CM}cm ` +
+          `pra fixar dobradiça/puxador com folga. Considere reduzir o nº de portas ou aumentar a largura.`,
+        modulo_id: m.id,
+        valor_encontrado: Math.round(vaoPorFolha * 10) / 10,
+        valor_esperado: VAO_PORTA_MINIMO_CM,
       });
     }
   }

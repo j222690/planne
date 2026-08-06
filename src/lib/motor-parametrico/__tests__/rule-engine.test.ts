@@ -30,7 +30,7 @@ describe("validarProjeto — projeto saudável", () => {
     expect(r.status).toBeDefined();
     expect(typeof r.score).toBe("number");
     expect(Array.isArray(r.violacoes)).toBe(true);
-    expect(r.resumo.total_regras_avaliadas).toBe(8);
+    expect(r.resumo.total_regras_avaliadas).toBe(9);
     expect(r.avaliado_em).toBeTruthy();
   });
 
@@ -243,6 +243,47 @@ describe("regra largura_modulo_valida", () => {
     const r = validarProjeto(projetoOk);
 
     const viol = r.violacoes.find(v => v.regra === "largura_modulo_valida");
+    expect(viol).toBeUndefined();
+  });
+});
+
+// ─── Regra: vão mínimo por folha de porta ─────────────────────────────────────
+
+describe("regra vao_porta_minimo", () => {
+  test("módulo estreito com 2 portas (vão < 20cm por folha) gera alerta", () => {
+    const projeto = projetoSaudavel();
+    const mod = projeto.modulos[0];
+    // 30cm ÷ 2 portas = 15cm por folha — abaixo do mínimo de 20cm
+    const moduloEstreito: ModuloInstanciado = {
+      ...mod, largura_cm: 30, posicao_x_cm: 0,
+      configuracao: { ...mod.configuracao, num_portas: 2, tipo_porta: "dobradica" },
+    };
+    const projetoRuim: ProjetoFabricavel = { ...projeto, modulos: [moduloEstreito] };
+    const r = validarProjeto(projetoRuim);
+
+    const viol = r.violacoes.find(v => v.regra === "vao_porta_minimo");
+    expect(viol).toBeDefined();
+    expect(viol?.severidade).toBe("alerta");
+    expect(viol?.valor_encontrado).toBeCloseTo(15, 0);
+  });
+
+  test("módulo padrão (1 porta em 60cm) não gera alerta de vão", () => {
+    const r = validarProjeto(projetoSaudavel());
+    const viol = r.violacoes.find(v => v.regra === "vao_porta_minimo");
+    expect(viol).toBeUndefined();
+  });
+
+  test("módulo sem porta (aberta) não gera alerta de vão", () => {
+    const projeto = projetoSaudavel();
+    const mod = projeto.modulos[0];
+    const moduloAberto: ModuloInstanciado = {
+      ...mod, largura_cm: 30, posicao_x_cm: 0,
+      configuracao: { ...mod.configuracao, num_portas: 2, tipo_porta: "aberta" },
+    };
+    const projetoOk: ProjetoFabricavel = { ...projeto, modulos: [moduloAberto] };
+    const r = validarProjeto(projetoOk);
+
+    const viol = r.violacoes.find(v => v.regra === "vao_porta_minimo");
     expect(viol).toBeUndefined();
   });
 });

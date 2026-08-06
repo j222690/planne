@@ -1065,6 +1065,7 @@ var CIRCULACAO_MINIMA_CM = NORMAS.circulacao_minima.valor;
 var CIRCULACAO_CONFORTAVEL_CM = 90;
 var LARGURA_MODULO_MIN_CM = 30;
 var LARGURA_MODULO_MAX_CM = 90;
+var VAO_PORTA_MINIMO_CM = 20;
 var APROVEITAMENTO_MIN_PCT = 85;
 var FOLGA_TETO_MIN_CM = 5;
 var BASE_PROFUNDIDADE_CM2 = 55;
@@ -1080,6 +1081,7 @@ function validarProjeto(projeto) {
     regraBaseSobJanelaBaixa,
     regraAereoColideTeto,
     regraLarguraModuloValida,
+    regraVaoPortaMinimo,
     regraAproveitamentoParede,
     regraPontoHidraulicoAtendido
   ];
@@ -1257,6 +1259,25 @@ function regraLarguraModuloValida(_p, _a, modulos) {
         modulo_id: m.id,
         valor_encontrado: m.largura_cm,
         valor_esperado: LARGURA_MODULO_MAX_CM
+      });
+    }
+  }
+  return violacoes;
+}
+function regraVaoPortaMinimo(_p, _a, modulos) {
+  const violacoes = [];
+  for (const m of modulos) {
+    const { num_portas, tipo_porta } = m.configuracao;
+    if (num_portas <= 0 || tipo_porta === "aberta") continue;
+    const vaoPorFolha = m.largura_cm / num_portas;
+    if (vaoPorFolha < VAO_PORTA_MINIMO_CM) {
+      violacoes.push({
+        regra: "vao_porta_minimo",
+        severidade: "alerta",
+        mensagem: `M\xF3dulo "${m.nome_display}": cada folha de porta ficaria com ${vaoPorFolha.toFixed(1)}cm (${num_portas} porta(s) em ${m.largura_cm}cm), abaixo do m\xEDnimo pr\xE1tico de ${VAO_PORTA_MINIMO_CM}cm pra fixar dobradi\xE7a/puxador com folga. Considere reduzir o n\xBA de portas ou aumentar a largura.`,
+        modulo_id: m.id,
+        valor_encontrado: Math.round(vaoPorFolha * 10) / 10,
+        valor_esperado: VAO_PORTA_MINIMO_CM
       });
     }
   }
