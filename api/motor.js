@@ -1838,7 +1838,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
     const offset = offsetTorre + (portaTemperosNesteSeg ? PORTA_TEMPEROS_LARGURA_CM : 0);
     const largurasBases = encaixarModulos(seg.comprimento_cm - offset);
     if (largurasBases.length === 0) continue;
-    larguraOcupada += largurasBases.reduce((s, l) => s + l, 0);
+    larguraOcupada += offset + largurasBases.reduce((s, l) => s + l, 0);
     const bases = instanciarModulos(largurasBases, {
       parede: paredeId,
       inicio_cm: seg.inicio_cm + offset,

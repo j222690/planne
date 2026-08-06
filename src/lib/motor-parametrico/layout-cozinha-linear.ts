@@ -135,7 +135,10 @@ export function gerarLayoutCozinhaLinear(
     const offset = offsetTorre + (portaTemperosNesteSeg ? PORTA_TEMPEROS_LARGURA_CM : 0);
     const largurasBases = encaixarModulos(seg.comprimento_cm - offset);
     if (largurasBases.length === 0) continue;
-    larguraOcupada += largurasBases.reduce((s, l) => s + l, 0);
+    // offset = largura da torre de forno + porta-temperos reservada NESTE segmento
+    // — também é parede ocupada por móvel real, não sobra (bug: ficava de fora
+    // do aproveitamento, fazendo o % parecer baixo mesmo com a parede cheia).
+    larguraOcupada += offset + largurasBases.reduce((s, l) => s + l, 0);
 
     const bases = instanciarModulos(largurasBases, {
       parede: paredeId,
