@@ -283,11 +283,15 @@ export interface ConfiguracaoModulo {
   altura_gaveta_cm?: Centimetros;
   num_divisorias: number;
   /**
-   * Divisória vertical rente (encosta na face frontal, padrão) ou recuada
-   * (recuo a partir da frente — permite uma porta larga fechar por cima sem
-   * a divisória interromper visualmente o vão). Default "rente".
+   * Recuo da divisória vertical em relação à face FRONTAL do móvel — permite
+   * uma porta larga fechar por cima sem a divisória interromper visualmente
+   * o vão. Default false (rente/encostada). Modelo de 2 eixos independentes
+   * (frontal/traseiro), como o Construtor de Armários do Promob — ver
+   * memória reference_divisoria_construcao da sessão que pesquisou isso.
    */
-  tipo_divisoria?: "rente" | "recuada";
+  divisoria_recuo_frontal?: boolean;
+  /** Recuo da divisória em relação ao FUNDO do móvel (não atravessa o fundo). */
+  divisoria_recuo_traseiro?: boolean;
   tem_cabideiro: boolean;
   tem_fundo: boolean;
   espessura_fundo_mm: 6 | 3;

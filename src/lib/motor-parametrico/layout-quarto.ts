@@ -40,8 +40,9 @@ const LARGURAS_QUARTO = [100, 90, 80, 70, 60, 50] as const;
 
 export interface PreferenciasQuarto extends PreferenciasBase {
   tipo_porta?: "dobradica" | "correr" | "espelho";
-  /** Divisória vertical rente (padrão) ou recuada — ver ConfiguracaoModulo.tipo_divisoria. */
-  tipo_divisoria?: "rente" | "recuada";
+  /** Recuo frontal/traseiro da divisória vertical — ver ConfiguracaoModulo.divisoria_recuo_*. */
+  divisoria_recuo_frontal?: boolean;
+  divisoria_recuo_traseiro?: boolean;
   /** Paredes a usar. Se omitido, escolhe automaticamente. */
   paredes?: ParedeId[];
 }
@@ -89,7 +90,8 @@ function montarParedeRoupeiros(
       num_portas: largura <= 50 ? 1 : 2,
       num_prateleiras: 3,
       num_divisorias: 1,
-      tipo_divisoria: prefs.tipo_divisoria ?? "rente",
+      divisoria_recuo_frontal: prefs.divisoria_recuo_frontal ?? false,
+      divisoria_recuo_traseiro: prefs.divisoria_recuo_traseiro ?? false,
       tem_cabideiro: true,
       tem_roda_teto: true,   // roupeiro vai até o teto → moldura de roda-teto
       espessura_porta_mm: 15,  // padrão 15mm (marcenaria BR usa pouco 18mm)

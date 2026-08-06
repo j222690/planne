@@ -22,7 +22,11 @@ import { dobradicasPorAlturaMm } from "../base-conhecimento/parametros";
 const ESP: EspessuraMDF = 15;
 const FUNDO: EspessuraMDF = 6;
 
-/** Recuo (mm) da divisória "recuada" a partir da face frontal do móvel. */
+/**
+ * Recuo (mm) de cada lado da divisória vertical, quando ativado — mesma
+ * ordem de grandeza usada pelo Promob (não há valor padrão de mercado
+ * documentado; é configurável projeto a projeto na ferramenta de referência).
+ */
 const RECUO_DIVISORIA_MM = 40;
 
 const ALTURA_GAVETA_PADRAO_CM = 16;
@@ -123,7 +127,9 @@ export function regrasCorpo(opts: OpcoesCorpo = {}): RegraCorte[] {
       grupo: "corpo",
       ativa_quando: (cfg) => cfg.num_divisorias > 0,
       calcular_largura_mm: (_L, _A, P, cfg) =>
-        P - FUNDO - (cfg.tipo_divisoria === "recuada" ? RECUO_DIVISORIA_MM : 0),
+        P - FUNDO
+        - (cfg.divisoria_recuo_frontal ? RECUO_DIVISORIA_MM : 0)
+        - (cfg.divisoria_recuo_traseiro ? RECUO_DIVISORIA_MM : 0),
       calcular_comprimento_mm: (_L, A) => A - 2 * esp,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_divisorias,
       espessura_mm: esp,

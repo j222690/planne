@@ -90,7 +90,8 @@ interface RequestBody {
     tipo_porta_base?: "dobradica" | "correr";
     tipo_porta_aereo?: "dobradica" | "basculante";
     tipo_porta?: "dobradica" | "correr" | "espelho";
-    tipo_divisoria?: "rente" | "recuada";
+    divisoria_recuo_frontal?: boolean;
+    divisoria_recuo_traseiro?: boolean;
     /** Espessura padrão do corpo/porta (mm) — preferência de projeto. Default 15mm. */
     espessura_padrao_mm?: 15 | 18;
     versao_comercial?: "economica" | "intermediaria" | "premium";
@@ -387,7 +388,8 @@ function gerarLayout(
       const r = gerarLayoutDormitorio(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
-        tipo_divisoria: prefs.tipo_divisoria,
+        divisoria_recuo_frontal: prefs.divisoria_recuo_frontal,
+        divisoria_recuo_traseiro: prefs.divisoria_recuo_traseiro,
         paredes: prefs.paredes,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
@@ -396,7 +398,8 @@ function gerarLayout(
       const r = gerarLayoutCloset(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
-        tipo_divisoria: prefs.tipo_divisoria,
+        divisoria_recuo_frontal: prefs.divisoria_recuo_frontal,
+        divisoria_recuo_traseiro: prefs.divisoria_recuo_traseiro,
         paredes: prefs.paredes,
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };

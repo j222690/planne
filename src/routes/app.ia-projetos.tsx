@@ -2981,7 +2981,8 @@ function Step4Layout({
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
-  const [motorTipoDivisoria, setMotorTipoDivisoria] = useState<"rente" | "recuada">("rente");
+  const [divisoriaRecuoFrontal, setDivisoriaRecuoFrontal] = useState(false);
+  const [divisoriaRecuoTraseiro, setDivisoriaRecuoTraseiro] = useState(false);
   const [motorEspessura, setMotorEspessura] = useState<15 | 18>(15);
   const [motorLayoutCozinha, setMotorLayoutCozinha] = useState<
     "cozinha_linear" | "cozinha_l" | "cozinha_u" | "ilha"
@@ -3048,7 +3049,8 @@ function Step4Layout({
       tipo_porta_base: motorTipoPorta,
       tipo_porta_aereo: "dobradica",
       tipo_porta: motorTipoPorta,
-      tipo_divisoria: motorTipoDivisoria,
+      divisoria_recuo_frontal: divisoriaRecuoFrontal,
+      divisoria_recuo_traseiro: divisoriaRecuoTraseiro,
       espessura_padrao_mm: motorEspessura,
       versao_comercial: "intermediaria",
       acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
@@ -3116,7 +3118,8 @@ function Step4Layout({
     motorParede,
     motorFerragem,
     motorTipoPorta,
-    motorTipoDivisoria,
+    divisoriaRecuoFrontal,
+    divisoriaRecuoTraseiro,
     motorEspessura,
     motorLayoutCozinha,
     acRodape,
@@ -3223,7 +3226,8 @@ function Step4Layout({
     motorParede,
     motorFerragem,
     motorTipoPorta,
-    motorTipoDivisoria,
+    divisoriaRecuoFrontal,
+    divisoriaRecuoTraseiro,
     motorEspessura,
     motorLayoutCozinha,
     acRodape,
@@ -4007,27 +4011,29 @@ function Step4Layout({
                 </div>
               </div>
 
-              {/* Tipo de divisória — só aparece em roupeiro/closet (quarto tem divisória interna) */}
+              {/* Recuo da divisória — só aparece em roupeiro/closet (quarto tem divisória interna).
+                  2 eixos independentes (frontal/traseiro), igual ao Construtor de Armários do Promob —
+                  não é um "tipo" único: dá pra ligar os dois ao mesmo tempo. */}
               {(tipoLayoutMotor === "dormitorio" || tipoLayoutMotor === "closet") && (
                 <div>
-                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Tipo de divisória</div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Recuo da divisória</div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {(
-                      [
-                        ["rente", "Rente", "Encosta na face frontal"],
-                        ["recuada", "Recuada", "Recuo — porta larga fecha por cima sem interromper"],
-                      ] as const
-                    ).map(([v, l, sub]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => setMotorTipoDivisoria(v)}
-                        className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorTipoDivisoria === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
-                      >
-                        <span className="font-medium">{l}</span>
-                        <span className="text-[10.5px] text-muted-foreground">{sub}</span>
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setDivisoriaRecuoFrontal((v) => !v)}
+                      className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${divisoriaRecuoFrontal ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                    >
+                      <span className="font-medium">Frontal {divisoriaRecuoFrontal ? "✓" : ""}</span>
+                      <span className="text-[10.5px] text-muted-foreground">Recuo da frente — porta larga fecha por cima sem interromper</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDivisoriaRecuoTraseiro((v) => !v)}
+                      className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${divisoriaRecuoTraseiro ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                    >
+                      <span className="font-medium">Traseiro {divisoriaRecuoTraseiro ? "✓" : ""}</span>
+                      <span className="text-[10.5px] text-muted-foreground">Não atravessa o fundo do móvel</span>
+                    </button>
                   </div>
                 </div>
               )}

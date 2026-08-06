@@ -190,18 +190,33 @@ describe("gerarLayoutDormitorio", () => {
     expect(temTrilho).toBe(true);
   });
 
-  test("divisória recuada é mais estreita que rente (recuo a partir da frente)", () => {
-    const rRente = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, tipo_divisoria: "rente" });
-    const rRecuada = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, tipo_divisoria: "recuada" });
-    const largRente = rRente.projeto.modulos
+  function larguraDivisoria(r: ReturnType<typeof gerarLayoutDormitorio>) {
+    return r.projeto.modulos
       .flatMap((m) => m.pecas)
       .find((p) => p.regra_nome === "divisoria_vertical")?.largura_mm;
-    const largRecuada = rRecuada.projeto.modulos
-      .flatMap((m) => m.pecas)
-      .find((p) => p.regra_nome === "divisoria_vertical")?.largura_mm;
+  }
+
+  test("sem recuo (rente nos 2 lados) é o caso padrão — mais larga que qualquer recuo ativado", () => {
+    const rRente = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto });
+    const rFrontal = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, divisoria_recuo_frontal: true });
+    const rTraseiro = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, divisoria_recuo_traseiro: true });
+    const largRente = larguraDivisoria(rRente);
     expect(largRente).toBeDefined();
-    expect(largRecuada).toBeDefined();
-    expect(largRecuada!).toBeLessThan(largRente!);
+    expect(larguraDivisoria(rFrontal)).toBeLessThan(largRente!);
+    expect(larguraDivisoria(rTraseiro)).toBeLessThan(largRente!);
+  });
+
+  test("recuo frontal e traseiro são independentes e somam quando os 2 estão ativos", () => {
+    const rRente = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto });
+    const rFrontal = gerarLayoutDormitorio(amb(350, 300), { ...baseQuarto, divisoria_recuo_frontal: true });
+    const rAmbos = gerarLayoutDormitorio(amb(350, 300), {
+      ...baseQuarto, divisoria_recuo_frontal: true, divisoria_recuo_traseiro: true,
+    });
+    const largRente = larguraDivisoria(rRente)!;
+    const largFrontal = larguraDivisoria(rFrontal)!;
+    const largAmbos = larguraDivisoria(rAmbos)!;
+    const recuoUnico = largRente - largFrontal;
+    expect(largRente - largAmbos).toBeCloseTo(recuoUnico * 2, 0);
   });
 });
 

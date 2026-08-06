@@ -124,7 +124,7 @@ function regrasCorpo(opts = {}) {
       nome: "divisoria_vertical",
       grupo: "corpo",
       ativa_quando: (cfg) => cfg.num_divisorias > 0,
-      calcular_largura_mm: (_L, _A, P, cfg) => P - FUNDO - (cfg.tipo_divisoria === "recuada" ? RECUO_DIVISORIA_MM : 0),
+      calcular_largura_mm: (_L, _A, P, cfg) => P - FUNDO - (cfg.divisoria_recuo_frontal ? RECUO_DIVISORIA_MM : 0) - (cfg.divisoria_recuo_traseiro ? RECUO_DIVISORIA_MM : 0),
       calcular_comprimento_mm: (_L, A) => A - 2 * esp,
       calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_divisorias,
       espessura_mm: esp,
@@ -2476,7 +2476,8 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
       num_portas: largura <= 50 ? 1 : 2,
       num_prateleiras: 3,
       num_divisorias: 1,
-      tipo_divisoria: prefs.tipo_divisoria ?? "rente",
+      divisoria_recuo_frontal: prefs.divisoria_recuo_frontal ?? false,
+      divisoria_recuo_traseiro: prefs.divisoria_recuo_traseiro ?? false,
       tem_cabideiro: true,
       tem_roda_teto: true,
       // roupeiro vai até o teto → moldura de roda-teto
@@ -5822,7 +5823,8 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
       const r = gerarLayoutDormitorio(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
-        tipo_divisoria: prefs.tipo_divisoria,
+        divisoria_recuo_frontal: prefs.divisoria_recuo_frontal,
+        divisoria_recuo_traseiro: prefs.divisoria_recuo_traseiro,
         paredes: prefs.paredes
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
@@ -5831,7 +5833,8 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
       const r = gerarLayoutCloset(ambiente, {
         ...comum,
         tipo_porta: prefs.tipo_porta,
-        tipo_divisoria: prefs.tipo_divisoria,
+        divisoria_recuo_frontal: prefs.divisoria_recuo_frontal,
+        divisoria_recuo_traseiro: prefs.divisoria_recuo_traseiro,
         paredes: prefs.paredes
       });
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
