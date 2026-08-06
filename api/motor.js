@@ -5093,6 +5093,356 @@ function gerarArquivosAC(chapas) {
   }));
 }
 
+// src/lib/motor-parametrico/vista-explodida.ts
+var T = 0.018;
+var PISO_AEREO = 1.5;
+var RODAPE = 0.1;
+function calcularVistaExplodida(modulo) {
+  const L = modulo.largura_cm / 100;
+  const A = modulo.altura_cm / 100;
+  const P = modulo.profundidade_cm / 100;
+  const portas = modulo.configuracao.num_portas ?? 0;
+  const gavetas = modulo.configuracao.num_gavetas ?? 0;
+  const distBase = Math.max(L, A, P) * 0.9;
+  const pecas = [
+    {
+      id: "lat_e",
+      tipo: "lateral_esquerda",
+      nome: "Lateral esquerda",
+      posicao: [-L / 2 + T / 2, A / 2, 0],
+      tamanho: [T, A, P],
+      direcaoExplosao: [-1, 0, 0],
+      distanciaExplosao: distBase,
+      larguraMm: Math.round(P * 1e3),
+      comprimentoMm: Math.round(A * 1e3)
+    },
+    {
+      id: "lat_d",
+      tipo: "lateral_direita",
+      nome: "Lateral direita",
+      posicao: [L / 2 - T / 2, A / 2, 0],
+      tamanho: [T, A, P],
+      direcaoExplosao: [1, 0, 0],
+      distanciaExplosao: distBase,
+      larguraMm: Math.round(P * 1e3),
+      comprimentoMm: Math.round(A * 1e3)
+    },
+    {
+      id: "base",
+      tipo: "base",
+      nome: "Base",
+      posicao: [0, T / 2, 0],
+      tamanho: [L, T, P],
+      direcaoExplosao: [0, -1, 0],
+      distanciaExplosao: distBase,
+      larguraMm: Math.round(L * 1e3),
+      comprimentoMm: Math.round(P * 1e3)
+    },
+    {
+      id: "teto",
+      tipo: "teto",
+      nome: "Teto",
+      posicao: [0, A - T / 2, 0],
+      tamanho: [L, T, P],
+      direcaoExplosao: [0, 1, 0],
+      distanciaExplosao: distBase,
+      larguraMm: Math.round(L * 1e3),
+      comprimentoMm: Math.round(P * 1e3)
+    },
+    {
+      id: "fundo",
+      tipo: "fundo",
+      nome: "Fundo",
+      posicao: [0, A / 2, -P / 2 + T / 2],
+      tamanho: [Math.max(0.01, L - 2 * T), Math.max(0.01, A - 2 * T), T],
+      direcaoExplosao: [0, 0, -1],
+      distanciaExplosao: distBase,
+      larguraMm: Math.round((L - 2 * T) * 1e3),
+      comprimentoMm: Math.round((A - 2 * T) * 1e3)
+    }
+  ];
+  const zonaGav = gavetas && portas ? Math.min(A, gavetas * 0.16) : gavetas ? A : 0;
+  if (gavetas) {
+    const gh = zonaGav / gavetas;
+    for (let i = 0; i < gavetas; i++) {
+      const gz = i * gh + gh / 2;
+      pecas.push({
+        id: `gav${i}`,
+        tipo: "gaveta",
+        nome: `Gaveta ${i + 1}`,
+        posicao: [0, gz, P / 2 - T / 2],
+        tamanho: [Math.max(0.01, L - 6e-3), Math.max(0.01, gh - 6e-3), T],
+        direcaoExplosao: [0, 0, 1],
+        distanciaExplosao: distBase * 1.3,
+        larguraMm: Math.round(L * 1e3),
+        comprimentoMm: Math.round(gh * 1e3)
+      });
+    }
+  }
+  if (portas) {
+    const pz0 = zonaGav, ph = A - zonaGav, pw = L / portas;
+    for (let d = 0; d < portas; d++) {
+      const px = -L / 2 + (d + 0.5) * pw;
+      pecas.push({
+        id: `porta${d}`,
+        tipo: "porta",
+        nome: `Porta ${d + 1}`,
+        posicao: [px, pz0 + ph / 2, P / 2 - T / 2],
+        tamanho: [Math.max(0.01, pw - 6e-3), Math.max(0.01, ph - 6e-3), T],
+        direcaoExplosao: [0, 0, 1],
+        distanciaExplosao: distBase * 1.3,
+        larguraMm: Math.round(pw * 1e3),
+        comprimentoMm: Math.round(ph * 1e3)
+      });
+    }
+    const prateleiras = modulo.configuracao.num_prateleiras ?? 0;
+    for (let i = 0; i < prateleiras; i++) {
+      const pz = pz0 + (i + 1) / (prateleiras + 1) * ph;
+      pecas.push({
+        id: `prat${i}`,
+        tipo: "prateleira",
+        nome: `Prateleira ${i + 1}`,
+        posicao: [0, pz, 0],
+        tamanho: [Math.max(0.01, L - 2 * T - 4e-3), T, Math.max(0.01, P - 2 * T - 0.01)],
+        direcaoExplosao: [0, 0, -1],
+        distanciaExplosao: distBase * 0.6,
+        larguraMm: Math.round(L * 1e3),
+        comprimentoMm: Math.round(P * 1e3)
+      });
+    }
+  }
+  return pecas;
+}
+function calcularCenaCompleta(modulos, medidas) {
+  const larguraAmb = (medidas?.largura_cm ?? 0) / 100;
+  const profundidadeAmb = (medidas?.profundidade_cm ?? 0) / 100;
+  return modulos.map((m, moduloIndex) => {
+    const px = m.posicao_x_cm / 100;
+    const aereo = m.posicao_y_cm >= 100;
+    const y0 = aereo ? PISO_AEREO : RODAPE;
+    const L = m.largura_cm / 100;
+    const P = m.profundidade_cm / 100;
+    const parede = m.parede ?? "top";
+    let grupoPosicao;
+    let grupoRotacaoY;
+    switch (parede) {
+      case "bottom":
+        grupoRotacaoY = Math.PI;
+        grupoPosicao = [px + L / 2, y0, profundidadeAmb - P / 2];
+        break;
+      case "left":
+        grupoRotacaoY = Math.PI / 2;
+        grupoPosicao = [P / 2, y0, px + L / 2];
+        break;
+      case "right":
+        grupoRotacaoY = -Math.PI / 2;
+        grupoPosicao = [larguraAmb - P / 2, y0, px + L / 2];
+        break;
+      default:
+        grupoRotacaoY = 0;
+        grupoPosicao = [px + L / 2, y0, P / 2];
+    }
+    const pecas = calcularVistaExplodida(m).map((p) => ({ ...p, id: `m${moduloIndex}_${p.id}` }));
+    return {
+      moduloIndex,
+      nome: m.nome_display ?? `M\xF3dulo ${moduloIndex + 1}`,
+      pecas,
+      grupoPosicao,
+      grupoRotacaoY
+    };
+  });
+}
+
+// src/lib/motor-parametrico/exportacao-dae.ts
+var COR_PADRAO = "#D9C7A8";
+function hexParaRgb01(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const h = m ? m[1] : "D9C7A8";
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return [r, g, b];
+}
+function escaparXml(texto2) {
+  return texto2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+var CUBO_POSICOES = [
+  "-0.5 -0.5 -0.5 -0.5 -0.5 -0.5 -0.5 -0.5 -0.5",
+  // a
+  "-0.5 0.5 -0.5 -0.5 0.5 -0.5 -0.5 0.5 -0.5",
+  // b
+  "0.5 0.5 -0.5 0.5 0.5 -0.5 0.5 0.5 -0.5",
+  // c
+  "0.5 -0.5 -0.5 0.5 -0.5 -0.5 0.5 -0.5 -0.5",
+  // d
+  "-0.5 -0.5 0.5 -0.5 -0.5 0.5 -0.5 -0.5 0.5",
+  // e
+  "-0.5 0.5 0.5 -0.5 0.5 0.5 -0.5 0.5 0.5",
+  // f
+  "0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
+  // g
+  "0.5 -0.5 0.5 0.5 -0.5 0.5 0.5 -0.5 0.5"
+  // h
+].join(" ");
+var CUBO_NORMAIS = [
+  "-1 0 0 0 -1 0 0 0 -1",
+  // a
+  "-1 0 0 0 1 0 0 0 -1",
+  // b
+  "1 0 0 0 1 0 0 0 -1",
+  // c
+  "1 0 0 0 -1 0 0 0 -1",
+  // d
+  "-1 0 0 0 -1 0 0 0 1",
+  // e
+  "-1 0 0 0 1 0 0 0 1",
+  // f
+  "1 0 0 0 1 0 0 0 1",
+  // g
+  "1 0 0 0 -1 0 0 0 1"
+  // h
+].join(" ");
+var CUBO_TRIANGULOS = [
+  "6 18 21 6 21 9",
+  // face 1
+  "0 12 15 0 15 3",
+  // face 2
+  "19 7 4 19 4 16",
+  // face 3
+  "10 22 13 10 13 1",
+  // face 4
+  "23 20 17 23 17 14",
+  // face 5
+  "8 11 2 8 2 5"
+  // face 6
+].join(" ");
+function blocoGeometriaCubo() {
+  return `  <library_geometries>
+    <geometry id="box" name="Box">
+      <mesh>
+        <source id="box-positions">
+          <float_array id="box-positions-array" count="72">${CUBO_POSICOES}</float_array>
+          <technique_common>
+            <accessor source="#box-positions-array" count="24" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="box-normals">
+          <float_array id="box-normals-array" count="72">${CUBO_NORMAIS}</float_array>
+          <technique_common>
+            <accessor source="#box-normals-array" count="24" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="box-vertices">
+          <input semantic="POSITION" source="#box-positions"/>
+        </vertices>
+        <triangles count="12">
+          <input semantic="VERTEX" offset="0" source="#box-vertices"/>
+          <input semantic="NORMAL" offset="0" source="#box-normals"/>
+          <p>${CUBO_TRIANGULOS}</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>`;
+}
+function idMaterial(hex) {
+  return `mat_${hex.replace("#", "").toUpperCase()}`;
+}
+function blocoMateriais(coresHex) {
+  const effects = coresHex.map((hex) => {
+    const [r, g, b] = hexParaRgb01(hex);
+    const id = idMaterial(hex);
+    return `    <effect id="${id}-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <diffuse><color>${r.toFixed(4)} ${g.toFixed(4)} ${b.toFixed(4)} 1</color></diffuse>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>`;
+  }).join("\n");
+  const materials = coresHex.map((hex) => {
+    const id = idMaterial(hex);
+    return `    <material id="${id}" name="${id}"><instance_effect url="#${id}-effect"/></material>`;
+  }).join("\n");
+  return {
+    effects: `  <library_effects>
+${effects}
+  </library_effects>`,
+    materials: `  <library_materials>
+${materials}
+  </library_materials>`
+  };
+}
+function grausDe(rad) {
+  return Math.round(rad * 180 / Math.PI * 1e3) / 1e3;
+}
+function gerarDAE(modulos, medidas, nomeProjeto = "Projeto Planne") {
+  const cena = calcularCenaCompleta(modulos, medidas);
+  const coresHex = [...new Set(modulos.map((m) => (m.cor_hex ?? COR_PADRAO).toUpperCase()))];
+  if (coresHex.length === 0) coresHex.push(COR_PADRAO);
+  const { effects, materials } = blocoMateriais(coresHex);
+  const nos = cena.map((moduloNaCena, i) => {
+    const corModulo = (modulos[i]?.cor_hex ?? COR_PADRAO).toUpperCase();
+    const matId = idMaterial(corModulo);
+    const [px, py, pz] = moduloNaCena.grupoPosicao;
+    const anguloGraus = grausDe(moduloNaCena.grupoRotacaoY);
+    const nosPecas = moduloNaCena.pecas.map((p) => {
+      const [lx, ly, lz] = p.posicao;
+      const [sx, sy, sz] = p.tamanho;
+      return `      <node id="${p.id}" name="${escaparXml(p.nome)}">
+        <translate>${lx.toFixed(5)} ${ly.toFixed(5)} ${lz.toFixed(5)}</translate>
+        <scale>${sx.toFixed(5)} ${sy.toFixed(5)} ${sz.toFixed(5)}</scale>
+        <instance_geometry url="#box">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="boxMaterial" target="#${matId}"/>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>`;
+    }).join("\n");
+    return `    <node id="modulo_${i}" name="${escaparXml(moduloNaCena.nome)}">
+      <translate>${px.toFixed(5)} ${py.toFixed(5)} ${pz.toFixed(5)}</translate>
+      <rotate>0 1 0 ${anguloGraus}</rotate>
+${nosPecas}
+    </node>`;
+  }).join("\n");
+  const agora = (/* @__PURE__ */ new Date()).toISOString();
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <authoring_tool>Planne \u2014 Motor Param\xE9trico</authoring_tool>
+    </contributor>
+    <created>${agora}</created>
+    <modified>${agora}</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+${effects}
+${materials}
+${blocoGeometriaCubo()}
+  <library_visual_scenes>
+    <visual_scene id="cena" name="${escaparXml(nomeProjeto)}">
+${nos}
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#cena"/>
+  </scene>
+</COLLADA>
+`;
+}
+
 // src/lib/motor-parametrico/exportacao-corte.ts
 var LABEL_VEIO = {
   paralelo_largura: "largura",
@@ -5864,6 +6214,25 @@ async function gerarHandler(req, res) {
     if (body.incluir_giben) {
       arquivos_giben = gerarArquivosAC(gerarPlanoGiben(todasPecas));
     }
+    let arquivo_dae;
+    if (body.incluir_dae) {
+      const modulosParaDae = resultado.projeto.modulos.map((m) => ({
+        largura_cm: m.largura_cm,
+        altura_cm: m.altura_cm,
+        profundidade_cm: m.profundidade_cm,
+        posicao_x_cm: m.posicao_x_cm,
+        posicao_y_cm: m.posicao_y_cm,
+        parede: m.parede,
+        configuracao: m.configuracao,
+        nome_display: m.nome_display,
+        cor_hex: m.material_corpo?.cor_hex
+      }));
+      arquivo_dae = gerarDAE(
+        modulosParaDae,
+        { largura_cm: ambiente.dimensoes.largura_cm, profundidade_cm: ambiente.dimensoes.profundidade_cm },
+        prefs.nome ?? "Projeto Planne"
+      );
+    }
     const lista_compras = gerarListaCompras(resultado.projeto);
     const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
     const analise_tecnica = analisarProjeto(resultado.projeto);
@@ -5884,6 +6253,7 @@ async function gerarHandler(req, res) {
       // Plano de corte guilhotina (opt-in) — compatível com serra reta
       ...plano_corte_guilhotina ? { plano_corte_guilhotina, sequencia_corte_texto, sequencia_corte_checklist } : {},
       ...arquivos_giben ? { arquivos_giben } : {},
+      ...arquivo_dae ? { arquivo_dae } : {},
       // PCP: cronograma + etapas + lista de compras (Fase 9)
       pcp: {
         numero: pcpResultado.ordem.numero,

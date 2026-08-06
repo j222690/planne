@@ -2508,6 +2508,8 @@ function MotorResultadoPainel({
   exportandoGiben,
   onExportarXLS,
   exportandoXLS,
+  onExportarDAE,
+  exportandoDAE,
 }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
@@ -2526,6 +2528,9 @@ function MotorResultadoPainel({
   /** Planilha XLSX (lista de peças + orçamento) — só client-side, sem recalcular. */
   onExportarXLS?: () => void;
   exportandoXLS?: boolean;
+  /** Modelo 3D .dae (COLLADA) pra SketchUp/Blender — recalcula e baixa. */
+  onExportarDAE?: () => void;
+  exportandoDAE?: boolean;
 }) {
   const [renderJob, setRenderJob] = useState<{
     status: "pending" | "processing" | "completed" | "error";
@@ -2859,6 +2864,17 @@ function MotorResultadoPainel({
                 className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
               >
                 <Download className="size-3" /> {exportandoXLS ? "Gerando…" : "XLS"}
+              </button>
+            )}
+            {onExportarDAE && (
+              <button
+                type="button"
+                disabled={!!exportandoDAE}
+                onClick={onExportarDAE}
+                title="Modelo 3D esquemático .dae (COLLADA) — abre no SketchUp, Blender etc."
+                className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                <Download className="size-3" /> {exportandoDAE ? "Gerando…" : "DAE (SketchUp)"}
               </button>
             )}
           </div>
@@ -3220,6 +3236,30 @@ function Step4Layout({
       toast.error(e instanceof Error ? e.message : "Erro ao gerar arquivos Giben");
     } finally {
       setGerandoGiben(false);
+    }
+  };
+
+  // Exporta o modelo 3D .dae (COLLADA, SketchUp/Blender) — mesmo padrão da
+  // guilhotina/Giben: recalcula com a opção extra e baixa.
+  const [gerandoDAE, setGerandoDAE] = useState(false);
+  const handleExportarDAE = async () => {
+    if (!tipoLayoutMotor) return;
+    setGerandoDAE(true);
+    try {
+      const res = await fetch("/api/motor?action=gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(montarPayloadMotor({ incluir_dae: true })),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
+      const data = (await res.json()) as MotorResultado & { arquivo_dae?: string };
+      if (!data.arquivo_dae) throw new Error("Motor não retornou o arquivo .dae.");
+      baixarArquivo(data.arquivo_dae, "planne-projeto.dae", "model/vnd.collada+xml");
+      toast.success("Modelo 3D (.dae) gerado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar o modelo 3D .dae");
+    } finally {
+      setGerandoDAE(false);
     }
   };
 
@@ -3624,6 +3664,8 @@ function Step4Layout({
               exportandoGiben={gerandoGiben}
               onExportarXLS={handleExportarXLS}
               exportandoXLS={gerandoXLS}
+              onExportarDAE={handleExportarDAE}
+              exportandoDAE={gerandoDAE}
             />
           ) : (
             <div className="text-[12.5px] text-muted-foreground py-6 text-center">

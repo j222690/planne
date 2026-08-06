@@ -35,6 +35,7 @@ import { gerarPlanoNesting } from "../lib/motor-parametrico/nesting";
 import { gerarPlanoNestingGuilhotina } from "../lib/motor-parametrico/nesting-guilhotina";
 import { gerarSequenciaCorteTexto, gerarSequenciaCorteChecklist } from "../lib/motor-parametrico/exportacao-guilhotina";
 import { gerarPlanoGiben, gerarArquivosAC } from "../lib/motor-parametrico/giben-ac";
+import { gerarDAE } from "../lib/motor-parametrico/exportacao-dae";
 import { gerarExportacoes } from "../lib/motor-parametrico/exportacao-corte";
 import { gerarOrdemProducao } from "../lib/motor-parametrico/pcp";
 import { gerarListaCompras } from "../lib/motor-parametrico/engenharia";
@@ -68,6 +69,13 @@ interface RequestBody {
    * ver reference_giben_ac_formato).
    */
   incluir_giben?: boolean;
+
+  /**
+   * Também gera o arquivo .dae (COLLADA) — modelo 3D esquemático (caixas por
+   * peça, mesma geometria do visualizador 3D interativo) pra abrir no
+   * SketchUp/Blender. Opt-in.
+   */
+  incluir_dae?: boolean;
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
   ambiente_geometrico?: AmbienteGeometrico;
@@ -278,6 +286,28 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       arquivos_giben = gerarArquivosAC(gerarPlanoGiben(todasPecas));
     }
 
+    // 7.3: arquivo .dae (opt-in) — modelo 3D esquemático (SketchUp/Blender),
+    // mesma geometria do visualizador 3D interativo (calcularCenaCompleta).
+    let arquivo_dae: string | undefined;
+    if (body.incluir_dae) {
+      const modulosParaDae = resultado.projeto.modulos.map((m) => ({
+        largura_cm: m.largura_cm,
+        altura_cm: m.altura_cm,
+        profundidade_cm: m.profundidade_cm,
+        posicao_x_cm: m.posicao_x_cm,
+        posicao_y_cm: m.posicao_y_cm,
+        parede: m.parede,
+        configuracao: m.configuracao,
+        nome_display: m.nome_display,
+        cor_hex: m.material_corpo?.cor_hex,
+      }));
+      arquivo_dae = gerarDAE(
+        modulosParaDae,
+        { largura_cm: ambiente.dimensoes.largura_cm, profundidade_cm: ambiente.dimensoes.profundidade_cm },
+        prefs.nome ?? "Projeto Planne",
+      );
+    }
+
     // 8. Gerar PCP (Fase 9): ordem de produção com cronograma + lista de compras
     const lista_compras = gerarListaCompras(resultado.projeto);
     const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
@@ -303,6 +333,7 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       // Plano de corte guilhotina (opt-in) — compatível com serra reta
       ...(plano_corte_guilhotina ? { plano_corte_guilhotina, sequencia_corte_texto, sequencia_corte_checklist } : {}),
       ...(arquivos_giben ? { arquivos_giben } : {}),
+      ...(arquivo_dae ? { arquivo_dae } : {}),
       // PCP: cronograma + etapas + lista de compras (Fase 9)
       pcp: {
         numero: pcpResultado.ordem.numero,

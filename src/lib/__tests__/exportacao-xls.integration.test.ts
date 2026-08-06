@@ -115,7 +115,13 @@ describe("exportação XLSX — integração com o motor real", () => {
     expect(buffer.subarray(0, 2).toString("latin1")).toBe("PK");
 
     const wbLido = new ExcelJS.Workbook();
-    await wbLido.xlsx.load(buffer);
+
+    // Duas versões de @types/node no projeto (raiz vs aninhado em
+    // @vercel/node) fazem TS enxergar dois tipos "Buffer" nominalmente
+    // distintos aqui; em runtime é o mesmo Buffer do Node, só o nível de
+    // tipos diverge.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await wbLido.xlsx.load(buffer as any);
 
     const shPecas = wbLido.getWorksheet("Lista de Peças");
     expect(shPecas).toBeDefined();
