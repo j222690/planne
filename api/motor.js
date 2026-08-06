@@ -5094,6 +5094,22 @@ function gerarArquivosAC(chapas) {
 }
 
 // src/lib/motor-parametrico/exportacao-corte.ts
+var LABEL_VEIO = {
+  paralelo_largura: "largura",
+  paralelo_comprimento: "comprimento",
+  indiferente: "indiferente"
+};
+function ladosFitados(p) {
+  if (!p.fita_borda) return "";
+  const f = p.fita_borda;
+  const lados = p.rotacionada ? { topo: f.esquerda, base: f.direita, esquerda: f.topo, direita: f.base } : f;
+  const nomes = [];
+  if (lados.topo) nomes.push("topo");
+  if (lados.base) nomes.push("base");
+  if (lados.esquerda) nomes.push("esquerda");
+  if (lados.direita) nomes.push("direita");
+  return nomes.join("+");
+}
 function gerarCSVCorte(plano) {
   const sep = ";";
   const cabecalho = [
@@ -5105,6 +5121,8 @@ function gerarCSVCorte(plano) {
     "x_mm",
     "y_mm",
     "rotacionada",
+    "veio",
+    "lado_fitado",
     "etiqueta"
   ].join(sep);
   const linhas = [cabecalho];
@@ -5119,6 +5137,8 @@ function gerarCSVCorte(plano) {
         p.x_mm,
         p.y_mm,
         p.rotacionada ? "SIM" : "NAO",
+        p.direcao_fio ? LABEL_VEIO[p.direcao_fio] : "",
+        ladosFitados(p),
         escaparCSV(p.etiqueta)
       ].join(sep));
     }

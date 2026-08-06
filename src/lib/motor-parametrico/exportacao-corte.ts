@@ -10,19 +10,44 @@
  * Funções puras: o backend produz os dados; o frontend renderiza o QR/PDF.
  */
 
-import type { PlanoNesting, ChapaAlocada, PecaAlocada } from "./tipos";
+import type { PlanoNesting, ChapaAlocada, PecaAlocada, DirecaoFio } from "./tipos";
 
 // ─── CSV DO OPERADOR ──────────────────────────────────────────────────────────
 
+const LABEL_VEIO: Record<DirecaoFio, string> = {
+  paralelo_largura: "largura",
+  paralelo_comprimento: "comprimento",
+  indiferente: "indiferente",
+};
+
+/** Lados com fita de borda, na orientação FINAL da peça (já considera rotação). */
+function ladosFitados(p: PecaAlocada): string {
+  if (!p.fita_borda) return "";
+  const f = p.fita_borda;
+  // Rotacionar 90° troca largura<->comprimento, então os lados esquerda/
+  // direita (do comprimento) viram topo/base (da largura) e vice-versa.
+  const lados = p.rotacionada
+    ? { topo: f.esquerda, base: f.direita, esquerda: f.topo, direita: f.base }
+    : f;
+  const nomes: string[] = [];
+  if (lados.topo) nomes.push("topo");
+  if (lados.base) nomes.push("base");
+  if (lados.esquerda) nomes.push("esquerda");
+  if (lados.direita) nomes.push("direita");
+  return nomes.join("+");
+}
+
 /**
  * Gera o CSV de corte para o operador imprimir.
- * Uma linha por peça, agrupada por chapa, com posição e rotação.
+ * Uma linha por peça, agrupada por chapa, com posição, rotação, veio e fita
+ * de borda por lado (a mesma informação que já aparece no plano de corte
+ * visual, agora também no arquivo que vai pra produção).
  */
 export function gerarCSVCorte(plano: PlanoNesting): string {
   const sep = ";";
   const cabecalho = [
     "chapa", "material", "peca", "largura_mm", "comprimento_mm",
-    "x_mm", "y_mm", "rotacionada", "etiqueta",
+    "x_mm", "y_mm", "rotacionada", "veio", "lado_fitado", "etiqueta",
   ].join(sep);
 
   const linhas: string[] = [cabecalho];
@@ -38,6 +63,8 @@ export function gerarCSVCorte(plano: PlanoNesting): string {
         p.x_mm,
         p.y_mm,
         p.rotacionada ? "SIM" : "NAO",
+        p.direcao_fio ? LABEL_VEIO[p.direcao_fio] : "",
+        ladosFitados(p),
         escaparCSV(p.etiqueta),
       ].join(sep));
     }
