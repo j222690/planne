@@ -3012,7 +3012,9 @@ function Step4Layout({
   );
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
-  const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
+  const [motorTipoPorta, setMotorTipoPorta] = useState<
+    "dobradica" | "correr" | "veneziana" | "aluminio_vidro" | "provencal" | "palha"
+  >("dobradica");
   const [motorTipoPortaAereo, setMotorTipoPortaAereo] = useState<"dobradica" | "basculante">("dobradica");
   const [motorPosicaoPuxador, setMotorPosicaoPuxador] = useState<
     "" | "sem" | "em_pe" | "em_cima" | "em_baixo" | "passante_em_cima" | "passante_em_baixo"
@@ -3082,7 +3084,11 @@ function Step4Layout({
       parede_principal: motorParede,
       cor_mdf_hex: wizard.form.cor_mdf,
       ferragem: motorFerragem,
-      tipo_porta_base: motorTipoPorta,
+      // tipo_porta_base é só da cozinha (biblioteca-cozinha.ts não conhece as
+      // variantes novas de moldura/painel) — trava pro padrão se por acaso o
+      // estado ainda estiver numa variante de quando o wizard era outro ambiente.
+      tipo_porta_base:
+        motorTipoPorta === "dobradica" || motorTipoPorta === "correr" ? motorTipoPorta : "dobradica",
       tipo_porta_aereo: motorTipoPortaAereo,
       tipo_porta: motorTipoPorta,
       divisoria_recuo_frontal: divisoriaRecuoFrontal,
@@ -4112,17 +4118,29 @@ function Step4Layout({
                 </div>
               </div>
 
-              {/* Tipo de porta — base e roupeiros */}
+              {/* Tipo de porta — base e roupeiros. Variantes de moldura/painel
+                  (veneziana/alumínio-vidro/provençal/palha) só fazem sentido
+                  em roupeiro/closet — a cozinha usa suas próprias regras de
+                  porta em biblioteca-cozinha.ts, que não conhecem essas variantes. */}
               <div>
                 <div className="text-[11.5px] text-muted-foreground mb-1.5">
                   Tipo de porta{wizard.form.ambiente === "Cozinha" ? " (base)" : ""}
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {(
-                    [
-                      ["dobradica", "Dobradiça", "Abre para fora"],
-                      ["correr", "Corrediça", "Desliza lateralmente"],
-                    ] as const
+                    wizard.form.ambiente === "Cozinha"
+                      ? ([
+                          ["dobradica", "Dobradiça", "Abre para fora"],
+                          ["correr", "Corrediça", "Desliza lateralmente"],
+                        ] as const)
+                      : ([
+                          ["dobradica", "Dobradiça", "Painel liso"],
+                          ["correr", "Corrediça", "Desliza lateralmente"],
+                          ["veneziana", "Veneziana", "Lâminas horizontais"],
+                          ["aluminio_vidro", "Alumínio/vidro", "Moldura + vidro"],
+                          ["provencal", "Provençal", "Usinada no CNC"],
+                          ["palha", "Palha", "Moldura + tela trançada"],
+                        ] as const)
                   ).map(([v, l, sub]) => (
                     <button
                       key={v}

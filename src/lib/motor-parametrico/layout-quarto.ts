@@ -24,6 +24,7 @@ import {
 } from "./biblioteca-quarto";
 import {
   criarMaterialPadrao,
+  materialInsertDe,
   configPadrao,
   encaixarLarguras,
   instanciarModulos,
@@ -39,7 +40,7 @@ import {
 const LARGURAS_QUARTO = [100, 90, 80, 70, 60, 50] as const;
 
 export interface PreferenciasQuarto extends PreferenciasBase {
-  tipo_porta?: "dobradica" | "correr" | "espelho";
+  tipo_porta?: "dobradica" | "correr" | "espelho" | "provencal" | "veneziana" | "aluminio_vidro" | "palha";
   /** Recuo frontal/traseiro da divisória vertical — ver ConfiguracaoModulo.divisoria_recuo_*. */
   divisoria_recuo_frontal?: boolean;
   divisoria_recuo_traseiro?: boolean;
@@ -71,6 +72,7 @@ function montarParedeRoupeiros(
   const larguras = encaixarLarguras(disponivel, LARGURAS_QUARTO, 80, 50);
   const materialCorpo = criarMaterialPadrao(prefs.cor_mdf_hex, 15);
   const materialFundo = criarMaterialPadrao(prefs.cor_mdf_hex, 6);
+  const materialInsert = materialInsertDe(prefs.tipo_porta);
 
   const modulos = instanciarModulos(larguras, {
     parede,
@@ -81,6 +83,7 @@ function montarParedeRoupeiros(
     prefixo: "roupeiro",
     materialCorpo,
     materialFundo,
+    materialInsert,
     getTemplate: getTemplateRoupeiro,
     templateFallback: MODULOS_ROUPEIRO[3],
     espessura_padrao_mm: prefs.espessura_padrao_mm,

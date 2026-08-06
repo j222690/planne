@@ -52,6 +52,8 @@ const PRECO_FERRAGEM_REF: Record<TipoFerragem, number> = {
   cavilha_8x30mm: 0.15,
   cesto_aramado_porta_temperos: 65.0,
   suporte_basculante: 28.0,
+  perfil_aluminio_porta_1m: 32.0,
+  usinagem_provencal: 45.0,
 };
 
 // ─── CONFIGURAÇÃO DE CUSTO (por empresa) ──────────────────────────────────────

@@ -80,7 +80,7 @@ export interface Material {
   comprimento_chapa_mm: Milimetros;
   area_chapa_m2: MetrosQuadrados;
   cor_hex: string;
-  acabamento: "melamina" | "laca_uv" | "laca_pu" | "pvc" | "folha_natural" | "cru";
+  acabamento: "melamina" | "laca_uv" | "laca_pu" | "pvc" | "folha_natural" | "cru" | "vidro" | "palha";
   preco_custo_chapa: number;
   preco_venda_chapa: number;
   fornecedor_id?: string;
@@ -271,7 +271,11 @@ export interface DimensaoParametrica {
 }
 
 export interface ConfiguracaoModulo {
-  tipo_porta: "dobradica" | "correr" | "basculante" | "aberta" | "vidro" | "espelho" | "ripado";
+  tipo_porta:
+    | "dobradica" | "correr" | "basculante" | "aberta" | "vidro" | "espelho" | "ripado"
+    // Variantes de porta de armário (frame+insert ou geometria alternativa —
+    // todas abrem por dobradiça, só muda a construção do painel):
+    | "veneziana" | "aluminio_vidro" | "provencal" | "palha";
   num_portas: number;
   num_prateleiras: number;
   num_gavetas: number;
@@ -372,7 +376,8 @@ export interface RegraCorte {
   espessura_mm: EspessuraMDF | ((cfg: ConfiguracaoModulo) => EspessuraMDF);
   direcao_fio: DirecaoFio;
   fita_borda: (cfg: ConfiguracaoModulo) => FitaBorda;
-  usa_material: "corpo" | "porta" | "fundo";
+  /** "insert" = vidro/palha (miolo de porta com moldura) — ver ModuloInstanciado.material_insert. */
+  usa_material: "corpo" | "porta" | "fundo" | "insert";
   observacao?: string;
 }
 
@@ -396,7 +401,9 @@ export type TipoFerragem =
   | "minifix_15mm"
   | "cavilha_8x30mm"
   | "cesto_aramado_porta_temperos"
-  | "suporte_basculante";
+  | "suporte_basculante"
+  | "perfil_aluminio_porta_1m"
+  | "usinagem_provencal";
 
 export interface RegraFerragem {
   tipo: TipoFerragem;
@@ -430,6 +437,8 @@ export interface ModuloInstanciado {
   material_corpo: Material;
   material_porta?: Material;
   material_fundo?: Material;
+  /** Miolo de porta com moldura (vidro/palha) — usado por tipo_porta "aluminio_vidro"/"palha". */
+  material_insert?: Material;
   /** DERIVADO — calculado por calcularPecas(). Nunca salvar como fonte de verdade. */
   pecas: Peca[];
   /** DERIVADO — calculado por calcularFerragens(). */

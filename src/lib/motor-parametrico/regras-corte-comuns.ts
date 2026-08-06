@@ -179,6 +179,159 @@ export function regraPortaCorrer(): RegraCorte {
   };
 }
 
+// ─── VARIANTES DE PORTA DE ARMÁRIO ─────────────────────────────────────────────
+// Provençal e veneziana ainda são 1 painel MDF (mesma geometria da dobradiça,
+// só muda o acabamento/corte); alumínio-vidro e palha são construção real de
+// moldura + miolo (usa_material: "insert" — ver materialInsertDe em
+// layout-shared.ts). Todas abrem por dobradiça — regraDobradicas() já cobre.
+
+/**
+ * Porta usinada (provençal): mesmo painel da dobradiça, mas com regra_nome
+ * próprio pra aparecer identificada no plano de corte/CSV (o operador de CNC
+ * precisa saber que essa peça vai pro centro de usinagem antes da fita de
+ * borda). Custo do serviço de usinagem entra como ferragem (ver
+ * regraUsinagemProvencal) — não modelamos o desenho exato do rebaixo.
+ */
+export function regraPortaProvencal(): RegraCorte {
+  return {
+    nome: "porta_provencal",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "provencal",
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: fitaTotal,
+    usa_material: "porta",
+    observacao: "Painel usinado (provençal) — enviar pro centro de usinagem antes da fita de borda",
+  };
+}
+
+const VENEZIANA_LAMINA_MM = 30;
+const VENEZIANA_GAP_MM = 15;
+
+/** Porta veneziana: lâminas horizontais preenchendo cada folha (mesma técnica de regraRipa, orientada por porta). */
+export function regraPortaVeneziana(): RegraCorte {
+  return {
+    nome: "porta_veneziana",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "veneziana",
+    // comprimento da lâmina = largura da folha; "largura" da peça é a altura de cada lâmina
+    calcular_largura_mm: () => VENEZIANA_LAMINA_MM,
+    calcular_comprimento_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_quantidade: (_L, A, _P, cfg) => {
+      const alturaUtil = Math.max(150, A - zonaGavetasMm(cfg));
+      const passo = VENEZIANA_LAMINA_MM + VENEZIANA_GAP_MM;
+      const porFolha = Math.max(1, Math.floor((alturaUtil + VENEZIANA_GAP_MM) / passo));
+      return porFolha * cfg.num_portas;
+    },
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: (): FitaBorda => ({ esquerda: true, direita: true, topo: false, base: false }),
+    usa_material: "porta",
+    observacao: "Lâminas horizontais — quantidade = (altura útil ÷ (lâmina+vão)) × nº de portas",
+  };
+}
+
+const ALUMINIO_MOLDURA_MM = 30;
+
+/** Miolo de vidro (porta alumínio-vidro) — 1 peça por folha, dimensionada pro vão dentro da moldura de alumínio. */
+export function regraPortaAluminioVidro(): RegraCorte {
+  return {
+    nome: "vidro_porta",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "aluminio_vidro",
+    calcular_largura_mm: (L, _A, _P, cfg) =>
+      Math.max(50, Math.round(L / Math.max(cfg.num_portas, 1)) - 2 * ALUMINIO_MOLDURA_MM),
+    calcular_comprimento_mm: (_L, A, _P, cfg) =>
+      Math.max(50, Math.max(150, A - zonaGavetasMm(cfg)) - 2 * ALUMINIO_MOLDURA_MM),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: 6,
+    direcao_fio: "indiferente",
+    fita_borda: semFita,
+    usa_material: "insert",
+    observacao: "Vidro temperado — corte e lapidação por conta do vidraceiro, não entra no nesting de MDF",
+  };
+}
+
+/** Moldura de alumínio (ferragem, não peça de MDF) — perímetro da folha em metros lineares. */
+export function regraMolduraAluminioVidro(): RegraFerragem {
+  return {
+    tipo: "perfil_aluminio_porta_1m",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "aluminio_vidro",
+    calcular_quantidade: (L, A, _P, cfg) => {
+      const larguraFolha = L / Math.max(cfg.num_portas, 1);
+      const alturaFolha = Math.max(150, A - zonaGavetasMm(cfg));
+      const perimetroM = (2 * (larguraFolha + alturaFolha)) / 1000;
+      return Math.round(perimetroM * cfg.num_portas * 10) / 10;
+    },
+    descricao_tecnica: "Perímetro da moldura de alumínio (metros lineares) × nº de folhas",
+  };
+}
+
+const PALHA_MOLDURA_MM = 50;
+
+/** Moldura de MDF da porta de palha (2 travessas horizontais + 2 montantes verticais, por folha) + miolo de palha. */
+export function regraPortaPalha(): RegraCorte[] {
+  const larguraFolha = (L: number, cfg: { num_portas: number }) => L / Math.max(cfg.num_portas, 1);
+  const alturaFolha = (A: number, cfg: { num_gavetas: number; altura_gaveta_cm?: number }) =>
+    Math.max(150, A - zonaGavetasMm(cfg));
+  const ativa = (cfg: { num_portas: number; tipo_porta: string }) => cfg.num_portas > 0 && cfg.tipo_porta === "palha";
+
+  return [
+    {
+      nome: "moldura_palha_travessa",
+      grupo: "porta",
+      ativa_quando: ativa,
+      calcular_largura_mm: (L, _A, _P, cfg) => Math.round(larguraFolha(L, cfg)),
+      calcular_comprimento_mm: () => PALHA_MOLDURA_MM,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas * 2, // topo + base, por folha
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Travessas (topo/base) da moldura da porta de palha",
+    },
+    {
+      nome: "moldura_palha_montante",
+      grupo: "porta",
+      ativa_quando: ativa,
+      calcular_largura_mm: () => PALHA_MOLDURA_MM,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round(alturaFolha(A, cfg) - 2 * PALHA_MOLDURA_MM),
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas * 2, // esquerda + direita, por folha
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Montantes (esquerda/direita) da moldura da porta de palha",
+    },
+    {
+      nome: "palha_insert",
+      grupo: "porta",
+      ativa_quando: ativa,
+      calcular_largura_mm: (L, _A, _P, cfg) => Math.max(50, Math.round(larguraFolha(L, cfg)) - 2 * PALHA_MOLDURA_MM),
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(50, Math.round(alturaFolha(A, cfg)) - 2 * PALHA_MOLDURA_MM),
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+      espessura_mm: 3,
+      direcao_fio: "indiferente",
+      fita_borda: semFita,
+      usa_material: "insert",
+      observacao: "Tela de palha/rattan — fixada por dentro da moldura de MDF",
+    },
+  ];
+}
+
+/** Serviço de usinagem CNC da porta provençal (custo, não peça física). */
+export function regraUsinagemProvencal(): RegraFerragem {
+  return {
+    tipo: "usinagem_provencal",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "provencal",
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    descricao_tecnica: "Serviço de usinagem/rebaixo CNC — 1 por folha de porta provençal",
+  };
+}
+
 // ─── REGRA DE RIPADO ──────────────────────────────────────────────────────────
 
 /** Largura padrão de cada ripa (mm) quando o projeto não especifica. */
@@ -500,11 +653,15 @@ export function regrasAcabamento(): RegraCorte[] {
 
 // ─── FERRAGENS COMUNS ─────────────────────────────────────────────────────────
 
-/** Dobradiças: 2 por porta até 150cm, 3 até 200cm, 4 acima. */
+const TIPOS_PORTA_COM_DOBRADICA = new Set([
+  "dobradica", "provencal", "veneziana", "aluminio_vidro", "palha",
+]);
+
+/** Dobradiças: 2 por porta até 150cm, 3 até 200cm, 4 acima. Cobre toda variante de porta que abre por dobradiça (só muda a construção do painel). */
 export function regraDobradicas(): RegraFerragem {
   return {
     tipo: "dobradica_35mm_110grau",
-    ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
+    ativa_quando: (cfg) => TIPOS_PORTA_COM_DOBRADICA.has(cfg.tipo_porta) && cfg.num_portas > 0,
     calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * dobradicasPorAlturaMm(A),
     descricao_tecnica: "Nº de dobradiças por altura (base): 2 ≤90cm, 3 ≤200cm, 4 ≤240cm, 5 acima",
   };

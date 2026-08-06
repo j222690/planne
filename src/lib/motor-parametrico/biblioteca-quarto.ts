@@ -12,6 +12,10 @@ import {
   regrasCorpo,
   regraPortaDobradica,
   regraPortaCorrer,
+  regraPortaProvencal,
+  regraPortaVeneziana,
+  regraPortaAluminioVidro,
+  regraPortaPalha,
   regrasGaveta,
   regraDobradicas,
   regraCorredicaGaveta,
@@ -20,6 +24,8 @@ import {
   regraPuxadores,
   regraMinifix,
   regraPes,
+  regraMolduraAluminioVidro,
+  regraUsinagemProvencal,
 } from "./regras-corte-comuns";
 
 // ─── DIMENSÕES PADRÃO ─────────────────────────────────────────────────────────
@@ -77,7 +83,7 @@ function criarRoupeiro(largura_cm: number): ModuloParametrico {
       num_portas: { min: 1, max: 4 },
       num_gavetas: { min: 0, max: 4 },
       num_prateleiras: { min: 1, max: 8 },
-      tipos_porta_validos: ["dobradica", "correr", "espelho"],
+      tipos_porta_validos: ["dobradica", "correr", "espelho", "provencal", "veneziana", "aluminio_vidro", "palha"],
       permite_espelho: true,
       permite_iluminacao_led: true,
       permite_ripado: false,
@@ -86,6 +92,10 @@ function criarRoupeiro(largura_cm: number): ModuloParametrico {
       ...regrasCorpo({ com_divisoria: true }),
       regraPortaDobradica(),
       regraPortaCorrer(),
+      regraPortaProvencal(),
+      regraPortaVeneziana(),
+      regraPortaAluminioVidro(),
+      ...regraPortaPalha(),
       ...regrasGaveta(),
     ],
     regras_ferragens: [
@@ -96,6 +106,8 @@ function criarRoupeiro(largura_cm: number): ModuloParametrico {
       regraPuxadores(),
       regraMinifix(),
       regraPes(),
+      regraMolduraAluminioVidro(),
+      regraUsinagemProvencal(),
     ],
     restricoes_placement: {
       altura_piso_padrao_cm: 0,

@@ -80,6 +80,54 @@ export function criarMaterialPadrao(cor_hex: string, espessura: 3 | 6 | 9 | 12 |
   };
 }
 
+/**
+ * Miolo de porta com moldura (vidro temperado 6mm ou tela de palha/rattan
+ * sobre painel 3mm) — usado por tipo_porta "aluminio_vidro"/"palha".
+ * Chapa/preço de referência PRÓPRIOS (não são MDF): vidro é vendido por m²
+ * numa chapa padrão de vidraceiro; palha é um painel decorativo comprado
+ * pronto. Nesting.ts trata como um material a mais — vira um grupo de
+ * "chapas" separado no plano de corte, o que reflete a realidade (corte de
+ * vidro não sai junto com o MDF).
+ */
+export function criarMaterialInsertVidro(): Material {
+  return {
+    id: "insert_vidro_6mm",
+    codigo: "vidro_temperado_6mm",
+    nome_display: "Vidro Temperado 6mm",
+    espessura_mm: 6,
+    largura_chapa_mm: 2200,
+    comprimento_chapa_mm: 1600,
+    area_chapa_m2: (2200 / 1000) * (1600 / 1000),
+    cor_hex: "#cfe0e8",
+    acabamento: "vidro",
+    preco_custo_chapa: 420,
+    preco_venda_chapa: 0,
+  };
+}
+
+export function criarMaterialInsertPalha(): Material {
+  return {
+    id: "insert_palha_3mm",
+    codigo: "tela_palha_3mm",
+    nome_display: "Tela de Palha/Rattan 3mm",
+    espessura_mm: 3,
+    largura_chapa_mm: 1220,
+    comprimento_chapa_mm: 2440,
+    area_chapa_m2: (1220 / 1000) * (2440 / 1000),
+    cor_hex: "#c9a869",
+    acabamento: "palha",
+    preco_custo_chapa: 280,
+    preco_venda_chapa: 0,
+  };
+}
+
+/** Deriva o material de insert certo a partir do tipo de porta (undefined = porta não usa insert). */
+export function materialInsertDe(tipo_porta: ConfiguracaoModulo["tipo_porta"] | undefined): Material | undefined {
+  if (tipo_porta === "aluminio_vidro") return criarMaterialInsertVidro();
+  if (tipo_porta === "palha") return criarMaterialInsertPalha();
+  return undefined;
+}
+
 // ─── CONFIGURAÇÃO DE MÓDULO ───────────────────────────────────────────────────
 
 /** Configuração base padrão — ponto de partida para qualquer módulo. */
@@ -181,6 +229,8 @@ export interface OpcoesInstanciacao {
   materialCorpo: Material;
   materialFundo?: Material;
   materialPorta?: Material;
+  /** Miolo de porta com moldura (vidro/palha) — ver materialInsertDe(). */
+  materialInsert?: Material;
   /** Resolve o template a partir da largura. */
   getTemplate: (largura_cm: number) => ModuloParametrico | undefined;
   templateFallback: ModuloParametrico;
@@ -244,6 +294,7 @@ export function instanciarModulos(
       material_corpo: opcoes.materialCorpo,
       material_fundo: opcoes.materialFundo,
       material_porta: opcoes.materialPorta,
+      material_insert: opcoes.materialInsert,
       pecas: [],
       ferragens: [],
       nome_display: `${template.nome} — ${rotulo}`,

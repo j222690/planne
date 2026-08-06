@@ -165,6 +165,130 @@ function regraPortaCorrer() {
     usa_material: "porta"
   };
 }
+function regraPortaProvencal() {
+  return {
+    nome: "porta_provencal",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "provencal",
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: fitaTotal,
+    usa_material: "porta",
+    observacao: "Painel usinado (proven\xE7al) \u2014 enviar pro centro de usinagem antes da fita de borda"
+  };
+}
+var VENEZIANA_LAMINA_MM = 30;
+var VENEZIANA_GAP_MM = 15;
+function regraPortaVeneziana() {
+  return {
+    nome: "porta_veneziana",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "veneziana",
+    // comprimento da lâmina = largura da folha; "largura" da peça é a altura de cada lâmina
+    calcular_largura_mm: () => VENEZIANA_LAMINA_MM,
+    calcular_comprimento_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_quantidade: (_L, A, _P, cfg) => {
+      const alturaUtil = Math.max(150, A - zonaGavetasMm(cfg));
+      const passo = VENEZIANA_LAMINA_MM + VENEZIANA_GAP_MM;
+      const porFolha = Math.max(1, Math.floor((alturaUtil + VENEZIANA_GAP_MM) / passo));
+      return porFolha * cfg.num_portas;
+    },
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_largura",
+    fita_borda: () => ({ esquerda: true, direita: true, topo: false, base: false }),
+    usa_material: "porta",
+    observacao: "L\xE2minas horizontais \u2014 quantidade = (altura \xFAtil \xF7 (l\xE2mina+v\xE3o)) \xD7 n\xBA de portas"
+  };
+}
+var ALUMINIO_MOLDURA_MM = 30;
+function regraPortaAluminioVidro() {
+  return {
+    nome: "vidro_porta",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "aluminio_vidro",
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.max(50, Math.round(L / Math.max(cfg.num_portas, 1)) - 2 * ALUMINIO_MOLDURA_MM),
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(50, Math.max(150, A - zonaGavetasMm(cfg)) - 2 * ALUMINIO_MOLDURA_MM),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: 6,
+    direcao_fio: "indiferente",
+    fita_borda: semFita,
+    usa_material: "insert",
+    observacao: "Vidro temperado \u2014 corte e lapida\xE7\xE3o por conta do vidraceiro, n\xE3o entra no nesting de MDF"
+  };
+}
+function regraMolduraAluminioVidro() {
+  return {
+    tipo: "perfil_aluminio_porta_1m",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "aluminio_vidro",
+    calcular_quantidade: (L, A, _P, cfg) => {
+      const larguraFolha = L / Math.max(cfg.num_portas, 1);
+      const alturaFolha = Math.max(150, A - zonaGavetasMm(cfg));
+      const perimetroM = 2 * (larguraFolha + alturaFolha) / 1e3;
+      return Math.round(perimetroM * cfg.num_portas * 10) / 10;
+    },
+    descricao_tecnica: "Per\xEDmetro da moldura de alum\xEDnio (metros lineares) \xD7 n\xBA de folhas"
+  };
+}
+var PALHA_MOLDURA_MM = 50;
+function regraPortaPalha() {
+  const larguraFolha = (L, cfg) => L / Math.max(cfg.num_portas, 1);
+  const alturaFolha = (A, cfg) => Math.max(150, A - zonaGavetasMm(cfg));
+  const ativa = (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "palha";
+  return [
+    {
+      nome: "moldura_palha_travessa",
+      grupo: "porta",
+      ativa_quando: ativa,
+      calcular_largura_mm: (L, _A, _P, cfg) => Math.round(larguraFolha(L, cfg)),
+      calcular_comprimento_mm: () => PALHA_MOLDURA_MM,
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas * 2,
+      // topo + base, por folha
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_largura",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Travessas (topo/base) da moldura da porta de palha"
+    },
+    {
+      nome: "moldura_palha_montante",
+      grupo: "porta",
+      ativa_quando: ativa,
+      calcular_largura_mm: () => PALHA_MOLDURA_MM,
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.round(alturaFolha(A, cfg) - 2 * PALHA_MOLDURA_MM),
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas * 2,
+      // esquerda + direita, por folha
+      espessura_mm: ESP,
+      direcao_fio: "paralelo_comprimento",
+      fita_borda: fitaFrente,
+      usa_material: "corpo",
+      observacao: "Montantes (esquerda/direita) da moldura da porta de palha"
+    },
+    {
+      nome: "palha_insert",
+      grupo: "porta",
+      ativa_quando: ativa,
+      calcular_largura_mm: (L, _A, _P, cfg) => Math.max(50, Math.round(larguraFolha(L, cfg)) - 2 * PALHA_MOLDURA_MM),
+      calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(50, Math.round(alturaFolha(A, cfg)) - 2 * PALHA_MOLDURA_MM),
+      calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+      espessura_mm: 3,
+      direcao_fio: "indiferente",
+      fita_borda: semFita,
+      usa_material: "insert",
+      observacao: "Tela de palha/rattan \u2014 fixada por dentro da moldura de MDF"
+    }
+  ];
+}
+function regraUsinagemProvencal() {
+  return {
+    tipo: "usinagem_provencal",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "provencal",
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    descricao_tecnica: "Servi\xE7o de usinagem/rebaixo CNC \u2014 1 por folha de porta proven\xE7al"
+  };
+}
 var RIPA_LARGURA_PADRAO_MM = 40;
 var RIPA_GAP_MM = 20;
 var ESPESSURAS_MDF_VALIDAS = [3, 6, 9, 12, 15, 18, 25];
@@ -426,10 +550,17 @@ function regrasAcabamento() {
     regraReforcoRecorte()
   ];
 }
+var TIPOS_PORTA_COM_DOBRADICA = /* @__PURE__ */ new Set([
+  "dobradica",
+  "provencal",
+  "veneziana",
+  "aluminio_vidro",
+  "palha"
+]);
 function regraDobradicas() {
   return {
     tipo: "dobradica_35mm_110grau",
-    ativa_quando: (cfg) => cfg.tipo_porta === "dobradica" && cfg.num_portas > 0,
+    ativa_quando: (cfg) => TIPOS_PORTA_COM_DOBRADICA.has(cfg.tipo_porta) && cfg.num_portas > 0,
     calcular_quantidade: (_L, A, _P, cfg) => cfg.num_portas * dobradicasPorAlturaMm(A),
     descricao_tecnica: "N\xBA de dobradi\xE7as por altura (base): 2 \u226490cm, 3 \u2264200cm, 4 \u2264240cm, 5 acima"
   };
@@ -1566,6 +1697,7 @@ function consolidarCorrido(modulos, chapaLarguraMm = 2750, chapaComprimentoMm = 
 function selecionarMaterial(tipo, instancia) {
   if (tipo === "porta" && instancia.material_porta) return instancia.material_porta;
   if (tipo === "fundo" && instancia.material_fundo) return instancia.material_fundo;
+  if (tipo === "insert" && instancia.material_insert) return instancia.material_insert;
   return instancia.material_corpo;
 }
 function dividirEmSegmentos(baseId, moduloId, regraNome, largura, comprimento, espessura, material, regra, cfg, instancia) {
@@ -1627,6 +1759,41 @@ function criarMaterialPadrao(cor_hex, espessura) {
     preco_custo_chapa: PRECOS_CHAPA[espessura] ?? 85,
     preco_venda_chapa: 0
   };
+}
+function criarMaterialInsertVidro() {
+  return {
+    id: "insert_vidro_6mm",
+    codigo: "vidro_temperado_6mm",
+    nome_display: "Vidro Temperado 6mm",
+    espessura_mm: 6,
+    largura_chapa_mm: 2200,
+    comprimento_chapa_mm: 1600,
+    area_chapa_m2: 2200 / 1e3 * (1600 / 1e3),
+    cor_hex: "#cfe0e8",
+    acabamento: "vidro",
+    preco_custo_chapa: 420,
+    preco_venda_chapa: 0
+  };
+}
+function criarMaterialInsertPalha() {
+  return {
+    id: "insert_palha_3mm",
+    codigo: "tela_palha_3mm",
+    nome_display: "Tela de Palha/Rattan 3mm",
+    espessura_mm: 3,
+    largura_chapa_mm: 1220,
+    comprimento_chapa_mm: 2440,
+    area_chapa_m2: 1220 / 1e3 * (2440 / 1e3),
+    cor_hex: "#c9a869",
+    acabamento: "palha",
+    preco_custo_chapa: 280,
+    preco_venda_chapa: 0
+  };
+}
+function materialInsertDe(tipo_porta) {
+  if (tipo_porta === "aluminio_vidro") return criarMaterialInsertVidro();
+  if (tipo_porta === "palha") return criarMaterialInsertPalha();
+  return void 0;
 }
 function configPadrao(overrides = {}) {
   return {
@@ -1721,6 +1888,7 @@ function instanciarModulos(larguras, opcoes) {
       material_corpo: opcoes.materialCorpo,
       material_fundo: opcoes.materialFundo,
       material_porta: opcoes.materialPorta,
+      material_insert: opcoes.materialInsert,
       pecas: [],
       ferragens: [],
       nome_display: `${template.nome} \u2014 ${rotulo}`,
@@ -2309,7 +2477,7 @@ function criarRoupeiro(largura_cm) {
       num_portas: { min: 1, max: 4 },
       num_gavetas: { min: 0, max: 4 },
       num_prateleiras: { min: 1, max: 8 },
-      tipos_porta_validos: ["dobradica", "correr", "espelho"],
+      tipos_porta_validos: ["dobradica", "correr", "espelho", "provencal", "veneziana", "aluminio_vidro", "palha"],
       permite_espelho: true,
       permite_iluminacao_led: true,
       permite_ripado: false
@@ -2318,6 +2486,10 @@ function criarRoupeiro(largura_cm) {
       ...regrasCorpo({ com_divisoria: true }),
       regraPortaDobradica(),
       regraPortaCorrer(),
+      regraPortaProvencal(),
+      regraPortaVeneziana(),
+      regraPortaAluminioVidro(),
+      ...regraPortaPalha(),
       ...regrasGaveta()
     ],
     regras_ferragens: [
@@ -2327,7 +2499,9 @@ function criarRoupeiro(largura_cm) {
       regraCabideiro(),
       regraPuxadores(),
       regraMinifix(),
-      regraPes()
+      regraPes(),
+      regraMolduraAluminioVidro(),
+      regraUsinagemProvencal()
     ],
     restricoes_placement: {
       altura_piso_padrao_cm: 0,
@@ -2550,6 +2724,7 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
   const larguras = encaixarLarguras(disponivel, LARGURAS_QUARTO, 80, 50);
   const materialCorpo = criarMaterialPadrao(prefs.cor_mdf_hex, 15);
   const materialFundo = criarMaterialPadrao(prefs.cor_mdf_hex, 6);
+  const materialInsert = materialInsertDe(prefs.tipo_porta);
   const modulos = instanciarModulos(larguras, {
     parede,
     inicio_cm: inicio,
@@ -2559,6 +2734,7 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
     prefixo: "roupeiro",
     materialCorpo,
     materialFundo,
+    materialInsert,
     getTemplate: getTemplateRoupeiro,
     templateFallback: MODULOS_ROUPEIRO[3],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
@@ -4254,7 +4430,9 @@ var PRECO_FERRAGEM_REF = {
   minifix_15mm: 0.8,
   cavilha_8x30mm: 0.15,
   cesto_aramado_porta_temperos: 65,
-  suporte_basculante: 28
+  suporte_basculante: 28,
+  perfil_aluminio_porta_1m: 32,
+  usinagem_provencal: 45
 };
 var CONFIG_CUSTO_PADRAO = {
   valor_hora_corte: 45,

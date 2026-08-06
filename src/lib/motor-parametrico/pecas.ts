@@ -332,11 +332,14 @@ export const consolidarFundos = consolidarCorrido;
 // ─── HELPERS INTERNOS ─────────────────────────────────────────────────────────
 
 function selecionarMaterial(
-  tipo: "corpo" | "porta" | "fundo",
+  tipo: "corpo" | "porta" | "fundo" | "insert",
   instancia: ModuloInstanciado,
 ): Material {
   if (tipo === "porta" && instancia.material_porta) return instancia.material_porta;
   if (tipo === "fundo" && instancia.material_fundo) return instancia.material_fundo;
+  // Sem material_insert cadastrado (ex.: template não passou vidro/palha) cai
+  // pro corpo — nunca quebra o cálculo, só produz um preço/rótulo genérico.
+  if (tipo === "insert" && instancia.material_insert) return instancia.material_insert;
   return instancia.material_corpo;
 }
 
