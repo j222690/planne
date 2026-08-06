@@ -2981,6 +2981,7 @@ function Step4Layout({
   const [motorAuto, setMotorAuto] = useState(false);
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
+  const [motorTipoPortaAereo, setMotorTipoPortaAereo] = useState<"dobradica" | "basculante">("dobradica");
   const [divisoriaRecuoFrontal, setDivisoriaRecuoFrontal] = useState(false);
   const [divisoriaRecuoTraseiro, setDivisoriaRecuoTraseiro] = useState(false);
   const [motorEspessura, setMotorEspessura] = useState<15 | 18>(15);
@@ -3047,7 +3048,7 @@ function Step4Layout({
       cor_mdf_hex: wizard.form.cor_mdf,
       ferragem: motorFerragem,
       tipo_porta_base: motorTipoPorta,
-      tipo_porta_aereo: "dobradica",
+      tipo_porta_aereo: motorTipoPortaAereo,
       tipo_porta: motorTipoPorta,
       divisoria_recuo_frontal: divisoriaRecuoFrontal,
       divisoria_recuo_traseiro: divisoriaRecuoTraseiro,
@@ -3118,6 +3119,7 @@ function Step4Layout({
     motorParede,
     motorFerragem,
     motorTipoPorta,
+    motorTipoPortaAereo,
     divisoriaRecuoFrontal,
     divisoriaRecuoTraseiro,
     motorEspessura,
@@ -3226,6 +3228,7 @@ function Step4Layout({
     motorParede,
     motorFerragem,
     motorTipoPorta,
+    motorTipoPortaAereo,
     divisoriaRecuoFrontal,
     divisoriaRecuoTraseiro,
     motorEspessura,
@@ -3990,7 +3993,9 @@ function Step4Layout({
 
               {/* Tipo de porta — base e roupeiros */}
               <div>
-                <div className="text-[11.5px] text-muted-foreground mb-1.5">Tipo de porta</div>
+                <div className="text-[11.5px] text-muted-foreground mb-1.5">
+                  Tipo de porta{wizard.form.ambiente === "Cozinha" ? " (base)" : ""}
+                </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {(
                     [
@@ -4010,6 +4015,31 @@ function Step4Layout({
                   ))}
                 </div>
               </div>
+
+              {/* Tipo de porta do aéreo — só cozinha (basculante é típico de armário aéreo) */}
+              {wizard.form.ambiente === "Cozinha" && (
+                <div>
+                  <div className="text-[11.5px] text-muted-foreground mb-1.5">Tipo de porta (aéreo)</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(
+                      [
+                        ["dobradica", "Dobradiça", "Abre para fora"],
+                        ["basculante", "Basculante", "Vira pra cima"],
+                      ] as const
+                    ).map(([v, l, sub]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setMotorTipoPortaAereo(v)}
+                        className={`flex flex-col items-start px-2.5 py-2 rounded-md border text-[12px] transition-all ${motorTipoPortaAereo === v ? "border-accent bg-accent/10" : "border-border hover:border-border-strong"}`}
+                      >
+                        <span className="font-medium">{l}</span>
+                        <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Recuo da divisória — só aparece em roupeiro/closet (quarto tem divisória interna).
                   2 eixos independentes (frontal/traseiro), igual ao Construtor de Armários do Promob —

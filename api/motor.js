@@ -567,6 +567,21 @@ var regrasCorpoBase = [
     fita_borda: () => ({ esquerda: true, direita: true, topo: true, base: true }),
     usa_material: "porta"
   },
+  {
+    // Porta basculante: vira pra cima (comum em aéreos) — mesmo painel de uma
+    // porta comum, o que muda é a ferragem (suporte/compasso basculante em
+    // vez de dobradiça lateral), ver regrasBasculante.
+    nome: "porta_basculante",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "basculante",
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm2(cfg)),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: ESP2,
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: () => ({ esquerda: true, direita: true, topo: true, base: true }),
+    usa_material: "porta"
+  },
   // Gavetas
   {
     nome: "frente_gaveta",
@@ -631,6 +646,14 @@ var regrasCorredica = [
     ativa_quando: (cfg) => cfg.tipo_porta === "correr" && cfg.num_portas > 0,
     calcular_quantidade: (_L, _A, _P, cfg) => Math.ceil(cfg.num_portas / 2),
     descricao_tecnica: "1 par de corredi\xE7as por 2 portas de correr"
+  }
+];
+var regrasBasculante = [
+  {
+    tipo: "suporte_basculante",
+    ativa_quando: (cfg) => cfg.tipo_porta === "basculante" && cfg.num_portas > 0,
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas * 2,
+    descricao_tecnica: "2 suportes/compassos basculantes por porta (um em cada lado)"
   }
 ];
 var regrasPuxador = [
@@ -780,6 +803,7 @@ function criarModuloAereo(largura_cm, altura_cm = AEREO_ALTURA_CM) {
     regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
     regras_ferragens: [
       ...regrasDobradica,
+      ...regrasBasculante,
       ...regrasPuxador,
       ...regrasMinifix
     ],
@@ -4148,7 +4172,8 @@ var PRECO_FERRAGEM_REF = {
   amortecedor_soft_close: 8,
   minifix_15mm: 0.8,
   cavilha_8x30mm: 0.15,
-  cesto_aramado_porta_temperos: 65
+  cesto_aramado_porta_temperos: 65,
+  suporte_basculante: 28
 };
 var CONFIG_CUSTO_PADRAO = {
   valor_hora_corte: 45,

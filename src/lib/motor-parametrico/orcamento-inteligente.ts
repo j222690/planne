@@ -51,6 +51,7 @@ const PRECO_FERRAGEM_REF: Record<TipoFerragem, number> = {
   minifix_15mm: 0.8,
   cavilha_8x30mm: 0.15,
   cesto_aramado_porta_temperos: 65.0,
+  suporte_basculante: 28.0,
 };
 
 // ─── CONFIGURAÇÃO DE CUSTO (por empresa) ──────────────────────────────────────

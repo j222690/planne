@@ -187,6 +187,17 @@ describe("gerarLayoutCozinhaLinear — critério de aceite do roadmap", () => {
     expect(cestos?.quantidade).toBe(3);
   });
 
+  test("tipo_porta_aereo: basculante → gera peça porta_basculante e ferragem suporte_basculante", () => {
+    const amb = ambiente(400);
+    const { projeto } = gerarLayoutCozinhaLinear(amb, { ...prefsPadrao, tipo_porta_aereo: "basculante" });
+    const aereo = projeto.modulos.find((m) => m.modulo_template_codigo.startsWith("aereo_"));
+    expect(aereo).toBeDefined();
+    const portas = aereo!.pecas.filter((p) => p.regra_nome === "porta_basculante");
+    expect(portas.length).toBeGreaterThan(0);
+    const suportes = aereo!.ferragens.find((f) => f.tipo === "suporte_basculante");
+    expect(suportes?.quantidade).toBe(aereo!.configuracao.num_portas * 2);
+  });
+
   test("aproveitamento ≥ 85% para paredes de 300-500cm", () => {
     for (const largura of [300, 320, 360, 400, 450, 480, 500]) {
       const amb = ambiente(largura);

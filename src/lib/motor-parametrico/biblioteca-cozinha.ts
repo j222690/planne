@@ -145,6 +145,21 @@ const regrasCorpoBase: RegraCorte[] = [
     fita_borda: (): FitaBorda => ({ esquerda: true, direita: true, topo: true, base: true }),
     usa_material: "porta",
   },
+  {
+    // Porta basculante: vira pra cima (comum em aéreos) — mesmo painel de uma
+    // porta comum, o que muda é a ferragem (suporte/compasso basculante em
+    // vez de dobradiça lateral), ver regrasBasculante.
+    nome: "porta_basculante",
+    grupo: "porta",
+    ativa_quando: (cfg) => cfg.num_portas > 0 && cfg.tipo_porta === "basculante",
+    calcular_largura_mm: (L, _A, _P, cfg) => Math.round(L / Math.max(cfg.num_portas, 1)),
+    calcular_comprimento_mm: (_L, A, _P, cfg) => Math.max(150, A - zonaGavetasMm(cfg)),
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas,
+    espessura_mm: ESP,
+    direcao_fio: "paralelo_comprimento",
+    fita_borda: (): FitaBorda => ({ esquerda: true, direita: true, topo: true, base: true }),
+    usa_material: "porta",
+  },
   // Gavetas
   {
     nome: "frente_gaveta",
@@ -213,6 +228,15 @@ const regrasCorredica: RegraFerragem[] = [
     ativa_quando: (cfg) => cfg.tipo_porta === "correr" && cfg.num_portas > 0,
     calcular_quantidade: (_L, _A, _P, cfg) => Math.ceil(cfg.num_portas / 2),
     descricao_tecnica: "1 par de corrediças por 2 portas de correr",
+  },
+];
+
+const regrasBasculante: RegraFerragem[] = [
+  {
+    tipo: "suporte_basculante",
+    ativa_quando: (cfg) => cfg.tipo_porta === "basculante" && cfg.num_portas > 0,
+    calcular_quantidade: (_L, _A, _P, cfg) => cfg.num_portas * 2,
+    descricao_tecnica: "2 suportes/compassos basculantes por porta (um em cada lado)",
   },
 ];
 
@@ -366,6 +390,7 @@ function criarModuloAereo(largura_cm: number, altura_cm = AEREO_ALTURA_CM): Modu
     regras_pecas: [...regrasCorpoBase, ...regrasAcabamento()],
     regras_ferragens: [
       ...regrasDobradica,
+      ...regrasBasculante,
       ...regrasPuxador,
       ...regrasMinifix,
     ],

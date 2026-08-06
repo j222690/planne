@@ -386,7 +386,8 @@ export type TipoFerragem =
   | "amortecedor_soft_close"
   | "minifix_15mm"
   | "cavilha_8x30mm"
-  | "cesto_aramado_porta_temperos";
+  | "cesto_aramado_porta_temperos"
+  | "suporte_basculante";
 
 export interface RegraFerragem {
   tipo: TipoFerragem;
