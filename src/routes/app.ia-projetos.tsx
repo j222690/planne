@@ -2506,6 +2506,8 @@ function MotorResultadoPainel({
   exportandoGuilhotina,
   onExportarGiben,
   exportandoGiben,
+  onExportarXLS,
+  exportandoXLS,
 }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
@@ -2521,6 +2523,9 @@ function MotorResultadoPainel({
   /** Arquivos .AC da Giben (1 por material) — recalcula e baixa. */
   onExportarGiben?: () => void;
   exportandoGiben?: boolean;
+  /** Planilha XLSX (lista de peças + orçamento) — só client-side, sem recalcular. */
+  onExportarXLS?: () => void;
+  exportandoXLS?: boolean;
 }) {
   const [renderJob, setRenderJob] = useState<{
     status: "pending" | "processing" | "completed" | "error";
@@ -2843,6 +2848,17 @@ function MotorResultadoPainel({
                 className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
               >
                 <Download className="size-3" /> {exportandoGiben ? "Gerando…" : "Giben (.AC)"}
+              </button>
+            )}
+            {onExportarXLS && (
+              <button
+                type="button"
+                disabled={!!exportandoXLS}
+                onClick={onExportarXLS}
+                title="Planilha XLSX — lista de peças + orçamento (versão intermediária)"
+                className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                <Download className="size-3" /> {exportandoXLS ? "Gerando…" : "XLS"}
               </button>
             )}
           </div>
@@ -3207,6 +3223,61 @@ function Step4Layout({
     }
   };
 
+  // Exporta a planilha XLSX (lista de peças + orçamento) — puramente client-
+  // side a partir do wizard.motorResultado já carregado, sem chamar o motor
+  // de novo (diferente da guilhotina/Giben, que precisam recalcular com uma
+  // opção extra do servidor).
+  const [gerandoXLS, setGerandoXLS] = useState(false);
+  const handleExportarXLS = async () => {
+    const data = wizard.motorResultado;
+    if (!data) return;
+    setGerandoXLS(true);
+    try {
+      const { gerarXLSXProjeto } = await import("@/lib/exportacao-xls");
+      const pecas = data.plano_corte.chapas.flatMap((chapa) =>
+        chapa.pecas_alocadas.map((p) => ({
+          chapa: chapa.numero_sequencial,
+          material: chapa.material.nome_display,
+          peca_id: p.peca_id,
+          largura_mm: p.largura_mm,
+          comprimento_mm: p.comprimento_mm,
+          rotacionada: p.rotacionada,
+          etiqueta: p.etiqueta,
+        })),
+      );
+      const itensOrcamento = data.orcamentos.intermediaria.itens.map((it) => ({
+        descricao: it.descricao,
+        quantidade: it.quantidade,
+        preco_custo: it.preco_custo,
+        preco_unitario: it.preco_unitario,
+        total: it.total,
+      }));
+      const blob = await gerarXLSXProjeto({
+        nomeProjeto: wizard.form.nome || wizard.form.ambiente || "Projeto Planne",
+        versaoOrcamento: "intermediária",
+        pecas,
+        itensOrcamento,
+        resumoCorte: {
+          totalChapas: data.plano_corte.resumo.total_chapas,
+          totalPecas: data.plano_corte.resumo.total_pecas,
+          desperdicioPct: data.plano_corte.resumo.desperdicio_pct,
+          metrosFita: data.plano_corte.resumo.metros_fita_total,
+        },
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "planne-projeto.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Planilha XLSX gerada.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar planilha XLSX");
+    } finally {
+      setGerandoXLS(false);
+    }
+  };
+
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
     if (tipoLayoutMotor && !wizard.motorResultado && !motorAuto && !motorLoading) {
@@ -3551,6 +3622,8 @@ function Step4Layout({
               exportandoGuilhotina={gerandoGuilhotina}
               onExportarGiben={handleExportarGiben}
               exportandoGiben={gerandoGiben}
+              onExportarXLS={handleExportarXLS}
+              exportandoXLS={gerandoXLS}
             />
           ) : (
             <div className="text-[12.5px] text-muted-foreground py-6 text-center">
