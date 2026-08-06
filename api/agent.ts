@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+// Primeira função serverless do projeto a importar de src/lib/ — só dados
+// estáticos (JSON) + retrieval puro, sem I/O nem dependência do motor
+// paramétrico. Ver reference_vercel_funcoes: as outras 11 funções são
+// self-contained por causa do limite de 12 do plano Hobby; essa continua
+// contando 1 função só (o import não cria uma função nova).
+import { buscarAtomos, resumirParaPrompt } from "../src/lib/base-conhecimento";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -125,6 +131,21 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "buscar_conhecimento",
+      description: "Busca na base de conhecimento técnico de marcenaria (normas, regras de fabricação, dicas de produção — ex.: \"qual broca usar no Minifix\", \"distância mínima de dobradiça\"). Use quando o usuário fizer uma pergunta técnica sobre marcenaria, não sobre dados do sistema (clientes/orçamentos).",
+      parameters: {
+        type: "object",
+        properties: {
+          pergunta: { type: "string", description: "A pergunta técnica do usuário, em texto livre" },
+          categoria: { type: "string", description: "Categoria pra restringir a busca (opcional): Cozinhas, Ferragens, Estrutura, Portas e Gavetas, Materiais, Closets, Banheiros, Escritórios, Produção, Transporte, Montagem, Economia" },
+        },
+        required: ["pergunta"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "criar_projeto",
       description: "Cria um novo projeto de marcenaria vinculado a um cliente. Use quando o usuário pedir para criar um projeto.",
       parameters: {
@@ -188,6 +209,51 @@ ${catalogoRef
   } catch {
     return [];
   }
+}
+
+// Palavras de pergunta/ligação comuns em PT-BR que batem por acaso como
+// substring em várias palavras não relacionadas (ex.: "qual" dentro de
+// "qualquer"/"qualidade") — sem valor como palavra-chave de busca, então
+// nunca entram no fallback palavra-a-palavra.
+const STOPWORDS_BUSCA = new Set([
+  "qual", "quais", "quando", "onde", "como", "porque", "por", "que", "para",
+  "pela", "pelo", "pelos", "pelas", "esse", "essa", "isso", "este", "esta",
+  "isto", "aquele", "aquela", "aquilo", "sobre", "então",
+]);
+
+/**
+ * Retrieval da base de conhecimento pra tool-calling. Função pura (sem
+ * Supabase/rede) — exportada só pra ser testável isoladamente sem mockar
+ * o handler HTTP inteiro.
+ */
+export function buscarConhecimentoTool(pergunta: string, categoria?: string): unknown {
+  // Busca por texto livre; se vier vazio de primeira, tenta de novo só pela
+  // categoria (o usuário pode ter perguntado algo genérico demais pro match
+  // de substring, mas a categoria ainda ajuda a IA a responder).
+  let atomos = buscarAtomos({ texto: pergunta, categoria });
+  if (atomos.length === 0 && categoria) atomos = buscarAtomos({ categoria });
+  if (atomos.length === 0) {
+    // Último fallback: tenta cada palavra da pergunta isoladamente, da mais
+    // longa pra mais curta — palavras curtas/genéricas ("qual", "usar") têm
+    // muito mais chance de bater em algum átomo por acaso do que o termo
+    // técnico real da pergunta (ex.: "minifix"), então tentar por ordem de
+    // aparição pegava a palavra errada primeiro.
+    const palavras = pergunta.toLowerCase().split(/\s+/)
+      .filter((p) => p.length > 3 && !STOPWORDS_BUSCA.has(p))
+      .sort((a, b) => b.length - a.length);
+    for (const p of palavras) {
+      atomos = buscarAtomos({ texto: p });
+      if (atomos.length > 0) break;
+    }
+  }
+  if (atomos.length === 0) {
+    return { encontrado: false, mensagem: "Nada encontrado na base de conhecimento pra essa pergunta." };
+  }
+  return {
+    encontrado: true,
+    total: atomos.length,
+    resumo: resumirParaPrompt(atomos, 8),
+  };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -373,6 +439,8 @@ async function executeTool(
       if (!orc) return { erro: "Orçamento não encontrado." };
       return orc;
     }
+    case "buscar_conhecimento":
+      return buscarConhecimentoTool(String(args.pergunta ?? ""), args.categoria ? String(args.categoria) : undefined);
     case "criar_projeto": {
       let clienteId: string | null = null;
       if (args.cliente_nome) {
@@ -424,6 +492,7 @@ O QUE VOCÊ PODE FAZER:
 - CRIAR orçamentos com valores estimados automaticamente: use criar_orcamento com o nome do cliente e a lista de móveis — a IA estimará preços de custo e venda para cada item.
 - ATUALIZAR status de orçamento: use atualizar_status_orcamento (rascunho → analise → aprovado → recusado).
 - CRIAR projetos: use criar_projeto com nome, cliente e status inicial.
+- RESPONDER perguntas técnicas de marcenaria (normas, regras de fabricação, dicas de produção): use buscar_conhecimento. Sempre que citar algo vindo dela, mencione que é uma referência técnica da base (não invente números que não vieram do resultado da ferramenta).
 
 O QUE VOCÊ NÃO FAZ (redirecione para o sistema):
 - CRIAR ordens de produção: diga "Acesse **Produção** no menu lateral."
