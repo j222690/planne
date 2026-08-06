@@ -4812,6 +4812,180 @@ function gerarSequenciaCorteChecklist(chapas, cortesPorChapa) {
   return blocos.join("\n\n");
 }
 
+// src/lib/motor-parametrico/giben-ac.ts
+function empacotarShelf(itens, material) {
+  const larguraChapa = material.largura_chapa_mm;
+  const comprimentoChapa = material.comprimento_chapa_mm;
+  const areaUtilLargura = larguraChapa - 2 * MARGEM_CHAPA_MM;
+  const areaUtilComprimento = comprimentoChapa - 2 * MARGEM_CHAPA_MM;
+  const porLargura = /* @__PURE__ */ new Map();
+  for (const item of itens) {
+    const w = Math.round(item.largura_mm);
+    const grupo = porLargura.get(w) ?? [];
+    grupo.push(item);
+    porLargura.set(w, grupo);
+  }
+  const todasFaixas = [];
+  for (const [largura, grupo] of porLargura) {
+    if (largura > areaUtilLargura) continue;
+    const restante = [...grupo].sort((a, b) => b.comprimento_mm - a.comprimento_mm);
+    while (restante.length > 0) {
+      const faixaItens = [];
+      let usado = 0;
+      for (let i = restante.length - 1; i >= 0; i--) {
+        const c = restante[i].comprimento_mm + KERF_MM;
+        if (usado + c <= areaUtilComprimento) {
+          faixaItens.push(restante[i]);
+          usado += c;
+          restante.splice(i, 1);
+        }
+      }
+      if (faixaItens.length === 0) {
+        restante.pop();
+        continue;
+      }
+      const porComprimento = /* @__PURE__ */ new Map();
+      for (const it of faixaItens) {
+        const chave = `${it.numero_parte}|${Math.round(it.comprimento_mm)}`;
+        const atual = porComprimento.get(chave);
+        if (atual) atual.quantidade += 1;
+        else porComprimento.set(chave, { numero_parte: it.numero_parte, comprimento_mm: it.comprimento_mm, quantidade: 1 });
+      }
+      todasFaixas.push({ largura_mm: largura, cortes: [...porComprimento.values()] });
+    }
+  }
+  const chapas = [];
+  let faixasRestantes = [...todasFaixas].sort((a, b) => b.largura_mm - a.largura_mm);
+  let numeroPattern = 0;
+  while (faixasRestantes.length > 0) {
+    const faixasChapa = [];
+    let usadoLargura = 0;
+    for (let i = faixasRestantes.length - 1; i >= 0; i--) {
+      const w = faixasRestantes[i].largura_mm + KERF_MM;
+      if (usadoLargura + w <= areaUtilLargura) {
+        faixasChapa.push(faixasRestantes[i]);
+        usadoLargura += w;
+        faixasRestantes.splice(i, 1);
+      }
+    }
+    if (faixasChapa.length === 0) {
+      faixasRestantes.pop();
+      continue;
+    }
+    chapas.push({
+      numero_pattern: ++numeroPattern,
+      material,
+      largura_mm: larguraChapa,
+      comprimento_mm: comprimentoChapa,
+      faixas: faixasChapa
+    });
+  }
+  return chapas;
+}
+var NAO_CHAPA3 = /vidro|espelho|maci/i;
+function gerarPlanoGiben(pecas) {
+  const porMaterial = /* @__PURE__ */ new Map();
+  for (const p of pecas) {
+    if (NAO_CHAPA3.test(p.material.nome_display)) continue;
+    const chave = `${p.material.id}|${p.espessura_mm}`;
+    const grupo = porMaterial.get(chave) ?? { material: p.material, pecas: [] };
+    grupo.pecas.push(p);
+    porMaterial.set(chave, grupo);
+  }
+  const chapas = [];
+  for (const { material, pecas: pecasDoMaterial } of porMaterial.values()) {
+    let proximoNumeroParte = 1;
+    const numeroPartePorPeca = /* @__PURE__ */ new Map();
+    const itens = [];
+    for (const p of pecasDoMaterial) {
+      if (!numeroPartePorPeca.has(p.id)) {
+        numeroPartePorPeca.set(p.id, proximoNumeroParte <= 99 ? proximoNumeroParte++ : 99);
+      }
+      const numero_parte = numeroPartePorPeca.get(p.id);
+      for (let i = 0; i < p.quantidade; i++) {
+        itens.push({
+          peca_id: `${p.id}#${i}`,
+          numero_parte,
+          largura_mm: p.largura_mm,
+          comprimento_mm: p.comprimento_mm,
+          direcao_fio: p.direcao_fio
+        });
+      }
+    }
+    const chapasDoMaterial = empacotarShelf(itens, material).map((c, i) => ({
+      ...c,
+      numero_pattern: i % 99 + 1
+    }));
+    chapas.push(...chapasDoMaterial);
+  }
+  return chapas;
+}
+function padTexto(s, largura) {
+  return s.slice(0, largura).padEnd(largura, " ");
+}
+function padNumero(n, largura) {
+  const inteiro = Math.max(0, Math.round(n));
+  return String(inteiro).padStart(largura, "0").slice(-largura);
+}
+function linhaHeadline(chapa) {
+  const tipo = padTexto(chapa.material.nome_display, 15);
+  const espessura = padNumero(chapa.material.espessura_mm * 10, 3);
+  const pattern = padNumero(chapa.numero_pattern, 2);
+  const recordKey = "1";
+  const quantidade = padNumero(1, 5);
+  const comprimento = padNumero(chapa.comprimento_mm * 10, 5);
+  const largura = padNumero(chapa.largura_mm * 10, 5);
+  const trim = "0";
+  return tipo + espessura + pattern + recordKey + quantidade + comprimento + largura + trim;
+}
+function linhasPattern(chapa) {
+  const tipo = padTexto(chapa.material.nome_display, 15);
+  const espessura = padNumero(chapa.material.espessura_mm * 10, 3);
+  const pattern = padNumero(chapa.numero_pattern, 2);
+  const prefixo = tipo + espessura + pattern;
+  const linhas = [];
+  linhas.push(prefixo + "2" + padNumero(0, 2) + padNumero(chapa.comprimento_mm * 10, 5) + padNumero(1, 2));
+  for (const faixa of chapa.faixas) {
+    linhas.push(prefixo + "3" + padNumero(0, 2) + padNumero(faixa.largura_mm * 10, 5) + padNumero(1, 2));
+    for (const corte of faixa.cortes) {
+      const qtd = Math.min(corte.quantidade, 99);
+      linhas.push(
+        prefixo + "4" + padNumero(corte.numero_parte, 2) + padNumero(corte.comprimento_mm * 10, 5) + padNumero(qtd, 2)
+      );
+      let sobra = corte.quantidade - 99;
+      while (sobra > 0) {
+        const q = Math.min(sobra, 99);
+        linhas.push(
+          prefixo + "4" + padNumero(corte.numero_parte, 2) + padNumero(corte.comprimento_mm * 10, 5) + padNumero(q, 2)
+        );
+        sobra -= q;
+      }
+    }
+  }
+  return linhas;
+}
+function gerarArquivoAC(chapas) {
+  const linhas = [];
+  for (const chapa of chapas) {
+    linhas.push(linhaHeadline(chapa));
+    linhas.push(...linhasPattern(chapa));
+  }
+  return linhas.join("\r\n");
+}
+function gerarArquivosAC(chapas) {
+  const porMaterial = /* @__PURE__ */ new Map();
+  for (const chapa of chapas) {
+    const chave = `${chapa.material.id}|${chapa.material.espessura_mm}`;
+    const grupo = porMaterial.get(chave) ?? { nome: chapa.material.nome_display, chapas: [] };
+    grupo.chapas.push(chapa);
+    porMaterial.set(chave, grupo);
+  }
+  return [...porMaterial.values()].map(({ nome, chapas: chapasDoMaterial }) => ({
+    nome_arquivo: `${nome.replace(/[^\w-]+/g, "_")}.AC`,
+    conteudo: gerarArquivoAC(chapasDoMaterial)
+  }));
+}
+
 // src/lib/motor-parametrico/exportacao-corte.ts
 function gerarCSVCorte(plano) {
   const sep = ";";
@@ -5558,6 +5732,10 @@ async function gerarHandler(req, res) {
       sequencia_corte_texto = gerarSequenciaCorteTexto(g.plano.chapas, g.cortes_por_chapa);
       sequencia_corte_checklist = gerarSequenciaCorteChecklist(g.plano.chapas, g.cortes_por_chapa);
     }
+    let arquivos_giben;
+    if (body.incluir_giben) {
+      arquivos_giben = gerarArquivosAC(gerarPlanoGiben(todasPecas));
+    }
     const lista_compras = gerarListaCompras(resultado.projeto);
     const pcpResultado = gerarOrdemProducao(resultado.projeto, plano_corte, { lista_compras });
     const analise_tecnica = analisarProjeto(resultado.projeto);
@@ -5577,6 +5755,7 @@ async function gerarHandler(req, res) {
       exportacoes_corte,
       // Plano de corte guilhotina (opt-in) — compatível com serra reta
       ...plano_corte_guilhotina ? { plano_corte_guilhotina, sequencia_corte_texto, sequencia_corte_checklist } : {},
+      ...arquivos_giben ? { arquivos_giben } : {},
       // PCP: cronograma + etapas + lista de compras (Fase 9)
       pcp: {
         numero: pcpResultado.ordem.numero,

@@ -2504,6 +2504,8 @@ function MotorResultadoPainel({
   projetoId,
   onExportarGuilhotina,
   exportandoGuilhotina,
+  onExportarGiben,
+  exportandoGiben,
 }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
@@ -2516,6 +2518,9 @@ function MotorResultadoPainel({
   /** Sequência de corte guilhotina (serra reta) — recalcula e baixa um .txt. */
   onExportarGuilhotina?: () => void;
   exportandoGuilhotina?: boolean;
+  /** Arquivos .AC da Giben (1 por material) — recalcula e baixa. */
+  onExportarGiben?: () => void;
+  exportandoGiben?: boolean;
 }) {
   const [renderJob, setRenderJob] = useState<{
     status: "pending" | "processing" | "completed" | "error";
@@ -2827,6 +2832,17 @@ function MotorResultadoPainel({
                 className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
               >
                 <Scissors className="size-3" /> {exportandoGuilhotina ? "Gerando…" : "Serra reta"}
+              </button>
+            )}
+            {onExportarGiben && (
+              <button
+                type="button"
+                disabled={!!exportandoGiben}
+                onClick={onExportarGiben}
+                title="Arquivo .AC (Giben/Optisave) — 1 por material. Formato clássico; confirme com a máquina real antes de produção."
+                className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                <Download className="size-3" /> {exportandoGiben ? "Gerando…" : "Giben (.AC)"}
               </button>
             )}
           </div>
@@ -3146,6 +3162,38 @@ function Step4Layout({
       toast.error(e instanceof Error ? e.message : "Erro ao gerar sequência de corte guilhotina");
     } finally {
       setGerandoGuilhotina(false);
+    }
+  };
+
+  // Exporta os arquivos .AC da Giben (1 por material) — mesmo padrão do
+  // handler de guilhotina acima.
+  const [gerandoGiben, setGerandoGiben] = useState(false);
+  const handleExportarGiben = async () => {
+    if (!tipoLayoutMotor) return;
+    setGerandoGiben(true);
+    try {
+      const res = await fetch("/api/motor?action=gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(montarPayloadMotor({ incluir_giben: true })),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
+      const data = (await res.json()) as MotorResultado & {
+        arquivos_giben?: { nome_arquivo: string; conteudo: string }[];
+      };
+      if (!data.arquivos_giben || data.arquivos_giben.length === 0) {
+        throw new Error("Motor não retornou arquivos Giben.");
+      }
+      // Baixa um por vez (poucos materiais por projeto — 2 a 4 arquivos).
+      for (const arquivo of data.arquivos_giben) {
+        baixarArquivo(arquivo.conteudo, arquivo.nome_arquivo, "text/plain");
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      toast.success(`${data.arquivos_giben.length} arquivo(s) .AC gerado(s) — 1 por material.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar arquivos Giben");
+    } finally {
+      setGerandoGiben(false);
     }
   };
 
@@ -3488,6 +3536,8 @@ function Step4Layout({
               projetoId={wizard.projetoId}
               onExportarGuilhotina={handleExportarGuilhotina}
               exportandoGuilhotina={gerandoGuilhotina}
+              onExportarGiben={handleExportarGiben}
+              exportandoGiben={gerandoGiben}
             />
           ) : (
             <div className="text-[12.5px] text-muted-foreground py-6 text-center">

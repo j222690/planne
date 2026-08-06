@@ -34,6 +34,7 @@ import type { ConfiguracaoCusto } from "../lib/motor-parametrico/orcamento-intel
 import { gerarPlanoNesting } from "../lib/motor-parametrico/nesting";
 import { gerarPlanoNestingGuilhotina } from "../lib/motor-parametrico/nesting-guilhotina";
 import { gerarSequenciaCorteTexto, gerarSequenciaCorteChecklist } from "../lib/motor-parametrico/exportacao-guilhotina";
+import { gerarPlanoGiben, gerarArquivosAC } from "../lib/motor-parametrico/giben-ac";
 import { gerarExportacoes } from "../lib/motor-parametrico/exportacao-corte";
 import { gerarOrdemProducao } from "../lib/motor-parametrico/pcp";
 import { gerarListaCompras } from "../lib/motor-parametrico/engenharia";
@@ -60,6 +61,13 @@ interface RequestBody {
    * desnecessário (o MaxRects padrão já cobre corte CNC livre).
    */
   incluir_nesting_guilhotina?: boolean;
+
+  /**
+   * Também gera os arquivos .AC (Giben/Optisave) — 1 por material. Opt-in;
+   * formato clássico (pode não bater 100% com controlador G57 mais novo —
+   * ver reference_giben_ac_formato).
+   */
+  incluir_giben?: boolean;
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
   ambiente_geometrico?: AmbienteGeometrico;
@@ -249,9 +257,6 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
     const { plano: plano_corte, exportacoes: exportacoes_corte } = gerarExportacoes(planoBruto, resultado.projeto.id);
 
     // 7.1: nesting guilhotina (opt-in) — compatível com serra reta/seccionadora.
-    // Formato de máquina específico (Giben .AC, INMES, SCM) não é gerado aqui —
-    // exige arquivo de exemplo real da máquina pra confirmar a especificação
-    // exata; o que dá pra garantir sem isso é a sequência de cortes retos.
     let plano_corte_guilhotina: ReturnType<typeof gerarPlanoNestingGuilhotina>["plano"] | undefined;
     let sequencia_corte_texto: string | undefined;
     let sequencia_corte_checklist: string | undefined;
@@ -260,6 +265,13 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       plano_corte_guilhotina = g.plano;
       sequencia_corte_texto = gerarSequenciaCorteTexto(g.plano.chapas, g.cortes_por_chapa);
       sequencia_corte_checklist = gerarSequenciaCorteChecklist(g.plano.chapas, g.cortes_por_chapa);
+    }
+
+    // 7.2: arquivos .AC da Giben (opt-in) — 1 por material, formato clássico
+    // Optisave confirmado via spec oficial (ver reference_giben_ac_formato).
+    let arquivos_giben: ReturnType<typeof gerarArquivosAC> | undefined;
+    if (body.incluir_giben) {
+      arquivos_giben = gerarArquivosAC(gerarPlanoGiben(todasPecas));
     }
 
     // 8. Gerar PCP (Fase 9): ordem de produção com cronograma + lista de compras
@@ -286,6 +298,7 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       exportacoes_corte,
       // Plano de corte guilhotina (opt-in) — compatível com serra reta
       ...(plano_corte_guilhotina ? { plano_corte_guilhotina, sequencia_corte_texto, sequencia_corte_checklist } : {}),
+      ...(arquivos_giben ? { arquivos_giben } : {}),
       // PCP: cronograma + etapas + lista de compras (Fase 9)
       pcp: {
         numero: pcpResultado.ordem.numero,
