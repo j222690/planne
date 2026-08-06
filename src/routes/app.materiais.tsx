@@ -1,9 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Surface, Pill } from "@/components/planne/primitives";
-import { Upload, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff, PackageX } from "lucide-react";
+import { Upload, Search, Loader2, AlertCircle, Plus, X, MoreHorizontal, Pencil, Trash2, ImageOff, PackageX, ShoppingCart, Send, CheckCircle2, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { getMateriais, getEmpresaAtual, getFornecedores, upsertMaterial, updateMaterial, deleteMaterial } from "@/lib/db";
+import {
+  getMateriais, getEmpresaAtual, getFornecedores, upsertMaterial, updateMaterial, deleteMaterial,
+  getMovimentacoesEstoque, registrarMovimentacaoEstoque, type MovimentacaoEstoque,
+  criarPedidoCompra, getPedidosCompra, atualizarStatusPedidoCompra, receberPedidoCompra,
+} from "@/lib/db";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +27,17 @@ type Material = {
   fornecedores: { nome: string } | null;
   estoque_atual?: number | null;
   estoque_minimo?: number | null;
+};
+
+type PedidoCompra = {
+  id: string; numero: string | null; status: "rascunho" | "enviado" | "recebido" | "cancelado";
+  observacoes: string | null; criado_em: string; enviado_em: string | null; recebido_em: string | null;
+  fornecedor_id: string | null;
+  fornecedores: { nome: string } | null;
+  pedido_compra_item: {
+    id: string; material_id: string; quantidade: number; preco_custo_unitario: number | null;
+    recebido: boolean; materiais: { nome: string; unidade: string } | null;
+  }[];
 };
 
 function getCategoria(nome: string): string {
@@ -326,6 +341,13 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateri
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
             </div>
           </div>
+          {initialData && (
+            <MovimentacaoEstoquePanel
+              materialId={initialData.id}
+              unidade={watch("unidade") || "un"}
+              onRegistrado={(delta) => setValue("estoque_atual", Math.max(0, (Number(watch("estoque_atual")) || 0) + delta))}
+            />
+          )}
           <div className="flex gap-2 justify-end pt-2 border-t border-border">
             <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting}
@@ -335,6 +357,295 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateri
           </div>
         </form>
       </motion.div>
+    </div>
+  );
+}
+
+/** Histórico de movimentação de estoque + ajuste manual (entrada/saída avulsa). */
+function MovimentacaoEstoquePanel({ materialId, unidade, onRegistrado }: {
+  materialId: string; unidade: string; onRegistrado: (delta: number) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [historico, setHistorico] = useState<MovimentacaoEstoque[] | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [tipo, setTipo] = useState<"entrada" | "saida">("entrada");
+  const [quantidade, setQuantidade] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [registrando, setRegistrando] = useState(false);
+
+  const carregarHistorico = async () => {
+    setCarregando(true);
+    try {
+      setHistorico(await getMovimentacoesEstoque(materialId));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao carregar histórico");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const toggle = () => {
+    const abrir = !aberto;
+    setAberto(abrir);
+    if (abrir && historico === null) carregarHistorico();
+  };
+
+  const handleRegistrar = async () => {
+    const q = Number(quantidade);
+    if (!q || q <= 0) { toast.error("Informe uma quantidade válida"); return; }
+    setRegistrando(true);
+    try {
+      await registrarMovimentacaoEstoque({ material_id: materialId, tipo, quantidade: q, motivo: motivo || undefined });
+      toast.success(`${tipo === "entrada" ? "Entrada" : "Saída"} de ${q} ${unidade} registrada.`);
+      onRegistrado(tipo === "entrada" ? q : -q);
+      setQuantidade(""); setMotivo("");
+      carregarHistorico();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao registrar movimentação");
+    } finally {
+      setRegistrando(false);
+    }
+  };
+
+  return (
+    <div className="border border-border rounded-md">
+      <button type="button" onClick={toggle}
+        className="w-full flex items-center justify-between px-3 py-2 text-[12.5px] font-medium hover:bg-secondary/40">
+        <span>Movimentação de estoque</span>
+        <span className="text-muted-foreground">{aberto ? "▲" : "▼"}</span>
+      </button>
+      {aberto && (
+        <div className="px-3 pb-3 space-y-2.5 border-t border-border pt-2.5">
+          <div className="flex items-end gap-2">
+            <div>
+              <div className="text-[10.5px] text-muted-foreground mb-1">Tipo</div>
+              <select value={tipo} onChange={(e) => setTipo(e.target.value as "entrada" | "saida")}
+                className="h-8 rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none">
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+              </select>
+            </div>
+            <div className="w-24">
+              <div className="text-[10.5px] text-muted-foreground mb-1">Qtd ({unidade})</div>
+              <input type="number" step="0.1" min="0" value={quantidade} onChange={(e) => setQuantidade(e.target.value)}
+                className="h-8 w-full rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+            </div>
+            <div className="flex-1">
+              <div className="text-[10.5px] text-muted-foreground mb-1">Motivo (opcional)</div>
+              <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex: uso na ordem #42"
+                className="h-8 w-full rounded border border-border bg-surface-2 px-2 text-[12.5px] outline-none" />
+            </div>
+            <button type="button" disabled={registrando} onClick={handleRegistrar}
+              className="h-8 px-3 rounded bg-foreground text-background text-[12px] font-medium hover:opacity-90 disabled:opacity-50 shrink-0">
+              {registrando ? "..." : "Registrar"}
+            </button>
+          </div>
+          <div className="max-h-40 overflow-auto space-y-1">
+            {carregando && <div className="text-[11.5px] text-muted-foreground">Carregando…</div>}
+            {historico && historico.length === 0 && !carregando && (
+              <div className="text-[11.5px] text-muted-foreground">Nenhuma movimentação registrada ainda.</div>
+            )}
+            {historico?.map((m) => (
+              <div key={m.id} className="flex items-center justify-between text-[11.5px] border-b border-border/40 last:border-0 py-1">
+                <span className={m.tipo === "entrada" ? "text-emerald-600" : "text-red-600"}>
+                  {m.tipo === "entrada" ? "+" : "−"}{m.quantidade} {unidade}
+                  {m.motivo ? ` · ${m.motivo}` : ""}
+                </span>
+                <span className="text-muted-foreground shrink-0 ml-2">
+                  {new Date(m.criado_em).toLocaleDateString("pt-BR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Gera 1 pedido de compra por fornecedor a partir dos materiais abaixo do
+ * mínimo — quantidade sugerida = mínimo - atual (arredondado pra cima, min 1),
+ * editável antes de criar. Materiais sem fornecedor cadastrado ficam à parte
+ * (não dá pra montar um pedido sem saber pra quem mandar). */
+function PedidoCompraModal({ onClose, onCriado, empresaId, materiaisBaixos }: {
+  onClose: () => void; onCriado: () => void; empresaId: string;
+  materiaisBaixos: Material[];
+}) {
+  const [quantidades, setQuantidades] = useState<Record<string, number>>(() =>
+    Object.fromEntries(materiaisBaixos.map((m) => [
+      m.id, Math.max(1, Math.ceil((m.estoque_minimo ?? 0) - (m.estoque_atual ?? 0))),
+    ])),
+  );
+  const [criando, setCriando] = useState(false);
+
+  const comFornecedor = materiaisBaixos.filter((m) => m.fornecedor_id);
+  const semFornecedor = materiaisBaixos.filter((m) => !m.fornecedor_id);
+  const porFornecedor = useMemo(() => {
+    const grupos = new Map<string, { nome: string; itens: Material[] }>();
+    for (const m of comFornecedor) {
+      const key = m.fornecedor_id!;
+      if (!grupos.has(key)) grupos.set(key, { nome: m.fornecedores?.nome ?? "Fornecedor", itens: [] });
+      grupos.get(key)!.itens.push(m);
+    }
+    return grupos;
+  }, [comFornecedor]);
+
+  const handleCriar = async () => {
+    setCriando(true);
+    try {
+      for (const [fornecedorId, grupo] of porFornecedor) {
+        await criarPedidoCompra(
+          empresaId, fornecedorId,
+          grupo.itens.map((m) => ({ material_id: m.id, quantidade: quantidades[m.id] ?? 1 })),
+          "Gerado automaticamente — materiais abaixo do estoque mínimo.",
+        );
+      }
+      toast.success(`${porFornecedor.size} pedido(s) de compra criado(s) (rascunho).`);
+      onCriado();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar pedido(s) de compra");
+    } finally {
+      setCriando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/70 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg max-h-[85vh] overflow-auto bg-surface border border-border rounded-lg shadow-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[15px] font-semibold inline-flex items-center gap-1.5"><ShoppingCart className="size-4 text-accent" /> Gerar pedido de compra</div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </div>
+
+        {porFornecedor.size === 0 && semFornecedor.length === 0 && (
+          <div className="text-[13px] text-muted-foreground">Nenhum material abaixo do estoque mínimo.</div>
+        )}
+
+        {Array.from(porFornecedor.entries()).map(([fid, grupo]) => (
+          <div key={fid} className="border border-border rounded-md p-3 space-y-2">
+            <div className="text-[12.5px] font-semibold">{grupo.nome}</div>
+            {grupo.itens.map((m) => (
+              <div key={m.id} className="flex items-center justify-between gap-2 text-[12.5px]">
+                <span className="truncate flex-1">{m.nome}</span>
+                <span className="text-muted-foreground shrink-0">atual {m.estoque_atual ?? 0} / mín {m.estoque_minimo ?? 0}</span>
+                <input type="number" min="1" step="0.1" value={quantidades[m.id] ?? 1}
+                  onChange={(e) => setQuantidades((q) => ({ ...q, [m.id]: Number(e.target.value) || 1 }))}
+                  className="w-16 h-7 rounded border border-border bg-surface-2 px-1.5 text-[12px] outline-none shrink-0" />
+                <span className="text-muted-foreground shrink-0 w-8">{m.unidade}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        {semFornecedor.length > 0 && (
+          <div className="border border-amber-500/40 bg-amber-500/10 rounded-md p-3 space-y-1">
+            <div className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+              Sem fornecedor cadastrado (não entram no pedido)
+            </div>
+            <div className="text-[11.5px] text-amber-600">
+              {semFornecedor.map((m) => m.nome).join(", ")} — cadastre o fornecedor no material pra incluir aqui.
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end pt-2 border-t border-border">
+          <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] hover:bg-secondary">Cancelar</button>
+          <button type="button" disabled={criando || porFornecedor.size === 0} onClick={handleCriar}
+            className="h-9 px-4 rounded-md bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5">
+            {criando && <Loader2 className="size-3.5 animate-spin" />} Criar {porFornecedor.size > 1 ? `${porFornecedor.size} pedidos` : "pedido"} (rascunho)
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/** 1 linha da lista de pedidos de compra — mostra itens + ações conforme status. */
+function PedidoCompraRow({ pedido, onAtualizado }: { pedido: PedidoCompra; onAtualizado: () => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [processando, setProcessando] = useState(false);
+
+  const statusCor: Record<PedidoCompra["status"], string> = {
+    rascunho: "bg-secondary text-muted-foreground",
+    enviado: "bg-blue-500/10 text-blue-600",
+    recebido: "bg-emerald-500/10 text-emerald-600",
+    cancelado: "bg-red-500/10 text-red-600",
+  };
+  const statusLabel: Record<PedidoCompra["status"], string> = {
+    rascunho: "Rascunho", enviado: "Enviado", recebido: "Recebido", cancelado: "Cancelado",
+  };
+
+  const handleEnviar = async () => {
+    setProcessando(true);
+    try {
+      await atualizarStatusPedidoCompra(pedido.id, "enviado");
+      toast.success("Pedido marcado como enviado.");
+      onAtualizado();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar pedido");
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleReceber = async () => {
+    setProcessando(true);
+    try {
+      await receberPedidoCompra(pedido.id);
+      toast.success("Pedido recebido — estoque atualizado.");
+      onAtualizado();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao receber pedido");
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  return (
+    <div className="px-3.5 py-2.5">
+      {/* O toggle fica só no botão de texto (nome+status) — os botões de ação
+          (Marcar enviado/Receber) são irmãos, não filhos, pra não aninhar
+          elemento interativo dentro de outro (inválido e quebra accessible name). */}
+      <div className="w-full flex items-center justify-between gap-2">
+        <button type="button" onClick={() => setAberto((v) => !v)} className="min-w-0 text-left flex-1">
+          <div className="text-[12.5px] font-medium truncate">
+            {pedido.fornecedores?.nome ?? "Sem fornecedor"}
+            <span className={`ml-2 text-[10.5px] px-1.5 py-0.5 rounded-full ${statusCor[pedido.status]}`}>{statusLabel[pedido.status]}</span>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {pedido.pedido_compra_item.length} item(ns) · {new Date(pedido.criado_em).toLocaleDateString("pt-BR")}
+          </div>
+        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {pedido.status === "rascunho" && (
+            <button type="button" disabled={processando} onClick={handleEnviar}
+              className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50">
+              <Send className="size-3" /> Marcar enviado
+            </button>
+          )}
+          {(pedido.status === "rascunho" || pedido.status === "enviado") && (
+            <button type="button" disabled={processando} onClick={handleReceber}
+              className="h-7 px-2 rounded border border-emerald-500 text-emerald-700 text-[11px] hover:bg-emerald-500/10 inline-flex items-center gap-1 disabled:opacity-50">
+              <CheckCircle2 className="size-3" /> Receber
+            </button>
+          )}
+          <button type="button" onClick={() => setAberto((v) => !v)} aria-label={aberto ? "Recolher" : "Expandir"}>
+            <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${aberto ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+      {aberto && (
+        <div className="mt-2 space-y-1 pl-1">
+          {pedido.pedido_compra_item.map((it) => (
+            <div key={it.id} className="flex items-center justify-between text-[11.5px] text-muted-foreground">
+              <span>{it.materiais?.nome ?? it.material_id}</span>
+              <span>{it.quantidade} {it.materiais?.unidade ?? "un"} {it.recebido ? "· recebido" : ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -391,6 +702,17 @@ function Materiais() {
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
   const csvRef = useRef<HTMLInputElement>(null);
+  const [showPedidoModal, setShowPedidoModal] = useState(false);
+  const [pedidos, setPedidos] = useState<PedidoCompra[]>([]);
+  const [mostrarPedidos, setMostrarPedidos] = useState(false);
+
+  const carregarPedidos = async (eid: string) => {
+    try {
+      setPedidos(await getPedidosCompra(eid) as unknown as PedidoCompra[]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao carregar pedidos de compra");
+    }
+  };
 
   const load = async () => {
     try {
@@ -398,7 +720,7 @@ function Materiais() {
       setError(null);
       const empresa = await getEmpresaAtual();
       const eid = empresa ? (empresa as { id: string }).id : undefined;
-      if (eid) setEmpresaId(eid);
+      if (eid) { setEmpresaId(eid); carregarPedidos(eid); }
       const data = await getMateriais(eid);
       setMateriais(data as unknown as Material[]);
     } catch (e) {
@@ -468,6 +790,17 @@ function Materiais() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showPedidoModal && empresaId && (
+          <PedidoCompraModal
+            onClose={() => setShowPedidoModal(false)}
+            onCriado={() => { setShowPedidoModal(false); load(); setMostrarPedidos(true); }}
+            empresaId={empresaId}
+            materiaisBaixos={materiais.filter((m) => m.estoque_atual != null && m.estoque_minimo != null && m.estoque_atual <= m.estoque_minimo)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Feature 12: Stock alerts */}
       {(() => {
         const baixos = materiais.filter((m) => m.estoque_atual != null && m.estoque_minimo != null && m.estoque_atual <= m.estoque_minimo);
@@ -483,13 +816,30 @@ function Materiais() {
                 {baixos.map((m) => m.nome).join(", ")}
               </div>
             </div>
-            <button onClick={() => setShowModal(true)}
-              className="h-7 px-2.5 rounded border border-amber-500 text-amber-700 text-[11.5px] font-medium hover:bg-amber-500/10 shrink-0">
-              Repor
+            <button onClick={() => setShowPedidoModal(true)}
+              className="h-7 px-2.5 rounded border border-amber-500 text-amber-700 text-[11.5px] font-medium hover:bg-amber-500/10 shrink-0 inline-flex items-center gap-1">
+              <ShoppingCart className="size-3.5" /> Gerar pedido de compra
             </button>
           </div>
         );
       })()}
+
+      {pedidos.length > 0 && (
+        <div className="mb-4 rounded-lg border border-border">
+          <button onClick={() => setMostrarPedidos((v) => !v)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 text-[13px] font-medium hover:bg-secondary/40">
+            <span className="inline-flex items-center gap-1.5"><ShoppingCart className="size-4 text-accent" /> Pedidos de compra ({pedidos.length})</span>
+            <ChevronDown className={`size-4 text-muted-foreground transition-transform ${mostrarPedidos ? "rotate-180" : ""}`} />
+          </button>
+          {mostrarPedidos && (
+            <div className="border-t border-border divide-y divide-border">
+              {pedidos.map((p) => (
+                <PedidoCompraRow key={p.id} pedido={p} onAtualizado={load} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <PageHeader
         eyebrow="Operação"

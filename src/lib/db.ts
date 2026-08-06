@@ -166,6 +166,101 @@ export async function upsertMaterial(empresaId: string, material: MaterialInput)
   return data;
 }
 
+// ─── Estoque: movimentação + pedidos de compra ─────────────────────────────────
+
+export interface MovimentacaoEstoque {
+  id: string;
+  material_id: string;
+  tipo: "entrada" | "saida";
+  quantidade: number;
+  motivo: string | null;
+  referencia_tipo: string | null;
+  criado_em: string;
+}
+
+export async function getMovimentacoesEstoque(materialId: string) {
+  const { data, error } = await supabase
+    .from("movimentacao_estoque")
+    .select("id,material_id,tipo,quantidade,motivo,referencia_tipo,criado_em")
+    .eq("material_id", materialId)
+    .order("criado_em", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as MovimentacaoEstoque[];
+}
+
+/** Ajuste manual de estoque (entrada/saída avulsa) — atômico via RPC. */
+export async function registrarMovimentacaoEstoque(params: {
+  material_id: string;
+  tipo: "entrada" | "saida";
+  quantidade: number;
+  motivo?: string;
+}) {
+  const { error } = await supabase.rpc("registrar_movimentacao_estoque", {
+    p_material_id: params.material_id,
+    p_tipo: params.tipo,
+    p_quantidade: params.quantidade,
+    p_motivo: params.motivo ?? null,
+  });
+  if (error) throw error;
+}
+
+export interface PedidoCompraItemInput {
+  material_id: string;
+  quantidade: number;
+  preco_custo_unitario?: number | null;
+}
+
+export async function criarPedidoCompra(
+  empresaId: string,
+  fornecedorId: string | null,
+  itens: PedidoCompraItemInput[],
+  observacoes?: string,
+) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data: pedido, error } = await supabase
+    .from("pedido_compra")
+    .insert({
+      empresa_id: empresaId,
+      fornecedor_id: fornecedorId,
+      observacoes: observacoes ?? null,
+      criado_por: session?.user.id ?? null,
+    })
+    .select("id,numero")
+    .single();
+  if (error) throw error;
+  if (itens.length > 0) {
+    const { error: errItens } = await supabase
+      .from("pedido_compra_item")
+      .insert(itens.map((it) => ({ ...it, pedido_compra_id: pedido.id })));
+    if (errItens) throw errItens;
+  }
+  return pedido;
+}
+
+export async function getPedidosCompra(empresaId: string) {
+  const { data, error } = await supabase
+    .from("pedido_compra")
+    .select("id,numero,status,observacoes,criado_em,enviado_em,recebido_em,fornecedor_id,fornecedores(nome),pedido_compra_item(id,material_id,quantidade,preco_custo_unitario,recebido,materiais(nome,unidade))")
+    .eq("empresa_id", empresaId)
+    .order("criado_em", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function atualizarStatusPedidoCompra(id: string, status: "enviado" | "cancelado") {
+  const campo = status === "enviado" ? { status, enviado_em: new Date().toISOString() } : { status };
+  const { error } = await supabase.from("pedido_compra").update(campo).eq("id", id);
+  if (error) throw error;
+}
+
+/** Recebe o pedido: soma a quantidade de cada item no estoque do material +
+ * registra a movimentação (entrada) + fecha o pedido — atômico via RPC. */
+export async function receberPedidoCompra(id: string) {
+  const { error } = await supabase.rpc("receber_pedido_compra", { p_pedido_id: id });
+  if (error) throw error;
+}
+
 // ─── Projetos ─────────────────────────────────────────────────────────────────
 export async function upsertProjeto(empresaId: string, projeto: ProjetoInput) {
   if (projeto.id) {
