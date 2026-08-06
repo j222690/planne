@@ -19,6 +19,7 @@ import type {
   MetricasProjeto,
   Material,
   EspessuraMDF,
+  ConfiguracaoModulo,
   TOLERANCIA_SERRA_MM,
   MAX_PECA_MM,
   AREA_CHAPA_M2,
@@ -108,6 +109,17 @@ export function calcularPecas(
  * @param template  - ModuloParametrico com as regras de ferragem
  * @returns Ferragem[] derivadas
  */
+const LABEL_POSICAO_PUXADOR: Record<NonNullable<ConfiguracaoModulo["posicao_puxador"]>, string> = {
+  sem: "sem puxador",
+  em_pe: "em pé (vertical)",
+  em_cima: "em cima",
+  em_baixo: "em baixo",
+  passante_em_cima: "passante em cima (contínuo com o módulo vizinho)",
+  passante_em_baixo: "passante em baixo (contínuo com o módulo vizinho)",
+};
+
+const TIPOS_PUXADOR = new Set(["puxador_perfil_alu_1200mm", "puxador_alu_128mm", "puxador_push_open"]);
+
 export function calcularFerragens(
   instancia: ModuloInstanciado,
   template: ModuloParametrico,
@@ -124,17 +136,25 @@ export function calcularFerragens(
 
   return template.regras_ferragens
     .filter((r) => r.ativa_quando(cfg))
-    .map((r) => ({
-      id: `${instancia.id}_${r.tipo}`,
-      modulo_instanciado_id: instancia.id,
-      tipo: r.tipo,
-      marca,
-      quantidade: r.calcular_quantidade(L, A, P, cfg),
-      descricao: r.descricao_tecnica,
-      preco_custo_unit: 0,   // preenchido pelo motor de custos
-      preco_venda_unit: 0,
-      etiqueta_producao: `${r.tipo} — ${instancia.nome_display}`,
-    }));
+    .map((r) => {
+      // Posição do puxador: só anota (instrução de produção) quando a
+      // preferência foi definida e a ferragem gerada é mesmo um puxador —
+      // não muda quantidade nem geometria de nenhuma peça.
+      const notaPosicao = cfg.posicao_puxador && TIPOS_PUXADOR.has(r.tipo)
+        ? ` — posição: ${LABEL_POSICAO_PUXADOR[cfg.posicao_puxador]}`
+        : "";
+      return {
+        id: `${instancia.id}_${r.tipo}`,
+        modulo_instanciado_id: instancia.id,
+        tipo: r.tipo,
+        marca,
+        quantidade: r.calcular_quantidade(L, A, P, cfg),
+        descricao: r.descricao_tecnica + notaPosicao,
+        preco_custo_unit: 0,   // preenchido pelo motor de custos
+        preco_venda_unit: 0,
+        etiqueta_producao: `${r.tipo} — ${instancia.nome_display}`,
+      };
+    });
 }
 
 // ─── calcularMetricas ─────────────────────────────────────────────────────────

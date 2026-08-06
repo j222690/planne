@@ -326,6 +326,15 @@ export interface ConfiguracaoModulo {
   espessura_porta_mm: 15 | 18;
   ferragem: "nacional" | "blum" | "hafele" | "grass";
   tipo_puxador: "perfil_aluminio" | "puxador_alu" | "push_open" | "sem";
+  /**
+   * Posição do puxador na porta — característica de fabricação (onde furar/
+   * fixar), só relevante pra tipo_puxador "puxador_alu" (puxador individual;
+   * perfil contínuo e push_open não têm posição variável). As variantes
+   * "passante" indicam um puxador contínuo por cima de módulos adjacentes —
+   * registradas aqui só como instrução de produção (a peça em si não muda de
+   * tamanho); o canal/rebaixo passante em si NÃO é modelado como geometria.
+   */
+  posicao_puxador?: "sem" | "em_pe" | "em_cima" | "em_baixo" | "passante_em_cima" | "passante_em_baixo";
 }
 
 export interface LimitesConfiguracao {

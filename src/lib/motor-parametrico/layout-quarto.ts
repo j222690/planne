@@ -84,6 +84,7 @@ function montarParedeRoupeiros(
     getTemplate: getTemplateRoupeiro,
     templateFallback: MODULOS_ROUPEIRO[3],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta ?? "dobradica",
       ferragem: prefs.ferragem,
@@ -244,6 +245,7 @@ function montarMixCloset(
       getTemplate: getTpl,
       templateFallback: tpl ?? MODULOS_ROUPEIRO[3],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: () => configPadrao({ ferragem: prefs.ferragem, ...cfgExtra }),
       ordemInicial: ordem,
     });

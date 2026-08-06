@@ -198,6 +198,28 @@ describe("gerarLayoutCozinhaLinear — critério de aceite do roadmap", () => {
     expect(suportes?.quantidade).toBe(aereo!.configuracao.num_portas * 2);
   });
 
+  test("posicao_puxador ausente não anota nada na ferragem de puxador", () => {
+    const amb = ambiente(400);
+    const { projeto } = gerarLayoutCozinhaLinear(amb, prefsPadrao);
+    const m = projeto.modulos.find((x) => x.configuracao.num_portas > 0);
+    const puxador = m!.ferragens.find((f) => f.tipo.startsWith("puxador"));
+    expect(puxador?.descricao).not.toContain("posição:");
+  });
+
+  test("posicao_puxador definido anota a posição na descrição da ferragem", () => {
+    const amb = ambiente(400);
+    const { projeto } = gerarLayoutCozinhaLinear(amb, { ...prefsPadrao, posicao_puxador: "passante_em_cima" });
+    const m = projeto.modulos.find((x) => x.configuracao.num_portas > 0);
+    const puxador = m!.ferragens.find((f) => f.tipo.startsWith("puxador"));
+    expect(puxador?.descricao).toContain("passante em cima");
+    // não muda a peça da porta (mesma largura/comprimento) — é só nota de ferragem
+    const semPosicao = gerarLayoutCozinhaLinear(amb, prefsPadrao).projeto.modulos
+      .find((x) => x.configuracao.num_portas > 0)!.pecas.find((p) => p.regra_nome === "porta_dobradica");
+    const comPosicao = projeto.modulos.find((x) => x.configuracao.num_portas > 0)!
+      .pecas.find((p) => p.regra_nome === "porta_dobradica");
+    expect(comPosicao?.largura_mm).toBe(semPosicao?.largura_mm);
+  });
+
   test("aproveitamento ≥ 85% para paredes de 300-500cm", () => {
     for (const largura of [300, 320, 360, 400, 450, 480, 500]) {
       const amb = ambiente(largura);

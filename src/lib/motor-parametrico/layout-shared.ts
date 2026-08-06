@@ -38,6 +38,8 @@ export interface PreferenciasBase {
   estilo?: string;
   /** Espessura padrão do corpo/porta (mm) — preferência de projeto. Default 15mm. */
   espessura_padrao_mm?: 15 | 18;
+  /** Posição do puxador — característica de fabricação, sem valor = não anota. */
+  posicao_puxador?: ConfiguracaoModulo["posicao_puxador"];
 }
 
 // ─── RESULTADO PADRÃO DE LAYOUT ───────────────────────────────────────────────
@@ -194,6 +196,11 @@ export interface OpcoesInstanciacao {
    * desta chamada. Omitido = mantém o que `configDe` já definiu.
    */
   espessura_padrao_mm?: 15 | 18;
+  /**
+   * Posição do puxador (preferência de projeto) — sobrescreve o que
+   * `configDe` já definiu, mesma lógica de `espessura_padrao_mm`.
+   */
+  posicao_puxador?: ConfiguracaoModulo["posicao_puxador"];
 }
 
 /**
@@ -216,6 +223,9 @@ export function instanciarModulos(
     if (opcoes.espessura_padrao_mm) {
       cfg.espessura_corpo_mm = opcoes.espessura_padrao_mm;
       cfg.espessura_porta_mm = opcoes.espessura_padrao_mm;
+    }
+    if (opcoes.posicao_puxador) {
+      cfg.posicao_puxador = opcoes.posicao_puxador;
     }
     const rotulo = opcoes.rotuloParede ?? `Parede ${opcoes.parede}`;
 

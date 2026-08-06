@@ -2982,6 +2982,9 @@ function Step4Layout({
   const [criandoVersao, setCriandoVersao] = useState<string | null>(null);
   const [motorTipoPorta, setMotorTipoPorta] = useState<"dobradica" | "correr">("dobradica");
   const [motorTipoPortaAereo, setMotorTipoPortaAereo] = useState<"dobradica" | "basculante">("dobradica");
+  const [motorPosicaoPuxador, setMotorPosicaoPuxador] = useState<
+    "" | "sem" | "em_pe" | "em_cima" | "em_baixo" | "passante_em_cima" | "passante_em_baixo"
+  >("");
   const [divisoriaRecuoFrontal, setDivisoriaRecuoFrontal] = useState(false);
   const [divisoriaRecuoTraseiro, setDivisoriaRecuoTraseiro] = useState(false);
   const [motorEspessura, setMotorEspessura] = useState<15 | 18>(15);
@@ -3052,6 +3055,7 @@ function Step4Layout({
       tipo_porta: motorTipoPorta,
       divisoria_recuo_frontal: divisoriaRecuoFrontal,
       divisoria_recuo_traseiro: divisoriaRecuoTraseiro,
+      ...(motorPosicaoPuxador ? { posicao_puxador: motorPosicaoPuxador } : {}),
       espessura_padrao_mm: motorEspessura,
       versao_comercial: "intermediaria",
       acabamentos: { rodape: acRodape, roda_teto: acRodaTeto, engrosso: acEngrosso },
@@ -3120,6 +3124,7 @@ function Step4Layout({
     motorFerragem,
     motorTipoPorta,
     motorTipoPortaAereo,
+    motorPosicaoPuxador,
     divisoriaRecuoFrontal,
     divisoriaRecuoTraseiro,
     motorEspessura,
@@ -3229,6 +3234,7 @@ function Step4Layout({
     motorFerragem,
     motorTipoPorta,
     motorTipoPortaAereo,
+    motorPosicaoPuxador,
     divisoriaRecuoFrontal,
     divisoriaRecuoTraseiro,
     motorEspessura,
@@ -4089,6 +4095,24 @@ function Step4Layout({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Posição do puxador — característica de fabricação, não muda a peça */}
+              <div>
+                <div className="text-[11.5px] text-muted-foreground mb-1.5">Posição do puxador</div>
+                <select
+                  value={motorPosicaoPuxador}
+                  onChange={(e) => setMotorPosicaoPuxador(e.target.value as typeof motorPosicaoPuxador)}
+                  className="w-full h-8 px-2.5 rounded-md border border-border bg-surface-2 text-[12.5px] outline-none focus:border-border-strong"
+                >
+                  <option value="">Padrão (sem instrução específica)</option>
+                  <option value="sem">Sem puxador</option>
+                  <option value="em_pe">Em pé (vertical)</option>
+                  <option value="em_cima">Em cima</option>
+                  <option value="em_baixo">Em baixo</option>
+                  <option value="passante_em_cima">Passante em cima</option>
+                  <option value="passante_em_baixo">Passante em baixo</option>
+                </select>
               </div>
 
               {/* Layout de cozinha — só aparece quando o ambiente é Cozinha */}

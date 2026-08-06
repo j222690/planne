@@ -1365,24 +1365,36 @@ function calcularPecas(instancia, template) {
   }
   return pecas;
 }
+var LABEL_POSICAO_PUXADOR = {
+  sem: "sem puxador",
+  em_pe: "em p\xE9 (vertical)",
+  em_cima: "em cima",
+  em_baixo: "em baixo",
+  passante_em_cima: "passante em cima (cont\xEDnuo com o m\xF3dulo vizinho)",
+  passante_em_baixo: "passante em baixo (cont\xEDnuo com o m\xF3dulo vizinho)"
+};
+var TIPOS_PUXADOR = /* @__PURE__ */ new Set(["puxador_perfil_alu_1200mm", "puxador_alu_128mm", "puxador_push_open"]);
 function calcularFerragens(instancia, template) {
   const L = instancia.largura_cm * 10;
   const A = instancia.altura_cm * 10;
   const P = instancia.profundidade_cm * 10;
   const cfg = instancia.configuracao;
   const marca = cfg.ferragem === "blum" ? "blum" : cfg.ferragem === "hafele" ? "hafele" : cfg.ferragem === "grass" ? "grass" : "nacional";
-  return template.regras_ferragens.filter((r) => r.ativa_quando(cfg)).map((r) => ({
-    id: `${instancia.id}_${r.tipo}`,
-    modulo_instanciado_id: instancia.id,
-    tipo: r.tipo,
-    marca,
-    quantidade: r.calcular_quantidade(L, A, P, cfg),
-    descricao: r.descricao_tecnica,
-    preco_custo_unit: 0,
-    // preenchido pelo motor de custos
-    preco_venda_unit: 0,
-    etiqueta_producao: `${r.tipo} \u2014 ${instancia.nome_display}`
-  }));
+  return template.regras_ferragens.filter((r) => r.ativa_quando(cfg)).map((r) => {
+    const notaPosicao = cfg.posicao_puxador && TIPOS_PUXADOR.has(r.tipo) ? ` \u2014 posi\xE7\xE3o: ${LABEL_POSICAO_PUXADOR[cfg.posicao_puxador]}` : "";
+    return {
+      id: `${instancia.id}_${r.tipo}`,
+      modulo_instanciado_id: instancia.id,
+      tipo: r.tipo,
+      marca,
+      quantidade: r.calcular_quantidade(L, A, P, cfg),
+      descricao: r.descricao_tecnica + notaPosicao,
+      preco_custo_unit: 0,
+      // preenchido pelo motor de custos
+      preco_venda_unit: 0,
+      etiqueta_producao: `${r.tipo} \u2014 ${instancia.nome_display}`
+    };
+  });
 }
 function calcularMetricas(modulos) {
   let chapas18 = 0, chapas15 = 0, chapas6 = 0;
@@ -1644,6 +1656,9 @@ function instanciarModulos(larguras, opcoes) {
       cfg.espessura_corpo_mm = opcoes.espessura_padrao_mm;
       cfg.espessura_porta_mm = opcoes.espessura_padrao_mm;
     }
+    if (opcoes.posicao_puxador) {
+      cfg.posicao_puxador = opcoes.posicao_puxador;
+    }
     const rotulo = opcoes.rotuloParede ?? `Parede ${opcoes.parede}`;
     const instancia = {
       id: `${opcoes.prefixo}_${largura}_${opcoes.parede}_${Math.round(posX)}`,
@@ -1790,6 +1805,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       getTemplate: getTemplateBase,
       templateFallback: MODULOS_BASE_COZINHA[4],
       espessura_padrao_mm: preferencias.espessura_padrao_mm,
+      posicao_puxador: preferencias.posicao_puxador,
       configDe: (largura) => configPadrao({
         tipo_porta: preferencias.tipo_porta_base,
         ferragem: preferencias.ferragem,
@@ -1819,6 +1835,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
       getTemplate: getTemplateAereo,
       templateFallback: MODULOS_AEREOS_COZINHA[4],
       espessura_padrao_mm: preferencias.espessura_padrao_mm,
+      posicao_puxador: preferencias.posicao_puxador,
       configDe: (largura) => configPadrao({
         tipo_porta: preferencias.tipo_porta_aereo,
         ferragem: preferencias.ferragem,
@@ -1845,6 +1862,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
         getTemplate: () => MODULO_TORRE_FORNO,
         templateFallback: MODULO_TORRE_FORNO,
         espessura_padrao_mm: preferencias.espessura_padrao_mm,
+        posicao_puxador: preferencias.posicao_puxador,
         configDe: () => configPadrao({
           tipo_porta: "dobradica",
           ferragem: preferencias.ferragem,
@@ -1872,6 +1890,7 @@ function gerarLayoutCozinhaLinear(ambiente, preferencias) {
         getTemplate: () => MODULO_PORTA_TEMPEROS,
         templateFallback: MODULO_PORTA_TEMPEROS,
         espessura_padrao_mm: preferencias.espessura_padrao_mm,
+        posicao_puxador: preferencias.posicao_puxador,
         configDe: () => configPadrao({
           tipo_porta: "dobradica",
           ferragem: preferencias.ferragem,
@@ -1998,6 +2017,7 @@ function montarParede(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, avi
     getTemplate: getTemplateBase,
     templateFallback: MODULOS_BASE_COZINHA[4],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base,
       ferragem: prefs.ferragem,
@@ -2021,6 +2041,7 @@ function montarParede(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, avi
       getTemplate: getTemplateAereo,
       templateFallback: MODULOS_AEREOS_COZINHA[4],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: (largura) => configPadrao({
         tipo_porta: prefs.tipo_porta_aereo,
         ferragem: prefs.ferragem,
@@ -2163,6 +2184,7 @@ function gerarLayoutIlha(ambiente, prefs) {
     getTemplate: getTemplateBase,
     templateFallback: MODULOS_BASE_COZINHA[4],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base ?? "dobradica",
       ferragem: prefs.ferragem,
@@ -2494,6 +2516,7 @@ function montarParedeRoupeiros(ambiente, parede, inicioRecuo_cm, prefs, ordemIni
     getTemplate: getTemplateRoupeiro,
     templateFallback: MODULOS_ROUPEIRO[3],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta ?? "dobradica",
       ferragem: prefs.ferragem,
@@ -2610,6 +2633,7 @@ function montarMixCloset(ambiente, parede, inicioRecuo_cm, prefs, ordemInicial, 
       getTemplate: getTpl,
       templateFallback: tpl ?? MODULOS_ROUPEIRO[3],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: () => configPadrao({ ferragem: prefs.ferragem, ...cfgExtra }),
       ordemInicial: ordem
     });
@@ -2936,6 +2960,7 @@ function gerarLayoutBanheiro(ambiente, prefs) {
     getTemplate: getTemplateGabinetePia,
     templateFallback: MODULOS_GABINETE_PIA[2],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -2958,6 +2983,7 @@ function gerarLayoutBanheiro(ambiente, prefs) {
       getTemplate: getTemplateEspelheira,
       templateFallback: MODULOS_ESPELHEIRA[2],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: (largura) => configPadrao({
         tipo_porta: "espelho",
         ferragem: prefs.ferragem,
@@ -3008,6 +3034,7 @@ function gerarLayoutLavanderia(ambiente, prefs) {
     getTemplate: getTemplateGabineteTanque,
     templateFallback: MODULOS_GABINETE_TANQUE[2],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -3030,6 +3057,7 @@ function gerarLayoutLavanderia(ambiente, prefs) {
       getTemplate: getTemplateArmarioServico,
       templateFallback: MODULOS_ARMARIO_SERVICO[2],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: largura <= 50 ? 1 : 2,
@@ -3288,6 +3316,7 @@ function gerarLayoutSala(ambiente, prefs) {
     getTemplate: getTemplateRackTv,
     templateFallback: MODULOS_RACK_TV[1],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: largura <= 50 ? 1 : 2,
@@ -3311,6 +3340,7 @@ function gerarLayoutSala(ambiente, prefs) {
       getTemplate: getTemplatePainelRipado,
       templateFallback: MODULOS_PAINEL_RIPADO[1],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: () => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -3337,6 +3367,7 @@ function gerarLayoutSala(ambiente, prefs) {
       getTemplate: getTemplateNichoSala,
       templateFallback: MODULOS_NICHO_SALA[1],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -3597,6 +3628,7 @@ function gerarLayoutEscritorio(ambiente, prefs) {
       getTemplate: getTemplateGaveteiroEsc,
       templateFallback: MODULOS_GAVETEIRO_ESC[1],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: () => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: 0,
@@ -3621,6 +3653,7 @@ function gerarLayoutEscritorio(ambiente, prefs) {
     getTemplate: getTemplateEscrivaninha,
     templateFallback: MODULOS_ESCRIVANINHA[1],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
+    posicao_puxador: prefs.posicao_puxador,
     configDe: (largura) => configPadrao({
       ferragem: prefs.ferragem,
       num_portas: 0,
@@ -3644,6 +3677,7 @@ function gerarLayoutEscritorio(ambiente, prefs) {
       getTemplate: getTemplateEstanteEsc,
       templateFallback: MODULOS_ESTANTE_ESC[2],
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       configDe: (largura) => configPadrao({
         ferragem: prefs.ferragem,
         num_portas: largura >= 80 ? 2 : 0,
@@ -5690,6 +5724,7 @@ async function gerarHandler(req, res) {
       ferragem: prefs.ferragem ?? "nacional",
       versao_comercial: prefs.versao_comercial ?? "intermediaria",
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       nome: prefs.nome,
       empresa_id: prefs.empresa_id,
       cliente_id: prefs.cliente_id,

@@ -94,6 +94,8 @@ interface RequestBody {
     divisoria_recuo_traseiro?: boolean;
     /** Espessura padrão do corpo/porta (mm) — preferência de projeto. Default 15mm. */
     espessura_padrao_mm?: 15 | 18;
+    /** Posição do puxador — característica de fabricação (onde furar/fixar). */
+    posicao_puxador?: "sem" | "em_pe" | "em_cima" | "em_baixo" | "passante_em_cima" | "passante_em_baixo";
     versao_comercial?: "economica" | "intermediaria" | "premium";
     com_aereos?: boolean;
     com_superior?: boolean;
@@ -172,6 +174,7 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
       ferragem: prefs.ferragem ?? "nacional" as const,
       versao_comercial: prefs.versao_comercial ?? "intermediaria" as const,
       espessura_padrao_mm: prefs.espessura_padrao_mm,
+      posicao_puxador: prefs.posicao_puxador,
       nome: prefs.nome,
       empresa_id: prefs.empresa_id,
       cliente_id: prefs.cliente_id,
