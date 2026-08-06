@@ -1152,8 +1152,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const toggleAbertura = (comodoId: string, paredeId: string, tipo: "porta" | "janela") =>
     setParedes(comodoId, (ps) => ps.map((p) => p.id === paredeId ? { ...p, [tipo]: !p[tipo] } : p));
 
-  // Foto da parede (com folha A4 de referência) → estima medida + porta/janela
+  // Foto da parede (com folha A4 ou régua de 30cm de referência) → estima
+  // medida + porta/janela. Um objeto de referência conhecido por cômodo —
+  // troca o que o Gemini procura na foto pra calibrar a escala.
   const [fotoAnalisando, setFotoAnalisando] = useState<string | null>(null);
+  const [refFoto, setRefFoto] = useState<Record<string, "a4" | "regua">>({});
   const analisarFotoParede = async (comodoId: string, paredeId: string, file: File) => {
     const b64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -1166,7 +1169,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     try {
       const res = await fetch("/api/analisar-planta", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagem_b64: b64, modo: "foto", referencia: "a4" }),
+        body: JSON.stringify({ imagem_b64: b64, modo: "foto", referencia: refFoto[comodoId] ?? "a4" }),
       });
       const r = await res.json() as { largura_cm: number; altura_cm: number; porta: boolean; janela: boolean; confianca: string; error?: string };
       if (!res.ok) { toast.error(r.error ?? "Erro ao analisar a foto"); return; }
@@ -1979,14 +1982,24 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                           )}
                         </div>
                       ) : (
-                        /* Slots de foto por parede (com folha A4) */
+                        /* Slots de foto por parede (objeto de referência configurável) */
                         <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-muted-foreground">Referência na foto:</span>
+                            {([["a4", "Folha A4"], ["regua", "Régua 30cm"]] as const).map(([val, label]) => (
+                              <button key={val} type="button"
+                                onClick={() => setRefFoto((r) => ({ ...r, [c.id]: val }))}
+                                className={`h-6 px-2 rounded text-[11px] border transition-colors ${(refFoto[c.id] ?? "a4") === val ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {(["A", "B", "C", "D"] as const).map((pid) => {
                               const parede = (c.paredes ?? []).find((p) => p.id === pid);
                               const analisando = fotoAnalisando === `${c.id}|${pid}`;
                               return (
-                                <label key={pid} title="Subir ou tirar foto da parede (com folha A4)"
+                                <label key={pid} title={`Subir ou tirar foto da parede (com ${(refFoto[c.id] ?? "a4") === "regua" ? "régua de 30cm" : "folha A4"})`}
                                   className={`h-8 px-2.5 rounded-md border text-[12px] inline-flex items-center gap-1.5 cursor-pointer transition-colors ${parede?.comprimento_cm ? "border-accent bg-accent/10 text-accent" : "border-dashed border-border text-muted-foreground hover:bg-secondary"} ${analisando ? "animate-pulse" : ""}`}>
                                   {analisando ? <Loader2 className="size-3.5 animate-spin" /> : <ImageUp className="size-3.5" />}
                                   Parede {pid}{parede?.comprimento_cm ? ` · ${parede.comprimento_cm}cm` : ""}
@@ -1996,7 +2009,9 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
                               );
                             })}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">Cole uma folha A4 na parede como referência. É estimativa — confira com trena.</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {(refFoto[c.id] ?? "a4") === "regua" ? "Encoste uma régua de 30cm na parede" : "Cole uma folha A4 na parede"} como referência. É estimativa — confira com trena.
+                          </div>
                         </div>
                       )}
                     </div>
