@@ -231,6 +231,8 @@ export interface OpcoesInstanciacao {
   materialPorta?: Material;
   /** Miolo de porta com moldura (vidro/palha) — ver materialInsertDe(). */
   materialInsert?: Material;
+  /** Módulo solto no meio do cômodo (ilha) — ver ModuloInstanciado.eh_ilha em tipos.ts. */
+  ehIlha?: boolean;
   /** Resolve o template a partir da largura. */
   getTemplate: (largura_cm: number) => ModuloParametrico | undefined;
   templateFallback: ModuloParametrico;
@@ -295,6 +297,7 @@ export function instanciarModulos(
       material_fundo: opcoes.materialFundo,
       material_porta: opcoes.materialPorta,
       material_insert: opcoes.materialInsert,
+      eh_ilha: opcoes.ehIlha,
       pecas: [],
       ferragens: [],
       nome_display: `${template.nome} — ${rotulo}`,

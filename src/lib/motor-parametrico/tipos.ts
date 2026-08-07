@@ -439,6 +439,8 @@ export interface ModuloInstanciado {
   material_fundo?: Material;
   /** Miolo de porta com moldura (vidro/palha) — usado por tipo_porta "aluminio_vidro"/"palha". */
   material_insert?: Material;
+  /** Módulo solto no meio do cômodo (ilha) — ver ModuloComPosicao.eh_ilha em vista-explodida.ts. */
+  eh_ilha?: boolean;
   /** DERIVADO — calculado por calcularPecas(). Nunca salvar como fonte de verdade. */
   pecas: Peca[];
   /** DERIVADO — calculado por calcularFerragens(). */

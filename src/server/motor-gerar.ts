@@ -40,7 +40,9 @@ import { gerarExportacoes } from "../lib/motor-parametrico/exportacao-corte";
 import { gerarOrdemProducao } from "../lib/motor-parametrico/pcp";
 import { gerarListaCompras } from "../lib/motor-parametrico/engenharia";
 import { analisarProjeto } from "../lib/motor-parametrico/consultor-tecnico";
-import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel } from "../lib/motor-parametrico/tipos";
+import { criarModuloManual, buscarTemplatePorCodigo } from "../lib/motor-parametrico/editor-manual";
+import { criarMaterialPadrao, montarProjeto, materialInsertDe } from "../lib/motor-parametrico/layout-shared";
+import type { AmbienteGeometrico, ParedeId, ProjetoFabricavel, ConfiguracaoModulo } from "../lib/motor-parametrico/tipos";
 import type { ResultadoValidacao } from "../lib/motor-parametrico/rule-engine";
 
 type TipoLayout =
@@ -76,6 +78,25 @@ interface RequestBody {
    * SketchUp/Blender. Opt-in.
    */
   incluir_dae?: boolean;
+
+  /**
+   * Editor 3D de ambiente: módulos posicionados MANUALMENTE (arrastados numa
+   * cena 3D) em vez de gerados pelo algoritmo de layout automático. Quando
+   * presente, `tipo_layout` é ignorado — o pipeline de orçamento/corte/PCP
+   * é o MESMO (agnóstico à origem dos módulos), só a montagem do projeto
+   * muda. "Ilha" (módulo solto) usa parede "bottom" fixa + posicao_y_cm
+   * guardando a profundidade — mesma convenção de layout-ilha.ts.
+   */
+  modulos_manuais?: {
+    template_codigo: string;
+    posicao_x_cm: number;
+    posicao_y_cm: number;
+    parede: ParedeId;
+    largura_cm?: number;
+    tipo_porta?: ConfiguracaoModulo["tipo_porta"];
+    /** Módulo solto no meio do cômodo (ilha) — `posicao_y_cm` vira profundidade livre. */
+    eh_ilha?: boolean;
+  }[];
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
   ambiente_geometrico?: AmbienteGeometrico;
@@ -194,8 +215,12 @@ export async function gerarHandler(req: VercelRequest, res: VercelResponse) {
     // aqui para podermos patchar os materiais antes de engenharia + nesting.
     const cfgCusto: ConfiguracaoCusto = { ...CONFIG_CUSTO_PADRAO, ...(body.config_custo ?? {}) };
 
-    // 3. Despachar para o gerador correto (100% determinístico, sem IA)
-    const resultado = gerarLayout(tipoLayout, ambiente, prefs, comum);
+    // 3. Despachar para o gerador correto (100% determinístico, sem IA) — OU,
+    // se vier do Editor 3D (módulos posicionados manualmente), monta o
+    // projeto direto dos placements, pulando o algoritmo de layout automático.
+    const resultado = body.modulos_manuais && body.modulos_manuais.length > 0
+      ? montarProjetoManual(body.modulos_manuais, ambiente, comum)
+      : gerarLayout(tipoLayout, ambiente, prefs, comum);
 
     // Aplicar preços e dimensões reais da chapa MDF cadastrada pela empresa.
     // Assim o nesting e a engenharia usam as medidas verdadeiras da fornecedora,
@@ -487,4 +512,56 @@ function gerarLayout(
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };
     }
   }
+}
+
+// ─── EDITOR 3D — MONTAGEM MANUAL ───────────────────────────────────────────────
+
+/**
+ * Monta o projeto a partir de módulos posicionados manualmente (Editor 3D) em
+ * vez do algoritmo de layout automático. Cada placement vira um
+ * `ModuloInstanciado` via `criarModuloManual` (mesmas funções de cálculo de
+ * peças/ferragens que o fluxo automático usa) — daqui pra frente o pipeline
+ * de orçamento/corte/PCP é idêntico, é agnóstico à origem dos módulos.
+ */
+function montarProjetoManual(
+  placements: NonNullable<RequestBody["modulos_manuais"]>,
+  ambiente: AmbienteGeometrico,
+  comum: PrefsComuns,
+): LayoutNormalizado {
+  const materialCorpo = criarMaterialPadrao(comum.cor_mdf_hex, 15);
+  const materialFundo = criarMaterialPadrao(comum.cor_mdf_hex, 6);
+
+  const modulos = placements.map((p, i) => {
+    const template = buscarTemplatePorCodigo(p.template_codigo);
+    if (!template) {
+      throw new Error(`Editor 3D: módulo "${p.template_codigo}" não encontrado no catálogo.`);
+    }
+    const materialInsert = materialInsertDe(p.tipo_porta);
+    return criarModuloManual(
+      template,
+      {
+        posicao_x_cm: p.posicao_x_cm,
+        posicao_y_cm: p.posicao_y_cm,
+        parede: p.parede,
+        largura_cm: p.largura_cm,
+        ehIlha: p.eh_ilha,
+      },
+      { materialCorpo, materialFundo, materialInsert },
+      i,
+      p.tipo_porta ? { tipo_porta: p.tipo_porta } : undefined,
+    );
+  });
+
+  const paredes_usadas = [...new Set(modulos.map((m) => m.parede))];
+
+  const r = montarProjeto({
+    ambiente,
+    modulos,
+    paredes_usadas,
+    tipo_ambiente: "Editor 3D",
+    preferencias: comum,
+    avisos: [],
+    nome_padrao: comum.nome ?? "Projeto — Editor 3D",
+  });
+  return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
 }

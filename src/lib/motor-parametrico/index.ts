@@ -395,3 +395,11 @@ export {
   calcularFerragens,
   calcularMetricas,
 } from "./pecas";
+
+// Editor 3D de ambiente — instanciação manual (fora do fluxo de layout automático)
+export {
+  listarTodosOsModulos,
+  buscarTemplatePorCodigo,
+  criarModuloManual,
+} from "./editor-manual";
+export type { PlacementManual, MateriaisManual } from "./editor-manual";

@@ -58,6 +58,16 @@ export interface ModuloComPosicao extends ModuloParaVista3D {
   nome_display?: string;
   /** Pra calcularPassosMontagem() — sem isso os passos saem sem lista de hardware. */
   ferragens?: { tipo: string; quantidade: number }[];
+  /**
+   * Módulo solto no meio do cômodo (ilha) — não encosta em nenhuma parede.
+   * Quando true, `posicao_x_cm`/`posicao_y_cm` são coordenadas LIVRES no
+   * chão (X e profundidade), não a convenção de "encostar na parede
+   * indicada por `parede`". Ver layout-ilha.ts pra a origem dessa
+   * distinção — antes desse flag, calcularCenaCompleta sempre encostava o
+   * módulo na parede oposta ("bottom"), ignorando `posicao_y_cm` como
+   * profundidade (bug real: ilha aparecia colada na parede de trás).
+   */
+  eh_ilha?: boolean;
 }
 
 export interface ModuloNaCena {
@@ -324,7 +334,12 @@ export function calcularCenaCompleta(
 
     let grupoPosicao: [number, number, number];
     let grupoRotacaoY: number;
-    switch (parede) {
+    if (m.eh_ilha) {
+      // Solta no meio do cômodo — X e profundidade são coordenadas livres
+      // (posicao_y_cm aqui NÃO é altura/aéreo, é a profundidade no chão).
+      grupoRotacaoY = 0;
+      grupoPosicao = [px + L / 2, RODAPE, m.posicao_y_cm / 100 + P / 2];
+    } else switch (parede) {
       case "bottom":
         grupoRotacaoY = Math.PI;
         grupoPosicao = [px + L / 2, y0, profundidadeAmb - P / 2];

@@ -28,6 +28,7 @@ import {
   Plus,
   Check,
   Camera,
+  Boxes,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,6 +39,8 @@ import { checkAndConsumeCredito, getCreditosDisponiveis } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, exportSvgToPng, type MovelCanvas } from "@/components/planne/RoomCanvas";
 import { VistaExplodida3D } from "@/components/planne/VistaExplodida3D";
+import { EditorAmbiente3D, type PlacementPayload } from "@/components/planne/EditorAmbiente3D";
+import type { CategoriaAmbiente } from "@/lib/motor-parametrico/tipos";
 
 export const Route = createFileRoute("/app/ia-projetos")({
   component: IAProjetoPage,
@@ -2483,6 +2486,22 @@ const AMBIENTE_TO_LAYOUT: Record<string, string> = {
   "Home office": "escritorio",
 };
 
+// Ambientes do wizard → categoria do catálogo de módulos (Editor 3D)
+const AMBIENTE_TO_CATEGORIA: Record<string, CategoriaAmbiente> = {
+  Cozinha: "cozinha",
+  "Área gourmet": "area_gourmet",
+  "Quarto casal": "quarto",
+  "Quarto solteiro": "quarto",
+  Closet: "closet",
+  Banheiro: "banheiro",
+  Lavanderia: "lavanderia",
+  Sala: "sala",
+  "Sala de estar": "sala",
+  "Home theater": "sala",
+  Escritório: "escritorio",
+  "Home office": "escritorio",
+};
+
 function baixarArquivo(conteudo: string, nome: string, mime: string) {
   const blob = new Blob([conteudo], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -2702,6 +2721,7 @@ function MotorResultadoPainel({
             configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
             material_corpo?: { cor_hex?: string };
             ferragens?: { tipo: string; quantidade: number }[];
+            eh_ilha?: boolean;
           };
           const brutos = data.projeto.modulos as unknown as ModuloBruto[];
           const primeiroMaterial = brutos.find((m) => m.material_corpo)?.material_corpo;
@@ -2738,6 +2758,7 @@ function MotorResultadoPainel({
                     configuracao: m.configuracao ?? {},
                     nome_display: m.nome_display ?? m.nome,
                     ferragens: m.ferragens,
+                    eh_ilha: m.eh_ilha,
                   }))}
                   medidas={{
                     largura_cm: medidas.largura * 100,
@@ -3006,6 +3027,8 @@ function Step4Layout({
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
   const [motorAberto, setMotorAberto] = useState(false);
   const [motorLoading, setMotorLoading] = useState(false);
+  const [editorAberto, setEditorAberto] = useState(false);
+  const [gerandoEditor, setGerandoEditor] = useState(false);
   const [motorParede, setMotorParede] = useState<"top" | "bottom" | "left" | "right">("top");
   const [motorFerragem, setMotorFerragem] = useState<"nacional" | "blum" | "hafele">(
     empresaParams.ferragem_padrao,
@@ -3104,6 +3127,31 @@ function Step4Layout({
     },
     ...extra,
   });
+
+  // Editor 3D: gera o mesmo MotorResultado a partir de módulos posicionados à
+  // mão (em vez do layout automático) — reusa 100% o mesmo payload/resposta,
+  // então o resto da tela (3 versões, corte, PCP, exportações) não muda nada.
+  const handleGerarDoEditor = async (placements: PlacementPayload[]) => {
+    setGerandoEditor(true);
+    try {
+      const res = await fetch("/api/motor?action=gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(montarPayloadMotor({ modulos_manuais: placements })),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
+      const data = (await res.json()) as MotorResultado;
+      update({ motorResultado: data });
+      setEditorAberto(false);
+      toast.success(
+        `Projeto gerado a partir do Editor 3D · validação ${data.validacao.status} (${data.validacao.score})`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar orçamento do Editor 3D");
+    } finally {
+      setGerandoEditor(false);
+    }
+  };
 
   // Gera o projeto fabricável pelo motor determinístico (protagonista do fluxo)
   const gerarMotor = useCallback(async () => {
@@ -4377,7 +4425,29 @@ function Step4Layout({
                   </>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => setEditorAberto(true)}
+                className="w-full h-9 rounded-md border border-accent/50 text-accent text-[12.5px] font-medium hover:bg-accent/10 inline-flex items-center justify-center gap-1.5"
+              >
+                <Boxes className="size-3.5" /> Montar no Editor 3D (arrastar módulos)
+              </button>
             </div>
+          )}
+
+          {editorAberto && (
+            <EditorAmbiente3D
+              ambiente={{
+                largura_cm: parseFloat(wizard.form.largura) * 100 || 400,
+                profundidade_cm: parseFloat(wizard.form.profundidade) * 100 || 300,
+                altura_cm: parseFloat(wizard.form.altura) * 100 || 270,
+              }}
+              corMdfHex={wizard.form.cor_mdf || "#D9C7A8"}
+              categoriaInicial={AMBIENTE_TO_CATEGORIA[wizard.form.ambiente]}
+              onGerar={handleGerarDoEditor}
+              gerando={gerandoEditor}
+              onClose={() => setEditorAberto(false)}
+            />
           )}
 
           {/* Resultado do motor é exibido no topo do Step 4 (2.3) */}

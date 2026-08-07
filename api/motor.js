@@ -1889,6 +1889,7 @@ function instanciarModulos(larguras, opcoes) {
       material_fundo: opcoes.materialFundo,
       material_porta: opcoes.materialPorta,
       material_insert: opcoes.materialInsert,
+      eh_ilha: opcoes.ehIlha,
       pecas: [],
       ferragens: [],
       nome_display: `${template.nome} \u2014 ${rotulo}`,
@@ -2399,6 +2400,7 @@ function gerarLayoutIlha(ambiente, prefs) {
     templateFallback: MODULOS_BASE_COZINHA[4],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
     posicao_puxador: prefs.posicao_puxador,
+    ehIlha: true,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base ?? "dobradica",
       ferragem: prefs.ferragem,
@@ -5403,7 +5405,10 @@ function calcularCenaCompleta(modulos, medidas) {
     const parede = m.parede ?? "top";
     let grupoPosicao;
     let grupoRotacaoY;
-    switch (parede) {
+    if (m.eh_ilha) {
+      grupoRotacaoY = 0;
+      grupoPosicao = [px + L / 2, RODAPE, m.posicao_y_cm / 100 + P / 2];
+    } else switch (parede) {
       case "bottom":
         grupoRotacaoY = Math.PI;
         grupoPosicao = [px + L / 2, y0, profundidadeAmb - P / 2];
@@ -6281,6 +6286,51 @@ function pesoModulo(m) {
   );
 }
 
+// src/lib/motor-parametrico/editor-manual.ts
+var TODAS_BIBLIOTECAS = [
+  BIBLIOTECA_COZINHA,
+  BIBLIOTECA_QUARTO,
+  BIBLIOTECA_SALA,
+  BIBLIOTECA_ESCRITORIO,
+  BIBLIOTECA_SERVICOS
+];
+function buscarTemplatePorCodigo(codigo) {
+  for (const biblioteca of TODAS_BIBLIOTECAS) {
+    const encontrado = Object.values(biblioteca).find((m) => m.codigo === codigo);
+    if (encontrado) return encontrado;
+  }
+  return void 0;
+}
+function criarModuloManual(template, placement, materiais, ordem, configOverrides) {
+  const largura_cm = placement.largura_cm ?? template.largura.padrao_cm;
+  const configuracao = { ...template.configuracao_padrao, ...configOverrides };
+  const instancia = {
+    id: `manual_${template.codigo}_${placement.parede}_${Math.round(placement.posicao_x_cm)}_${ordem}`,
+    modulo_template_id: template.id,
+    modulo_template_codigo: template.codigo,
+    modulo_template_versao: template.versao,
+    largura_cm,
+    altura_cm: template.altura.padrao_cm,
+    profundidade_cm: template.profundidade.padrao_cm,
+    parede: placement.parede,
+    posicao_x_cm: placement.posicao_x_cm,
+    posicao_y_cm: placement.posicao_y_cm,
+    configuracao,
+    material_corpo: materiais.materialCorpo,
+    material_fundo: materiais.materialFundo,
+    material_porta: materiais.materialPorta,
+    material_insert: materiais.materialInsert,
+    eh_ilha: placement.ehIlha,
+    pecas: [],
+    ferragens: [],
+    nome_display: `${template.nome} \u2014 Editor 3D`,
+    ordem
+  };
+  instancia.pecas = calcularPecas(instancia, template);
+  instancia.ferragens = calcularFerragens(instancia, template);
+  return instancia;
+}
+
 // src/server/motor-gerar.ts
 async function gerarHandler(req, res) {
   const body = req.body;
@@ -6327,7 +6377,7 @@ async function gerarHandler(req, res) {
     };
     const tipoLayout = body.tipo_layout ?? "cozinha_linear";
     const cfgCusto = { ...CONFIG_CUSTO_PADRAO, ...body.config_custo ?? {} };
-    const resultado = gerarLayout(tipoLayout, ambiente, prefs, comum);
+    const resultado = body.modulos_manuais && body.modulos_manuais.length > 0 ? montarProjetoManual(body.modulos_manuais, ambiente, comum) : gerarLayout(tipoLayout, ambiente, prefs, comum);
     {
       const { chapa_largura_mm: l, chapa_comprimento_mm: c } = cfgCusto;
       const precosPorEspessura = {
@@ -6563,6 +6613,41 @@ function gerarLayout(tipo, ambiente, prefs, comum) {
       return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: [r.parede_usada] };
     }
   }
+}
+function montarProjetoManual(placements, ambiente, comum) {
+  const materialCorpo = criarMaterialPadrao(comum.cor_mdf_hex, 15);
+  const materialFundo = criarMaterialPadrao(comum.cor_mdf_hex, 6);
+  const modulos = placements.map((p, i) => {
+    const template = buscarTemplatePorCodigo(p.template_codigo);
+    if (!template) {
+      throw new Error(`Editor 3D: m\xF3dulo "${p.template_codigo}" n\xE3o encontrado no cat\xE1logo.`);
+    }
+    const materialInsert = materialInsertDe(p.tipo_porta);
+    return criarModuloManual(
+      template,
+      {
+        posicao_x_cm: p.posicao_x_cm,
+        posicao_y_cm: p.posicao_y_cm,
+        parede: p.parede,
+        largura_cm: p.largura_cm,
+        ehIlha: p.eh_ilha
+      },
+      { materialCorpo, materialFundo, materialInsert },
+      i,
+      p.tipo_porta ? { tipo_porta: p.tipo_porta } : void 0
+    );
+  });
+  const paredes_usadas = [...new Set(modulos.map((m) => m.parede))];
+  const r = montarProjeto({
+    ambiente,
+    modulos,
+    paredes_usadas,
+    tipo_ambiente: "Editor 3D",
+    preferencias: comum,
+    avisos: [],
+    nome_padrao: comum.nome ?? "Projeto \u2014 Editor 3D"
+  });
+  return { projeto: r.projeto, validacao: r.validacao, avisos: r.avisos, paredes_usadas: r.paredes_usadas };
 }
 
 // src/lib/motor-parametrico/dxf-parser.ts

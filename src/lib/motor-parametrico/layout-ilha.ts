@@ -112,6 +112,7 @@ export function gerarLayoutIlha(
     templateFallback: MODULOS_BASE_COZINHA[4],
     espessura_padrao_mm: prefs.espessura_padrao_mm,
     posicao_puxador: prefs.posicao_puxador,
+    ehIlha: true,
     configDe: (largura) => configPadrao({
       tipo_porta: prefs.tipo_porta_base ?? "dobradica",
       ferragem: prefs.ferragem,

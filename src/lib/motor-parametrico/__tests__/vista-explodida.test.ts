@@ -212,6 +212,36 @@ describe("calcularCenaCompleta", () => {
     expect(cena[0].grupoRotacaoY).toBeCloseTo(-Math.PI / 2);
     expect(cena[0].grupoPosicao[0]).toBeCloseTo(3 - 0.275); // largura_amb - P/2
   });
+
+  test("eh_ilha: usa posicao_x_cm/posicao_y_cm como coordenadas livres no chão, não encosta na parede (bug real corrigido)", () => {
+    // Antes do fix, todo módulo com parede "bottom" (convenção de layout-ilha.ts
+    // pra ter um eixo de referência) ficava colado na parede de trás,
+    // ignorando posicao_y_cm — a ilha "flutuava" na parede errada.
+    const cena = calcularCenaCompleta(
+      [
+        {
+          largura_cm: 200,
+          altura_cm: 90,
+          profundidade_cm: 90,
+          configuracao: { num_portas: 2 },
+          posicao_x_cm: 100,
+          posicao_y_cm: 130, // profundidade livre no chão — NÃO é "aéreo"
+          parede: "bottom",
+          eh_ilha: true,
+        },
+      ],
+      { largura_cm: 500, profundidade_cm: 400 },
+    );
+    expect(cena[0].grupoRotacaoY).toBe(0); // ilha não rotaciona por parede
+    expect(cena[0].grupoPosicao[0]).toBeCloseTo(1.0 + 1.0); // posicao_x_cm/100 + L/2 (L=200cm)
+    // Z vem de posicao_y_cm (profundidade livre), NÃO de "profundidadeAmb - P/2"
+    // (que seria 4 - 0.45 = 3.55 — bem diferente do valor correto abaixo).
+    expect(cena[0].grupoPosicao[2]).toBeCloseTo(1.3 + 0.45); // posicao_y_cm/100 + P/2 (P=90cm)
+    expect(cena[0].grupoPosicao[2]).not.toBeCloseTo(3.55);
+    // Não fica no piso "aéreo" mesmo com posicao_y_cm ≥ 100 — pra ilha, esse
+    // campo é profundidade, não altura, então sempre fica no nível do piso.
+    expect(cena[0].grupoPosicao[1]).toBeCloseTo(0.1); // RODAPE
+  });
 });
 
 describe("calcularPassosMontagem", () => {
