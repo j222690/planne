@@ -466,7 +466,13 @@ function Fornecedores() {
   useEffect(() => { load(); }, []);
 
   const toggleAtivo = async (f: Fornecedor) => {
-    await supabase.from("fornecedores").update({ ativo: !f.ativo }).eq("id", f.id);
+    // BUG corrigido: mostrava toast.success incondicionalmente, mesmo quando
+    // o update no Supabase falhava — falso positivo explícito pro usuário.
+    const { error } = await supabase.from("fornecedores").update({ ativo: !f.ativo }).eq("id", f.id);
+    if (error) {
+      toast.error("Não foi possível atualizar o fornecedor");
+      return;
+    }
     toast.success(f.ativo ? "Fornecedor desativado" : "Fornecedor ativado");
     setFornecedores((fs) => fs.map((x) => x.id === f.id ? { ...x, ativo: !f.ativo } : x));
   };

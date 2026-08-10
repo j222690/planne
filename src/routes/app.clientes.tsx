@@ -12,6 +12,9 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/app/clientes")({
   component: Clientes,
+  validateSearch: (search: Record<string, unknown>): { cliente?: string } => ({
+    cliente: typeof search.cliente === "string" ? search.cliente : undefined,
+  }),
 });
 
 type Cliente = {
@@ -209,6 +212,10 @@ function RowMenu({ cliente, onEdit, onDeleted }: { cliente: Cliente; onEdit: () 
 }
 
 function Clientes() {
+  // BUG corrigido: chegar aqui vindo da Busca de Lead (com ?cliente=<id>)
+  // caía sempre na lista genérica — nunca abria o registro específico
+  // clicado. Agora abre o painel de detalhe assim que a lista carrega.
+  const { cliente: clienteIdAlvo } = Route.useSearch();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -235,6 +242,12 @@ function Clientes() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!clienteIdAlvo || clientes.length === 0) return;
+    const alvo = clientes.find((c) => c.id === clienteIdAlvo);
+    if (alvo) setDetalhe(alvo);
+  }, [clienteIdAlvo, clientes]);
 
   const filtered = clientes.filter((c) =>
     search === "" ||
@@ -463,8 +476,14 @@ function ClienteDetalhePanel({ cliente, empresaId, onClose, onEdit }: {
   };
 
   const toggleConcluida = async (a: Atividade) => {
-    await supabase.from("atividades").update({ concluida: !a.concluida }).eq("id", a.id);
+    // Otimista: atualiza a UI já, mas reverte se o Supabase falhar (senão o
+    // usuário vê um estado que não bate com o banco até recarregar a página).
     setAtividades((prev) => prev.map((x) => x.id === a.id ? { ...x, concluida: !x.concluida } : x));
+    const { error } = await supabase.from("atividades").update({ concluida: !a.concluida }).eq("id", a.id);
+    if (error) {
+      setAtividades((prev) => prev.map((x) => x.id === a.id ? { ...x, concluida: a.concluida } : x));
+      toast.error("Não foi possível atualizar a atividade");
+    }
   };
 
   const pendentes = atividades.filter((a) => !a.concluida).length;

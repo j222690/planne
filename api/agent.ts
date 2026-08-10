@@ -511,6 +511,41 @@ interface GroqMessage {
   tool_call_id?: string;
 }
 
+// Preço aproximado do llama-3.3-70b-versatile na Groq (US$/1M tokens) — taxa
+// pública de referência, não uma cobrança exata; serve pra dar uma ordem de
+// grandeza real no dashboard de custo, que antes sempre mostrava $0 (a
+// tabela ai_usage existia mas nunca recebia INSERT em lugar nenhum).
+const PRECO_GROQ_INPUT_POR_1M = 0.59;
+const PRECO_GROQ_OUTPUT_POR_1M = 0.79;
+
+// Mesmo motivo do parâmetro `supabase` em executeTool: o generic do client
+// inferido aqui não bate estruturalmente com o alias SupabaseClient por
+// causa de overloads do createClient.
+async function registrarUsoIA(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  empresaId: string,
+  tokensInput: number,
+  tokensOutput: number,
+): Promise<void> {
+  if (tokensInput === 0 && tokensOutput === 0) return;
+  const custo_usd =
+    (tokensInput / 1_000_000) * PRECO_GROQ_INPUT_POR_1M + (tokensOutput / 1_000_000) * PRECO_GROQ_OUTPUT_POR_1M;
+  try {
+    await supabase.from("ai_usage").insert({
+      empresa_id: empresaId,
+      tipo: "chat",
+      modelo: "llama-3.3-70b-versatile",
+      tokens_input: tokensInput,
+      tokens_output: tokensOutput,
+      custo_usd,
+      referencia_tipo: "agent_chat",
+    });
+  } catch {
+    // Não deixa uma falha de telemetria derrubar a resposta real do chat.
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -549,6 +584,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const history: GroqMessage[] = [{ role: "system", content: SYSTEM }, ...messages];
   const toolCallsSummary: { name: string; result: unknown }[] = [];
+  let tokensInputTotal = 0;
+  let tokensOutputTotal = 0;
 
   for (let iter = 0; iter < 6; iter++) {
     const response = await fetch(GROQ_URL, {
@@ -569,17 +606,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!response.ok) {
       const err = await response.text();
+      await registrarUsoIA(supabase, empresaId, tokensInputTotal, tokensOutputTotal);
       return res.status(500).json({ error: `Groq: ${err}` });
     }
 
     const data = (await response.json()) as {
       choices: { message: GroqMessage; finish_reason: string }[];
+      usage?: { prompt_tokens: number; completion_tokens: number };
     };
+    tokensInputTotal += data.usage?.prompt_tokens ?? 0;
+    tokensOutputTotal += data.usage?.completion_tokens ?? 0;
 
     const msg = data.choices[0].message;
     history.push(msg);
 
     if (!msg.tool_calls || msg.tool_calls.length === 0) {
+      await registrarUsoIA(supabase, empresaId, tokensInputTotal, tokensOutputTotal);
       return res.json({
         text: msg.content ?? "",
         toolCalls: toolCallsSummary,
@@ -599,5 +641,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  await registrarUsoIA(supabase, empresaId, tokensInputTotal, tokensOutputTotal);
   return res.status(500).json({ error: "Agente não convergiu em 6 iterações" });
 }

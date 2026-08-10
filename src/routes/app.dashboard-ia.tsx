@@ -15,6 +15,7 @@ type AIStats = {
   rendersCompletos: number;
   totalTokens: number;
   custoTotal: number;
+  temUsoRegistrado: boolean;
   projetosRecentes: { id: string; nome: string; ambiente: string; created_at: string; render_url: string | null }[];
   rendersRecentes: { id: string; status: string; created_at: string; url_resultado: string | null }[];
 };
@@ -29,23 +30,42 @@ function DashboardIA() {
       if (!empresa) return;
       const eid = (empresa as { id: string }).id;
 
+      // BUG corrigido: renders liam de "render_jobs" (tabela legada, nunca
+      // recebe INSERT) — o job real de render 3D vive em "render3d_job".
+      // "ai_usage" existe mas também nunca era escrita em lugar nenhum do
+      // sistema (dashboard sempre mostrava 0/$0 mesmo com IA sendo usada de
+      // verdade) — instrumentamos a escrita real em api/agent.ts.
       const [{ data: projetos }, { data: renders }, { data: usage }] = await Promise.all([
         supabase.from("room_projects").select("id,nome,ambiente,created_at,render_url").eq("empresa_id", eid).order("created_at", { ascending: false }).limit(10),
-        supabase.from("render_jobs").select("id,status,created_at,url_resultado").eq("empresa_id", eid).order("created_at", { ascending: false }).limit(20),
-        supabase.from("ai_usage").select("tokens_usados,custo_usd").eq("empresa_id", eid),
+        supabase.from("render3d_job").select("id,status,created_at,image_path").eq("empresa_id", eid).order("created_at", { ascending: false }).limit(20),
+        supabase.from("ai_usage").select("tokens_input,tokens_output,custo_usd").eq("empresa_id", eid),
       ]);
 
-      const totalTokens = (usage ?? []).reduce((s: number, u: { tokens_usados: number }) => s + (Number(u.tokens_usados) || 0), 0);
+      const totalTokens = (usage ?? []).reduce(
+        (s: number, u: { tokens_input: number; tokens_output: number }) =>
+          s + (Number(u.tokens_input) || 0) + (Number(u.tokens_output) || 0),
+        0,
+      );
       const custoTotal = (usage ?? []).reduce((s: number, u: { custo_usd: number }) => s + (Number(u.custo_usd) || 0), 0);
+
+      const rendersConvertidos = (renders ?? []).map((r: { id: string; status: string; created_at: string; image_path: string | null }) => ({
+        id: r.id,
+        status: r.status,
+        created_at: r.created_at,
+        url_resultado: r.image_path
+          ? supabase.storage.from("renders3d").getPublicUrl(r.image_path).data.publicUrl
+          : null,
+      }));
 
       setStats({
         totalProjetos: projetos?.length ?? 0,
-        totalRenders: renders?.length ?? 0,
-        rendersCompletos: (renders ?? []).filter((r: { status: string }) => r.status === "completed" || r.status === "Ready").length,
+        totalRenders: rendersConvertidos.length,
+        rendersCompletos: rendersConvertidos.filter((r) => r.status === "completed").length,
         totalTokens,
         custoTotal,
+        temUsoRegistrado: (usage ?? []).length > 0,
         projetosRecentes: projetos ?? [],
-        rendersRecentes: renders ?? [],
+        rendersRecentes: rendersConvertidos,
       });
       setLoading(false);
     }
@@ -145,6 +165,12 @@ function DashboardIA() {
                 </span>
               </div>
             </div>
+            {!s.temUsoRegistrado && (
+              <div className="mt-3 text-[11px] text-muted-foreground border-t border-border pt-2">
+                Sem uso registrado ainda — hoje só o chat do Grat grava custo real. Análise de
+                planta/foto e outros pontos de IA ainda não instrumentam essa métrica.
+              </div>
+            )}
           </Surface>
 
           <Surface>

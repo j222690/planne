@@ -294,8 +294,12 @@ function ListaCortePanel({ ordem, empresaId }: { ordem: Ordem; empresaId: string
   useEffect(() => { loadPecas(); }, [ordem.id]);
 
   const toggleCortado = async (peca: Peca) => {
-    await supabase.from("lista_corte").update({ cortado: !peca.cortado }).eq("id", peca.id);
     setPecas((ps) => ps.map((p) => p.id === peca.id ? { ...p, cortado: !p.cortado } : p));
+    const { error } = await supabase.from("lista_corte").update({ cortado: !peca.cortado }).eq("id", peca.id);
+    if (error) {
+      setPecas((ps) => ps.map((p) => p.id === peca.id ? { ...p, cortado: peca.cortado } : p));
+      toast.error("Não foi possível atualizar a peça");
+    }
   };
 
   const handlePrint = () => {

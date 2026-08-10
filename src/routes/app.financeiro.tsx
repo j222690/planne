@@ -254,15 +254,19 @@ function Financeiro() {
       const eid = (empresa as {id:string}).id;
       setEmpresaId(eid);
 
+      // BUG corrigido: antes buscava só os últimos 50 lançamentos e usava
+      // esse MESMO array pra calcular os totais dos StatCards e o gráfico de
+      // 6 meses — qualquer empresa com mais de 50 lançamentos via receita/
+      // despesa/fluxo de caixa subestimados sem nenhum aviso. Agora busca
+      // TODOS pra agregação; a lista "Últimos lançamentos" continua limitada.
       const { data: lancs } = await supabase
         .from("financeiro")
         .select("*")
         .eq("empresa_id", eid)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("created_at", { ascending: false });
 
       const all = (lancs ?? []) as Lancamento[];
-      setLancamentos(all);
+      setLancamentos(all.slice(0, 50));
 
       const receita  = all.filter(l => l.tipo === "entrada" && l.status === "pago").reduce((s,l) => s + Number(l.valor), 0);
       const despesa  = all.filter(l => l.tipo === "saida"   && l.status === "pago").reduce((s,l) => s + Number(l.valor), 0);

@@ -258,7 +258,7 @@ function BuscaLead() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="flex items-center gap-4 px-5 py-3.5 hover:bg-secondary/40 cursor-pointer group"
-                onClick={() => navigate({ to: "/app/clientes" })}
+                onClick={() => navigate({ to: "/app/clientes", search: { cliente: lead.id } })}
               >
                 <div className="size-9 rounded-md bg-secondary text-foreground/70 grid place-items-center text-[12px] font-semibold shrink-0">
                   {lead.nome.split(" ").map((s) => s[0]).slice(0, 2).join("")}
