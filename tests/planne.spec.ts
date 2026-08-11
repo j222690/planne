@@ -388,12 +388,14 @@ test.describe("Navegação sidebar", () => {
   });
 
   test("Não há links quebrados (404) nas rotas do app", async ({ page }) => {
+    test.setTimeout(60_000); // 18 rotas, cada uma com goto + 1.2s de espera, passa dos 30s padrão
     const routes = [
       "/app", "/app/clientes", "/app/orcamentos", "/app/projetos",
       "/app/materiais", "/app/fornecedores", "/app/financeiro",
       "/app/pipeline", "/app/producao", "/app/calendario",
       "/app/ia", "/app/ia-projetos", "/app/dashboard-ia",
       "/app/busca-lead", "/app/historico-precos", "/app/configuracoes",
+      "/app/central-conhecimento", "/app/planos",
     ];
 
     const broken: string[] = [];
@@ -434,5 +436,67 @@ test.describe("Responsividade mobile", () => {
     await goTo(page, "/app/clientes");
     await noErrors(page);
     await page.waitForTimeout(1000);
+  });
+});
+
+// ─── 21. Central de Conhecimento ────────────────────────────────────────────
+
+test.describe("Central de Conhecimento", () => {
+  test.beforeEach(async ({ page }) => { await login(page); });
+
+  test("Página carrega e a base de conhecimento é buscada", async ({ page }) => {
+    await goTo(page, "/app/central-conhecimento");
+    await noErrors(page);
+    await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 8_000 });
+    // aguarda o import dinâmico da base (~470KB) resolver — o placeholder de
+    // loading some e o campo de busca fica habilitado
+    await expect(page.locator("text=Carregando base de conhecimento")).toHaveCount(0, { timeout: 10_000 });
+  });
+
+  test("Busca por texto retorna resultados", async ({ page }) => {
+    await goTo(page, "/app/central-conhecimento");
+    await expect(page.locator("text=Carregando base de conhecimento")).toHaveCount(0, { timeout: 10_000 });
+    const search = page.locator('input[placeholder*="broca"]');
+    await expect(search).toBeVisible({ timeout: 5_000 });
+    await search.fill("dobradiça");
+    await page.waitForTimeout(500);
+    await noErrors(page);
+    const body = await page.content();
+    expect(body).toMatch(/resultado/i);
+  });
+
+  test("Filtro por categoria funciona", async ({ page }) => {
+    await goTo(page, "/app/central-conhecimento");
+    await expect(page.locator("text=Carregando base de conhecimento")).toHaveCount(0, { timeout: 10_000 });
+    const select = page.locator("select");
+    await expect(select).toBeVisible({ timeout: 5_000 });
+    const opcoes = await select.locator("option").allTextContents();
+    expect(opcoes.length).toBeGreaterThan(1);
+    await select.selectOption({ index: 1 });
+    await page.waitForTimeout(500);
+    await noErrors(page);
+  });
+});
+
+// ─── 22. Planos e assinatura ────────────────────────────────────────────────
+
+test.describe("Planos e assinatura", () => {
+  test.beforeEach(async ({ page }) => { await login(page); });
+
+  test("Página de planos carrega com os cards de plano", async ({ page }) => {
+    await goTo(page, "/app/planos");
+    await noErrors(page);
+    await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 8_000 });
+    // cada card de plano tem um botão "Assinar" ou "Plano atual" — não
+    // clicamos nele aqui pra não disparar checkout real na Asaas
+    const botoesPlano = page.locator("button", { hasText: /assinar|plano atual/i });
+    await expect(botoesPlano.first()).toBeVisible({ timeout: 8_000 });
+  });
+
+  test("Preços dos planos são exibidos em R$", async ({ page }) => {
+    await goTo(page, "/app/planos");
+    await noErrors(page);
+    const body = await page.content();
+    expect(body).toMatch(/R\$/);
   });
 });
