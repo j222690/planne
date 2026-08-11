@@ -3,6 +3,7 @@ import { PageHeader, Surface } from "@/components/planne/primitives";
 import {
   Sparkles, Send, Loader2, Zap, Bot,
   Users, FileText, Wallet, Folder, UserPlus,
+  type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,7 +21,7 @@ const examples = [
   "Cadastra um novo cliente: João Silva, (49) 99999-1234, Instagram",
 ];
 
-const TOOL_LABELS: Record<string, { label: string; Icon: React.ElementType }> = {
+const TOOL_LABELS: Record<string, { label: string; Icon: LucideIcon }> = {
   buscar_clientes:    { label: "Buscando clientes",    Icon: Users },
   listar_orcamentos:  { label: "Listando orçamentos",  Icon: FileText },
   resumo_financeiro:  { label: "Consultando financeiro", Icon: Wallet },
