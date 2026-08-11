@@ -1,13 +1,14 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Grid, Edges } from "@react-three/drei";
+import { OrbitControls, Grid, Edges, Environment } from "@react-three/drei";
 import { Search, Trash2, RotateCw, Waves, X, Loader2 } from "lucide-react";
 import {
   calcularCenaCompleta,
   type ModuloComPosicao,
 } from "@/lib/motor-parametrico/vista-explodida";
 import { listarTodosOsModulos } from "@/lib/motor-parametrico/editor-manual";
+import { useTexturasMdf } from "./texturas-mdf";
 import {
   moverModuloNaParede,
   moverModuloIlha,
@@ -102,6 +103,9 @@ function ModuloBox({
   const L = placement.largura_cm / 100;
   const A = placement.template.altura.padrao_cm / 100;
   const P = placement.template.profundidade.padrao_cm / 100;
+  // Textura só no estado normal — selecionado usa azul chapado (mais claro
+  // de ver qual módulo está ativo do que um MDF "azul" texturizado).
+  const { roughnessMap, normalMap } = useTexturasMdf(L, A);
   return (
     <group position={grupoPosicao} rotation={[0, grupoRotacaoY, 0]}>
       <mesh
@@ -114,13 +118,19 @@ function ModuloBox({
         onClick={(e) => e.stopPropagation()}
       >
         <boxGeometry args={[L, A, P]} />
-        <meshStandardMaterial
-          color={selecionado ? "#3b82f6" : corHex}
-          roughness={0.6}
-          metalness={0.05}
-          transparent={!selecionado}
-          opacity={selecionado ? 1 : 0.92}
-        />
+        {selecionado ? (
+          <meshStandardMaterial color="#3b82f6" roughness={0.6} metalness={0.05} />
+        ) : (
+          <meshStandardMaterial
+            color={corHex}
+            roughness={0.8}
+            metalness={0.02}
+            roughnessMap={roughnessMap}
+            normalMap={normalMap}
+            transparent
+            opacity={0.92}
+          />
+        )}
         <Edges color={selecionado ? "#1d4ed8" : "#64748b"} />
       </mesh>
     </group>
@@ -428,21 +438,26 @@ export function EditorAmbiente3D({
             <Edges color="#334155" />
           </mesh>
 
-          {cena.map((m, i) => (
-            <ModuloBox
-              key={placements[i].uid}
-              placement={placements[i]}
-              grupoPosicao={m.grupoPosicao}
-              grupoRotacaoY={m.grupoRotacaoY}
-              corHex={corMdfHex}
-              selecionado={placements[i].uid === selecionadoUid}
-              onSelecionar={() => setSelecionadoUid(placements[i].uid)}
-              onPointerDownModulo={() => {
-                setArrastandoUid(placements[i].uid);
-                setOrbitAtivo(false);
-              }}
-            />
-          ))}
+          {/* Suspense: useTexture (MDF) e Environment carregam de forma
+              assíncrona — sem isso o R3F derruba a montagem da cena. */}
+          <Suspense fallback={null}>
+            <Environment preset="apartment" />
+            {cena.map((m, i) => (
+              <ModuloBox
+                key={placements[i].uid}
+                placement={placements[i]}
+                grupoPosicao={m.grupoPosicao}
+                grupoRotacaoY={m.grupoRotacaoY}
+                corHex={corMdfHex}
+                selecionado={placements[i].uid === selecionadoUid}
+                onSelecionar={() => setSelecionadoUid(placements[i].uid)}
+                onPointerDownModulo={() => {
+                  setArrastandoUid(placements[i].uid);
+                  setOrbitAtivo(false);
+                }}
+              />
+            ))}
+          </Suspense>
 
           <OrbitControls
             makeDefault

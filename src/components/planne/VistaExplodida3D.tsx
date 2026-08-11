@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Edges } from "@react-three/drei";
+import { OrbitControls, Edges, Environment } from "@react-three/drei";
 import {
   Camera,
   ChevronDown,
@@ -15,6 +15,7 @@ import {
   type ModuloComPosicao,
   type PecaVisual3D,
 } from "@/lib/motor-parametrico/vista-explodida";
+import { useTexturasMdf } from "./texturas-mdf";
 
 function PecaMesh({
   peca,
@@ -40,6 +41,10 @@ function PecaMesh({
   ];
   const corFrente = peca.tipo === "porta" || peca.tipo === "gaveta";
   const cor = selecionada ? "#3b82f6" : destaque ? "#f59e0b" : corFrente ? corHex : "#f2f0eb";
+  // Textura de MDF só no estado "normal" — raio-x fica quase transparente
+  // (textura seria desperdiçada) e seleção/destaque usam cor chapada de propósito.
+  const usaTextura = !selecionada && !destaque && !raioX;
+  const { roughnessMap, normalMap } = useTexturasMdf(peca.tamanho[0], peca.tamanho[1]);
   return (
     <mesh
       position={pos}
@@ -53,6 +58,8 @@ function PecaMesh({
         color={cor}
         roughness={0.6}
         metalness={0.05}
+        roughnessMap={usaTextura ? roughnessMap : undefined}
+        normalMap={usaTextura ? normalMap : undefined}
         transparent={raioX}
         opacity={raioX ? (corFrente ? 0.06 : 0.12) : 1}
         depthWrite={!raioX}
@@ -215,36 +222,43 @@ export function VistaExplodida3D({
           <ambientLight intensity={0.75} />
           <directionalLight position={[2, 4, 3]} intensity={1.1} />
           <directionalLight position={[-2, 1.5, -2]} intensity={0.35} />
-          <group onPointerMissed={() => setSelecionadaId(null)}>
-            {cena.map((m) => (
-              <group
-                key={m.moduloIndex}
-                position={m.grupoPosicao}
-                rotation={[0, m.grupoRotacaoY, 0]}
-              >
-                {m.pecas
-                  .filter((p) => mostrarPortas || (p.tipo !== "porta" && p.tipo !== "gaveta"))
-                  .filter(
-                    (p) =>
-                      !(modoManual && m.moduloIndex === focoIndex) || tiposInstalados.has(p.tipo),
-                  )
-                  .map((p) => (
-                    <PecaMesh
-                      key={p.id}
-                      peca={p}
-                      explosao={modoManual ? 0 : m.moduloIndex === focoIndex ? explosao : 0}
-                      corHex={corHex}
-                      raioX={raioX}
-                      destaque={
-                        modoManual && m.moduloIndex === focoIndex && tiposDoPassoAtual.has(p.tipo)
-                      }
-                      selecionada={p.id === selecionadaId}
-                      onSelect={() => selecionarPeca(m.moduloIndex, p.id)}
-                    />
-                  ))}
-              </group>
-            ))}
-          </group>
+          {/* Suspense: useTexture (MDF) e Environment carregam de forma
+              assíncrona — sem isso o R3F derruba a montagem da cena. Sem
+              Environment no raio-x — o contraste ali já foi ajustado à mão
+              (ver memória do projeto) e reflexo ambiente atrapalharia. */}
+          <Suspense fallback={null}>
+            {!raioX && <Environment preset="apartment" />}
+            <group onPointerMissed={() => setSelecionadaId(null)}>
+              {cena.map((m) => (
+                <group
+                  key={m.moduloIndex}
+                  position={m.grupoPosicao}
+                  rotation={[0, m.grupoRotacaoY, 0]}
+                >
+                  {m.pecas
+                    .filter((p) => mostrarPortas || (p.tipo !== "porta" && p.tipo !== "gaveta"))
+                    .filter(
+                      (p) =>
+                        !(modoManual && m.moduloIndex === focoIndex) || tiposInstalados.has(p.tipo),
+                    )
+                    .map((p) => (
+                      <PecaMesh
+                        key={p.id}
+                        peca={p}
+                        explosao={modoManual ? 0 : m.moduloIndex === focoIndex ? explosao : 0}
+                        corHex={corHex}
+                        raioX={raioX}
+                        destaque={
+                          modoManual && m.moduloIndex === focoIndex && tiposDoPassoAtual.has(p.tipo)
+                        }
+                        selecionada={p.id === selecionadaId}
+                        onSelect={() => selecionarPeca(m.moduloIndex, p.id)}
+                      />
+                    ))}
+                </group>
+              ))}
+            </group>
+          </Suspense>
           <OrbitControls makeDefault target={[centroX, alturaTotal / 2, centroZ]} enablePan />
         </Canvas>
       </div>
