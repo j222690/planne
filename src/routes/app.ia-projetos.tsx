@@ -578,7 +578,7 @@ function IAProjetoPage() {
           })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => (d?.ambiente_geometrico as Record<string, unknown>) ?? null)
-            .catch(() => null)
+            .catch((e) => { console.error("Falha ao analisar geometria da planta:", e); return null; })
         : Promise.resolve(null);
 
       const [res, ambienteGeometrico] = await Promise.all([visionPromise, ambientePromise]);

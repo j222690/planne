@@ -3,6 +3,7 @@ import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/r
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/lib/theme";
 import { isConnectionError } from "@/lib/supabase";
+import { ErrorBoundary } from "@/components/planne/ErrorBoundary";
 
 function NotFoundComponent() {
   return (
@@ -76,7 +77,9 @@ function RootComponent() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
         <Toaster position="bottom-right" richColors closeButton />
       </QueryClientProvider>
     </ThemeProvider>

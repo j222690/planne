@@ -3402,7 +3402,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     if (!(orc as unknown as { moveis_config?: unknown }).moveis_config) {
       getOrcamentoMoveis(orc.id)
         .then((cfg) => { if (cfg) setMoveisCfg(parseMoveisCfg(cfg)); })
-        .catch(() => {});
+        .catch((e) => console.error("Falha ao carregar configuração de móveis do orçamento:", e));
     }
   }, [orc.id]);
 
@@ -3444,20 +3444,31 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
       await updateOrcamentoStatus(orc.id, newStatus);
 
       if (newStatus === "aprovado" && empresaId) {
-        await Promise.all([
+        const [ordemResult, lancamentoResult] = await Promise.allSettled([
           upsertOrdemProducao(empresaId, {
             projeto_id: orc.projeto_id ?? null,
             observacoes: `Gerado do orçamento ${orc.numero ?? ""}`,
-          }).catch(() => {}),
+          }),
           upsertLancamento(empresaId, {
             tipo: "entrada",
             descricao: `Orçamento ${orc.numero ?? ""} — ${orc.clientes?.nome ?? "Cliente"}`,
             valor: orc.total ?? 0,
             categoria: "Orçamento aprovado",
             status: "pendente",
-          }).catch(() => {}),
+          }),
         ]);
-        toast.success("Aprovado! Ordem de produção e entrada financeira criadas automaticamente.");
+        if (ordemResult.status === "rejected") console.error("Falha ao criar ordem de produção automática:", ordemResult.reason);
+        if (lancamentoResult.status === "rejected") console.error("Falha ao criar lançamento financeiro automático:", lancamentoResult.reason);
+
+        if (ordemResult.status === "fulfilled" && lancamentoResult.status === "fulfilled") {
+          toast.success("Aprovado! Ordem de produção e entrada financeira criadas automaticamente.");
+        } else if (ordemResult.status === "rejected" && lancamentoResult.status === "rejected") {
+          toast.warning("Aprovado, mas a ordem de produção e a entrada financeira não puderam ser criadas automaticamente. Crie-as manualmente.");
+        } else if (ordemResult.status === "rejected") {
+          toast.warning("Aprovado e entrada financeira criada, mas a ordem de produção não pôde ser criada automaticamente.");
+        } else {
+          toast.warning("Aprovado e ordem de produção criada, mas a entrada financeira não pôde ser criada automaticamente.");
+        }
       } else {
         toast.success(`Status atualizado para ${STATUS_LABEL[newStatus]}`);
       }
