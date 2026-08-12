@@ -88,6 +88,13 @@ interface RequestBody {
    * guardando a profundidade — mesma convenção de layout-ilha.ts.
    */
   modulos_manuais?: {
+    /**
+     * uid estável gerado no cliente (sobrevive a drag/reorder/delete de
+     * outros módulos) — vira `ModuloInstanciado.id`. Opcional por
+     * compatibilidade com payloads antigos sem o campo; nesse caso
+     * `montarProjetoManual` cai de volta pro id posicional (instável).
+     */
+    id?: string;
     template_codigo: string;
     posicao_x_cm: number;
     posicao_y_cm: number;
@@ -540,6 +547,7 @@ function montarProjetoManual(
     return criarModuloManual(
       template,
       {
+        id: p.id,
         posicao_x_cm: p.posicao_x_cm,
         posicao_y_cm: p.posicao_y_cm,
         parede: p.parede,

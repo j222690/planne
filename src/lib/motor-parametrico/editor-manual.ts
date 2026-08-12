@@ -55,6 +55,12 @@ export function buscarTemplatePorCodigo(codigo: string): ModuloParametrico | und
 }
 
 export interface PlacementManual {
+  /**
+   * uid estável (gerado no cliente, sobrevive a drag/reorder/delete de
+   * outros módulos). Se ausente, cai no id posicional antigo — instável,
+   * só por compatibilidade com chamadores que ainda não passam id.
+   */
+  id?: string;
   posicao_x_cm: number;
   /** ≥100 = aéreo (módulo de parede); pra `ehIlha:true`, é a profundidade livre no chão. */
   posicao_y_cm: number;
@@ -89,7 +95,7 @@ export function criarModuloManual(
   const configuracao: ConfiguracaoModulo = { ...template.configuracao_padrao, ...configOverrides };
 
   const instancia: ModuloInstanciado = {
-    id: `manual_${template.codigo}_${placement.parede}_${Math.round(placement.posicao_x_cm)}_${ordem}`,
+    id: placement.id ?? `manual_${template.codigo}_${placement.parede}_${Math.round(placement.posicao_x_cm)}_${ordem}`,
     modulo_template_id: template.id,
     modulo_template_codigo: template.codigo,
     modulo_template_versao: template.versao,

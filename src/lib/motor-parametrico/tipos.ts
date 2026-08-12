@@ -423,6 +423,15 @@ export interface RegraFerragem {
  *   - pecas e ferragens são SEMPRE derivados — recalculados quando config muda
  */
 export interface ModuloInstanciado {
+  /**
+   * Chave de identidade — no fluxo do Editor 3D (editor-manual.ts), é o uid
+   * gerado no cliente na criação do módulo e sobrevive a drag/reorder/
+   * delete de outros módulos (nunca é recriado, só reatribuído no patch).
+   * `Peca.id`/`Ferragem.id` derivam deste id, então mantê-lo estável
+   * mantém tudo abaixo estável também. No layout automático
+   * (layout-shared.ts) ainda é posicional/instável — ver Fase 0 do plano
+   * do motor 3D paramétrico.
+   */
   id: string;
   modulo_template_id: string;
   modulo_template_codigo: string;

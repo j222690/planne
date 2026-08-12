@@ -44,6 +44,13 @@ const TIPOS_PORTA_EDITAVEIS: { valor: ConfiguracaoModulo["tipo_porta"]; label: s
 ];
 
 export interface PlacementPayload {
+  /**
+   * uid gerado no cliente na criação do módulo (nunca muda com drag/reorder)
+   * — vira `ModuloInstanciado.id` no servidor, em vez de um id posicional
+   * recalculado a cada geração. Sem isso, seleção/painel de propriedades/
+   * undo-redo (fases seguintes) não têm em que se ancorar de forma estável.
+   */
+  id: string;
   template_codigo: string;
   posicao_x_cm: number;
   posicao_y_cm: number;
@@ -318,6 +325,7 @@ export function EditorAmbiente3D({
 
   const gerarOrcamento = () => {
     const payload: PlacementPayload[] = placements.map((p) => ({
+      id: p.uid,
       template_codigo: p.template.codigo,
       posicao_x_cm: p.posicao_x_cm,
       posicao_y_cm: p.posicao_y_cm,

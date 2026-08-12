@@ -135,3 +135,82 @@ describe("criarModuloManual — equivalência com o fluxo automático", () => {
     expect(manual.configuracao.num_gavetas).toBe(2);
   });
 });
+
+describe("criarModuloManual — id estável (Fase 0 do plano do motor 3D paramétrico)", () => {
+  test("usa o id do placement quando fornecido, em vez de gerar um id posicional", () => {
+    const template = getTemplateBase(60)!;
+    const materialCorpo = criarMaterialPadrao("#D9C7A8", 15);
+    const manual = criarModuloManual(
+      template,
+      { id: "uid-fixo-abc", posicao_x_cm: 0, posicao_y_cm: 0, parede: "top", largura_cm: 60 },
+      { materialCorpo },
+      0,
+    );
+    expect(manual.id).toBe("uid-fixo-abc");
+  });
+
+  test("id não muda quando a posição (drag) muda, dado o mesmo uid", () => {
+    const template = getTemplateBase(60)!;
+    const materialCorpo = criarMaterialPadrao("#D9C7A8", 15);
+    const antes = criarModuloManual(
+      template,
+      { id: "uid-fixo-xyz", posicao_x_cm: 0, posicao_y_cm: 0, parede: "top", largura_cm: 60 },
+      { materialCorpo },
+      0,
+    );
+    const depoisDoDrag = criarModuloManual(
+      template,
+      { id: "uid-fixo-xyz", posicao_x_cm: 220, posicao_y_cm: 0, parede: "top", largura_cm: 60 },
+      { materialCorpo },
+      0,
+    );
+    expect(depoisDoDrag.id).toBe(antes.id);
+  });
+
+  test("id não muda quando a ordem muda (ex.: deletar um módulo antes dele desloca o índice)", () => {
+    const template = getTemplateBase(60)!;
+    const materialCorpo = criarMaterialPadrao("#D9C7A8", 15);
+    const comOrdem2 = criarModuloManual(
+      template,
+      { id: "uid-fixo-777", posicao_x_cm: 0, posicao_y_cm: 0, parede: "top", largura_cm: 60 },
+      { materialCorpo },
+      2,
+    );
+    const comOrdem0 = criarModuloManual(
+      template,
+      { id: "uid-fixo-777", posicao_x_cm: 0, posicao_y_cm: 0, parede: "top", largura_cm: 60 },
+      { materialCorpo },
+      0,
+    );
+    expect(comOrdem0.id).toBe(comOrdem2.id);
+  });
+
+  test("Peca.id e Ferragem.id derivam do id do módulo — estáveis de graça quando o módulo é estável", () => {
+    const template = getTemplateBase(60)!;
+    const materialCorpo = criarMaterialPadrao("#D9C7A8", 15);
+    const manual = criarModuloManual(
+      template,
+      { id: "uid-fixo-999", posicao_x_cm: 0, posicao_y_cm: 0, parede: "top", largura_cm: 60 },
+      { materialCorpo },
+      0,
+    );
+    expect(manual.pecas.length).toBeGreaterThan(0);
+    expect(manual.pecas.every((p) => p.id.startsWith("uid-fixo-999_"))).toBe(true);
+    expect(manual.pecas.every((p) => p.modulo_instanciado_id === "uid-fixo-999")).toBe(true);
+    if (manual.ferragens.length > 0) {
+      expect(manual.ferragens.every((f) => f.modulo_instanciado_id === "uid-fixo-999")).toBe(true);
+    }
+  });
+
+  test("sem id no placement (compatibilidade retroativa), cai no id posicional antigo", () => {
+    const template = getTemplateBase(60)!;
+    const materialCorpo = criarMaterialPadrao("#D9C7A8", 15);
+    const manual = criarModuloManual(
+      template,
+      { posicao_x_cm: 137, posicao_y_cm: 0, parede: "left", largura_cm: 60 },
+      { materialCorpo },
+      3,
+    );
+    expect(manual.id).toBe(`manual_${template.codigo}_left_137_3`);
+  });
+});

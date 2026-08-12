@@ -6305,7 +6305,7 @@ function criarModuloManual(template, placement, materiais, ordem, configOverride
   const largura_cm = placement.largura_cm ?? template.largura.padrao_cm;
   const configuracao = { ...template.configuracao_padrao, ...configOverrides };
   const instancia = {
-    id: `manual_${template.codigo}_${placement.parede}_${Math.round(placement.posicao_x_cm)}_${ordem}`,
+    id: placement.id ?? `manual_${template.codigo}_${placement.parede}_${Math.round(placement.posicao_x_cm)}_${ordem}`,
     modulo_template_id: template.id,
     modulo_template_codigo: template.codigo,
     modulo_template_versao: template.versao,
@@ -6626,6 +6626,7 @@ function montarProjetoManual(placements, ambiente, comum) {
     return criarModuloManual(
       template,
       {
+        id: p.id,
         posicao_x_cm: p.posicao_x_cm,
         posicao_y_cm: p.posicao_y_cm,
         parede: p.parede,
