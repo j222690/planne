@@ -51,6 +51,12 @@ export interface OrcamentoInput {
   observacoes?: string | null;
   cliente_id?: string | null;
   projeto_id?: string | null;
+  /**
+   * Vínculo com o projeto rico do motor paramétrico (room_projects) —
+   * diferente de `projeto_id`, que referencia a tabela `projetos` legada
+   * (sistema comercial simples, desconectado do motor).
+   */
+  room_project_id?: string | null;
   moveis_config?: unknown;
 }
 

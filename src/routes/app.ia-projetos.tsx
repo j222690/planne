@@ -500,6 +500,68 @@ function IAProjetoPage() {
 
   const update = (patch: Partial<WizardState>) => setWizard((w) => (w ? { ...w, ...patch } : w));
 
+  // Reidrata um projeto salvo direto do JSONB (sem rechamar IA nem o motor)
+  // — reabertura instantânea e fiel ao que foi calculado/mostrado da última
+  // vez. Projetos antigos (sem motor_resultado) caem no modo resumo, com
+  // aviso explícito pra não passar falsa sensação de fidelidade.
+  const abrirProjetoSalvo = async (id: string) => {
+    const { data: row, error } = await supabase
+      .from("room_projects")
+      .select(
+        "id,nome,ambiente,estilo,medidas,cliente_id,analise_ia,moveis_layout,orcamento_ia,render_url,motor_resultado",
+      )
+      .eq("id", id)
+      .single();
+    if (error || !row) {
+      toast.error("Não foi possível abrir o projeto salvo");
+      return;
+    }
+    const medidas = (row.medidas ?? {}) as { largura?: number; profundidade?: number; altura?: number };
+    const motorResultado = (row.motor_resultado as MotorResultado | null) ?? null;
+    if (!motorResultado) {
+      toast.info(
+        "Este projeto foi criado antes do editor 3D rico — abrindo em modo resumo (sem 3D fabricável).",
+      );
+    }
+    setWizard({
+      step: 4,
+      projetoId: row.id,
+      comodos: [],
+      comodoAtivoId: null,
+      form: {
+        nome: row.nome ?? "",
+        ambiente: row.ambiente ?? "Sala de estar",
+        estilo: row.estilo ?? "Moderno Minimalista",
+        largura: String(medidas.largura ?? 4),
+        profundidade: String(medidas.profundidade ?? 3),
+        altura: String(medidas.altura ?? 2.7),
+        descricao: "",
+        cor_mdf: "#f5f3f0",
+        porta_parede: "bottom",
+        janelas: [],
+      },
+      planta: null,
+      ambienteGeometrico: null,
+      referencias: [],
+      analisando: false,
+      analise: (row.analise_ia as AnaliseIA | null) ?? null,
+      moveis: (row.moveis_layout as Movel[] | null) ?? [],
+      renderUrl: row.render_url ?? null,
+      renderUrls: row.render_url ? [row.render_url] : [],
+      motorResultado,
+      renderLoading: false,
+      renderJobId: null,
+      listaCorte: null,
+      listaCorteLoading: false,
+      renderMode: "pro",
+      previewUrl: null,
+      clienteId: row.cliente_id ?? null,
+      clienteNome: null,
+      criandoOrdem: false,
+      error: null,
+    });
+  };
+
   // ── Step 3: Analyze ──────────────────────────────────────────────────────
 
   const analisar = useCallback(async () => {
@@ -1003,7 +1065,12 @@ function IAProjetoPage() {
 
   if (!wizard)
     return (
-      <LandingPage onStart={initWizard} savedProjects={savedProjects} loading={loadingProjects} />
+      <LandingPage
+        onStart={initWizard}
+        onAbrirProjeto={abrirProjetoSalvo}
+        savedProjects={savedProjects}
+        loading={loadingProjects}
+      />
     );
 
   return (
@@ -2993,6 +3060,24 @@ function MotorResultadoPainel({
   );
 }
 
+// Fase 1 do plano de evolução do motor 3D paramétrico: fonte única de
+// verdade persistida. Guarda o MotorResultado COMPLETO (não só o
+// ProjetoFabricavel) — de propósito: um orçamento já mostrado ao cliente
+// não pode mudar de valor sozinho se a empresa alterar o preço padrão de
+// chapa depois. Chamado logo após todo `update({ motorResultado })` real.
+async function persistirMotorResultado(projetoId: string | null, data: MotorResultado) {
+  if (!projetoId) return;
+  const { error } = await supabase
+    .from("room_projects")
+    .update({
+      projeto_fabricavel: data.projeto,
+      motor_resultado: data,
+      origem: "motor_parametrico",
+    })
+    .eq("id", projetoId);
+  if (error) console.error("Falha ao persistir o projeto fabricável:", error);
+}
+
 function Step4Layout({
   wizard,
   update,
@@ -3142,6 +3227,7 @@ function Step4Layout({
       if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
       const data = (await res.json()) as MotorResultado;
       update({ motorResultado: data });
+      await persistirMotorResultado(wizard.projetoId, data);
       setEditorAberto(false);
       toast.success(
         `Projeto gerado a partir do Editor 3D · validação ${data.validacao.status} (${data.validacao.score})`,
@@ -3166,6 +3252,7 @@ function Step4Layout({
       if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
       const data = (await res.json()) as MotorResultado;
       update({ motorResultado: data });
+      await persistirMotorResultado(wizard.projetoId, data);
       setMotorAberto(false);
 
       // 3.4: guarda o resumo das 3 versões no cômodo ativo, para consolidação.
@@ -3205,6 +3292,7 @@ function Step4Layout({
     wizard.ambienteGeometrico,
     wizard.comodoAtivoId,
     wizard.comodos,
+    wizard.projetoId,
     update,
     motorParede,
     motorFerragem,
@@ -3434,6 +3522,7 @@ function Step4Layout({
           total: fin.preco_venda,
           observacoes: `${wizard.form.nome || wizard.form.ambiente} — versão ${versao} (motor paramétrico). Prazo ${v.prazo_producao_dias} dias.`,
           cliente_id: wizard.clienteId ?? null,
+          room_project_id: wizard.projetoId ?? null,
         });
         const itens = (v.itens ?? []).map((it) => ({
           orcamento_id: orc.id,
@@ -3453,7 +3542,7 @@ function Step4Layout({
         setCriandoVersao(null);
       }
     },
-    [wizard.motorResultado, wizard.form, wizard.clienteId, navigateMotor],
+    [wizard.motorResultado, wizard.form, wizard.clienteId, wizard.projetoId, navigateMotor],
   );
 
   // Cria a ordem de produção a partir do plano de corte (nesting) + PCP do motor
@@ -4723,10 +4812,12 @@ function Step5Render({
 
 function LandingPage({
   onStart,
+  onAbrirProjeto,
   savedProjects,
   loading,
 }: {
   onStart: () => void;
+  onAbrirProjeto: (id: string) => void;
   savedProjects: SavedProject[];
   loading: boolean;
 }) {
@@ -4786,9 +4877,11 @@ function LandingPage({
           <div className="text-[13px] font-semibold mb-4">Projetos salvos</div>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
             {savedProjects.map((p) => (
-              <div
+              <button
                 key={p.id}
-                className="rounded-lg border border-border overflow-hidden hover:border-border-strong transition-colors"
+                type="button"
+                onClick={() => onAbrirProjeto(p.id)}
+                className="text-left rounded-lg border border-border overflow-hidden hover:border-border-strong transition-colors cursor-pointer"
               >
                 <div className="h-28 bg-surface-2 grid place-items-center overflow-hidden">
                   {p.render_url ? (
@@ -4806,7 +4899,7 @@ function LandingPage({
                     {new Date(p.created_at).toLocaleDateString("pt-BR")}
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </Surface>
