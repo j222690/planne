@@ -103,6 +103,8 @@ interface RequestBody {
     tipo_porta?: ConfiguracaoModulo["tipo_porta"];
     /** Módulo solto no meio do cômodo (ilha) — `posicao_y_cm` vira profundidade livre. */
     eh_ilha?: boolean;
+    /** Override de cor do MDF só deste módulo (Fase 3 — edição em tempo real no Editor 3D). Sem isso usa `preferencias.cor_mdf_hex`. */
+    material_corpo_hex?: string;
   }[];
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
@@ -544,6 +546,12 @@ function montarProjetoManual(
       throw new Error(`Editor 3D: módulo "${p.template_codigo}" não encontrado no catálogo.`);
     }
     const materialInsert = materialInsertDe(p.tipo_porta);
+    // Fase 3: cor por módulo — só cria um Material novo quando o usuário
+    // realmente sobrescreveu a cor daquele módulo no Editor 3D; senão
+    // reaproveita o material padrão do projeto (mesma instância pros outros).
+    const materialCorpoModulo = p.material_corpo_hex
+      ? criarMaterialPadrao(p.material_corpo_hex, 15)
+      : materialCorpo;
     return criarModuloManual(
       template,
       {
@@ -554,7 +562,7 @@ function montarProjetoManual(
         largura_cm: p.largura_cm,
         ehIlha: p.eh_ilha,
       },
-      { materialCorpo, materialFundo, materialInsert },
+      { materialCorpo: materialCorpoModulo, materialFundo, materialInsert },
       i,
       p.tipo_porta ? { tipo_porta: p.tipo_porta } : undefined,
     );

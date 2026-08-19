@@ -61,6 +61,8 @@ export interface PlacementPayload {
   largura_cm?: number;
   eh_ilha?: boolean;
   tipo_porta?: ConfiguracaoModulo["tipo_porta"];
+  /** Override de cor do MDF por módulo (Fase 3) — sem isso usa a cor padrão do projeto. */
+  material_corpo_hex?: string;
 }
 
 interface PlacementLocal {
@@ -71,6 +73,8 @@ interface PlacementLocal {
   parede: ParedeId;
   largura_cm: number;
   ehIlha: boolean;
+  /** Cor do MDF só deste módulo — Fase 3 (edição paramétrica em tempo real). undefined = usa corMdfHex do projeto. */
+  corHex?: string;
   tipoPorta?: ConfiguracaoModulo["tipo_porta"];
 }
 
@@ -355,6 +359,7 @@ export function EditorAmbiente3D({
       largura_cm: p.largura_cm,
       eh_ilha: p.ehIlha,
       tipo_porta: p.tipoPorta,
+      material_corpo_hex: p.corHex,
     }));
     onGerar(payload);
   };
@@ -540,7 +545,7 @@ export function EditorAmbiente3D({
                 pecas={m.pecas}
                 grupoPosicao={m.grupoPosicao}
                 grupoRotacaoY={m.grupoRotacaoY}
-                corHex={corMdfHex}
+                corHex={placements[i].corHex ?? corMdfHex}
                 pecaSelecionadaId={placements[i].uid === selecionadoUid ? pecaSelecionadaId : null}
                 onSelecionarModulo={() => selecionarModulo(placements[i].uid)}
                 onSelecionarPeca={(pecaId) => selecionarPeca(placements[i].uid, pecaId)}
@@ -582,6 +587,26 @@ export function EditorAmbiente3D({
                 step={selecionado.template.largura.passo_cm}
                 onChange={(e) => atualizar(selecionado.uid, { largura_cm: Number(e.target.value) })}
                 className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none"
+              />
+            </div>
+            <div>
+              <div className="text-[10.5px] text-muted-foreground mb-0.5 flex items-center justify-between">
+                <span>Cor do MDF</span>
+                {selecionado.corHex && (
+                  <button
+                    type="button"
+                    onClick={() => atualizar(selecionado.uid, { corHex: undefined })}
+                    className="text-accent hover:underline"
+                  >
+                    Usar padrão
+                  </button>
+                )}
+              </div>
+              <input
+                type="color"
+                value={selecionado.corHex ?? corMdfHex}
+                onChange={(e) => atualizar(selecionado.uid, { corHex: e.target.value })}
+                className="w-full h-7 rounded border border-border bg-surface-2 cursor-pointer"
               />
             </div>
             {selecionado.template.configuracao_padrao.num_portas > 0 && (
