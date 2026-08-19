@@ -1,9 +1,10 @@
-import { useMemo, useState, useCallback, Suspense } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { Grid, Edges, Environment } from "@react-three/drei";
 import {
   Search, Trash2, RotateCw, Waves, X, Loader2, ChevronDown, ChevronRight as ChevronRightIcon,
+  Undo2, Redo2,
 } from "lucide-react";
 import {
   calcularCenaCompleta,
@@ -175,6 +176,53 @@ export function EditorAmbiente3D({
   onClose: () => void;
 }) {
   const [placements, setPlacements] = useState<PlacementLocal[]>([]);
+  // Undo/redo (Fase 5) — stack de snapshots em ref (não re-renderiza sozinho;
+  // historyTick força o React a reavaliar se os botões devem ficar
+  // habilitados). Snapshot só em mudança DISCRETA (fim de arraste, add/
+  // remove, troca de cor/largura/porta) — nunca a cada pointermove do drag,
+  // senão um arraste vira 60 entradas no histórico.
+  const historyRef = useRef<{ past: PlacementLocal[][]; future: PlacementLocal[][] }>({
+    past: [],
+    future: [],
+  });
+  // Força um re-render pra os botões Undo/Redo reavaliarem
+  // historyRef.current.past/future.length — o ref sozinho não dispara isso.
+  const [, forceHistoryRender] = useState(0);
+  const pushHistory = useCallback(() => {
+    historyRef.current.past.push(placements);
+    historyRef.current.future = [];
+    forceHistoryRender((n) => n + 1);
+  }, [placements]);
+  const undo = useCallback(() => {
+    const { past, future } = historyRef.current;
+    if (past.length === 0) return;
+    const anterior = past[past.length - 1];
+    historyRef.current = { past: past.slice(0, -1), future: [placements, ...future] };
+    setPlacements(anterior);
+    setSelecionadoUid(null);
+    setPecaSelecionadaId(null);
+  }, [placements]);
+  const redo = useCallback(() => {
+    const { past, future } = historyRef.current;
+    if (future.length === 0) return;
+    const proximo = future[0];
+    historyRef.current = { past: [...past, placements], future: future.slice(1) };
+    setPlacements(proximo);
+    setSelecionadoUid(null);
+    setPecaSelecionadaId(null);
+  }, [placements]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undo, redo]);
+
   const [selecionadoUid, setSelecionadoUid] = useState<string | null>(null);
   const [pecaSelecionadaId, setPecaSelecionadaId] = useState<string | null>(null);
   const [arvoreAberta, setArvoreAberta] = useState(true);
@@ -207,6 +255,7 @@ export function EditorAmbiente3D({
     : null;
 
   const adicionarModulo = (template: ModuloParametrico) => {
+    pushHistory();
     const parede: ParedeId = "top";
     const largura_cm = template.largura.padrao_cm;
     const existentesNaParede = placements
@@ -252,6 +301,7 @@ export function EditorAmbiente3D({
 
   const excluirSelecionado = () => {
     if (!selecionadoUid) return;
+    pushHistory();
     setPlacements((prev) => prev.filter((p) => p.uid !== selecionadoUid));
     setSelecionadoUid(null);
     setPecaSelecionadaId(null);
@@ -259,6 +309,7 @@ export function EditorAmbiente3D({
 
   const alternarIlha = () => {
     if (!selecionado) return;
+    pushHistory();
     if (selecionado.ehIlha) {
       // Ilha → parede: volta pra "top", encontra o próximo espaço livre.
       const outros = placements
@@ -284,6 +335,7 @@ export function EditorAmbiente3D({
 
   const girarParede = () => {
     if (!selecionado || selecionado.ehIlha) return;
+    pushHistory();
     const novaParede = PROXIMA_PAREDE[selecionado.parede];
     const outros = placements
       .filter((p) => !p.ehIlha && p.parede === novaParede && p.uid !== selecionado.uid)
@@ -380,13 +432,33 @@ export function EditorAmbiente3D({
         <div className="p-2.5 border-b border-border space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-semibold">Editor 3D</span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={undo}
+                disabled={historyRef.current.past.length === 0}
+                title="Desfazer (Ctrl+Z)"
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
+              >
+                <Undo2 className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                disabled={historyRef.current.future.length === 0}
+                title="Refazer (Ctrl+Shift+Z)"
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
+              >
+                <Redo2 className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-muted-foreground hover:text-foreground ml-1"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
@@ -546,6 +618,7 @@ export function EditorAmbiente3D({
                 onSelecionarModulo={() => selecionarModulo(placements[i].uid)}
                 onSelecionarPeca={(pecaId) => selecionarPeca(placements[i].uid, pecaId)}
                 onPointerDownModulo={() => {
+                  pushHistory();
                   setArrastandoUid(placements[i].uid);
                   setOrbitAtivo(false);
                 }}
@@ -618,6 +691,7 @@ export function EditorAmbiente3D({
                 min={selecionado.template.largura.min_cm}
                 max={selecionado.template.largura.max_cm}
                 step={selecionado.template.largura.passo_cm}
+                onFocus={pushHistory}
                 onChange={(e) => atualizar(selecionado.uid, { largura_cm: Number(e.target.value) })}
                 className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none"
               />
@@ -628,7 +702,10 @@ export function EditorAmbiente3D({
                 {selecionado.corHex && (
                   <button
                     type="button"
-                    onClick={() => atualizar(selecionado.uid, { corHex: undefined })}
+                    onClick={() => {
+                      pushHistory();
+                      atualizar(selecionado.uid, { corHex: undefined });
+                    }}
                     className="text-accent hover:underline"
                   >
                     Usar padrão
@@ -638,6 +715,7 @@ export function EditorAmbiente3D({
               <input
                 type="color"
                 value={selecionado.corHex ?? corMdfHex}
+                onFocus={pushHistory}
                 onChange={(e) => atualizar(selecionado.uid, { corHex: e.target.value })}
                 className="w-full h-7 rounded border border-border bg-surface-2 cursor-pointer"
               />
@@ -647,6 +725,7 @@ export function EditorAmbiente3D({
                 <div className="text-[10.5px] text-muted-foreground mb-0.5">Tipo de porta</div>
                 <select
                   value={selecionado.tipoPorta ?? ""}
+                  onFocus={pushHistory}
                   onChange={(e) =>
                     atualizar(selecionado.uid, {
                       tipoPorta: (e.target.value || undefined) as
