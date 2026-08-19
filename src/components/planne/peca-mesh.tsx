@@ -16,6 +16,7 @@ export function PecaMesh({
   selecionada,
   raioX = false,
   destaque = false,
+  semTextura = false,
   onSelect,
   onPointerDownPeca,
 }: {
@@ -25,6 +26,8 @@ export function PecaMesh({
   selecionada: boolean;
   raioX?: boolean;
   destaque?: boolean;
+  /** Modo técnico (Fase 4) — cor chapada sem relevo de textura, tipo desenho de projeto. */
+  semTextura?: boolean;
   onSelect: () => void;
   /**
    * Opcional — usado pelo Editor de arrastar pra iniciar o drag do módulo
@@ -42,7 +45,7 @@ export function PecaMesh({
   const cor = selecionada ? "#3b82f6" : destaque ? "#f59e0b" : corFrente ? corHex : "#f2f0eb";
   // Textura de MDF só no estado "normal" — raio-x fica quase transparente
   // (textura seria desperdiçada) e seleção/destaque usam cor chapada de propósito.
-  const usaTextura = !selecionada && !destaque && !raioX;
+  const usaTextura = !selecionada && !destaque && !raioX && !semTextura;
   const { roughnessMap, normalMap } = useTexturasMdf(peca.tamanho[0], peca.tamanho[1]);
   return (
     <mesh

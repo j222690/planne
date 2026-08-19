@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Grid, Edges, Environment } from "@react-three/drei";
+import { Grid, Edges, Environment } from "@react-three/drei";
 import {
   Search, Trash2, RotateCw, Waves, X, Loader2, ChevronDown, ChevronRight as ChevronRightIcon,
 } from "lucide-react";
@@ -12,6 +12,7 @@ import {
 } from "@/lib/motor-parametrico/vista-explodida";
 import { listarTodosOsModulos } from "@/lib/motor-parametrico/editor-manual";
 import { PecaMesh } from "./peca-mesh";
+import { CameraControlada, VISTAS_NOMEADAS, type VistaCamera } from "./camera-controles";
 import {
   moverModuloNaParede,
   moverModuloIlha,
@@ -113,6 +114,7 @@ function ModuloPecas({
   grupoRotacaoY,
   corHex,
   pecaSelecionadaId,
+  semTextura = false,
   onSelecionarModulo,
   onSelecionarPeca,
   onPointerDownModulo,
@@ -122,6 +124,7 @@ function ModuloPecas({
   grupoRotacaoY: number;
   corHex: string;
   pecaSelecionadaId: string | null;
+  semTextura?: boolean;
   onSelecionarModulo: () => void;
   onSelecionarPeca: (pecaId: string) => void;
   onPointerDownModulo: (e: ThreeEvent<PointerEvent>) => void;
@@ -134,6 +137,7 @@ function ModuloPecas({
           peca={p}
           corHex={corHex}
           selecionada={p.id === pecaSelecionadaId}
+          semTextura={semTextura}
           onSelect={() => onSelecionarPeca(p.id)}
           onPointerDownPeca={(e) => {
             e.stopPropagation();
@@ -176,6 +180,8 @@ export function EditorAmbiente3D({
   const [arvoreAberta, setArvoreAberta] = useState(true);
   const [arrastandoUid, setArrastandoUid] = useState<string | null>(null);
   const [orbitAtivo, setOrbitAtivo] = useState(true);
+  const [vista, setVista] = useState<VistaCamera>("livre");
+  const [modoTecnico, setModoTecnico] = useState(false);
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<CategoriaAmbiente | "todas">(
     categoriaInicial ?? "todas",
@@ -489,18 +495,7 @@ export function EditorAmbiente3D({
 
       {/* Cena 3D */}
       <div className="flex-1 relative">
-        <Canvas
-          camera={{
-            position: [
-              larguraM * 0.7,
-              Math.max(larguraM, profundidadeM) * 0.9,
-              profundidadeM * 1.4 + 2,
-            ],
-            fov: 45,
-          }}
-          onPointerUp={encerrarArraste}
-          onPointerLeave={encerrarArraste}
-        >
+        <Canvas onPointerUp={encerrarArraste} onPointerLeave={encerrarArraste}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[3, 5, 3]} intensity={1.1} />
           <directionalLight position={[-3, 2, -3]} intensity={0.35} />
@@ -547,6 +542,7 @@ export function EditorAmbiente3D({
                 grupoRotacaoY={m.grupoRotacaoY}
                 corHex={placements[i].corHex ?? corMdfHex}
                 pecaSelecionadaId={placements[i].uid === selecionadoUid ? pecaSelecionadaId : null}
+                semTextura={modoTecnico}
                 onSelecionarModulo={() => selecionarModulo(placements[i].uid)}
                 onSelecionarPeca={(pecaId) => selecionarPeca(placements[i].uid, pecaId)}
                 onPointerDownModulo={() => {
@@ -557,12 +553,49 @@ export function EditorAmbiente3D({
             ))}
           </Suspense>
 
-          <OrbitControls
-            makeDefault
+          <CameraControlada
+            vista={vista}
+            ortho={modoTecnico}
             enabled={orbitAtivo}
-            target={[larguraM / 2, 0.6, profundidadeM / 2]}
+            bbox={{
+              centroX: larguraM / 2,
+              centroZ: profundidadeM / 2,
+              larguraM,
+              profundidadeM,
+              alturaM: ambiente.altura_cm / 100,
+            }}
           />
         </Canvas>
+
+        {/* Câmera: ângulos nomeados + modo técnico (Fase 4) */}
+        <div className="absolute top-3 right-3 bg-surface/95 border border-border rounded-lg shadow-lg p-2 flex flex-col gap-1.5 items-end">
+          <div className="flex gap-1">
+            {VISTAS_NOMEADAS.map((v) => (
+              <button
+                key={v.valor}
+                type="button"
+                onClick={() => setVista(v.valor)}
+                title={v.label}
+                className={`h-6 px-2 rounded border text-[10.5px] ${
+                  vista === v.valor
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                }`}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+          <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={modoTecnico}
+              onChange={(e) => setModoTecnico(e.target.checked)}
+              className="size-3"
+            />
+            Modo técnico
+          </label>
+        </div>
 
         {/* Toolbar do módulo selecionado */}
         {selecionado && (

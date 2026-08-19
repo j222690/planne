@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 import {
   Camera,
   ChevronDown,
@@ -14,6 +14,7 @@ import {
   type ModuloComPosicao,
 } from "@/lib/motor-parametrico/vista-explodida";
 import { PecaMesh } from "./peca-mesh";
+import { CameraControlada, VISTAS_NOMEADAS, type VistaCamera } from "./camera-controles";
 
 function imprimirManual(nomeModulo: string, passos: ReturnType<typeof calcularPassosMontagem>) {
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Manual de montagem — ${nomeModulo}</title>
@@ -82,6 +83,8 @@ export function VistaExplodida3D({
   const [arvoreAberta, setArvoreAberta] = useState(false);
   const [modoManual, setModoManual] = useState(false);
   const [passoAtual, setPassoAtual] = useState(0);
+  const [vista, setVista] = useState<VistaCamera>("livre");
+  const [modoTecnico, setModoTecnico] = useState(false);
   const glRef = useRef<HTMLCanvasElement | null>(null);
 
   const todasPecas = cena.flatMap((m) => m.pecas);
@@ -108,7 +111,6 @@ export function VistaExplodida3D({
   const profundidadeTotal =
     profundidadeAmb ?? (centrosZ.length ? Math.max(...centrosZ) - Math.min(...centrosZ) + 1 : 3);
   const alturaTotal = alturasM.length ? Math.max(...alturasM) : 1;
-  const alcance = Math.max(larguraTotal, profundidadeTotal, alturaTotal, 1);
   const centroX =
     larguraAmb !== undefined
       ? larguraAmb / 2
@@ -154,10 +156,6 @@ export function VistaExplodida3D({
         style={{ height: 380, background: raioX ? "#c7ced6" : "#eef1f4" }}
       >
         <Canvas
-          camera={{
-            position: [centroX + alcance * 0.9, alturaTotal * 1.1, centroZ + alcance * 1.3],
-            fov: 42,
-          }}
           gl={{ preserveDrawingBuffer: true }}
           onCreated={(state) => {
             glRef.current = state.gl.domElement;
@@ -192,6 +190,7 @@ export function VistaExplodida3D({
                         explosao={modoManual ? 0 : m.moduloIndex === focoIndex ? explosao : 0}
                         corHex={corHex}
                         raioX={raioX}
+                        semTextura={modoTecnico}
                         destaque={
                           modoManual && m.moduloIndex === focoIndex && tiposDoPassoAtual.has(p.tipo)
                         }
@@ -203,8 +202,38 @@ export function VistaExplodida3D({
               ))}
             </group>
           </Suspense>
-          <OrbitControls makeDefault target={[centroX, alturaTotal / 2, centroZ]} enablePan />
+          <CameraControlada
+            vista={vista}
+            ortho={modoTecnico}
+            bbox={{ centroX, centroZ, larguraM: larguraTotal, profundidadeM: profundidadeTotal, alturaM: alturaTotal }}
+          />
         </Canvas>
+      </div>
+
+      <div className="flex items-center gap-1 flex-wrap text-[11px]">
+        {VISTAS_NOMEADAS.map((v) => (
+          <button
+            key={v.valor}
+            type="button"
+            onClick={() => setVista(v.valor)}
+            className={`h-6 px-2 rounded border text-[10.5px] ${
+              vista === v.valor
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border text-muted-foreground hover:bg-secondary"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+        <label className="flex items-center gap-1.5 cursor-pointer select-none ml-1">
+          <input
+            type="checkbox"
+            checked={modoTecnico}
+            onChange={(e) => setModoTecnico(e.target.checked)}
+            className="size-3"
+          />
+          Modo técnico
+        </label>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap text-[11px]">
