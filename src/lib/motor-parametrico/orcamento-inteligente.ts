@@ -100,6 +100,15 @@ export interface ConfiguracaoCusto {
   preco_chapa_mdf_15: number;  // R$/chapa 15mm (default R$85)
   preco_chapa_mdf_18: number;  // R$/chapa 18mm (default R$105)
   preco_fita_borda_metro: number; // R$/m de fita de borda (default R$3,50)
+
+  /**
+   * Fase 6 (motor 3D paramétrico) — preço real de ferragem cadastrado pela
+   * empresa (categoria='ferragens' em `materiais`, mapeado por
+   * `tipo_ferragem_motor`), sobrescrevendo PRECO_FERRAGEM_REF por tipo.
+   * Parcial: só os tipos que a empresa cadastrou; os demais caem no
+   * fallback de referência — não quebra quem não configurou catálogo.
+   */
+  precos_ferragem?: Partial<Record<TipoFerragem, number>>;
 }
 
 /** Configuração padrão — médias de mercado BR 2026. */
@@ -189,11 +198,11 @@ function linhaProducao(horas: number, valorHora: number): LinhaProducao {
   };
 }
 
-/** Custo de ferragens do projeto usando a tabela de preços de referência. */
-function custoFerragensReferencia(projeto: ProjetoFabricavel): number {
+/** Custo de ferragens do projeto — preço real da empresa quando cadastrado (Fase 6), senão referência de mercado. */
+function custoFerragensReferencia(projeto: ProjetoFabricavel, cfg: ConfiguracaoCusto): number {
   const consolidadas = consolidarFerragens(projeto);
   return consolidadas.reduce(
-    (s, f) => s + f.quantidade_total * (PRECO_FERRAGEM_REF[f.tipo] ?? 0),
+    (s, f) => s + f.quantidade_total * (cfg.precos_ferragem?.[f.tipo] ?? PRECO_FERRAGEM_REF[f.tipo] ?? 0),
     0,
   );
 }
@@ -227,7 +236,7 @@ function calcularCustoMateriais(
   });
 
   const subtotal_chapas = arredondar(linhas.reduce((s, l) => s + l.total, 0));
-  const subtotal_ferragens = arredondar(custoFerragensReferencia(projeto) * ajuste.mult_ferragem);
+  const subtotal_ferragens = arredondar(custoFerragensReferencia(projeto, cfg) * ajuste.mult_ferragem);
 
   return {
     linhas,

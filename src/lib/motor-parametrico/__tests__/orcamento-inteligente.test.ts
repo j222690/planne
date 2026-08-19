@@ -66,6 +66,43 @@ describe("calcularOrcamentoCompleto", () => {
     expect(af.lucro_pct).toBeCloseTo((af.lucro_bruto / af.preco_venda) * 100, 0);
   });
 
+  // Fase 6 (motor 3D paramétrico): materiais.tipo_ferragem_motor sobrescreve
+  // o preço de referência do motor por tipo, via ConfiguracaoCusto.precos_ferragem.
+  test("precos_ferragem (cadastro real da empresa) sobrescreve o preço de referência", () => {
+    const p = projeto();
+    const semOverride = calcularOrcamentoCompleto(p).custo_materiais.subtotal_ferragens;
+
+    // Sobrescreve TODOS os tipos com um preço absurdamente alto — o subtotal
+    // de ferragens tem que subir de verdade, não ficar igual (prova que o
+    // override é lido, não só aceito e ignorado).
+    const todosOsTipos = Object.keys(CONFIG_CUSTO_PADRAO).includes("precos_ferragem");
+    expect(todosOsTipos).toBe(false); // padrão não vem com override nenhum — opt-in puro
+
+    const comOverride = calcularOrcamentoCompleto(p, "intermediaria", {
+      ...CONFIG_CUSTO_PADRAO,
+      precos_ferragem: {
+        dobradica_35mm_110grau: 999,
+        minifix_15mm: 999,
+        ajustador_pe_100mm: 999,
+        cavilha_8x30mm: 999,
+      },
+    }).custo_materiais.subtotal_ferragens;
+
+    expect(comOverride).toBeGreaterThan(semOverride);
+  });
+
+  test("precos_ferragem parcial só afeta os tipos cadastrados (fallback pros demais)", () => {
+    const p = projeto();
+    const base = calcularOrcamentoCompleto(p).custo_materiais.subtotal_ferragens;
+    // Um tipo que essa cozinha provavelmente não usa (usinagem provençal é
+    // só de porta variante, não do template padrão) não deve mudar o total.
+    const comTipoIrrelevante = calcularOrcamentoCompleto(p, "intermediaria", {
+      ...CONFIG_CUSTO_PADRAO,
+      precos_ferragem: { usinagem_provencal: 99999 },
+    }).custo_materiais.subtotal_ferragens;
+    expect(comTipoIrrelevante).toBeCloseTo(base, 1);
+  });
+
   test("gera 1 item comercial por módulo", () => {
     const p = projeto();
     const orc = calcularOrcamentoCompleto(p);

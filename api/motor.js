@@ -4481,10 +4481,10 @@ function linhaProducao(horas, valorHora) {
     total: arredondar2(horasArred * valorHora)
   };
 }
-function custoFerragensReferencia(projeto) {
+function custoFerragensReferencia(projeto, cfg) {
   const consolidadas = consolidarFerragens(projeto);
   return consolidadas.reduce(
-    (s, f) => s + f.quantidade_total * (PRECO_FERRAGEM_REF[f.tipo] ?? 0),
+    (s, f) => s + f.quantidade_total * (cfg.precos_ferragem?.[f.tipo] ?? PRECO_FERRAGEM_REF[f.tipo] ?? 0),
     0
   );
 }
@@ -4507,7 +4507,7 @@ function calcularCustoMateriais(projeto, cfg, ajuste) {
     total: arredondar2(eng.fita_borda.metros_com_desperdicio * cfg.preco_fita_borda_metro)
   });
   const subtotal_chapas = arredondar2(linhas.reduce((s, l) => s + l.total, 0));
-  const subtotal_ferragens = arredondar2(custoFerragensReferencia(projeto) * ajuste.mult_ferragem);
+  const subtotal_ferragens = arredondar2(custoFerragensReferencia(projeto, cfg) * ajuste.mult_ferragem);
   return {
     linhas,
     subtotal_chapas,

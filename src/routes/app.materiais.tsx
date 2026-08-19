@@ -27,6 +27,8 @@ type Material = {
   fornecedores: { nome: string } | null;
   estoque_atual?: number | null;
   estoque_minimo?: number | null;
+  /** Fase 6 (motor 3D paramétrico) — liga este material a um TipoFerragem do motor. */
+  tipo_ferragem_motor?: string | null;
 };
 
 type PedidoCompra = {
@@ -73,7 +75,37 @@ const matSchema = z.object({
   fornecedor_id: z.string().optional(),
   estoque_atual: z.coerce.number().optional(),
   estoque_minimo: z.coerce.number().optional(),
+  tipo_ferragem_motor: z.string().optional(),
 });
+
+// Fase 6 (motor 3D paramétrico): rótulos em PT-BR dos 21 tipos de ferragem
+// que o motor conhece (src/lib/motor-parametrico/tipos.ts, TipoFerragem) —
+// ligar um material a um desses tipos faz o motor usar o preço real
+// cadastrado aqui em vez do preço de referência de mercado.
+const TIPOS_FERRAGEM_MOTOR: { valor: string; label: string }[] = [
+  { valor: "dobradica_35mm_110grau", label: "Dobradiça 35mm 110°" },
+  { valor: "dobradica_35mm_165grau", label: "Dobradiça 35mm 165°" },
+  { valor: "dobradica_push_open", label: "Dobradiça push-open" },
+  { valor: "corredicao_tandem_300mm", label: "Corrediça tandem 300mm" },
+  { valor: "corredicao_tandem_400mm", label: "Corrediça tandem 400mm" },
+  { valor: "corredicao_tandem_500mm", label: "Corrediça tandem 500mm" },
+  { valor: "corredicao_lateral_porta", label: "Corrediça porta de correr" },
+  { valor: "puxador_perfil_alu_1200mm", label: "Puxador perfil alumínio (1200mm)" },
+  { valor: "puxador_alu_128mm", label: "Puxador alumínio 128mm" },
+  { valor: "puxador_push_open", label: "Puxador push-open" },
+  { valor: "ajustador_pe_100mm", label: "Pé regulável 100mm" },
+  { valor: "ajustador_pe_150mm", label: "Pé regulável 150mm" },
+  { valor: "rodape_pvc_100mm", label: "Rodapé PVC 100mm" },
+  { valor: "cabideiro_simples", label: "Cabideiro simples" },
+  { valor: "perfil_led_1m", label: "Perfil LED 1m" },
+  { valor: "amortecedor_soft_close", label: "Amortecedor soft-close" },
+  { valor: "minifix_15mm", label: "Minifix 15mm" },
+  { valor: "cavilha_8x30mm", label: "Cavilha 8×30mm" },
+  { valor: "cesto_aramado_porta_temperos", label: "Cesto aramado porta-temperos" },
+  { valor: "suporte_basculante", label: "Suporte basculante" },
+  { valor: "perfil_aluminio_porta_1m", label: "Perfil alumínio de porta (1m)" },
+  { valor: "usinagem_provencal", label: "Usinagem provençal" },
+];
 type MatForm = z.infer<typeof matSchema>;
 
 const CATEGORIAS_OPCOES = ["MDF", "MDP", "Chapas", "Puxadores", "Ferragens", "Vidros", "Acabamentos", "Acessórios", "Outros"];
@@ -155,6 +187,7 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateri
       fornecedor_id: initialData.fornecedor_id ?? "",
       estoque_atual: initialData.estoque_atual ?? undefined,
       estoque_minimo: initialData.estoque_minimo ?? undefined,
+      tipo_ferragem_motor: initialData.tipo_ferragem_motor ?? "",
     } : { unidade: "un", preco_custo: 0, preco_venda: 0 },
   });
 
@@ -199,6 +232,7 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateri
         imagem_url: data.imagem_url || null,
         estoque_atual: data.estoque_atual ?? null,
         estoque_minimo: data.estoque_minimo ?? null,
+        tipo_ferragem_motor: data.tipo_ferragem_motor || null,
       };
       if (initialData) {
         await updateMaterial(initialData.id, payload);
@@ -312,6 +346,19 @@ function MaterialModal({ onClose, onSaved, empresaId, initialData, todosOsMateri
               <div className="text-[11.5px] text-muted-foreground mb-1">Esp. (mm)</div>
               <input {...register("espessura_mm")} type="number" step="0.1" min="0"
                 className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none focus:border-border-strong" />
+            </div>
+          </div>
+          <div>
+            <div className="text-[11.5px] text-muted-foreground mb-1">
+              Tipo no motor 3D <span className="text-muted-foreground/60">(opcional — pra ferragens)</span>
+            </div>
+            <select {...register("tipo_ferragem_motor")}
+              className="w-full h-9 rounded-md border border-border bg-surface-2 px-2.5 text-[13px] outline-none text-foreground">
+              <option value="">Não é ferragem / não ligado ao motor</option>
+              {TIPOS_FERRAGEM_MOTOR.map((t) => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+            </select>
+            <div className="text-[10.5px] text-muted-foreground mt-1">
+              Ligando, o motor paramétrico usa o custo cadastrado aqui em vez do preço de referência de mercado nos projetos gerados.
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

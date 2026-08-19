@@ -416,6 +416,11 @@ function IAProjetoPage() {
     acab_roda_teto: true,
     acab_engrosso: true,
     ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele",
+    // Fase 6 (motor 3D paramétrico): preço real de ferragem cadastrado pela
+    // empresa (materiais.tipo_ferragem_motor), sobrescreve o preço de
+    // referência de mercado do motor por tipo. Vazio = ninguém cadastrou
+    // ainda, motor cai no fallback de sempre.
+    precos_ferragem: {} as Record<string, number>,
   });
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const navigate = useNavigate();
@@ -434,6 +439,20 @@ function IAProjetoPage() {
       setSavedProjects(data ?? []);
       setLoadingProjects(false);
 
+      // Fase 6: catálogo de ferragens real (materiais com tipo_ferragem_motor
+      // preenchido) — opt-in, a maioria das empresas ainda não cadastrou
+      // nenhum, o motor cai no preço de referência de sempre nesse caso.
+      const { data: ferragensReais } = await supabase
+        .from("materiais")
+        .select("tipo_ferragem_motor,preco_custo")
+        .eq("empresa_id", eid)
+        .eq("ativo", true)
+        .not("tipo_ferragem_motor", "is", null);
+      const precosFerragem: Record<string, number> = {};
+      for (const f of ferragensReais ?? []) {
+        if (f.tipo_ferragem_motor) precosFerragem[f.tipo_ferragem_motor] = Number(f.preco_custo);
+      }
+
       // Load plantas, params and clientes
       const emp = empresa as { parametros?: Record<string, unknown> };
       const p = emp.parametros ?? {};
@@ -449,6 +468,7 @@ function IAProjetoPage() {
         acab_roda_teto: p.acab_roda_teto !== false,
         acab_engrosso: p.acab_engrosso !== false,
         ferragem_padrao: (p.ferragem_padrao as "nacional" | "blum" | "hafele") ?? "nacional",
+        precos_ferragem: precosFerragem,
       });
       if (p.plantas_baixas && typeof p.plantas_baixas === "object") {
         setPlantasSalvas(p.plantas_baixas as Record<string, PlantaSalva>);
@@ -3118,6 +3138,7 @@ function Step4Layout({
     acab_roda_teto: boolean;
     acab_engrosso: boolean;
     ferragem_padrao: "nacional" | "blum" | "hafele";
+    precos_ferragem: Record<string, number>;
   };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
@@ -3183,6 +3204,11 @@ function Step4Layout({
         chapa_comprimento_mm: empresaParams.chapa_comprimento_mm,
         preco_fita_borda_metro: empresaParams.custo_fita_metro,
         custo_fixo_diario: empresaParams.custo_fixo_diario,
+        // Fase 6: preço real de ferragem cadastrado (materiais.tipo_ferragem_motor)
+        // sobrescreve a tabela de referência do motor por tipo — vazio não muda nada.
+        ...(Object.keys(empresaParams.precos_ferragem).length
+          ? { precos_ferragem: empresaParams.precos_ferragem }
+          : {}),
       };
     })(),
     // 2.1: se a planta foi interpretada, usa o AmbienteGeometrico real

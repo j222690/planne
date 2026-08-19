@@ -32,6 +32,8 @@ export interface MaterialInput {
   imagem_url?: string | null;
   estoque_atual?: number | null;
   estoque_minimo?: number | null;
+  /** Fase 6 (motor 3D paramétrico) — liga este material a um TipoFerragem do motor. */
+  tipo_ferragem_motor?: string | null;
 }
 
 export interface ProjetoInput {
@@ -142,7 +144,7 @@ export async function getFornecedores(empresaId: string) {
 export async function getMateriais(empresaId?: string) {
   let q = supabase
     .from("materiais")
-    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,largura_mm,comprimento_mm,fornecedor_id,fornecedores(nome),categoria_id,estoque_atual,estoque_minimo")
+    .select("id,codigo,nome,unidade,preco_custo,preco_venda,ativo,cor,espessura_mm,imagem_url,largura_mm,comprimento_mm,fornecedor_id,fornecedores(nome),categoria_id,estoque_atual,estoque_minimo,tipo_ferragem_motor")
     .eq("ativo", true);
   if (empresaId) q = q.eq("empresa_id", empresaId);
   const { data, error } = await q.order("nome");
