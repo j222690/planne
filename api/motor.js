@@ -6623,6 +6623,7 @@ function montarProjetoManual(placements, ambiente, comum) {
       throw new Error(`Editor 3D: m\xF3dulo "${p.template_codigo}" n\xE3o encontrado no cat\xE1logo.`);
     }
     const materialInsert = materialInsertDe(p.tipo_porta);
+    const materialCorpoModulo = p.material_corpo_hex ? criarMaterialPadrao(p.material_corpo_hex, 15) : materialCorpo;
     return criarModuloManual(
       template,
       {
@@ -6633,7 +6634,7 @@ function montarProjetoManual(placements, ambiente, comum) {
         largura_cm: p.largura_cm,
         ehIlha: p.eh_ilha
       },
-      { materialCorpo, materialFundo, materialInsert },
+      { materialCorpo: materialCorpoModulo, materialFundo, materialInsert },
       i,
       p.tipo_porta ? { tipo_porta: p.tipo_porta } : void 0
     );
