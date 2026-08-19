@@ -518,6 +518,17 @@ function IAProjetoPage() {
     }
     const medidas = (row.medidas ?? {}) as { largura?: number; profundidade?: number; altura?: number };
     const motorResultado = (row.motor_resultado as MotorResultado | null) ?? null;
+    const analiseSalva = (row.analise_ia as Partial<AnaliseIA> | null) ?? null;
+    // Step4Layout (o passo 4) exige analise.orcamento pra renderizar sem
+    // quebrar — mesmo quando o motor já rodou, ele lê esse resumo da IA
+    // (legado) antes de decidir o que mostrar. Um projeto que só chegou a
+    // ser criado (Step 3 nunca terminou) tem analise_ia:{} — sem
+    // .orcamento — e travaria a tela se a gente pulasse direto pro Step 4.
+    const temConteudoParaStep4 = Boolean(motorResultado) || Boolean(analiseSalva?.orcamento);
+    if (!temConteudoParaStep4) {
+      toast.error("Este projeto está incompleto (a análise não foi concluída) — refaça a partir do início.");
+      return;
+    }
     if (!motorResultado) {
       toast.info(
         "Este projeto foi criado antes do editor 3D rico — abrindo em modo resumo (sem 3D fabricável).",

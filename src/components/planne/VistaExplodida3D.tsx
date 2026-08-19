@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import type { ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Edges, Environment } from "@react-three/drei";
+import { OrbitControls, Environment } from "@react-three/drei";
 import {
   Camera,
   ChevronDown,
@@ -13,63 +12,8 @@ import {
   calcularCenaCompleta,
   calcularPassosMontagem,
   type ModuloComPosicao,
-  type PecaVisual3D,
 } from "@/lib/motor-parametrico/vista-explodida";
-import { useTexturasMdf } from "./texturas-mdf";
-
-function PecaMesh({
-  peca,
-  explosao,
-  corHex,
-  selecionada,
-  raioX,
-  destaque,
-  onSelect,
-}: {
-  peca: PecaVisual3D;
-  explosao: number;
-  corHex: string;
-  selecionada: boolean;
-  raioX: boolean;
-  destaque: boolean;
-  onSelect: () => void;
-}) {
-  const pos: [number, number, number] = [
-    peca.posicao[0] + peca.direcaoExplosao[0] * peca.distanciaExplosao * explosao,
-    peca.posicao[1] + peca.direcaoExplosao[1] * peca.distanciaExplosao * explosao,
-    peca.posicao[2] + peca.direcaoExplosao[2] * peca.distanciaExplosao * explosao,
-  ];
-  const corFrente = peca.tipo === "porta" || peca.tipo === "gaveta";
-  const cor = selecionada ? "#3b82f6" : destaque ? "#f59e0b" : corFrente ? corHex : "#f2f0eb";
-  // Textura de MDF só no estado "normal" — raio-x fica quase transparente
-  // (textura seria desperdiçada) e seleção/destaque usam cor chapada de propósito.
-  const usaTextura = !selecionada && !destaque && !raioX;
-  const { roughnessMap, normalMap } = useTexturasMdf(peca.tamanho[0], peca.tamanho[1]);
-  return (
-    <mesh
-      position={pos}
-      onClick={(e: ThreeEvent<MouseEvent>) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-    >
-      <boxGeometry args={peca.tamanho} />
-      <meshStandardMaterial
-        color={cor}
-        roughness={0.6}
-        metalness={0.05}
-        roughnessMap={usaTextura ? roughnessMap : undefined}
-        normalMap={usaTextura ? normalMap : undefined}
-        transparent={raioX}
-        opacity={raioX ? (corFrente ? 0.06 : 0.12) : 1}
-        depthWrite={!raioX}
-      />
-      <Edges
-        color={selecionada ? "#1d4ed8" : destaque ? "#b45309" : raioX ? "#1e293b" : "#64748b"}
-      />
-    </mesh>
-  );
-}
+import { PecaMesh } from "./peca-mesh";
 
 function imprimirManual(nomeModulo: string, passos: ReturnType<typeof calcularPassosMontagem>) {
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Manual de montagem — ${nomeModulo}</title>

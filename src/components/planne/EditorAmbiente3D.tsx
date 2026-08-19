@@ -2,13 +2,16 @@ import { useMemo, useState, useCallback, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Grid, Edges, Environment } from "@react-three/drei";
-import { Search, Trash2, RotateCw, Waves, X, Loader2 } from "lucide-react";
+import {
+  Search, Trash2, RotateCw, Waves, X, Loader2, ChevronDown, ChevronRight as ChevronRightIcon,
+} from "lucide-react";
 import {
   calcularCenaCompleta,
   type ModuloComPosicao,
+  type PecaVisual3D,
 } from "@/lib/motor-parametrico/vista-explodida";
 import { listarTodosOsModulos } from "@/lib/motor-parametrico/editor-manual";
-import { useTexturasMdf } from "./texturas-mdf";
+import { PecaMesh } from "./peca-mesh";
 import {
   moverModuloNaParede,
   moverModuloIlha,
@@ -90,56 +93,51 @@ function paraModuloComPosicao(p: PlacementLocal): ModuloComPosicao {
   };
 }
 
-function ModuloBox({
-  placement,
+/**
+ * Renderiza um módulo peça-a-peça (lateral/base/teto/fundo/porta/gaveta/
+ * prateleira), em vez de uma caixa única — Fase 2 do plano do motor 3D
+ * paramétrico: mesma seleção individual de peça que o Vista Explodida já
+ * tem, portada pro Editor de arrastar via o PecaMesh compartilhado.
+ *
+ * O drag do módulo inteiro continua funcionando: cada peça dispara
+ * onPointerDownModulo no pointerdown (seleciona o módulo + inicia o arraste,
+ * igual antes); o click (sem arraste real) seleciona a peça específica.
+ */
+function ModuloPecas({
+  pecas,
   grupoPosicao,
   grupoRotacaoY,
   corHex,
-  selecionado,
-  onSelecionar,
+  pecaSelecionadaId,
+  onSelecionarModulo,
+  onSelecionarPeca,
   onPointerDownModulo,
 }: {
-  placement: PlacementLocal;
+  pecas: PecaVisual3D[];
   grupoPosicao: [number, number, number];
   grupoRotacaoY: number;
   corHex: string;
-  selecionado: boolean;
-  onSelecionar: () => void;
+  pecaSelecionadaId: string | null;
+  onSelecionarModulo: () => void;
+  onSelecionarPeca: (pecaId: string) => void;
   onPointerDownModulo: (e: ThreeEvent<PointerEvent>) => void;
 }) {
-  const L = placement.largura_cm / 100;
-  const A = placement.template.altura.padrao_cm / 100;
-  const P = placement.template.profundidade.padrao_cm / 100;
-  // Textura só no estado normal — selecionado usa azul chapado (mais claro
-  // de ver qual módulo está ativo do que um MDF "azul" texturizado).
-  const { roughnessMap, normalMap } = useTexturasMdf(L, A);
   return (
     <group position={grupoPosicao} rotation={[0, grupoRotacaoY, 0]}>
-      <mesh
-        position={[0, A / 2, 0]}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          onSelecionar();
-          onPointerDownModulo(e);
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <boxGeometry args={[L, A, P]} />
-        {selecionado ? (
-          <meshStandardMaterial color="#3b82f6" roughness={0.6} metalness={0.05} />
-        ) : (
-          <meshStandardMaterial
-            color={corHex}
-            roughness={0.8}
-            metalness={0.02}
-            roughnessMap={roughnessMap}
-            normalMap={normalMap}
-            transparent
-            opacity={0.92}
-          />
-        )}
-        <Edges color={selecionado ? "#1d4ed8" : "#64748b"} />
-      </mesh>
+      {pecas.map((p) => (
+        <PecaMesh
+          key={p.id}
+          peca={p}
+          corHex={corHex}
+          selecionada={p.id === pecaSelecionadaId}
+          onSelect={() => onSelecionarPeca(p.id)}
+          onPointerDownPeca={(e) => {
+            e.stopPropagation();
+            onSelecionarModulo();
+            onPointerDownModulo(e);
+          }}
+        />
+      ))}
     </group>
   );
 }
@@ -170,6 +168,8 @@ export function EditorAmbiente3D({
 }) {
   const [placements, setPlacements] = useState<PlacementLocal[]>([]);
   const [selecionadoUid, setSelecionadoUid] = useState<string | null>(null);
+  const [pecaSelecionadaId, setPecaSelecionadaId] = useState<string | null>(null);
+  const [arvoreAberta, setArvoreAberta] = useState(true);
   const [arrastandoUid, setArrastandoUid] = useState<string | null>(null);
   const [orbitAtivo, setOrbitAtivo] = useState(true);
   const [busca, setBusca] = useState("");
@@ -189,6 +189,12 @@ export function EditorAmbiente3D({
   );
 
   const selecionado = placements.find((p) => p.uid === selecionadoUid) ?? null;
+  const indiceSelecionado = selecionadoUid
+    ? placements.findIndex((p) => p.uid === selecionadoUid)
+    : -1;
+  const pecaSelecionadaNome = pecaSelecionadaId
+    ? (cena[indiceSelecionado]?.pecas.find((p) => p.id === pecaSelecionadaId)?.nome ?? null)
+    : null;
 
   const adicionarModulo = (template: ModuloParametrico) => {
     const parede: ParedeId = "top";
@@ -213,16 +219,32 @@ export function EditorAmbiente3D({
     };
     setPlacements((prev) => [...prev, novo]);
     setSelecionadoUid(novo.uid);
+    setPecaSelecionadaId(null);
   };
 
   const atualizar = useCallback((alvoUid: string, patch: Partial<PlacementLocal>) => {
     setPlacements((prev) => prev.map((p) => (p.uid === alvoUid ? { ...p, ...patch } : p)));
   }, []);
 
+  // Selecionar um módulo (por drag ou clique na árvore) limpa a peça
+  // específica selecionada — evita ficar destacada uma peça de outro módulo.
+  const selecionarModulo = (uid: string) => {
+    setSelecionadoUid(uid);
+    setPecaSelecionadaId(null);
+  };
+
+  // Selecionar peça também seleciona implicitamente o módulo-pai (pro
+  // painel de propriedades saber em qual módulo aplicar mudanças — Fase 3).
+  const selecionarPeca = (moduloUid: string, pecaId: string) => {
+    setSelecionadoUid(moduloUid);
+    setPecaSelecionadaId(pecaId);
+  };
+
   const excluirSelecionado = () => {
     if (!selecionadoUid) return;
     setPlacements((prev) => prev.filter((p) => p.uid !== selecionadoUid));
     setSelecionadoUid(null);
+    setPecaSelecionadaId(null);
   };
 
   const alternarIlha = () => {
@@ -379,6 +401,65 @@ export function EditorAmbiente3D({
             <option value="lavanderia">Lavanderia</option>
           </select>
         </div>
+
+        {/* Árvore do projeto — mesmo padrão (chevron + peça clicável) do
+            Vista Explodida (Fase 2 do plano do motor 3D paramétrico),
+            portado aqui: clicar numa peça seleciona ela especificamente,
+            clicar no nome do módulo seleciona só o módulo. */}
+        <div className="border-b border-border shrink-0">
+          <button
+            type="button"
+            onClick={() => setArvoreAberta((v) => !v)}
+            className="w-full flex items-center gap-1.5 px-2.5 py-2 text-[12px] font-medium"
+          >
+            {arvoreAberta ? (
+              <ChevronDown className="size-3.5" />
+            ) : (
+              <ChevronRightIcon className="size-3.5" />
+            )}
+            Módulos no projeto ({placements.length})
+          </button>
+          {arvoreAberta && (
+            <div className="px-2.5 pb-2 space-y-1.5 max-h-48 overflow-auto">
+              {placements.length === 0 ? (
+                <div className="text-[11px] text-muted-foreground text-center py-3">
+                  Nenhum módulo ainda — clique num item do catálogo abaixo.
+                </div>
+              ) : (
+                cena.map((m, i) => (
+                  <div key={placements[i].uid}>
+                    <button
+                      type="button"
+                      onClick={() => selecionarModulo(placements[i].uid)}
+                      className={`text-[11.5px] font-medium ${
+                        placements[i].uid === selecionadoUid ? "text-accent" : "text-foreground"
+                      }`}
+                    >
+                      {placements[i].template.nome}
+                    </button>
+                    <div className="pl-3 flex flex-wrap gap-x-2.5 gap-y-0.5 mt-0.5">
+                      {m.pecas.map((p) => (
+                        <button
+                          type="button"
+                          key={p.id}
+                          onClick={() => selecionarPeca(placements[i].uid, p.id)}
+                          className={`text-[10px] hover:underline ${
+                            placements[i].uid === selecionadoUid && p.id === pecaSelecionadaId
+                              ? "text-accent font-medium"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {p.nome}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="flex-1 overflow-auto p-2 space-y-1">
           {catalogo.map((m) => (
             <button
@@ -424,7 +505,10 @@ export function EditorAmbiente3D({
             rotation={[-Math.PI / 2, 0, 0]}
             position={[larguraM / 2, 0, profundidadeM / 2]}
             onPointerMove={onGroundPointerMove}
-            onPointerMissed={() => setSelecionadoUid(null)}
+            onPointerMissed={() => {
+              setSelecionadoUid(null);
+              setPecaSelecionadaId(null);
+            }}
           >
             <planeGeometry args={[Math.max(larguraM, 1) + 4, Math.max(profundidadeM, 1) + 4]} />
             <meshBasicMaterial visible={false} />
@@ -451,14 +535,15 @@ export function EditorAmbiente3D({
           <Suspense fallback={null}>
             <Environment preset="apartment" />
             {cena.map((m, i) => (
-              <ModuloBox
+              <ModuloPecas
                 key={placements[i].uid}
-                placement={placements[i]}
+                pecas={m.pecas}
                 grupoPosicao={m.grupoPosicao}
                 grupoRotacaoY={m.grupoRotacaoY}
                 corHex={corMdfHex}
-                selecionado={placements[i].uid === selecionadoUid}
-                onSelecionar={() => setSelecionadoUid(placements[i].uid)}
+                pecaSelecionadaId={placements[i].uid === selecionadoUid ? pecaSelecionadaId : null}
+                onSelecionarModulo={() => selecionarModulo(placements[i].uid)}
+                onSelecionarPeca={(pecaId) => selecionarPeca(placements[i].uid, pecaId)}
                 onPointerDownModulo={() => {
                   setArrastandoUid(placements[i].uid);
                   setOrbitAtivo(false);
@@ -478,6 +563,15 @@ export function EditorAmbiente3D({
         {selecionado && (
           <div className="absolute top-3 left-3 bg-surface border border-border rounded-lg shadow-lg p-3 space-y-2 w-64">
             <div className="text-[12.5px] font-semibold">{selecionado.template.nome}</div>
+            <div className="text-[10.5px] text-muted-foreground -mt-1.5">
+              {pecaSelecionadaNome ? (
+                <>
+                  Peça: <span className="text-accent font-medium">{pecaSelecionadaNome}</span>
+                </>
+              ) : (
+                "Clique numa peça pra selecioná-la individualmente."
+              )}
+            </div>
             <div>
               <div className="text-[10.5px] text-muted-foreground mb-0.5">Largura (cm)</div>
               <input
