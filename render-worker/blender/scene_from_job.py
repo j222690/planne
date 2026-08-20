@@ -676,7 +676,12 @@ def main():
     bancada_e_cooktops(modulos, mats)
     detalhes_promob(modulos, mats)
     x_dir_eletro = eletros_reais(modulos, mats)
-    # decoracao(modulos)  # TODO: props high-poly travam o Eevee — reativar após otimizar/decimar
+    # Reativado (2026-08-19): a suspeita antiga era "props high-poly travam o
+    # Eevee", mas fruteira.blend/tabua.blend/planta.blend têm MENOS faces que
+    # geladeira.blend (que já funciona sem problema) — o diagnóstico original
+    # estava errado. Testado sem crash local (Cycles CPU) e real em produção
+    # (Modal, Eevee de verdade).
+    decoracao(modulos)
 
     min_x = min(m.get("posicao_x_cm", 0) / 100.0 for m in modulos)
     max_x = max(m.get("posicao_x_cm", 0) / 100.0 + m["largura_cm"] / 100.0 for m in modulos)
