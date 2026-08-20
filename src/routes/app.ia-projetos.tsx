@@ -29,6 +29,7 @@ import {
   Check,
   Camera,
   Boxes,
+  BookOpen,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,8 +41,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, exportSvgToPng, type MovelCanvas } from "@/components/planne/RoomCanvas";
 import { VistaExplodida3D } from "@/components/planne/VistaExplodida3D";
 import { CroquiTecnicoModulo } from "@/components/planne/CroquiTecnicoModulo";
+import { svgParaPngDataUri } from "@/lib/svg-para-imagem";
 import { EditorAmbiente3D, type PlacementPayload } from "@/components/planne/EditorAmbiente3D";
-import type { CategoriaAmbiente } from "@/lib/motor-parametrico/tipos";
+import type { CategoriaAmbiente, PlanoNesting } from "@/lib/motor-parametrico/tipos";
 
 export const Route = createFileRoute("/app/ia-projetos")({
   component: IAProjetoPage,
@@ -247,38 +249,6 @@ async function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-}
-
-/**
- * Rasteriza um <svg> (o layout 2D) em PNG data-URI, para mandar como imagem-guia
- * do render (o Gemini usa como direção exata do layout).
- */
-async function svgParaPngDataUri(svg: SVGSVGElement, maxW = 1000): Promise<string | null> {
-  try {
-    const xml = new XMLSerializer().serializeToString(svg);
-    const vb = svg.viewBox.baseVal;
-    const w = vb?.width || svg.clientWidth || 800;
-    const h = vb?.height || svg.clientHeight || 600;
-    const scale = Math.min(1.5, maxW / w);
-    const src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
-    const img = new Image();
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = rej;
-      img.src = src;
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/png");
-  } catch {
-    return null;
-  }
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -2627,6 +2597,9 @@ function MotorResultadoPainel({
   onCriarOrdem,
   criandoVersao,
   ehCozinha,
+  nomeProjeto,
+  ambiente,
+  clienteNome,
   medidas,
   projetoId,
   onExportarGuilhotina,
@@ -2637,6 +2610,8 @@ function MotorResultadoPainel({
   exportandoXLS,
   onExportarDAE,
   exportandoDAE,
+  onExportarBookTecnico,
+  exportandoBookTecnico,
 }: {
   data: MotorResultado;
   onUsarVersao: (versao: "economica" | "intermediaria" | "premium") => void;
@@ -2644,6 +2619,10 @@ function MotorResultadoPainel({
   criandoVersao: string | null;
   /** Render 3D real (Blender) — MVP só cozinha, mesma regra do editor de orçamento. */
   ehCozinha: boolean;
+  /** Nome/ambiente/cliente — só pro cabeçalho do book técnico (Fase B), não afeta cálculo nenhum. */
+  nomeProjeto?: string;
+  ambiente?: string;
+  clienteNome?: string;
   medidas: { largura: number; profundidade: number; altura: number };
   projetoId?: string | null;
   /** Sequência de corte guilhotina (serra reta) — recalcula e baixa um .txt. */
@@ -2658,6 +2637,9 @@ function MotorResultadoPainel({
   /** Modelo 3D .dae (COLLADA) pra SketchUp/Blender — recalcula e baixa. */
   onExportarDAE?: () => void;
   exportandoDAE?: boolean;
+  /** Book técnico (PDF único: capa + planta + elevação + croquis + lista de corte + orçamento) — client-side. */
+  onExportarBookTecnico?: () => void;
+  exportandoBookTecnico?: boolean;
 }) {
   const [renderJob, setRenderJob] = useState<{
     status: "pending" | "processing" | "completed" | "error";
@@ -3044,6 +3026,17 @@ function MotorResultadoPainel({
                 className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
               >
                 <Download className="size-3" /> {exportandoDAE ? "Gerando…" : "DAE (SketchUp)"}
+              </button>
+            )}
+            {onExportarBookTecnico && (
+              <button
+                type="button"
+                disabled={!!exportandoBookTecnico}
+                onClick={onExportarBookTecnico}
+                title="PDF único: capa, planta baixa, vista de elevação, croqui técnico de cada módulo, lista de corte e resumo do orçamento"
+                className="h-7 px-2 rounded border border-border text-[11px] hover:bg-secondary inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                <BookOpen className="size-3" /> {exportandoBookTecnico ? "Gerando…" : "Book técnico"}
               </button>
             )}
           </div>
@@ -3563,6 +3556,51 @@ function Step4Layout({
     }
   };
 
+  // Book técnico (PDF único) — puramente client-side a partir do
+  // wizard.motorResultado já carregado (mesmo padrão do XLS), mais os SVGs
+  // já renderizados na tela (planta "planta-2d-book" e elevação
+  // "layout-2d-guia") capturados via svgParaPngDataUri.
+  const [gerandoBookTecnico, setGerandoBookTecnico] = useState(false);
+  const handleExportarBookTecnico = async () => {
+    const data = wizard.motorResultado;
+    if (!data) return;
+    setGerandoBookTecnico(true);
+    try {
+      const [{ gerarBookTecnico }, { svgParaPngDataUri }] = await Promise.all([
+        import("@/lib/exportacao-book-tecnico"),
+        import("@/lib/svg-para-imagem"),
+      ]);
+      const plantaEl = document.getElementById("planta-2d-book") as SVGSVGElement | null;
+      const elevacaoEl = document.getElementById("layout-2d-guia") as SVGSVGElement | null;
+      const [plantaPngDataUri, elevacaoPngDataUri] = await Promise.all([
+        plantaEl ? svgParaPngDataUri(plantaEl) : Promise.resolve(null),
+        elevacaoEl ? svgParaPngDataUri(elevacaoEl) : Promise.resolve(null),
+      ]);
+      const v = data.orcamentos.intermediaria;
+      await gerarBookTecnico({
+        nomeProjeto: wizard.form.nome || wizard.form.ambiente || "Projeto Planne",
+        ambiente: wizard.form.ambiente,
+        clienteNome: wizard.clienteNome ?? undefined,
+        plantaPngDataUri,
+        elevacaoPngDataUri,
+        modulos: data.projeto.modulos,
+        planoCorte: data.plano_corte as unknown as PlanoNesting,
+        orcamento: {
+          versaoLabel: "Intermediária",
+          custoTotal: v.analise_financeira.custo_total,
+          precoVenda: v.analise_financeira.preco_venda,
+          margemPct: v.analise_financeira.margem_desejada_pct,
+          prazoDias: v.prazo_producao_dias,
+        },
+      });
+      toast.success("Book técnico gerado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar o book técnico");
+    } finally {
+      setGerandoBookTecnico(false);
+    }
+  };
+
   // Auto-gera o projeto fabricável ao abrir o Step 4 (ambiente suportado pelo motor)
   useEffect(() => {
     if (tipoLayoutMotor && !wizard.motorResultado && !motorAuto && !motorLoading) {
@@ -3918,6 +3956,9 @@ function Step4Layout({
               onCriarOrdem={criarOrdemDoMotor}
               criandoVersao={criandoVersao}
               ehCozinha={AMBIENTE_TO_LAYOUT[wizard.form.ambiente] === "cozinha_linear"}
+              nomeProjeto={wizard.form.nome || wizard.form.ambiente}
+              ambiente={wizard.form.ambiente}
+              clienteNome={wizard.clienteNome ?? undefined}
               medidas={{
                 largura: parseFloat(wizard.form.largura) || 4,
                 profundidade: parseFloat(wizard.form.profundidade) || 3,
@@ -3932,6 +3973,8 @@ function Step4Layout({
               exportandoXLS={gerandoXLS}
               onExportarDAE={handleExportarDAE}
               exportandoDAE={gerandoDAE}
+              onExportarBookTecnico={handleExportarBookTecnico}
+              exportandoBookTecnico={gerandoBookTecnico}
             />
           ) : (
             <div className="text-[12.5px] text-muted-foreground py-6 text-center">

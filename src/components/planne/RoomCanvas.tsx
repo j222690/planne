@@ -300,6 +300,7 @@ export function RoomCanvas({ moveis, medidas, onChange, onExport, onSelect, read
     <div className="relative rounded-lg border border-border overflow-hidden bg-[#f9f7f5] select-none">
       <svg
         ref={svgRef}
+        id="planta-2d-book"
         width="100%"
         viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
         className="block"

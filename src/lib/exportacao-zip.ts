@@ -53,8 +53,14 @@ function montarPlano(chapas: ChapaAlocada[]): PlanoNesting {
   };
 }
 
-function pdfListaCorte(plano: PlanoNesting, titulo: string): jsPDF {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+/**
+ * `docExistente`: quando fornecido, a lista é acrescentada NUMA PÁGINA NOVA
+ * do mesmo documento (em vez de criar um jsPDF isolado) — usado pelo book
+ * técnico (exportacao-book-tecnico.ts) pra não duplicar essa lógica.
+ */
+export function pdfListaCorte(plano: PlanoNesting, titulo: string, docExistente?: jsPDF): jsPDF {
+  const doc = docExistente ?? new jsPDF({ unit: "mm", format: "a4" });
+  if (docExistente) doc.addPage();
   const pageH = doc.internal.pageSize.getHeight();
   let y = 15;
 

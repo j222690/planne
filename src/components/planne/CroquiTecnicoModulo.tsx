@@ -33,26 +33,82 @@ function labelPuxador(tipo: string): string {
   return tipo.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
+/** Uma peça reduzida ao que o croqui precisa desenhar: posição do CENTRO e
+ * tamanho, em metros, em coordenadas locais do módulo (origem no centro da
+ * base — mesma convenção de `calcularVistaExplodida`). */
+export interface PecaCroqui {
+  xCentroM: number;
+  yCentroM: number;
+  larguraM: number;
+  alturaM: number;
+}
+
+export interface CroquiGeometria {
+  larguraM: number;
+  alturaM: number;
+  portas: PecaCroqui[];
+  gavetas: PecaCroqui[];
+  prateleiras: PecaCroqui[];
+  anotacoes: {
+    numPortas: number;
+    numGavetas: number;
+    numPrateleiras: number;
+    espCorpoMm: number;
+    espPortaMm: number;
+    ferragemLabel?: string;
+    puxadorLabel?: string;
+  };
+}
+
+/**
+ * Geometria pura do croqui técnico — sem JSX, sem jsPDF. Reaproveitada tanto
+ * pelo componente React (desenha em SVG, tela) quanto pelo gerador do book
+ * técnico (desenha nativo em jsPDF, PDF) — o cálculo é feito uma vez só.
+ * Fonte: `calcularVistaExplodida()`, a mesma usada pelo 3D e pelo manual de
+ * montagem — zero cálculo geométrico novo.
+ */
+export function calcularCroquiGeometria(modulo: ModuloParaCroqui): CroquiGeometria {
+  const cfg = modulo.configuracao ?? {};
+  const pecas = calcularVistaExplodida({ ...modulo, configuracao: cfg });
+  const porTipo = (tipo: string): PecaCroqui[] =>
+    pecas
+      .filter((p) => p.tipo === tipo)
+      .map((p) => ({
+        xCentroM: p.posicao[0],
+        yCentroM: p.posicao[1],
+        larguraM: p.tamanho[0],
+        alturaM: p.tamanho[1],
+      }));
+
+  const espCorpoMm = cfg.espessura_corpo_mm ?? 15;
+
+  return {
+    larguraM: modulo.largura_cm / 100,
+    alturaM: modulo.altura_cm / 100,
+    portas: porTipo("porta"),
+    gavetas: porTipo("gaveta"),
+    prateleiras: porTipo("prateleira"),
+    anotacoes: {
+      numPortas: cfg.num_portas ?? 0,
+      numGavetas: cfg.num_gavetas ?? 0,
+      numPrateleiras: cfg.num_prateleiras ?? 0,
+      espCorpoMm,
+      espPortaMm: cfg.espessura_porta_mm ?? espCorpoMm,
+      ferragemLabel: cfg.ferragem ? (FERRAGEM_LABEL[cfg.ferragem] ?? cfg.ferragem) : undefined,
+      puxadorLabel: cfg.tipo_puxador ? labelPuxador(cfg.tipo_puxador) : undefined,
+    },
+  };
+}
+
 /**
  * Croqui técnico 2D de UM módulo isolado — ficha técnica com cotas internas
  * (largura/altura total + posição de portas/gavetas/prateleiras). Diferente
  * de `WallElevationSection` (mostra a composição de TODOS os módulos numa
  * parede, sem cota interna nenhuma).
- *
- * Geometria vem de `calcularVistaExplodida()` — mesma fonte já usada pelo
- * visualizador 3D e pelo manual de montagem — projetando (X,Y) e ignorando Z
- * (profundidade), o que dá exatamente a vista frontal montada (não
- * explodida) do módulo. Zero cálculo geométrico novo.
  */
 export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
-  const cfg = modulo.configuracao ?? {};
-  const pecas = useMemo(
-    () => calcularVistaExplodida({ ...modulo, configuracao: cfg }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [modulo],
-  );
-  const L = modulo.largura_cm / 100;
-  const A = modulo.altura_cm / 100;
+  const geo = useMemo(() => calcularCroquiGeometria(modulo), [modulo]);
+  const { larguraM: L, alturaM: A, portas, gavetas, prateleiras, anotacoes } = geo;
 
   const SVG_W = 420;
   const SVG_H = 420;
@@ -70,13 +126,6 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
   // Origem de tela é o canto superior-esquerdo (Y+ = baixo) — inverte Y.
   const telaX = (xLocal: number) => offX + (xLocal + L / 2) * escala;
   const telaY = (yLocal: number) => offY + (A - yLocal) * escala;
-
-  const portas = pecas.filter((p) => p.tipo === "porta");
-  const gavetas = pecas.filter((p) => p.tipo === "gaveta");
-  const prateleiras = pecas.filter((p) => p.tipo === "prateleira");
-
-  const espCorpo = cfg.espessura_corpo_mm ?? 15;
-  const espPorta = cfg.espessura_porta_mm ?? espCorpo;
 
   return (
     <div className="space-y-2">
@@ -111,7 +160,7 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
 
         {/* Divisórias entre portas (uma linha por fronteira interna, N-1 pra N portas) */}
         {portas.slice(1).map((p, i) => {
-          const xBorda = telaX(p.posicao[0] - p.tamanho[0] / 2);
+          const xBorda = telaX(p.xCentroM - p.larguraM / 2);
           return (
             <line
               key={`div-porta-${i}`}
@@ -127,7 +176,7 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
 
         {/* Linha no topo de cada gaveta — separa da gaveta/porta acima */}
         {gavetas.map((g, i) => {
-          const yTopo = telaY(g.posicao[1] + g.tamanho[1] / 2);
+          const yTopo = telaY(g.yCentroM + g.alturaM / 2);
           return (
             <line
               key={`div-gav-${i}`}
@@ -143,7 +192,7 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
 
         {/* Prateleiras — linha tracejada + cota da altura a partir do piso do módulo */}
         {prateleiras.map((pr, i) => {
-          const y = telaY(pr.posicao[1]);
+          const y = telaY(pr.yCentroM);
           return (
             <g key={`prat-${i}`}>
               <line
@@ -156,7 +205,7 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
                 strokeDasharray="4 2"
               />
               <text x={offX + L * escala + 6} y={y + 3} fontSize="9" fill="#b45309">
-                {Math.round(pr.posicao[1] * 100)}cm
+                {Math.round(pr.yCentroM * 100)}cm
               </text>
             </g>
           );
@@ -164,8 +213,8 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
 
         {/* Cotas de altura de cada gaveta, à direita */}
         {gavetas.map((g, i) => {
-          const syBase = telaY(g.posicao[1] - g.tamanho[1] / 2);
-          const syTopo = telaY(g.posicao[1] + g.tamanho[1] / 2);
+          const syBase = telaY(g.yCentroM - g.alturaM / 2);
+          const syTopo = telaY(g.yCentroM + g.alturaM / 2);
           return (
             <text
               key={`cota-gav-${i}`}
@@ -174,7 +223,7 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
               fontSize="8.5"
               fill="#6b7280"
             >
-              {Math.round(g.tamanho[1] * 100)}cm
+              {Math.round(g.alturaM * 100)}cm
             </text>
           );
         })}
@@ -197,7 +246,7 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
           fontSize="11"
           fill="#374151"
         >
-          {modulo.largura_cm}cm
+          {Math.round(L * 100)}cm
         </text>
 
         {/* Cota de altura total (lateral esquerda) */}
@@ -219,22 +268,20 @@ export function CroquiTecnicoModulo({ modulo }: { modulo: ModuloParaCroqui }) {
           fill="#374151"
           transform={`rotate(-90, ${offX - 28}, ${offY + (A * escala) / 2})`}
         >
-          {modulo.altura_cm}cm
+          {Math.round(A * 100)}cm
         </text>
       </svg>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11.5px] text-muted-foreground px-1">
         <div>
-          {cfg.num_portas ?? 0} porta(s) · {cfg.num_gavetas ?? 0} gaveta(s) ·{" "}
-          {cfg.num_prateleiras ?? 0} prateleira(s)
+          {anotacoes.numPortas} porta(s) · {anotacoes.numGavetas} gaveta(s) ·{" "}
+          {anotacoes.numPrateleiras} prateleira(s)
         </div>
         <div>
-          Corpo {espCorpo}mm · Porta {espPorta}mm
+          Corpo {anotacoes.espCorpoMm}mm · Porta {anotacoes.espPortaMm}mm
         </div>
-        {cfg.ferragem && (
-          <div>Ferragem: {FERRAGEM_LABEL[cfg.ferragem] ?? cfg.ferragem}</div>
-        )}
-        {cfg.tipo_puxador && <div>Puxador: {labelPuxador(cfg.tipo_puxador)}</div>}
+        {anotacoes.ferragemLabel && <div>Ferragem: {anotacoes.ferragemLabel}</div>}
+        {anotacoes.puxadorLabel && <div>Puxador: {anotacoes.puxadorLabel}</div>}
       </div>
     </div>
   );
