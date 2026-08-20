@@ -93,6 +93,32 @@ def mat_pbr(nome, rgba, rough=0.45, metal=0.0, texset=None, use_color=True,
     return m
 
 
+def mat_vidro(nome, tint=(0.85, 0.92, 0.95, 1.0)):
+    """Vidro real por transmissão (Principled BSDF) — pra insert de porta
+    (alumínio/vidro). Diferente do 'vidro' de janela em montar_comodo (que é
+    emissivo, simula luz do dia entrando; aqui é vidro comum visto de fora).
+    Blender 4.x renomeou o socket 'Transmission' -> 'Transmission Weight';
+    tenta os dois nomes, com fallback silencioso pra não derrubar a cena
+    inteira se a API mudar de novo numa versão futura do Blender."""
+    m = bpy.data.materials.new(nome)
+    m.use_nodes = True
+    b = m.node_tree.nodes.get("Principled BSDF")
+    b.inputs["Base Color"].default_value = tint
+    b.inputs["Roughness"].default_value = 0.05
+    try:
+        for chave in ("Transmission Weight", "Transmission"):
+            if chave in b.inputs:
+                b.inputs[chave].default_value = 0.95
+                break
+    except Exception:
+        pass
+    try:
+        m.blend_method = "BLEND"
+    except Exception:
+        pass
+    return m
+
+
 def box(nome, cx, cy, cz, sx, sy, sz, mat, bevel=True):
     bpy.ops.mesh.primitive_cube_add(size=1, location=(cx, cy, cz))
     ob = bpy.context.active_object
@@ -123,6 +149,53 @@ def _furar_tampo(alvo, cx, cy, larg, prof, z):
     bpy.context.view_layer.objects.active = alvo
     bpy.ops.object.modifier_apply(modifier=m.name)
     bpy.data.objects.remove(cut, do_unlink=True)
+
+
+def _desenhar_porta(nome, cx, y_fr, cz, largura, altura, tipo_porta, mats):
+    """Desenha 1 porta considerando a variante real do módulo (paridade com
+    o concorrente Marcenaria Diferente) — antes desenhava sempre uma caixa
+    lisa pra qualquer tipo_porta, ignorando veneziana/alumínio-vidro/
+    provençal/palha (a MESMA categoria de bug já achada e corrigida no motor
+    de corte real — ver reference_divisoria_construcao — só que aqui do lado
+    do render, nunca corrigido). Fidelidade estilizada, não fabricação: o
+    objetivo é o render não mentir sobre o acabamento escolhido."""
+    if tipo_porta == "veneziana":
+        # Lamelas horizontais — mesma proporção da regraRipa() do motor real
+        # (ripa ~40mm + ~20mm de vão, ver src/lib/motor-parametrico/regras-corte-comuns.ts).
+        passo = 0.06
+        n = max(1, int(altura / passo))
+        lh = altura / n
+        for i in range(n):
+            lz = cz - altura / 2 + i * lh + lh / 2
+            box(f"{nome}_lam{i}", cx, y_fr, lz, largura, T, lh * 0.62, mats["porta"], bevel=False)
+        return
+    if tipo_porta == "aluminio_vidro":
+        borda = 0.045
+        box(f"{nome}_mold_e", cx - largura / 2 + borda / 2, y_fr, cz, borda, T, altura, mats["pux"], bevel=False)
+        box(f"{nome}_mold_d", cx + largura / 2 - borda / 2, y_fr, cz, borda, T, altura, mats["pux"], bevel=False)
+        box(f"{nome}_mold_s", cx, y_fr, cz + altura / 2 - borda / 2, largura, T, borda, mats["pux"], bevel=False)
+        box(f"{nome}_mold_i", cx, y_fr, cz - altura / 2 + borda / 2, largura, T, borda, mats["pux"], bevel=False)
+        box(f"{nome}_vidro", cx, y_fr + T * 0.25, cz, largura - borda * 2, T * 0.5, altura - borda * 2,
+            mats["vidro_porta"], bevel=False)
+        return
+    if tipo_porta == "palha":
+        borda = 0.05
+        box(f"{nome}_mold_e", cx - largura / 2 + borda / 2, y_fr, cz, borda, T, altura, mats["porta"], bevel=False)
+        box(f"{nome}_mold_d", cx + largura / 2 - borda / 2, y_fr, cz, borda, T, altura, mats["porta"], bevel=False)
+        box(f"{nome}_mold_s", cx, y_fr, cz + altura / 2 - borda / 2, largura, T, borda, mats["porta"], bevel=False)
+        box(f"{nome}_mold_i", cx, y_fr, cz - altura / 2 + borda / 2, largura, T, borda, mats["porta"], bevel=False)
+        box(f"{nome}_palha", cx, y_fr + T * 0.2, cz, largura - borda * 2, T * 0.6, altura - borda * 2,
+            mats["palha"], bevel=False)
+        return
+    if tipo_porta == "provencal":
+        # Painel usinado — moldura + painel central recuado (relevo estilizado).
+        borda = 0.06
+        box(f"{nome}_mold", cx, y_fr, cz, largura, T, altura, mats["porta"])
+        box(f"{nome}_centro", cx, y_fr + T * 0.25, cz, largura - borda * 2, T * 0.5, altura - borda * 2,
+            mats["porta"], bevel=False)
+        return
+    # padrão: porta lisa (dobradiça/correr/basculante — sem diferença visual entre eles hoje)
+    box(nome, cx, y_fr, cz, largura, T, altura, mats["porta"])
 
 
 def montar_modulo(m, mats):
@@ -177,10 +250,11 @@ def montar_modulo(m, mats):
             # puxador na borda superior da gaveta
             _desenhar_puxador(cfg, cx, y_fr, gz + gh / 2 - 0.02, min(L * 0.6, L - 0.08), mats["pux"])
     if portas:
+        tipo_porta = cfg.get("tipo_porta")
         pz0, ph, pw = z0 + zona_gav, A - zona_gav, L / portas
         for d in range(portas):
             px = x0 + (d + 0.5) * pw
-            box(f"porta{d}", px, y_fr, pz0 + ph / 2, pw - 0.006, T, ph - 0.006, mats["porta"])
+            _desenhar_porta(f"porta{d}", px, y_fr, pz0 + ph / 2, pw - 0.006, ph - 0.006, tipo_porta, mats)
             # aéreo: perfil na borda INFERIOR; base: na borda SUPERIOR (puxador cava/perfil)
             puxz = (pz0 + 0.03) if aereo else (pz0 + ph - 0.03)
             _desenhar_puxador(cfg, px, y_fr, puxz, pw * 0.55, mats["pux"])
@@ -582,6 +656,12 @@ def main():
         "banc": mat_pbr("bancada", hex_rgb(job.get("bancada_hex"), "2b2b2e"), 0.12, 0.0,
                         texset=t_ban, use_color=False, escala=0.5, nrm_forca=0.35),
         "pux": mat_pbr("puxador", (0.72, 0.73, 0.75, 1), 0.28, 0.9),
+        # Variantes de porta (paridade): vidro real por transmissão pro
+        # insert de alumínio/vidro; palha é aproximação estilizada (não há
+        # textura CC0 de fibra natural no catálogo hoje) — tom quente/rugoso
+        # o suficiente pra não ler como MDF liso.
+        "vidro_porta": mat_vidro("vidro_porta"),
+        "palha": mat_pbr("palha", (0.82, 0.72, 0.52, 1), 0.75, 0.0),
         "eletro": mat_pbr("eletro", (0.09, 0.09, 0.10, 1), 0.22, 0.6),
         "boca": mat_pbr("boca", (0.05, 0.05, 0.06, 1), 0.15, 0.3),
         "rodape": mat_pbr("rodape", (0.03, 0.03, 0.035, 1), 0.45),
