@@ -28,6 +28,19 @@ export interface BookTecnicoInput {
     margemPct: number;
     prazoDias: number;
   };
+  /**
+   * Cada marcenaria monta o book do seu jeito — alguns times não emitem
+   * lista de corte pra fora (produção própria), outros já têm um book de
+   * elevação separado etc. Configurável em Configurações; sem nada
+   * definido, o book sai completo (todas as seções ligadas por padrão).
+   */
+  secoes?: {
+    planta?: boolean;
+    elevacao?: boolean;
+    croquis?: boolean;
+    listaCorte?: boolean;
+    resumoOrcamento?: boolean;
+  };
 }
 
 function brl(v: number): string {
@@ -153,11 +166,19 @@ export async function gerarBookTecnico(input: BookTecnicoInput): Promise<void> {
   doc.text(new Date().toLocaleDateString("pt-BR"), pageW / 2, yCapa, { align: "center" });
   doc.setTextColor(0);
 
-  if (input.plantaPngDataUri) adicionarImagemPagina(doc, "Planta baixa", input.plantaPngDataUri);
-  if (input.elevacaoPngDataUri) adicionarImagemPagina(doc, "Vista de elevação", input.elevacaoPngDataUri);
+  const secoes = {
+    planta: input.secoes?.planta ?? true,
+    elevacao: input.secoes?.elevacao ?? true,
+    croquis: input.secoes?.croquis ?? true,
+    listaCorte: input.secoes?.listaCorte ?? true,
+    resumoOrcamento: input.secoes?.resumoOrcamento ?? true,
+  };
+
+  if (secoes.planta && input.plantaPngDataUri) adicionarImagemPagina(doc, "Planta baixa", input.plantaPngDataUri);
+  if (secoes.elevacao && input.elevacaoPngDataUri) adicionarImagemPagina(doc, "Vista de elevação", input.elevacaoPngDataUri);
 
   // Croquis técnicos — 2 por página, empilhados
-  if (input.modulos.length) {
+  if (secoes.croquis && input.modulos.length) {
     const pageH = doc.internal.pageSize.getHeight();
     const margemX = 14;
     const larguraDisp = pageW - margemX * 2;
@@ -177,28 +198,30 @@ export async function gerarBookTecnico(input: BookTecnicoInput): Promise<void> {
   }
 
   // Lista de corte — acrescentada no MESMO doc (reaproveita pdfListaCorte)
-  pdfListaCorte(input.planoCorte, "Lista de corte", doc);
+  if (secoes.listaCorte) pdfListaCorte(input.planoCorte, "Lista de corte", doc);
 
   // Resumo do orçamento
-  doc.addPage();
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0);
-  doc.text("Resumo do orçamento", 14, 15);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  let y = 26;
-  doc.text(`Versão: ${input.orcamento.versaoLabel}`, 14, y);
-  y += 7;
-  doc.text(`Custo de produção: ${brl(input.orcamento.custoTotal)}`, 14, y);
-  y += 7;
-  doc.text(`Margem: ${input.orcamento.margemPct}%`, 14, y);
-  y += 7;
-  doc.text(`Prazo de produção: ${input.orcamento.prazoDias} dia(s)`, 14, y);
-  y += 10;
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Total ao cliente: ${brl(input.orcamento.precoVenda)}`, 14, y);
+  if (secoes.resumoOrcamento) {
+    doc.addPage();
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Resumo do orçamento", 14, 15);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    let y = 26;
+    doc.text(`Versão: ${input.orcamento.versaoLabel}`, 14, y);
+    y += 7;
+    doc.text(`Custo de produção: ${brl(input.orcamento.custoTotal)}`, 14, y);
+    y += 7;
+    doc.text(`Margem: ${input.orcamento.margemPct}%`, 14, y);
+    y += 7;
+    doc.text(`Prazo de produção: ${input.orcamento.prazoDias} dia(s)`, 14, y);
+    y += 10;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total ao cliente: ${brl(input.orcamento.precoVenda)}`, 14, y);
+  }
 
   const nomeArquivo = `book-tecnico-${input.nomeProjeto.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`;
   doc.save(nomeArquivo);

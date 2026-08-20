@@ -392,6 +392,13 @@ function IAProjetoPage() {
     // referência de mercado do motor por tipo. Vazio = ninguém cadastrou
     // ainda, motor cai no fallback de sempre.
     precos_ferragem: {} as Record<string, number>,
+    // Book técnico — seções do PDF editáveis em Configurações (cada
+    // marcenaria monta o book do seu jeito). Completo por padrão.
+    book_planta: true,
+    book_elevacao: true,
+    book_croquis: true,
+    book_lista_corte: true,
+    book_resumo_orcamento: true,
   });
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const navigate = useNavigate();
@@ -440,6 +447,11 @@ function IAProjetoPage() {
         acab_engrosso: p.acab_engrosso !== false,
         ferragem_padrao: (p.ferragem_padrao as "nacional" | "blum" | "hafele") ?? "nacional",
         precos_ferragem: precosFerragem,
+        book_planta: p.book_planta !== false,
+        book_elevacao: p.book_elevacao !== false,
+        book_croquis: p.book_croquis !== false,
+        book_lista_corte: p.book_lista_corte !== false,
+        book_resumo_orcamento: p.book_resumo_orcamento !== false,
       });
       if (p.plantas_baixas && typeof p.plantas_baixas === "object") {
         setPlantasSalvas(p.plantas_baixas as Record<string, PlantaSalva>);
@@ -3192,6 +3204,11 @@ function Step4Layout({
     acab_engrosso: boolean;
     ferragem_padrao: "nacional" | "blum" | "hafele";
     precos_ferragem: Record<string, number>;
+    book_planta: boolean;
+    book_elevacao: boolean;
+    book_croquis: boolean;
+    book_lista_corte: boolean;
+    book_resumo_orcamento: boolean;
   };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
@@ -3591,6 +3608,13 @@ function Step4Layout({
           precoVenda: v.analise_financeira.preco_venda,
           margemPct: v.analise_financeira.margem_desejada_pct,
           prazoDias: v.prazo_producao_dias,
+        },
+        secoes: {
+          planta: empresaParams.book_planta,
+          elevacao: empresaParams.book_elevacao,
+          croquis: empresaParams.book_croquis,
+          listaCorte: empresaParams.book_lista_corte,
+          resumoOrcamento: empresaParams.book_resumo_orcamento,
         },
       });
       toast.success("Book técnico gerado.");

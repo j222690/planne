@@ -91,6 +91,17 @@ function Configuracoes() {
     ferragem_padrao: "nacional" as "nacional" | "blum" | "hafele",
   });
 
+  // Book técnico (PDF) — cada marcenaria monta o book do seu jeito (algumas
+  // não emitem lista de corte pra fora, outras não usam croqui por módulo).
+  // Sai completo por padrão; a marcenaria desliga o que não usa.
+  const [bookTecnico, setBookTecnico] = useState({
+    book_planta: true,
+    book_elevacao: true,
+    book_croquis: true,
+    book_lista_corte: true,
+    book_resumo_orcamento: true,
+  });
+
   const [fiscal, setFiscal] = useState({
     focus_nfe_token: "",
     focus_nfe_ambiente: "homologacao" as "homologacao" | "producao",
@@ -159,6 +170,13 @@ function Configuracoes() {
         acab_engrosso: p.acab_engrosso !== false,
         ferragem_padrao: (p.ferragem_padrao as "nacional" | "blum" | "hafele") ?? "nacional",
       });
+      setBookTecnico({
+        book_planta: p.book_planta !== false,
+        book_elevacao: p.book_elevacao !== false,
+        book_croquis: p.book_croquis !== false,
+        book_lista_corte: p.book_lista_corte !== false,
+        book_resumo_orcamento: p.book_resumo_orcamento !== false,
+      });
       setFiscal({
         focus_nfe_token: String(p.focus_nfe_token ?? ""),
         focus_nfe_ambiente: (p.focus_nfe_ambiente as "homologacao" | "producao") ?? "homologacao",
@@ -207,7 +225,7 @@ function Configuracoes() {
       telefone: form.telefone || null,
       email: form.email || null,
       cor_primaria: form.cor_primaria || null,
-      parametros: { ...params, ...padroes, ...fiscal, plantas_baixas: Object.keys(plantas).length > 0 ? plantas : undefined },
+      parametros: { ...params, ...padroes, ...bookTecnico, ...fiscal, plantas_baixas: Object.keys(plantas).length > 0 ? plantas : undefined },
     }).eq("id", empresa.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -243,7 +261,7 @@ function Configuracoes() {
 
       // Salva imediatamente
       await supabase.from("empresas").update({
-        parametros: { ...params, ...fiscal, plantas_baixas: novasPlantas },
+        parametros: { ...params, ...padroes, ...bookTecnico, ...fiscal, plantas_baixas: novasPlantas },
       }).eq("id", empresa.id);
 
       toast.success(`Planta de ${ambiente} analisada e salva!`);
@@ -260,7 +278,7 @@ function Configuracoes() {
     delete novas[ambiente];
     setPlantas(novas);
     await supabase.from("empresas").update({
-      parametros: { ...params, ...fiscal, plantas_baixas: Object.keys(novas).length > 0 ? novas : null },
+      parametros: { ...params, ...padroes, ...bookTecnico, ...fiscal, plantas_baixas: Object.keys(novas).length > 0 ? novas : null },
     }).eq("id", empresa.id);
     toast.success("Planta removida");
   };
@@ -449,6 +467,36 @@ function Configuracoes() {
                   <option value="hafele">Häfele</option>
                 </select>
               </label>
+            </div>
+          </Surface>
+
+          {/* Book técnico (PDF) — cada marcenaria monta o book do seu jeito */}
+          <Surface>
+            <div className="text-[12.5px] font-semibold mb-1">Book técnico — seções do PDF</div>
+            <div className="text-[11px] text-muted-foreground mb-4">
+              O PDF sai completo por padrão. Desligue aqui o que sua marcenaria não usa —
+              vale pra todo projeto novo exportado.
+            </div>
+            <div className="space-y-2.5">
+              {([
+                ["book_planta", "Planta baixa", "Vista superior do ambiente"],
+                ["book_elevacao", "Vista de elevação", "Parede ativa, frente dos módulos"],
+                ["book_croquis", "Croqui técnico por módulo", "Cotas internas: portas, gavetas, prateleiras"],
+                ["book_lista_corte", "Lista de corte", "Peças por chapa, pronta pra produção"],
+                ["book_resumo_orcamento", "Resumo do orçamento", "Custo, margem, prazo e total ao cliente"],
+              ] as const).map(([key, label, sub]) => (
+                <button key={key} type="button"
+                  onClick={() => setBookTecnico((b) => ({ ...b, [key]: !b[key] }))}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border text-left transition-colors ${bookTecnico[key] ? "border-primary bg-primary/5" : "border-border hover:bg-secondary"}`}>
+                  <span className={`shrink-0 size-4 rounded border flex items-center justify-center ${bookTecnico[key] ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
+                    {bookTecnico[key] && <span className="text-[10px] leading-none">✓</span>}
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="text-[12.5px] font-medium">{label}</span>
+                    <span className="text-[10.5px] text-muted-foreground">{sub}</span>
+                  </span>
+                </button>
+              ))}
             </div>
           </Surface>
 
