@@ -3096,8 +3096,13 @@ function MotorResultadoPainel({
 // ProjetoFabricavel) — de propósito: um orçamento já mostrado ao cliente
 // não pode mudar de valor sozinho se a empresa alterar o preço padrão de
 // chapa depois. Chamado logo após todo `update({ motorResultado })` real.
-async function persistirMotorResultado(projetoId: string | null, data: MotorResultado) {
+async function persistirMotorResultado(
+  projetoId: string | null,
+  data: MotorResultado,
+  onStatus?: (s: "salvando" | "salvo" | "erro") => void,
+) {
   if (!projetoId) return;
+  onStatus?.("salvando");
   const { error } = await supabase
     .from("room_projects")
     .update({
@@ -3106,7 +3111,12 @@ async function persistirMotorResultado(projetoId: string | null, data: MotorResu
       origem: "motor_parametrico",
     })
     .eq("id", projetoId);
-  if (error) console.error("Falha ao persistir o projeto fabricável:", error);
+  if (error) {
+    console.error("Falha ao persistir o projeto fabricável:", error);
+    onStatus?.("erro");
+  } else {
+    onStatus?.("salvo");
+  }
 }
 
 function Step4Layout({
@@ -3142,6 +3152,11 @@ function Step4Layout({
   };
 }) {
   const [selectedMovelId, setSelectedMovelId] = useState<string | null>(null);
+  // Fase 5 (autosave) — indicador visual de que o projeto está sendo salvo
+  // de verdade a cada recalculo (o motor já persiste sozinho via
+  // persistirMotorResultado; isso só torna esse salvamento visível/confiável
+  // pro usuário, que hoje não tem nenhum feedback de que está acontecendo).
+  const [salvando, setSalvando] = useState<"idle" | "salvando" | "salvo" | "erro">("idle");
   const [motorAberto, setMotorAberto] = useState(false);
   const [motorLoading, setMotorLoading] = useState(false);
   const [editorAberto, setEditorAberto] = useState(false);
@@ -3264,7 +3279,7 @@ function Step4Layout({
       if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
       const data = (await res.json()) as MotorResultado;
       update({ motorResultado: data });
-      await persistirMotorResultado(wizard.projetoId, data);
+      await persistirMotorResultado(wizard.projetoId, data, setSalvando);
       setEditorAberto(false);
       toast.success(
         `Projeto gerado a partir do Editor 3D · validação ${data.validacao.status} (${data.validacao.score})`,
@@ -3289,7 +3304,7 @@ function Step4Layout({
       if (!res.ok) throw new Error(((await res.json()) as { error: string }).error);
       const data = (await res.json()) as MotorResultado;
       update({ motorResultado: data });
-      await persistirMotorResultado(wizard.projetoId, data);
+      await persistirMotorResultado(wizard.projetoId, data, setSalvando);
       setMotorAberto(false);
 
       // 3.4: guarda o resumo das 3 versões no cômodo ativo, para consolidação.
@@ -3331,6 +3346,7 @@ function Step4Layout({
     wizard.comodos,
     wizard.projetoId,
     update,
+    setSalvando,
     motorParede,
     motorFerragem,
     motorTipoPorta,
@@ -3819,10 +3835,30 @@ function Step4Layout({
             <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
               Motor Paramétrico
             </span>
-            {motorLoading && (
+            {motorLoading ? (
               <span className="ml-auto text-[11.5px] text-muted-foreground inline-flex items-center gap-1">
                 <Loader2 className="size-3 animate-spin" /> gerando…
               </span>
+            ) : (
+              salvando !== "idle" && (
+                <span
+                  className={`ml-auto text-[11.5px] inline-flex items-center gap-1 ${
+                    salvando === "erro" ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                >
+                  {salvando === "salvando" && (
+                    <>
+                      <Loader2 className="size-3 animate-spin" /> salvando…
+                    </>
+                  )}
+                  {salvando === "salvo" && (
+                    <>
+                      <CheckCircle2 className="size-3 text-emerald-500" /> salvo
+                    </>
+                  )}
+                  {salvando === "erro" && "erro ao salvar"}
+                </span>
+              )
             )}
           </div>
           {wizard.motorResultado ? (
