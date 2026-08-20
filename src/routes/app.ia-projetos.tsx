@@ -39,6 +39,7 @@ import { checkAndConsumeCredito, getCreditosDisponiveis } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
 import { RoomCanvas, exportSvgToPng, type MovelCanvas } from "@/components/planne/RoomCanvas";
 import { VistaExplodida3D } from "@/components/planne/VistaExplodida3D";
+import { CroquiTecnicoModulo } from "@/components/planne/CroquiTecnicoModulo";
 import { EditorAmbiente3D, type PlacementPayload } from "@/components/planne/EditorAmbiente3D";
 import type { CategoriaAmbiente } from "@/lib/motor-parametrico/tipos";
 
@@ -2519,7 +2520,16 @@ interface ModuloMotor {
   largura_cm: number;
   altura_cm: number;
   profundidade_cm: number;
-  configuracao?: { num_portas?: number; num_gavetas?: number; num_prateleiras?: number };
+  configuracao?: {
+    num_portas?: number;
+    num_gavetas?: number;
+    num_prateleiras?: number;
+    // Campos a mais pro croqui técnico (Fase A) — só leitura/anotação, sem cálculo novo.
+    espessura_corpo_mm?: number;
+    espessura_porta_mm?: number;
+    ferragem?: string;
+    tipo_puxador?: string;
+  };
 }
 interface MotorResultado {
   projeto: { modulos: ModuloMotor[] };
@@ -2655,6 +2665,7 @@ function MotorResultadoPainel({
     error?: string;
   } | null>(null);
   const [moduloVista3D, setModuloVista3D] = useState<number | null>(null);
+  const [moduloCroqui, setModuloCroqui] = useState<number | null>(null);
 
   const handleGerarRender3D = async () => {
     setRenderJob({ status: "pending" });
@@ -2796,11 +2807,49 @@ function MotorResultadoPainel({
                   >
                     <Layers className="size-3" /> 3D
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setModuloCroqui(i)}
+                    className="ml-2 text-[10.5px] text-accent hover:underline shrink-0 inline-flex items-center gap-0.5"
+                  >
+                    <FileText className="size-3" /> Croqui
+                  </button>
                 </div>
               );
             })}
           </div>
         </details>
+      )}
+
+      {/* Croqui técnico 2D do módulo — ficha isolada com cotas internas (Fase A) */}
+      {moduloCroqui !== null && data.projeto.modulos[moduloCroqui] && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          onClick={() => setModuloCroqui(null)}
+        >
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md bg-surface border border-border rounded-lg shadow-xl p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[13px] font-semibold">
+                Croqui técnico —{" "}
+                {data.projeto.modulos[moduloCroqui].nome_display ??
+                  data.projeto.modulos[moduloCroqui].nome ??
+                  `Módulo ${moduloCroqui + 1}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setModuloCroqui(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <CroquiTecnicoModulo modulo={data.projeto.modulos[moduloCroqui]} />
+          </div>
+        </div>
       )}
 
       {/* Vista explodida 3D — cena completa (todos os módulos), com foco no clicado */}
