@@ -14,6 +14,7 @@ import {
 import { listarTodosOsModulos } from "@/lib/motor-parametrico/editor-manual";
 import { PecaMesh } from "./peca-mesh";
 import { CameraControlada, VISTAS_NOMEADAS, type VistaCamera } from "./camera-controles";
+import { CotaLinha3D, MarcadorPontoCota, type Cota3D } from "./cota-3d";
 import {
   moverModuloNaParede,
   moverModuloIlha,
@@ -119,6 +120,8 @@ function ModuloPecas({
   onSelecionarModulo,
   onSelecionarPeca,
   onPointerDownModulo,
+  modoCota = false,
+  onPontoCota,
 }: {
   pecas: PecaVisual3D[];
   grupoPosicao: [number, number, number];
@@ -129,6 +132,9 @@ function ModuloPecas({
   onSelecionarModulo: () => void;
   onSelecionarPeca: (pecaId: string) => void;
   onPointerDownModulo: (e: ThreeEvent<PointerEvent>) => void;
+  /** Modo "Cotar" ativo — clique nas peças captura ponto em vez de selecionar. */
+  modoCota?: boolean;
+  onPontoCota?: (point: [number, number, number]) => void;
 }) {
   return (
     <group position={grupoPosicao} rotation={[0, grupoRotacaoY, 0]}>
@@ -145,6 +151,7 @@ function ModuloPecas({
             onSelecionarModulo();
             onPointerDownModulo(e);
           }}
+          onPontoCota={modoCota ? onPontoCota : undefined}
         />
       ))}
     </group>
@@ -212,8 +219,26 @@ export function EditorAmbiente3D({
     setPecaSelecionadaId(null);
   }, [placements]);
 
+  // Cotas manuais (medir 2 pontos) — puramente client-side, sem undo/redo
+  // próprio (controle de remoção individual/limpar tudo é suficiente pra
+  // uma ferramenta de conferência rápida).
+  const [modoCota, setModoCota] = useState(false);
+  const [cotas, setCotas] = useState<Cota3D[]>([]);
+  const [pontoPendente, setPontoPendente] = useState<[number, number, number] | null>(null);
+  const registrarPontoCota = useCallback((p: [number, number, number]) => {
+    setPontoPendente((atual) => {
+      if (!atual) return p;
+      setCotas((cs) => [...cs, { id: crypto.randomUUID(), p1: atual, p2: p }]);
+      return null;
+    });
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && pontoPendente) {
+        setPontoPendente(null);
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
       e.preventDefault();
       if (e.shiftKey) redo();
@@ -221,7 +246,7 @@ export function EditorAmbiente3D({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, pontoPendente]);
 
   const [selecionadoUid, setSelecionadoUid] = useState<string | null>(null);
   const [pecaSelecionadaId, setPecaSelecionadaId] = useState<string | null>(null);
@@ -572,7 +597,7 @@ export function EditorAmbiente3D({
           <directionalLight position={[3, 5, 3]} intensity={1.1} />
           <directionalLight position={[-3, 2, -3]} intensity={0.35} />
 
-          {/* Chão — também é o plano de raycast do arraste */}
+          {/* Chão — também é o plano de raycast do arraste e (em modo cota) de captura de ponto */}
           <mesh
             rotation={[-Math.PI / 2, 0, 0]}
             position={[larguraM / 2, 0, profundidadeM / 2]}
@@ -581,6 +606,14 @@ export function EditorAmbiente3D({
               setSelecionadoUid(null);
               setPecaSelecionadaId(null);
             }}
+            onClick={
+              modoCota
+                ? (e) => {
+                    e.stopPropagation();
+                    registrarPontoCota([e.point.x, 0, e.point.z]);
+                  }
+                : undefined
+            }
           >
             <planeGeometry args={[Math.max(larguraM, 1) + 4, Math.max(profundidadeM, 1) + 4]} />
             <meshBasicMaterial visible={false} />
@@ -595,8 +628,12 @@ export function EditorAmbiente3D({
             sectionColor="#94a3b8"
           />
 
-          {/* Contorno das paredes — caixa invisível fina, só as arestas aparecem */}
-          <mesh position={[larguraM / 2, 0.01, profundidadeM / 2]}>
+          {/* Contorno das paredes — caixa invisível fina, só as arestas aparecem.
+              raycast desabilitado: ela fica ligeiramente ACIMA do chão
+              (y=0.01 vs y=0 do chão) e cobre o mesmo footprint da sala —
+              sem isso, ela intercepta o raycast antes do chão, e clique no
+              piso dentro da sala (modo Cotar) falha silenciosamente. */}
+          <mesh position={[larguraM / 2, 0.01, profundidadeM / 2]} raycast={() => null}>
             <boxGeometry args={[larguraM, 0.02, profundidadeM]} />
             <meshBasicMaterial visible={false} />
             <Edges color="#334155" />
@@ -622,9 +659,16 @@ export function EditorAmbiente3D({
                   setArrastandoUid(placements[i].uid);
                   setOrbitAtivo(false);
                 }}
+                modoCota={modoCota}
+                onPontoCota={registrarPontoCota}
               />
             ))}
           </Suspense>
+
+          {cotas.map((c) => (
+            <CotaLinha3D key={c.id} cota={c} onRemover={(id) => setCotas((cs) => cs.filter((x) => x.id !== id))} />
+          ))}
+          {pontoPendente && <MarcadorPontoCota ponto={pontoPendente} />}
 
           <CameraControlada
             vista={vista}
@@ -668,6 +712,38 @@ export function EditorAmbiente3D({
             />
             Modo técnico
           </label>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setModoCota((m) => !m);
+                setPontoPendente(null);
+              }}
+              title="Clique em 2 pontos (peça ou chão) pra medir a distância entre eles"
+              className={`h-6 px-2 rounded border text-[10.5px] ${
+                modoCota
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border text-muted-foreground hover:bg-secondary"
+              }`}
+            >
+              Cotar
+            </button>
+            {cotas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCotas([])}
+                title="Remover todas as cotas"
+                className="h-6 px-2 rounded border border-border text-[10.5px] text-muted-foreground hover:bg-secondary"
+              >
+                Limpar cotas ({cotas.length})
+              </button>
+            )}
+          </div>
+          {modoCota && (
+            <div className="text-[10px] text-muted-foreground text-right">
+              {pontoPendente ? "Clique no 2º ponto (Esc cancela)" : "Clique em 2 pontos pra cotar"}
+            </div>
+          )}
         </div>
 
         {/* Toolbar do módulo selecionado */}

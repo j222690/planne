@@ -19,6 +19,7 @@ export function PecaMesh({
   semTextura = false,
   onSelect,
   onPointerDownPeca,
+  onPontoCota,
 }: {
   peca: PecaVisual3D;
   explosao?: number;
@@ -35,6 +36,12 @@ export function PecaMesh({
    * VistaExplodida3D não passa isso (não tem drag).
    */
   onPointerDownPeca?: (e: ThreeEvent<PointerEvent>) => void;
+  /**
+   * Opcional — modo "Cotar" do Editor 3D. Quando presente, INTERCEPTA o
+   * click (não seleciona a peça): captura o ponto clicado em coordenada de
+   * mundo pra virar um dos 2 pontos de uma cota manual.
+   */
+  onPontoCota?: (point: [number, number, number]) => void;
 }) {
   const pos: [number, number, number] = [
     peca.posicao[0] + peca.direcaoExplosao[0] * peca.distanciaExplosao * explosao,
@@ -53,7 +60,11 @@ export function PecaMesh({
       onPointerDown={onPointerDownPeca}
       onClick={(e: ThreeEvent<MouseEvent>) => {
         e.stopPropagation();
-        onSelect();
+        if (onPontoCota) {
+          onPontoCota([e.point.x, e.point.y, e.point.z]);
+        } else {
+          onSelect();
+        }
       }}
     >
       <boxGeometry args={peca.tamanho} />
