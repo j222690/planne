@@ -16,12 +16,40 @@ import {
 import { PecaMesh } from "./peca-mesh";
 import { CameraControlada, VISTAS_NOMEADAS, type VistaCamera } from "./camera-controles";
 
-function imprimirManual(nomeModulo: string, passos: ReturnType<typeof calcularPassosMontagem>) {
+/**
+ * `win` é aberto ANTES de qualquer await — popup blocker só libera
+ * `window.open` dentro do gesto síncrono do clique; abrir depois de esperar
+ * o QR geraria um popup bloqueado na maioria dos navegadores.
+ */
+async function imprimirManual(
+  nomeModulo: string,
+  passos: ReturnType<typeof calcularPassosMontagem>,
+  renderUrl?: string,
+) {
+  const win = window.open("", "_blank");
+  if (!win) return;
+
+  // QR code (paridade com o concorrente) — só quando já existe um render 3D
+  // real gerado; sem isso não tem URL nenhuma útil pra apontar num celular.
+  // import() dinâmico: "qrcode" só carrega no clique de Imprimir, não infla
+  // o bundle principal (mesmo padrão de exportacao-zip.ts).
+  const qrDataUrl = renderUrl
+    ? await import("qrcode")
+        .then(({ toDataURL }) => toDataURL(renderUrl, { margin: 0, width: 160 }))
+        .catch(() => null)
+    : null;
+  const qrHtml = qrDataUrl
+    ? `<div class="qr"><img src="${qrDataUrl}" width="110" height="110" alt="QR code do render 3D" /><div class="qr-label">Ver render 3D<br/>no celular</div></div>`
+    : "";
+
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Manual de montagem — ${nomeModulo}</title>
 <style>
   body{font-family:sans-serif;max-width:640px;margin:32px auto;padding:0 16px;color:#111}
   h1{font-size:18px;margin-bottom:2px}
   .sub{color:#666;font-size:12.5px;margin-bottom:24px}
+  .cabecalho{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .qr{text-align:center;flex-shrink:0}
+  .qr-label{font-size:10px;color:#666;margin-top:4px;line-height:1.3}
   .passo{border:1px solid #ddd;border-radius:8px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid}
   .passo h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
   .n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#111;color:#fff;font-size:12px;flex-shrink:0}
@@ -31,8 +59,13 @@ function imprimirManual(nomeModulo: string, passos: ReturnType<typeof calcularPa
   @media print{.no-print{display:none}}
 </style></head><body>
 <div class="no-print"><button onclick="window.print()" style="padding:8px 20px;background:#111;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir</button></div>
-<h1>Manual de montagem</h1>
-<div class="sub">${nomeModulo} · ${passos.length} passo(s)</div>
+<div class="cabecalho">
+  <div>
+    <h1>Manual de montagem</h1>
+    <div class="sub">${nomeModulo} · ${passos.length} passo(s)</div>
+  </div>
+  ${qrHtml}
+</div>
 ${passos
   .map(
     (p, i) => `
@@ -47,11 +80,8 @@ ${passos
   )
   .join("")}
 </body></html>`;
-  const win = window.open("", "_blank");
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-  }
+  win.document.write(html);
+  win.document.close();
 }
 
 /**
@@ -67,12 +97,15 @@ export function VistaExplodida3D({
   medidas,
   corHex = "#f2f0eb",
   moduloFocoInicial = null,
+  renderUrl,
 }: {
   modulos: ModuloComPosicao[];
   /** Dimensões do ambiente (cm) — necessário quando há paredes "bottom"/"right". */
   medidas?: { largura_cm: number; profundidade_cm: number };
   corHex?: string;
   moduloFocoInicial?: number | null;
+  /** URL pública do render 3D real (Blender), quando já gerado — vira QR code no manual de montagem impresso. */
+  renderUrl?: string;
 }) {
   const cena = useMemo(() => calcularCenaCompleta(modulos, medidas), [modulos, medidas]);
   const [explosao, setExplosao] = useState(moduloFocoInicial !== null ? 0.4 : 0);
@@ -295,7 +328,7 @@ export function VistaExplodida3D({
             </span>
             <button
               type="button"
-              onClick={() => imprimirManual(moduloFoco.nome_display ?? "Módulo", passos)}
+              onClick={() => imprimirManual(moduloFoco.nome_display ?? "Módulo", passos, renderUrl)}
               className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
             >
               <Printer className="size-3" /> Imprimir

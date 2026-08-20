@@ -2864,6 +2864,7 @@ function MotorResultadoPainel({
                   }}
                   corHex={primeiroMaterial?.cor_hex ?? "#f2f0eb"}
                   moduloFocoInicial={moduloVista3D}
+                  renderUrl={renderJob?.status === "completed" ? renderJob.imageUrl : undefined}
                 />
               </div>
             </div>
