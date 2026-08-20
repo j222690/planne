@@ -81,24 +81,32 @@ function desenharCroqui(
   doc.setTextColor(0);
   doc.text(titulo, x, y);
 
-  const reservaRodape = 12;
-  const topoDesenho = y + 5;
-  const alturaUtil = alturaDisp - reservaRodape;
+  // Layout em 3 faixas de altura FIXAS (título / desenho / rodapé de
+  // anotação) — o rodapé é reservado antes de calcular a escala do desenho,
+  // não posicionado relativo à caixa depois, senão módulos muito altos
+  // empurram a anotação pra dentro do card seguinte (bug encontrado ao
+  // inspecionar o PDF gerado de verdade: texto sobrepondo o próximo título).
+  const tituloH = 6;
+  const rodapeH = 11;
+  const gapDesenhoRodape = 3;
+  const topoDesenho = y + tituloH;
+  const alturaUtil = alturaDisp - tituloH - rodapeH - gapDesenhoRodape;
   const escala = Math.min((larguraDisp - 12) / geo.larguraM, alturaUtil / geo.alturaM);
   const bx = x + (larguraDisp - geo.larguraM * escala) / 2;
   const by = topoDesenho;
+  const rodapeY = y + tituloH + alturaUtil + gapDesenhoRodape + 4;
 
   const telaX = (xLocal: number) => bx + (xLocal + geo.larguraM / 2) * escala;
   const telaY = (yLocal: number) => by + (geo.alturaM - yLocal) * escala;
 
   // Caixa externa
-  doc.setDrawColor(55, 65, 81);
-  doc.setLineWidth(0.3);
+  doc.setDrawColor(31, 41, 55);
+  doc.setLineWidth(0.4);
   doc.rect(bx, by, geo.larguraM * escala, geo.alturaM * escala);
 
   // Divisórias entre portas
-  doc.setDrawColor(156, 163, 175);
-  doc.setLineWidth(0.15);
+  doc.setDrawColor(107, 114, 128);
+  doc.setLineWidth(0.25);
   for (const p of geo.portas.slice(1)) {
     const lx = telaX(p.xCentroM - p.larguraM / 2);
     doc.line(lx, by, lx, by + geo.alturaM * escala);
@@ -110,6 +118,7 @@ function desenharCroqui(
   }
   // Prateleiras (tracejado)
   doc.setDrawColor(180, 83, 9);
+  doc.setLineWidth(0.3);
   doc.setLineDashPattern([1, 0.8], 0);
   for (const pr of geo.prateleiras) {
     const ly = telaY(pr.yCentroM);
@@ -118,19 +127,20 @@ function desenharCroqui(
   doc.setLineDashPattern([], 0);
 
   // Cotas totais
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(55, 65, 81);
-  doc.text(`${Math.round(geo.larguraM * 100)}cm`, bx + (geo.larguraM * escala) / 2, by + geo.alturaM * escala + 4, {
+  doc.setTextColor(31, 41, 55);
+  doc.text(`${Math.round(geo.larguraM * 100)}cm`, bx + (geo.larguraM * escala) / 2, by + geo.alturaM * escala + 5, {
     align: "center",
   });
-  doc.text(`${Math.round(geo.alturaM * 100)}cm`, Math.max(x, bx - 2), by + (geo.alturaM * escala) / 2, {
-    align: "right",
+  doc.text(`${Math.round(geo.alturaM * 100)}cm`, Math.max(x, bx - 2.5), by + (geo.alturaM * escala) / 2, {
+    align: "center",
+    angle: 90,
   });
 
-  // Anotações
-  doc.setFontSize(6.3);
-  doc.setTextColor(120);
+  // Anotações — posição FIXA (rodapeY), não relativa ao tamanho da caixa
+  doc.setFontSize(7);
+  doc.setTextColor(75, 85, 99);
   const a = geo.anotacoes;
   const partes = [
     `${a.numPortas} porta(s) · ${a.numGavetas} gaveta(s) · ${a.numPrateleiras} prateleira(s)`,
@@ -138,7 +148,7 @@ function desenharCroqui(
     a.ferragemLabel ? `Ferragem ${a.ferragemLabel}` : null,
     a.puxadorLabel ? `Puxador ${a.puxadorLabel}` : null,
   ].filter(Boolean);
-  doc.text(partes.join("  ·  "), x, by + geo.alturaM * escala + 9, { maxWidth: larguraDisp });
+  doc.text(partes.join("  ·  "), x, rodapeY, { maxWidth: larguraDisp });
   doc.setTextColor(0);
 }
 
