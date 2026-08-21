@@ -1521,6 +1521,7 @@ function calcularPecas(instancia, template) {
         );
         pecas.push(...segmentos);
       } else {
+        const usinagens = cfg.usinagens?.filter((u) => u.peca_regra_nome === regra.nome);
         pecas.push({
           id: `${baseId}_${seq++}`,
           modulo_instanciado_id: instancia.id,
@@ -1535,7 +1536,8 @@ function calcularPecas(instancia, template) {
           fita_borda: regra.fita_borda(cfg),
           quantidade: 1,
           etiqueta_producao: `${regra.nome.toUpperCase()} \u2014 ${instancia.nome_display}`,
-          status: "pendente"
+          status: "pendente",
+          ...usinagens && usinagens.length > 0 ? { usinagens } : {}
         });
       }
     }
@@ -4762,7 +4764,8 @@ function prepararPorMaterial(pecas) {
     if (NAO_CHAPA.test(p.material.nome_display)) continue;
     const chave = `${p.material.id}|${p.espessura_mm}`;
     const grupo = grupos.get(chave) ?? { material: p.material, itens: [] };
-    const podeRotacionar = p.direcao_fio === "indiferente";
+    const temUsinagem = !!p.usinagens && p.usinagens.length > 0;
+    const podeRotacionar = p.direcao_fio === "indiferente" && !temUsinagem;
     for (let i = 0; i < p.quantidade; i++) {
       grupo.itens.push({
         peca_id: `${p.id}#${i}`,
@@ -4773,7 +4776,8 @@ function prepararPorMaterial(pecas) {
         pode_rotacionar: podeRotacionar,
         etiqueta: p.etiqueta_producao,
         direcao_fio: p.direcao_fio,
-        fita_borda: p.fita_borda
+        fita_borda: p.fita_borda,
+        usinagens: p.usinagens
       });
     }
     grupos.set(chave, grupo);
@@ -4815,7 +4819,10 @@ function montarChapa(numero, material, bin, comSvg) {
     rotacionada: c.rotacionada,
     etiqueta: c.peca.etiqueta,
     direcao_fio: c.peca.direcao_fio,
-    fita_borda: c.peca.fita_borda
+    fita_borda: c.peca.fita_borda,
+    // Nunca rotacionada (ver prepararPorMaterial) — x_mm/y_mm da usinagem
+    // usam a mesma orientação local com que foram pedidos, sem remapear.
+    usinagens: c.peca.usinagens
   }));
   const areaChapa = bin.largura * bin.altura;
   const areaUtil = pecas_alocadas.reduce((s, p) => s + p.largura_mm * p.comprimento_mm, 0);
@@ -5627,6 +5634,10 @@ ${nos}
 }
 
 // src/lib/motor-parametrico/exportacao-corte.ts
+function textoUsinagens(p) {
+  if (!p.usinagens || p.usinagens.length === 0) return "";
+  return p.usinagens.map((u) => `furo \xD8${u.diametro_mm}mm @ (${u.x_mm},${u.y_mm})`).join("; ");
+}
 var LABEL_VEIO = {
   paralelo_largura: "largura",
   paralelo_comprimento: "comprimento",
@@ -5656,7 +5667,8 @@ function gerarCSVCorte(plano) {
     "rotacionada",
     "veio",
     "lado_fitado",
-    "etiqueta"
+    "etiqueta",
+    "usinagens"
   ].join(sep);
   const linhas = [cabecalho];
   for (const chapa of plano.chapas) {
@@ -5672,7 +5684,8 @@ function gerarCSVCorte(plano) {
         p.rotacionada ? "SIM" : "NAO",
         p.direcao_fio ? LABEL_VEIO[p.direcao_fio] : "",
         ladosFitados(p),
-        escaparCSV(p.etiqueta)
+        escaparCSV(p.etiqueta),
+        escaparCSV(textoUsinagens(p))
       ].join(sep));
     }
   }
@@ -5710,6 +5723,9 @@ function gerarDXFCorte(plano) {
       const h = p.rotacionada ? p.largura_mm : p.comprimento_mm;
       retangulo(push, layer, offsetX + p.x_mm, p.y_mm, w, h);
       texto(push, layer, offsetX + p.x_mm + w / 2, p.y_mm + h / 2, p.etiqueta);
+      for (const u of p.usinagens ?? []) {
+        circulo(push, layer, offsetX + p.x_mm + u.x_mm, p.y_mm + u.y_mm, u.diametro_mm / 2);
+      }
     }
     offsetX += chapa.largura_mm + espacoEntreChapas;
   }
@@ -5738,6 +5754,13 @@ function texto(push, layer, x, y, conteudo) {
   push(20, Math.round(y));
   push(40, 20);
   push(1, conteudo);
+}
+function circulo(push, layer, cx, cy, raio) {
+  push(0, "CIRCLE");
+  push(8, layer);
+  push(10, cx);
+  push(20, cy);
+  push(40, raio);
 }
 function gerarEtiquetas(plano, projetoId = "") {
   const etiquetas = [];
@@ -6636,7 +6659,10 @@ function montarProjetoManual(placements, ambiente, comum) {
       },
       { materialCorpo: materialCorpoModulo, materialFundo, materialInsert },
       i,
-      p.tipo_porta ? { tipo_porta: p.tipo_porta } : void 0
+      {
+        ...p.tipo_porta ? { tipo_porta: p.tipo_porta } : {},
+        ...p.usinagens && p.usinagens.length > 0 ? { usinagens: p.usinagens } : {}
+      }
     );
   });
   const paredes_usadas = [...new Set(modulos.map((m) => m.parede))];

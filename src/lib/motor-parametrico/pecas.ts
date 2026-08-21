@@ -77,6 +77,12 @@ export function calcularPecas(
         );
         pecas.push(...segmentos);
       } else {
+        // Usinagens manuais (furo) — casadas por peca_regra_nome, não por
+        // instância (Peca é derivada do zero a cada recálculo, ver o
+        // comentário do tipo). Só nas peças NÃO segmentadas — uma peça
+        // grande demais que precisa dividir em 2 chapas teria que decidir
+        // em qual segmento o furo cai, fora do escopo desta 1ª versão.
+        const usinagens = cfg.usinagens?.filter((u) => u.peca_regra_nome === regra.nome);
         pecas.push({
           id: `${baseId}_${seq++}`,
           modulo_instanciado_id: instancia.id,
@@ -92,6 +98,7 @@ export function calcularPecas(
           quantidade: 1,
           etiqueta_producao: `${regra.nome.toUpperCase()} — ${instancia.nome_display}`,
           status: "pendente",
+          ...(usinagens && usinagens.length > 0 ? { usinagens } : {}),
         });
       }
     }

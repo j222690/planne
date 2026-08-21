@@ -301,6 +301,41 @@ describe("calcularPecas — Gabinete Base 60cm", () => {
   });
 });
 
+// ─── Usinagens manuais (furo) — MVP de usinagens livres ───────────────────────
+
+describe("calcularPecas — usinagens manuais (furo)", () => {
+  test("anexa a usinagem só na peça com peca_regra_nome correspondente", () => {
+    const instancia = criarInstancia(60, 72, 55, {
+      ...cfgPadrao,
+      usinagens: [{ id: "u1", peca_regra_nome: "lateral", tipo: "furo", x_mm: 120, y_mm: 45, diametro_mm: 8 }],
+    });
+    const pecas = calcularPecas(instancia, templateBase60);
+    const laterais = pecas.filter((p) => p.regra_nome === "lateral");
+    const outras = pecas.filter((p) => p.regra_nome !== "lateral");
+    expect(laterais.length).toBeGreaterThan(0);
+    laterais.forEach((p) => {
+      expect(p.usinagens).toHaveLength(1);
+      expect(p.usinagens![0]).toMatchObject({ x_mm: 120, y_mm: 45, diametro_mm: 8 });
+    });
+    outras.forEach((p) => expect(p.usinagens).toBeUndefined());
+  });
+
+  test("sem usinagens na config, nenhuma peça ganha o campo", () => {
+    const instancia = criarInstancia();
+    const pecas = calcularPecas(instancia, templateBase60);
+    pecas.forEach((p) => expect(p.usinagens).toBeUndefined());
+  });
+
+  test("peca_regra_nome sem correspondência em nenhuma peça real não gera nada", () => {
+    const instancia = criarInstancia(60, 72, 55, {
+      ...cfgPadrao,
+      usinagens: [{ id: "u1", peca_regra_nome: "regra_que_nao_existe", tipo: "furo", x_mm: 10, y_mm: 10, diametro_mm: 6 }],
+    });
+    const pecas = calcularPecas(instancia, templateBase60);
+    pecas.forEach((p) => expect(p.usinagens).toBeUndefined());
+  });
+});
+
 // ─── Peça maior que MAX_PECA_MM ───────────────────────────────────────────────
 
 describe("calcularPecas — divisão em segmentos", () => {

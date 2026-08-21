@@ -24,6 +24,7 @@ import type {
   PecaAlocada,
   DirecaoFio,
   FitaBorda,
+  UsinagemManual,
 } from "./tipos";
 
 // ─── PARÂMETROS ───────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ interface PecaNesting {
   etiqueta: string;
   direcao_fio: DirecaoFio;
   fita_borda: FitaBorda;
+  usinagens?: UsinagemManual[];
 }
 
 interface Colocacao {
@@ -214,7 +216,13 @@ function prepararPorMaterial(pecas: Peca[]): Map<string, { material: Material; i
     const chave = `${p.material.id}|${p.espessura_mm}`;
     const grupo = grupos.get(chave) ?? { material: p.material, itens: [] };
 
-    const podeRotacionar = p.direcao_fio === "indiferente";
+    // Peça com usinagem manual (furo) nunca rotaciona no nesting — evita
+    // ter que remapear x_mm/y_mm da usinagem pra orientação rotacionada
+    // (zona de risco real: um remapeamento errado é um furo cortado no
+    // lugar errado numa chapa de verdade). Custo: aproveitamento um pouco
+    // pior nessas peças específicas — troca aceitável pela segurança.
+    const temUsinagem = !!p.usinagens && p.usinagens.length > 0;
+    const podeRotacionar = p.direcao_fio === "indiferente" && !temUsinagem;
     for (let i = 0; i < p.quantidade; i++) {
       grupo.itens.push({
         peca_id: `${p.id}#${i}`,
@@ -226,6 +234,7 @@ function prepararPorMaterial(pecas: Peca[]): Map<string, { material: Material; i
         etiqueta: p.etiqueta_producao,
         direcao_fio: p.direcao_fio,
         fita_borda: p.fita_borda,
+        usinagens: p.usinagens,
       });
     }
     grupos.set(chave, grupo);
@@ -308,6 +317,9 @@ function montarChapa(
     etiqueta: c.peca.etiqueta,
     direcao_fio: c.peca.direcao_fio,
     fita_borda: c.peca.fita_borda,
+    // Nunca rotacionada (ver prepararPorMaterial) — x_mm/y_mm da usinagem
+    // usam a mesma orientação local com que foram pedidos, sem remapear.
+    usinagens: c.peca.usinagens,
   }));
 
   const areaChapa = bin.largura * bin.altura;

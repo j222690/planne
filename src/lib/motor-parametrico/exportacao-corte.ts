@@ -12,6 +12,14 @@
 
 import type { PlanoNesting, ChapaAlocada, PecaAlocada, DirecaoFio } from "./tipos";
 
+/** Texto das usinagens manuais (furo) de uma peça, pra CSV/etiqueta — "" se não tiver nenhuma. */
+function textoUsinagens(p: PecaAlocada): string {
+  if (!p.usinagens || p.usinagens.length === 0) return "";
+  return p.usinagens
+    .map((u) => `furo Ø${u.diametro_mm}mm @ (${u.x_mm},${u.y_mm})`)
+    .join("; ");
+}
+
 // ─── CSV DO OPERADOR ──────────────────────────────────────────────────────────
 
 const LABEL_VEIO: Record<DirecaoFio, string> = {
@@ -47,7 +55,7 @@ export function gerarCSVCorte(plano: PlanoNesting): string {
   const sep = ";";
   const cabecalho = [
     "chapa", "material", "peca", "largura_mm", "comprimento_mm",
-    "x_mm", "y_mm", "rotacionada", "veio", "lado_fitado", "etiqueta",
+    "x_mm", "y_mm", "rotacionada", "veio", "lado_fitado", "etiqueta", "usinagens",
   ].join(sep);
 
   const linhas: string[] = [cabecalho];
@@ -66,6 +74,7 @@ export function gerarCSVCorte(plano: PlanoNesting): string {
         p.direcao_fio ? LABEL_VEIO[p.direcao_fio] : "",
         ladosFitados(p),
         escaparCSV(p.etiqueta),
+        escaparCSV(textoUsinagens(p)),
       ].join(sep));
     }
   }
@@ -125,6 +134,12 @@ export function gerarDXFCorte(plano: PlanoNesting): string {
       retangulo(push, layer, offsetX + p.x_mm, p.y_mm, w, h);
       // Texto com etiqueta no centro da peça
       texto(push, layer, offsetX + p.x_mm + w / 2, p.y_mm + h / 2, p.etiqueta);
+      // Furos manuais — peça com usinagem nunca é rotacionada no nesting
+      // (ver nesting.ts), então x_mm/y_mm da usinagem valem direto, sem
+      // precisar remapear pra orientação rotacionada.
+      for (const u of p.usinagens ?? []) {
+        circulo(push, layer, offsetX + p.x_mm + u.x_mm, p.y_mm + u.y_mm, u.diametro_mm / 2);
+      }
     }
 
     offsetX += chapa.largura_mm + espacoEntreChapas;
@@ -161,6 +176,17 @@ function texto(
   push(10, Math.round(x)); push(20, Math.round(y));
   push(40, 20); // altura do texto
   push(1, conteudo);
+}
+
+function circulo(
+  push: (c: number, v: string | number) => void,
+  layer: string,
+  cx: number, cy: number, raio: number,
+): void {
+  push(0, "CIRCLE");
+  push(8, layer);
+  push(10, cx); push(20, cy);
+  push(40, raio);
 }
 
 // ─── ETIQUETAS COM QR ─────────────────────────────────────────────────────────

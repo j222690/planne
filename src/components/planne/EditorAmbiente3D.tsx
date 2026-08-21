@@ -25,6 +25,7 @@ import type {
   ParedeId,
   ConfiguracaoModulo,
   CategoriaAmbiente,
+  UsinagemManual,
 } from "@/lib/motor-parametrico/tipos";
 
 const PROXIMA_PAREDE: Record<ParedeId, ParedeId> = {
@@ -66,6 +67,8 @@ export interface PlacementPayload {
   tipo_porta?: ConfiguracaoModulo["tipo_porta"];
   /** Override de cor do MDF por módulo (Fase 3) — sem isso usa a cor padrão do projeto. */
   material_corpo_hex?: string;
+  /** Furos manuais por peça (usinagens livres, MVP) — ver UsinagemManual em tipos.ts. */
+  usinagens?: UsinagemManual[];
 }
 
 interface PlacementLocal {
@@ -79,10 +82,16 @@ interface PlacementLocal {
   /** Cor do MDF só deste módulo — Fase 3 (edição paramétrica em tempo real). undefined = usa corMdfHex do projeto. */
   corHex?: string;
   tipoPorta?: ConfiguracaoModulo["tipo_porta"];
+  /** Furos manuais, por peça (regra_nome) — usinagens livres (MVP). */
+  usinagens?: UsinagemManual[];
 }
 
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function humanizarNomeRegra(nome: string): string {
+  return nome.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
 /** Um placement local → forma que calcularCenaCompleta entende (pra reusar o mesmo cálculo de posição/rotação do visualizador read-only). */
@@ -250,6 +259,15 @@ export function EditorAmbiente3D({
 
   const [selecionadoUid, setSelecionadoUid] = useState<string | null>(null);
   const [pecaSelecionadaId, setPecaSelecionadaId] = useState<string | null>(null);
+  // Usinagens manuais (furo) — MVP. A peça-alvo é escolhida por regra_nome
+  // real do template (não pelo id da peça clicada em 3D — esse id vem do
+  // modelo sintético de vista-explodida, que NÃO é garantido bater com o
+  // regra_nome real do motor; escolher errado faria o furo sumir
+  // silenciosamente no cálculo real).
+  const [pecaAlvoUsinagem, setPecaAlvoUsinagem] = useState("");
+  const [furoX, setFuroX] = useState("");
+  const [furoY, setFuroY] = useState("");
+  const [furoD, setFuroD] = useState("");
   const [arvoreAberta, setArvoreAberta] = useState(true);
   const [arrastandoUid, setArrastandoUid] = useState<string | null>(null);
   const [orbitAtivo, setOrbitAtivo] = useState(true);
@@ -330,6 +348,31 @@ export function EditorAmbiente3D({
     setPlacements((prev) => prev.filter((p) => p.uid !== selecionadoUid));
     setSelecionadoUid(null);
     setPecaSelecionadaId(null);
+  };
+
+  const adicionarFuro = () => {
+    if (!selecionado || !pecaAlvoUsinagem) return;
+    const x = Number(furoX), y = Number(furoY), d = Number(furoD);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(d) || d <= 0) return;
+    pushHistory();
+    const nova: UsinagemManual = {
+      id: uid(),
+      peca_regra_nome: pecaAlvoUsinagem,
+      tipo: "furo",
+      x_mm: x,
+      y_mm: y,
+      diametro_mm: d,
+    };
+    atualizar(selecionado.uid, { usinagens: [...(selecionado.usinagens ?? []), nova] });
+    setFuroX(""); setFuroY(""); setFuroD("");
+  };
+
+  const removerUsinagem = (usinagemId: string) => {
+    if (!selecionado) return;
+    pushHistory();
+    atualizar(selecionado.uid, {
+      usinagens: (selecionado.usinagens ?? []).filter((u) => u.id !== usinagemId),
+    });
   };
 
   const alternarIlha = () => {
@@ -443,6 +486,7 @@ export function EditorAmbiente3D({
       eh_ilha: p.ehIlha,
       tipo_porta: p.tipoPorta,
       material_corpo_hex: p.corHex,
+      usinagens: p.usinagens,
     }));
     onGerar(payload);
   };
@@ -759,6 +803,77 @@ export function EditorAmbiente3D({
                 "Clique numa peça pra selecioná-la individualmente."
               )}
             </div>
+
+            {/* Usinagens manuais (furo) — MVP de usinagens livres. Só sai no
+                DXF/lista de corte (Giben não consegue expressar furo — ver
+                plano); não aparece na visualização 3D nem no croqui. */}
+            <div className="pt-1 border-t border-border">
+              <div className="text-[10.5px] text-muted-foreground mb-0.5">Usinagens (furo)</div>
+              <select
+                value={pecaAlvoUsinagem}
+                onChange={(e) => setPecaAlvoUsinagem(e.target.value)}
+                className="w-full h-7 rounded border border-border bg-surface-2 px-2 text-[12px] outline-none"
+              >
+                <option value="">Selecione a peça…</option>
+                {selecionado.template.regras_pecas.map((r) => (
+                  <option key={r.nome} value={r.nome}>
+                    {humanizarNomeRegra(r.nome)}
+                  </option>
+                ))}
+              </select>
+              {pecaAlvoUsinagem && (
+                <>
+                  {(selecionado.usinagens ?? [])
+                    .filter((u) => u.peca_regra_nome === pecaAlvoUsinagem)
+                    .map((u) => (
+                      <div key={u.id} className="flex items-center justify-between text-[11px] py-1">
+                        <span>
+                          Ø{u.diametro_mm}mm @ ({u.x_mm},{u.y_mm})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removerUsinagem(u.id)}
+                          className="text-destructive hover:underline"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ))}
+                  <div className="flex gap-1 mt-1">
+                    <input
+                      type="number"
+                      placeholder="X mm"
+                      value={furoX}
+                      onChange={(e) => setFuroX(e.target.value)}
+                      className="w-1/3 h-7 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Y mm"
+                      value={furoY}
+                      onChange={(e) => setFuroY(e.target.value)}
+                      className="w-1/3 h-7 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Ø mm"
+                      value={furoD}
+                      onChange={(e) => setFuroD(e.target.value)}
+                      className="w-1/3 h-7 rounded border border-border bg-surface-2 px-1.5 text-[11px] outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={adicionarFuro}
+                    disabled={!furoX || !furoY || !furoD}
+                    className="w-full h-7 mt-1 rounded border border-accent/50 text-accent text-[11px] hover:bg-accent/10 disabled:opacity-50"
+                  >
+                    Adicionar furo
+                  </button>
+                </>
+              )}
+            </div>
+
             <div>
               <div className="text-[10.5px] text-muted-foreground mb-0.5">Largura (cm)</div>
               <input

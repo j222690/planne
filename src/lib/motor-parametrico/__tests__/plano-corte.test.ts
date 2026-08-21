@@ -20,7 +20,10 @@ const material15: Material = {
   preco_custo_chapa: 85, preco_venda_chapa: 0,
 };
 
-function peca(id: string, largura: number, comprimento: number, qtd = 1, fio: Peca["direcao_fio"] = "indiferente"): Peca {
+function peca(
+  id: string, largura: number, comprimento: number, qtd = 1,
+  fio: Peca["direcao_fio"] = "indiferente", usinagens?: Peca["usinagens"],
+): Peca {
   return {
     id, modulo_instanciado_id: "m1", regra_nome: "teste",
     largura_mm: largura, comprimento_mm: comprimento, espessura_mm: 15,
@@ -28,6 +31,7 @@ function peca(id: string, largura: number, comprimento: number, qtd = 1, fio: Pe
     material: material15, direcao_fio: fio,
     fita_borda: { esquerda: false, direita: false, topo: true, base: false },
     quantidade: qtd, etiqueta_producao: `Peça ${id}`, status: "pendente",
+    ...(usinagens ? { usinagens } : {}),
   };
 }
 
@@ -165,6 +169,39 @@ describe("gerarPlanoNesting — MaxRects", () => {
   test("SVG omitido quando com_svg=false", () => {
     const plano = gerarPlanoNesting([peca("p", 600, 720, 2)], 0, { com_svg: false });
     expect(plano.chapas[0].svg_layout).toBe("");
+  });
+});
+
+// ─── Usinagens manuais (furo) — nunca rotaciona no nesting ────────────────────
+//
+// Peça 1000×2000mm só cabe na chapa 2750×1830 se rotacionada (altura 2000mm
+// excede o comprimento da chapa, 1830mm; rotacionada, vira 2000×1000 e cabe).
+// Isso prova a regra de forma determinística: sem usinagem, cabe rotacionando;
+// com usinagem, rotação fica desligada — a peça não tem como caber, e o
+// resultado (nenhuma chapa gerada) só se explica se a regra realmente pegou.
+
+describe("gerarPlanoNesting — usinagens manuais nunca rotacionam", () => {
+  test("sem usinagem, a peça cabe rotacionando (prova que o cenário força rotação)", () => {
+    const plano = gerarPlanoNesting([peca("p", 1000, 2000, 1, "indiferente")]);
+    expect(plano.chapas.length).toBe(1);
+    expect(plano.chapas[0].pecas_alocadas[0].rotacionada).toBe(true);
+  });
+
+  test("com usinagem, a mesma peça não cabe (rotação foi desligada)", () => {
+    const usinagens: Peca["usinagens"] = [
+      { id: "u1", peca_regra_nome: "teste", tipo: "furo", x_mm: 50, y_mm: 50, diametro_mm: 8 },
+    ];
+    const plano = gerarPlanoNesting([peca("p", 1000, 2000, 1, "indiferente", usinagens)]);
+    expect(plano.chapas.length).toBe(0);
+  });
+
+  test("usinagens propaga sem alteração pra PecaAlocada quando a peça cabe sem rotacionar", () => {
+    const usinagens: Peca["usinagens"] = [
+      { id: "u1", peca_regra_nome: "teste", tipo: "furo", x_mm: 120, y_mm: 45, diametro_mm: 8 },
+    ];
+    const plano = gerarPlanoNesting([peca("p", 600, 720, 1, "indiferente", usinagens)]);
+    expect(plano.chapas[0].pecas_alocadas[0].rotacionada).toBe(false);
+    expect(plano.chapas[0].pecas_alocadas[0].usinagens).toEqual(usinagens);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { gerarCSVCorte } from "../exportacao-corte";
+import { gerarCSVCorte, gerarDXFCorte } from "../exportacao-corte";
 import type { PlanoNesting, ChapaAlocada, PecaAlocada, Material } from "../tipos";
 
 function material(): Material {
@@ -89,5 +89,74 @@ describe("gerarCSVCorte — colunas de veio e lado fitado", () => {
     for (const col of ["chapa", "material", "peca", "largura_mm", "comprimento_mm", "x_mm", "y_mm", "rotacionada", "etiqueta"]) {
       expect(cabecalho).toContain(col);
     }
+  });
+});
+
+// ─── Usinagens manuais (furo) — MVP de usinagens livres ───────────────────────
+
+describe("gerarCSVCorte — coluna de usinagens", () => {
+  test("cabeçalho inclui a coluna usinagens", () => {
+    const csv = gerarCSVCorte(plano([pecaAlocada()]));
+    expect(csv.split("\n")[0]).toContain("usinagens");
+  });
+
+  test("peça sem usinagens deixa a coluna vazia", () => {
+    const csv = gerarCSVCorte(plano([pecaAlocada()]));
+    const idx = csv.split("\n")[0].split(";").indexOf("usinagens");
+    expect(csv.split("\n")[1].split(";")[idx]).toBe("");
+  });
+
+  test("peça com 1 furo mostra diâmetro e posição na coluna", () => {
+    const csv = gerarCSVCorte(plano([
+      pecaAlocada({ usinagens: [{ id: "u1", peca_regra_nome: "lateral", tipo: "furo", x_mm: 120, y_mm: 45, diametro_mm: 8 }] }),
+    ]));
+    const idx = csv.split("\n")[0].split(";").indexOf("usinagens");
+    expect(csv.split("\n")[1].split(";")[idx]).toContain("furo Ø8mm @ (120,45)");
+  });
+
+  test("peça com 2 furos lista os dois separados por ;  (escapado entre aspas)", () => {
+    const csv = gerarCSVCorte(plano([
+      pecaAlocada({
+        usinagens: [
+          { id: "u1", peca_regra_nome: "lateral", tipo: "furo", x_mm: 10, y_mm: 10, diametro_mm: 8 },
+          { id: "u2", peca_regra_nome: "lateral", tipo: "furo", x_mm: 200, y_mm: 30, diametro_mm: 5 },
+        ],
+      }),
+    ]));
+    const linha = csv.split("\n")[1];
+    expect(linha).toContain("furo Ø8mm @ (10,10)");
+    expect(linha).toContain("furo Ø5mm @ (200,30)");
+  });
+});
+
+describe("gerarDXFCorte — furos manuais viram CIRCLE", () => {
+  test("peça sem usinagens não gera nenhuma entidade CIRCLE", () => {
+    const dxf = gerarDXFCorte(plano([pecaAlocada()]));
+    expect(dxf).not.toContain("CIRCLE");
+  });
+
+  test("peça com 1 furo gera exatamente 1 CIRCLE, raio = diametro/2", () => {
+    const dxf = gerarDXFCorte(plano([
+      pecaAlocada({ x_mm: 10, y_mm: 10, usinagens: [{ id: "u1", peca_regra_nome: "lateral", tipo: "furo", x_mm: 120, y_mm: 45, diametro_mm: 8 }] }),
+    ]));
+    const linhas = dxf.split("\r\n");
+    const idxCircle = linhas.indexOf("CIRCLE");
+    expect(idxCircle).toBeGreaterThan(-1);
+    // Depois de "CIRCLE" vem "8"/layer, então os pares de código/valor de
+    // centro (10) e raio (40) — confere que o raio é metade do diâmetro.
+    const idxRaio = linhas.indexOf("40", idxCircle);
+    expect(Number(linhas[idxRaio + 1])).toBe(4); // 8mm / 2
+  });
+
+  test("posição do CIRCLE = posição da peça na chapa + x_mm/y_mm da usinagem", () => {
+    const dxf = gerarDXFCorte(plano([
+      pecaAlocada({ x_mm: 10, y_mm: 10, usinagens: [{ id: "u1", peca_regra_nome: "lateral", tipo: "furo", x_mm: 120, y_mm: 45, diametro_mm: 8 }] }),
+    ]));
+    const linhas = dxf.split("\r\n");
+    const idxCircle = linhas.indexOf("CIRCLE");
+    const idxCentroX = linhas.indexOf("10", idxCircle);
+    expect(Number(linhas[idxCentroX + 1])).toBe(130); // offsetX(0) + p.x_mm(10) + u.x_mm(120)
+    const idxCentroY = linhas.indexOf("20", idxCentroX);
+    expect(Number(linhas[idxCentroY + 1])).toBe(55); // p.y_mm(10) + u.y_mm(45)
   });
 });

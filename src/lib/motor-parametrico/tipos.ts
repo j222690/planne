@@ -37,6 +37,30 @@ export interface FitaBorda {
 }
 
 /**
+ * Usinagem manual (MVP: só furo) — pedida pelo usuário numa peça
+ * específica do módulo, identificada por `peca_regra_nome` (não por
+ * instância de Peca, que é derivada/recalculada do zero a cada mudança
+ * de config — ver `Peca`). Guardada em `ConfiguracaoModulo.usinagens`
+ * e REAPLICADA a cada `calcularPecas()`, casando pelo nome da regra —
+ * mesmo padrão de `fita_borda` (config → função → campo na peça).
+ *
+ * Só exportada em DXF/CSV (qualquer CNC que leia DXF) — o formato Giben
+ * (.AC) é estritamente corte reto em 2 estágios, não tem como expressar
+ * furo/rasgo nele (ver reference_giben_ac_formato). Não aparece na
+ * visualização 3D nem no croqui técnico (ambos são modelos sintéticos
+ * separados do Peca[] real) — decisão de escopo, não lacuna.
+ */
+export interface UsinagemManual {
+  id: string;
+  peca_regra_nome: string;
+  tipo: "furo";
+  /** A partir do canto inferior-esquerdo da peça, orientação NÃO rotacionada. */
+  x_mm: Milimetros;
+  y_mm: Milimetros;
+  diametro_mm: Milimetros;
+}
+
+/**
  * Convenção das 4 paredes (vista de cima):
  *   top    = parede de fundo
  *   bottom = parede da entrada
@@ -339,6 +363,8 @@ export interface ConfiguracaoModulo {
    * tamanho); o canal/rebaixo passante em si NÃO é modelado como geometria.
    */
   posicao_puxador?: "sem" | "em_pe" | "em_cima" | "em_baixo" | "passante_em_cima" | "passante_em_baixo";
+  /** Furos manuais por peça (MVP de usinagens livres) — ver `UsinagemManual`. */
+  usinagens?: UsinagemManual[];
 }
 
 export interface LimitesConfiguracao {
@@ -493,6 +519,8 @@ export interface Peca {
   chapa_alocada_id?: string;
   posicao_na_chapa?: Ponto2D;
   rotacionada?: boolean;
+  /** Furos manuais aplicados a esta peça (casados por `regra_nome` a partir de `ConfiguracaoModulo.usinagens`). */
+  usinagens?: UsinagemManual[];
 }
 
 // ─── FERRAGEM ─────────────────────────────────────────────────────────────────
@@ -789,6 +817,8 @@ export interface PecaAlocada {
   direcao_fio?: DirecaoFio;
   /** Fita de borda por lado, na orientação NÃO rotacionada da peça. */
   fita_borda?: FitaBorda;
+  /** Furos manuais — x_mm/y_mm já remapeados pra orientação ROTACIONADA (como fica na chapa). */
+  usinagens?: UsinagemManual[];
 }
 
 export type TipoEtapa =

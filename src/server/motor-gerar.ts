@@ -105,6 +105,8 @@ interface RequestBody {
     eh_ilha?: boolean;
     /** Override de cor do MDF só deste módulo (Fase 3 — edição em tempo real no Editor 3D). Sem isso usa `preferencias.cor_mdf_hex`. */
     material_corpo_hex?: string;
+    /** Furos manuais por peça (usinagens livres, MVP) — ver UsinagemManual em tipos.ts. */
+    usinagens?: ConfiguracaoModulo["usinagens"];
   }[];
 
   // Opção 1: AmbienteGeometrico já processado (vindo de analisar-planta.ts)
@@ -564,7 +566,10 @@ function montarProjetoManual(
       },
       { materialCorpo: materialCorpoModulo, materialFundo, materialInsert },
       i,
-      p.tipo_porta ? { tipo_porta: p.tipo_porta } : undefined,
+      {
+        ...(p.tipo_porta ? { tipo_porta: p.tipo_porta } : {}),
+        ...(p.usinagens && p.usinagens.length > 0 ? { usinagens: p.usinagens } : {}),
+      },
     );
   });
 
