@@ -494,6 +494,7 @@ def decoracao(modulos):
     props = [
         ("fruteira.blend", x0 + 0.62, 0.30, "larg", -P * 0.45),
         ("tabua.blend", x0 + 0.95, 0.42, "larg", -P * 0.45),
+        ("planta.blend", x0 + 1.25, 0.35, "larg", -P * 0.4),
     ]
     for arq, cx, alvo, eixo, yc in props:
         caminho = os.path.join(MODELS, arq)
@@ -524,7 +525,24 @@ def montar_comodo(job, min_x, max_x, max_z, max_p, mats):
         jw, jh = j.get("largura_cm", 120) / 100.0, j.get("altura_cm", 100) / 100.0
         vidro = bpy.data.materials.new("vidro"); vidro.use_nodes = True
         vb = vidro.node_tree.nodes.get("Principled BSDF")
-        vb.inputs["Emission Color"].default_value = (0.95, 0.97, 1.0, 1)
+        # Gradiente vertical (céu claro em cima, quase-branco quente perto do
+        # horizonte) em vez de cor chapada — ainda é uma caixa emissiva opaca
+        # (sem transmissão real/geometria de fundo), só troca "branco sólido"
+        # por "sugestão de céu". Generated.Z já vem normalizado 0-1 na altura
+        # da própria caixa da janela (bounding box local).
+        try:
+            tc = vidro.node_tree.nodes.new("ShaderNodeTexCoord")
+            sep = vidro.node_tree.nodes.new("ShaderNodeSeparateXYZ")
+            ramp = vidro.node_tree.nodes.new("ShaderNodeValToRGB")
+            ramp.color_ramp.elements[0].position = 0.0
+            ramp.color_ramp.elements[0].color = (0.98, 0.94, 0.86, 1)
+            ramp.color_ramp.elements[1].position = 1.0
+            ramp.color_ramp.elements[1].color = (0.55, 0.75, 0.98, 1)
+            vidro.node_tree.links.new(tc.outputs["Generated"], sep.inputs["Vector"])
+            vidro.node_tree.links.new(sep.outputs["Z"], ramp.inputs["Fac"])
+            vidro.node_tree.links.new(ramp.outputs["Color"], vb.inputs["Emission Color"])
+        except Exception:
+            vb.inputs["Emission Color"].default_value = (0.95, 0.97, 1.0, 1)
         vb.inputs["Emission Strength"].default_value = 3.0
         box("janela", jx, 0.045, jz, jw, 0.02, jh, vidro, bevel=False)
         box("caixilho", jx, 0.05, jz, jw + 0.06, 0.045, jh + 0.06, mat_pbr("caixilho", (0.14, 0.14, 0.15, 1), 0.5), bevel=False)
@@ -552,12 +570,12 @@ def camera_luz(cx, W, D, H, max_z):
     except Exception:
         pass
     # Iluminação: softbox quente (key) + preenchimento frio; o HDRI dá o ambiente.
-    key = bpy.data.lights.new("key", type="AREA"); key.energy = 500; key.size = 6
+    key = bpy.data.lights.new("key", type="AREA"); key.energy = 580; key.size = 6
     key.color = (1.0, 0.93, 0.82)  # luz quente (2900K aprox.)
     ko = bpy.data.objects.new("key", key)
     ko.location = (cx - W * 0.2, -D * 0.5, H - 0.05); ko.rotation_euler = (0.5, 0, 0)
     bpy.context.collection.objects.link(ko)
-    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 150; fill.size = 9
+    fill = bpy.data.lights.new("fill", type="AREA"); fill.energy = 110; fill.size = 9
     fill.color = (1.0, 0.97, 0.92)  # preenchimento neutro-quente (menos "CG frio")
     fo = bpy.data.objects.new("fill", fill)
     fo.location = (cx + W * 0.4, -dist * 0.7, H * 0.8)
@@ -599,7 +617,7 @@ def setup_render(out, engine="eevee"):
             pass
         try:
             scn.cycles.device = "GPU" if usou_gpu else "CPU"
-            scn.cycles.samples = 96 if usou_gpu else 48
+            scn.cycles.samples = 160 if usou_gpu else 48
             scn.cycles.use_denoising = True
             scn.cycles.time_limit = 0 if usou_gpu else 150  # CPU: teto de 2m30 e finaliza
             scn.cycles.use_adaptive_sampling = True
@@ -630,6 +648,28 @@ def setup_render(out, engine="eevee"):
         except TypeError:
             continue
     scn.view_settings.exposure = -0.2
+    # Glare sutil (bloom só nos pontos bem brilhantes — vidro/LED/metal) —
+    # sem isso o render sai "seco", sem o brilho que fotos de vitrine têm.
+    # Envolvido em try/except: se a API do compositor mudar de versão pro
+    # Blender do Modal, o render continua saindo normal, só sem o glare.
+    try:
+        scn.use_nodes = True
+        tree = scn.node_tree
+        rl = next((n for n in tree.nodes if n.type == "R_LAYERS"), None)
+        comp = next((n for n in tree.nodes if n.type == "COMPOSITE"), None)
+        if rl and comp:
+            glare = tree.nodes.new("CompositorNodeGlare")
+            glare.glare_type = "FOG_GLOW"
+            glare.quality = "MEDIUM"
+            glare.threshold = 1.1
+            glare.size = 7
+            for link in list(tree.links):
+                if link.from_node == rl and link.to_node == comp:
+                    tree.links.remove(link)
+            tree.links.new(rl.outputs["Image"], glare.inputs["Image"])
+            tree.links.new(glare.outputs["Image"], comp.inputs["Image"])
+    except Exception:
+        pass
     scn.render.filepath = out
     scn.render.image_settings.file_format = "PNG"
 
