@@ -119,6 +119,30 @@ def mat_vidro(nome, tint=(0.85, 0.92, 0.95, 1.0)):
     return m
 
 
+def adicionar_variacao_procedural(mat, escala=15.0, faixa=(0.75, 0.95)):
+    """Injeta ruído procedural (Noise Texture, sem asset externo) na
+    Roughness de um material já criado — quebra o 'liso demais/bola de
+    bilhar' de uma cor chapada sem assumir um estilo específico (tipo
+    forçar textura de madeira numa parede de cozinha, que nem sempre faz
+    sentido). É o tipo de imperfeição sutil que toda parede pintada de
+    verdade tem e que falta pro render não ler como render."""
+    try:
+        nt = mat.node_tree
+        b = nt.nodes.get("Principled BSDF")
+        tc = nt.nodes.new("ShaderNodeTexCoord")
+        noise = nt.nodes.new("ShaderNodeTexNoise")
+        noise.inputs["Scale"].default_value = escala
+        noise.inputs["Detail"].default_value = 4.0
+        remap = nt.nodes.new("ShaderNodeMapRange")
+        remap.inputs["To Min"].default_value = faixa[0]
+        remap.inputs["To Max"].default_value = faixa[1]
+        nt.links.new(tc.outputs["Object"], noise.inputs["Vector"])
+        nt.links.new(noise.outputs["Fac"], remap.inputs["Value"])
+        nt.links.new(remap.outputs["Result"], b.inputs["Roughness"])
+    except Exception:
+        pass
+
+
 def box(nome, cx, cy, cz, sx, sy, sz, mat, bevel=True):
     bpy.ops.mesh.primitive_cube_add(size=1, location=(cx, cy, cz))
     ob = bpy.context.active_object
@@ -336,7 +360,13 @@ def detalhes_promob(modulos, mats):
         led = bpy.data.materials.new("led"); led.use_nodes = True
         lb = led.node_tree.nodes.get("Principled BSDF")
         lb.inputs["Emission Color"].default_value = (1.0, 0.86, 0.62, 1)
-        lb.inputs["Emission Strength"].default_value = 7.0
+        # Mais forte (7→14): a intenção é o LED ler como fonte de luz visível
+        # de verdade na foto final (glow real + luz prática iluminando o
+        # backsplash embaixo), não só uma tira clara sem contribuir — é o
+        # tipo de detalhe que aparece nas referências de fotografia de
+        # interiores de verdade (luminária embutida que "ilumina", não só
+        # "é branca").
+        lb.inputs["Emission Strength"].default_value = 14.0
         box("led", (ax0 + ax1) / 2, -ap + 0.02, PISO_AEREO - 0.008,
             (ax1 - ax0) - 0.06, ap * 0.55, 0.006, led, bevel=False)
 
@@ -666,8 +696,22 @@ def setup_render(out, engine="eevee"):
             for link in list(tree.links):
                 if link.from_node == rl and link.to_node == comp:
                     tree.links.remove(link)
+            saida = glare.outputs["Image"]
             tree.links.new(rl.outputs["Image"], glare.inputs["Image"])
-            tree.links.new(glare.outputs["Image"], comp.inputs["Image"])
+            # Grading quente sutil (sombra levemente quente, luz levemente
+            # quente) — o render tava saindo neutro/frio demais pra ler como
+            # foto de interior de verdade, que quase sempre tem um leve
+            # tratamento editorial. Envolvido no mesmo try/except do glare.
+            try:
+                balance = tree.nodes.new("CompositorNodeColorBalance")
+                balance.correction_method = "LIFT_GAMMA_GAIN"
+                balance.lift = (1.015, 1.005, 0.985)
+                balance.gain = (1.03, 1.01, 0.97)
+                tree.links.new(glare.outputs["Image"], balance.inputs["Image"])
+                saida = balance.outputs["Image"]
+            except Exception:
+                pass
+            tree.links.new(saida, comp.inputs["Image"])
     except Exception:
         pass
     scn.render.filepath = out
@@ -710,6 +754,10 @@ def main():
         "parede": mat_pbr("parede", (0.90, 0.89, 0.86, 1), 0.9),
         "piso": mat_pbr("piso", (1, 1, 1, 1), 0.5, texset=t_pis, escala=0.45, nrm_forca=0.8),
     }
+    # Parede lisa demais lia como "render de catálogo" — ruído procedural
+    # sutil na roughness (sem textura de imagem nova) quebra isso sem forçar
+    # um estilo (ver adicionar_variacao_procedural).
+    adicionar_variacao_procedural(mats["parede"])
 
     for m in modulos:
         montar_modulo(m, mats)
