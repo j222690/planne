@@ -92,6 +92,69 @@ describe("gerarCSVCorte — colunas de veio e lado fitado", () => {
   });
 });
 
+// ─── Retângulo da peça rotacionada — bug real achado investigando usinagens ───
+//
+// PecaAlocada.largura_mm/comprimento_mm JÁ vêm com a troca de eixo aplicada
+// pra peça rotacionada (é assim que nesting.ts monta o objeto) — o DXF tinha
+// uma troca DE NOVO em cima disso, desenhando o retângulo com a dimensão de
+// ANTES da rotação. Pra peça não-quadrada isso desenha um retângulo que
+// pode ultrapassar o contorno da chapa. Ver reference_dxf_rotacao_bug.
+
+describe("gerarDXFCorte — retângulo de peça rotacionada", () => {
+  function extrairRetangulos(dxf: string): { x: number; y: number; w: number; h: number }[] {
+    const linhas = dxf.split("\r\n");
+    const retangulos: { x: number; y: number; w: number; h: number }[] = [];
+    for (let i = 0; i < linhas.length; i++) {
+      if (linhas[i] !== "LWPOLYLINE") continue;
+      // próximos 4 pares (10/20) são os 4 vértices, em ordem:
+      // (x,y) (x+w,y) (x+w,y+h) (x,y+h)
+      const codigos = linhas.slice(i, i + 26);
+      const xs: number[] = [];
+      const ys: number[] = [];
+      for (let j = 0; j < codigos.length - 1; j++) {
+        if (codigos[j] === "10") xs.push(Number(codigos[j + 1]));
+        if (codigos[j] === "20") ys.push(Number(codigos[j + 1]));
+        if (xs.length === 4 && ys.length === 4) break;
+      }
+      const x = Math.min(...xs), y = Math.min(...ys);
+      const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+      retangulos.push({ x, y, w, h });
+    }
+    return retangulos;
+  }
+
+  test("peça NÃO rotacionada: retângulo usa largura_mm/comprimento_mm direto", () => {
+    const dxf = gerarDXFCorte(plano([
+      pecaAlocada({ x_mm: 0, y_mm: 0, largura_mm: 600, comprimento_mm: 720, rotacionada: false }),
+    ]));
+    const [, peca1] = extrairRetangulos(dxf); // [0]=contorno da chapa, [1]=peça
+    expect(peca1).toMatchObject({ w: 600, h: 720 });
+  });
+
+  test("peça ROTACIONADA: retângulo usa largura_mm/comprimento_mm direto, SEM trocar de novo", () => {
+    // largura_mm/comprimento_mm aqui já representam a peça COMO FOI COLOCADA
+    // (é isso que rotacionada:true significa em PecaAlocada) — o DXF não
+    // deve trocar esses valores de novo.
+    const dxf = gerarDXFCorte(plano([
+      pecaAlocada({ x_mm: 0, y_mm: 0, largura_mm: 2000, comprimento_mm: 1000, rotacionada: true }),
+    ]));
+    const [, peca1] = extrairRetangulos(dxf);
+    expect(peca1).toMatchObject({ w: 2000, h: 1000 });
+  });
+
+  test("peça rotacionada nunca ultrapassa o contorno da chapa (regressão do bug)", () => {
+    // Chapa 2750×1830 (fixture `material()`); peça 2000×1000 rotacionada
+    // cabe dentro dela — se o bug voltar (troca de novo), viraria 1000×2000
+    // e estouraria os 1830mm de comprimento da chapa.
+    const dxf = gerarDXFCorte(plano([
+      pecaAlocada({ x_mm: 10, y_mm: 10, largura_mm: 2000, comprimento_mm: 1000, rotacionada: true }),
+    ]));
+    const [chapaRet, pecaRet] = extrairRetangulos(dxf);
+    expect(pecaRet.y + pecaRet.h).toBeLessThanOrEqual(chapaRet.h);
+    expect(pecaRet.x + pecaRet.w).toBeLessThanOrEqual(chapaRet.w);
+  });
+});
+
 // ─── Usinagens manuais (furo) — MVP de usinagens livres ───────────────────────
 
 describe("gerarCSVCorte — coluna de usinagens", () => {

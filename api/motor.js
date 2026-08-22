@@ -5719,8 +5719,8 @@ function gerarDXFCorte(plano) {
     const layer = `CHAPA_${chapa.numero_sequencial}`;
     retangulo(push, layer, offsetX, 0, chapa.largura_mm, chapa.comprimento_mm);
     for (const p of chapa.pecas_alocadas) {
-      const w = p.rotacionada ? p.comprimento_mm : p.largura_mm;
-      const h = p.rotacionada ? p.largura_mm : p.comprimento_mm;
+      const w = p.largura_mm;
+      const h = p.comprimento_mm;
       retangulo(push, layer, offsetX + p.x_mm, p.y_mm, w, h);
       texto(push, layer, offsetX + p.x_mm + w / 2, p.y_mm + h / 2, p.etiqueta);
       for (const u of p.usinagens ?? []) {

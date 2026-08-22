@@ -127,10 +127,17 @@ export function gerarDXFCorte(plano: PlanoNesting): string {
     // Contorno da chapa
     retangulo(push, layer, offsetX, 0, chapa.largura_mm, chapa.comprimento_mm);
 
-    // Peças
+    // Peças — largura_mm/comprimento_mm em PecaAlocada JÁ são as dimensões
+    // finais como a peça foi colocada na chapa (montarChapa, em nesting.ts,
+    // já troca os dois quando rotacionada=true) — usar direto, SEM trocar
+    // de novo aqui. Achado real ao investigar usinagens livres: uma versão
+    // anterior trocava de novo pra peça rotacionada, o que desfazia a troca
+    // e desenhava o retângulo com a dimensão de ANTES da rotação — pra uma
+    // peça não-quadrada, isso desenha um retângulo maior que a chapa (a
+    // rotação existe justamente pra fazer a peça caber trocando os eixos).
     for (const p of chapa.pecas_alocadas) {
-      const w = p.rotacionada ? p.comprimento_mm : p.largura_mm;
-      const h = p.rotacionada ? p.largura_mm : p.comprimento_mm;
+      const w = p.largura_mm;
+      const h = p.comprimento_mm;
       retangulo(push, layer, offsetX + p.x_mm, p.y_mm, w, h);
       // Texto com etiqueta no centro da peça
       texto(push, layer, offsetX + p.x_mm + w / 2, p.y_mm + h / 2, p.etiqueta);
