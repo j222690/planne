@@ -9,31 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as AppProjetosRouteImport } from './routes/app.projetos'
-import { Route as AppProducaoRouteImport } from './routes/app.producao'
-import { Route as AppPlanosRouteImport } from './routes/app.planos'
-import { Route as AppPipelineRouteImport } from './routes/app.pipeline'
-import { Route as AppOrcamentosRouteImport } from './routes/app.orcamentos'
-import { Route as AppMateriaisRouteImport } from './routes/app.materiais'
-import { Route as AppIaProjetosRouteImport } from './routes/app.ia-projetos'
-import { Route as AppIaRouteImport } from './routes/app.ia'
-import { Route as AppHistoricoPrecosRouteImport } from './routes/app.historico-precos'
-import { Route as AppFornecedoresRouteImport } from './routes/app.fornecedores'
-import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
-import { Route as AppDashboardIaRouteImport } from './routes/app.dashboard-ia'
-import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
-import { Route as AppClientesRouteImport } from './routes/app.clientes'
-import { Route as AppCentralConhecimentoRouteImport } from './routes/app.central-conhecimento'
-import { Route as AppCalendarioRouteImport } from './routes/app.calendario'
 import { Route as AppBuscaLeadRouteImport } from './routes/app.busca-lead'
+import { Route as AppCalendarioRouteImport } from './routes/app.calendario'
+import { Route as AppCentralConhecimentoRouteImport } from './routes/app.central-conhecimento'
+import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
+import { Route as AppDashboardIaRouteImport } from './routes/app.dashboard-ia'
+import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
+import { Route as AppFornecedoresRouteImport } from './routes/app.fornecedores'
+import { Route as AppHistoricoPrecosRouteImport } from './routes/app.historico-precos'
+import { Route as AppIaRouteImport } from './routes/app.ia'
+import { Route as AppIaProjetosRouteImport } from './routes/app.ia-projetos'
+import { Route as AppMateriaisRouteImport } from './routes/app.materiais'
+import { Route as AppOrcamentosRouteImport } from './routes/app.orcamentos'
+import { Route as AppPipelineRouteImport } from './routes/app.pipeline'
+import { Route as AppPlanosRouteImport } from './routes/app.planos'
+import { Route as AppProducaoRouteImport } from './routes/app.producao'
+import { Route as AppProjetosRouteImport } from './routes/app.projetos'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -41,9 +41,9 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -51,79 +51,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppProjetosRoute = AppProjetosRouteImport.update({
-  id: '/projetos',
-  path: '/projetos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProducaoRoute = AppProducaoRouteImport.update({
-  id: '/producao',
-  path: '/producao',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPlanosRoute = AppPlanosRouteImport.update({
-  id: '/planos',
-  path: '/planos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPipelineRoute = AppPipelineRouteImport.update({
-  id: '/pipeline',
-  path: '/pipeline',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppOrcamentosRoute = AppOrcamentosRouteImport.update({
-  id: '/orcamentos',
-  path: '/orcamentos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMateriaisRoute = AppMateriaisRouteImport.update({
-  id: '/materiais',
-  path: '/materiais',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppIaProjetosRoute = AppIaProjetosRouteImport.update({
-  id: '/ia-projetos',
-  path: '/ia-projetos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppIaRoute = AppIaRouteImport.update({
-  id: '/ia',
-  path: '/ia',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppHistoricoPrecosRoute = AppHistoricoPrecosRouteImport.update({
-  id: '/historico-precos',
-  path: '/historico-precos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFornecedoresRoute = AppFornecedoresRouteImport.update({
-  id: '/fornecedores',
-  path: '/fornecedores',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardIaRoute = AppDashboardIaRouteImport.update({
-  id: '/dashboard-ia',
-  path: '/dashboard-ia',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppClientesRoute = AppClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCentralConhecimentoRoute = AppCentralConhecimentoRouteImport.update({
-  id: '/central-conhecimento',
-  path: '/central-conhecimento',
+const AppBuscaLeadRoute = AppBuscaLeadRouteImport.update({
+  id: '/busca-lead',
+  path: '/busca-lead',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCalendarioRoute = AppCalendarioRouteImport.update({
@@ -131,9 +61,79 @@ const AppCalendarioRoute = AppCalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => AppRoute,
 } as any)
-const AppBuscaLeadRoute = AppBuscaLeadRouteImport.update({
-  id: '/busca-lead',
-  path: '/busca-lead',
+const AppCentralConhecimentoRoute = AppCentralConhecimentoRouteImport.update({
+  id: '/central-conhecimento',
+  path: '/central-conhecimento',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardIaRoute = AppDashboardIaRouteImport.update({
+  id: '/dashboard-ia',
+  path: '/dashboard-ia',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFornecedoresRoute = AppFornecedoresRouteImport.update({
+  id: '/fornecedores',
+  path: '/fornecedores',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistoricoPrecosRoute = AppHistoricoPrecosRouteImport.update({
+  id: '/historico-precos',
+  path: '/historico-precos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaRoute = AppIaRouteImport.update({
+  id: '/ia',
+  path: '/ia',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaProjetosRoute = AppIaProjetosRouteImport.update({
+  id: '/ia-projetos',
+  path: '/ia-projetos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMateriaisRoute = AppMateriaisRouteImport.update({
+  id: '/materiais',
+  path: '/materiais',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrcamentosRoute = AppOrcamentosRouteImport.update({
+  id: '/orcamentos',
+  path: '/orcamentos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanosRoute = AppPlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProducaoRoute = AppProducaoRouteImport.update({
+  id: '/producao',
+  path: '/producao',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProjetosRoute = AppProjetosRouteImport.update({
+  id: '/projetos',
+  path: '/projetos',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -285,11 +285,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -299,11 +299,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -313,109 +313,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/projetos': {
-      id: '/app/projetos'
-      path: '/projetos'
-      fullPath: '/app/projetos'
-      preLoaderRoute: typeof AppProjetosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/producao': {
-      id: '/app/producao'
-      path: '/producao'
-      fullPath: '/app/producao'
-      preLoaderRoute: typeof AppProducaoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/planos': {
-      id: '/app/planos'
-      path: '/planos'
-      fullPath: '/app/planos'
-      preLoaderRoute: typeof AppPlanosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/pipeline': {
-      id: '/app/pipeline'
-      path: '/pipeline'
-      fullPath: '/app/pipeline'
-      preLoaderRoute: typeof AppPipelineRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/orcamentos': {
-      id: '/app/orcamentos'
-      path: '/orcamentos'
-      fullPath: '/app/orcamentos'
-      preLoaderRoute: typeof AppOrcamentosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/materiais': {
-      id: '/app/materiais'
-      path: '/materiais'
-      fullPath: '/app/materiais'
-      preLoaderRoute: typeof AppMateriaisRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ia-projetos': {
-      id: '/app/ia-projetos'
-      path: '/ia-projetos'
-      fullPath: '/app/ia-projetos'
-      preLoaderRoute: typeof AppIaProjetosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ia': {
-      id: '/app/ia'
-      path: '/ia'
-      fullPath: '/app/ia'
-      preLoaderRoute: typeof AppIaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/historico-precos': {
-      id: '/app/historico-precos'
-      path: '/historico-precos'
-      fullPath: '/app/historico-precos'
-      preLoaderRoute: typeof AppHistoricoPrecosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/fornecedores': {
-      id: '/app/fornecedores'
-      path: '/fornecedores'
-      fullPath: '/app/fornecedores'
-      preLoaderRoute: typeof AppFornecedoresRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/financeiro': {
-      id: '/app/financeiro'
-      path: '/financeiro'
-      fullPath: '/app/financeiro'
-      preLoaderRoute: typeof AppFinanceiroRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/dashboard-ia': {
-      id: '/app/dashboard-ia'
-      path: '/dashboard-ia'
-      fullPath: '/app/dashboard-ia'
-      preLoaderRoute: typeof AppDashboardIaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/configuracoes': {
-      id: '/app/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/app/configuracoes'
-      preLoaderRoute: typeof AppConfiguracoesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/clientes': {
-      id: '/app/clientes'
-      path: '/clientes'
-      fullPath: '/app/clientes'
-      preLoaderRoute: typeof AppClientesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/central-conhecimento': {
-      id: '/app/central-conhecimento'
-      path: '/central-conhecimento'
-      fullPath: '/app/central-conhecimento'
-      preLoaderRoute: typeof AppCentralConhecimentoRouteImport
+    '/app/busca-lead': {
+      id: '/app/busca-lead'
+      path: '/busca-lead'
+      fullPath: '/app/busca-lead'
+      preLoaderRoute: typeof AppBuscaLeadRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/calendario': {
@@ -425,11 +327,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCalendarioRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/busca-lead': {
-      id: '/app/busca-lead'
-      path: '/busca-lead'
-      fullPath: '/app/busca-lead'
-      preLoaderRoute: typeof AppBuscaLeadRouteImport
+    '/app/central-conhecimento': {
+      id: '/app/central-conhecimento'
+      path: '/central-conhecimento'
+      fullPath: '/app/central-conhecimento'
+      preLoaderRoute: typeof AppCentralConhecimentoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/clientes': {
+      id: '/app/clientes'
+      path: '/clientes'
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/configuracoes': {
+      id: '/app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/app/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/dashboard-ia': {
+      id: '/app/dashboard-ia'
+      path: '/dashboard-ia'
+      fullPath: '/app/dashboard-ia'
+      preLoaderRoute: typeof AppDashboardIaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/financeiro': {
+      id: '/app/financeiro'
+      path: '/financeiro'
+      fullPath: '/app/financeiro'
+      preLoaderRoute: typeof AppFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/fornecedores': {
+      id: '/app/fornecedores'
+      path: '/fornecedores'
+      fullPath: '/app/fornecedores'
+      preLoaderRoute: typeof AppFornecedoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/historico-precos': {
+      id: '/app/historico-precos'
+      path: '/historico-precos'
+      fullPath: '/app/historico-precos'
+      preLoaderRoute: typeof AppHistoricoPrecosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ia': {
+      id: '/app/ia'
+      path: '/ia'
+      fullPath: '/app/ia'
+      preLoaderRoute: typeof AppIaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ia-projetos': {
+      id: '/app/ia-projetos'
+      path: '/ia-projetos'
+      fullPath: '/app/ia-projetos'
+      preLoaderRoute: typeof AppIaProjetosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/materiais': {
+      id: '/app/materiais'
+      path: '/materiais'
+      fullPath: '/app/materiais'
+      preLoaderRoute: typeof AppMateriaisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/orcamentos': {
+      id: '/app/orcamentos'
+      path: '/orcamentos'
+      fullPath: '/app/orcamentos'
+      preLoaderRoute: typeof AppOrcamentosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/pipeline': {
+      id: '/app/pipeline'
+      path: '/pipeline'
+      fullPath: '/app/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/planos': {
+      id: '/app/planos'
+      path: '/planos'
+      fullPath: '/app/planos'
+      preLoaderRoute: typeof AppPlanosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/producao': {
+      id: '/app/producao'
+      path: '/producao'
+      fullPath: '/app/producao'
+      preLoaderRoute: typeof AppProducaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/projetos': {
+      id: '/app/projetos'
+      path: '/projetos'
+      fullPath: '/app/projetos'
+      preLoaderRoute: typeof AppProjetosRouteImport
       parentRoute: typeof AppRoute
     }
   }
