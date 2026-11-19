@@ -16,6 +16,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { gerarHandler } from "./motor-gerar";
 import { lerPlantaHandler } from "./motor-leitura";
 import { chatHandler } from "./motor-chat";
+import { requireUser } from "./require-user";
 
 type Acao = "gerar" | "ler-planta" | "chat";
 
@@ -23,6 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
+
+  const auth = await requireUser(req, res);
+  if (!auth) return;
 
   const body = (req.body ?? {}) as { action?: string };
   const acao = (req.query.action as string | undefined) ?? body.action;

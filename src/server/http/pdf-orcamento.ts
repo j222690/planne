@@ -1,4 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { requireUser } from "../require-user";
+import { urlParaModelo } from "../midia";
+
+export const config = { maxDuration: 30 };
 
 const SYSTEM = `Você é especialista em orçamentos de marcenaria planejada brasileira.
 Analise o documento de orçamento/proposta na imagem e extraia todos os itens.
@@ -23,13 +27,15 @@ Unidades comuns: un, chapa, metro, par, kit, cj.`;
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { pdf_b64, tipo_mime } = req.body as { pdf_b64: string; tipo_mime?: string };
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const { pdf_b64, pdf_url, tipo_mime } = req.body as { pdf_b64?: string; pdf_url?: string; tipo_mime?: string };
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
-  if (!pdf_b64) return res.status(400).json({ error: "pdf_b64 obrigatório" });
 
-  const mime = tipo_mime ?? "image/jpeg";
-  const dataUrl = `data:${mime};base64,${pdf_b64}`;
+  const dataUrl = await urlParaModelo({ url: pdf_url, b64: pdf_b64, mime: tipo_mime });
+  if (!dataUrl) return res.status(400).json({ error: "pdf_b64 ou pdf_url obrigatório" });
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {

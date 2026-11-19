@@ -1,4 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { requireUser, type AuthUser } from "../require-user";
+import { inlineParaGemini, publicarImagemRender } from "../midia";
+
+async function jsonComImagem(
+  res: VercelResponse,
+  auth: AuthUser,
+  base64: string,
+  mime: string,
+  payload: Record<string, unknown>,
+) {
+  const stored = await publicarImagemRender(auth.token, auth.id, base64, mime);
+  return res.json({ ...payload, url: stored ?? `data:${mime};base64,${base64}` });
+}
 
 // ─── Visual context ────────────────────────────────────────────────────────────
 
@@ -312,9 +325,14 @@ const FLUX_CONFIGS = {
 export const config = { maxDuration: 60 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "GET" && req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
   // GET → consulta de status do job (consolidado de render-status)
   if (req.method === "GET") return statusHandler(req, res);
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   // Render 3D fotorrealista (Blender, GPU no Modal) — dispara o worker pra um
   // job já criado em render3d_job (o insert é feito pelo app, direto no
@@ -325,9 +343,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const body = req.body as Partial<RenderInput> & {
     moveis_nomes?: string[];
-    // Imagem-guia (preview 2D/3D do projeto, base64 com ou sem prefixo data:) —
-    // usada como DIREÇÃO exata do layout no Gemini. + materiais especificados.
+    // Imagem-guia (preview 2D/3D do projeto). Preferir guia_url (Storage);
+    // guia_b64 permanece como fallback.
     guia_b64?: string;
+    guia_url?: string;
     materiais_txt?: string;
   };
 
@@ -363,12 +382,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // O Gemini aceita imagem + texto na mesma chamada: passamos o preview como
   // referência EXATA do layout e escrevemos os materiais (trilho, chapa, cor,
   // ferragem). É o caminho mais fiel ao projeto — tem prioridade quando há guia.
-  const guiaRaw = body.guia_b64;
-  const guiaData = guiaRaw ? guiaRaw.replace(/^data:[^;]+;base64,/, "") : null;
-  const guiaMime = guiaRaw?.startsWith("data:")
-    ? guiaRaw.slice(5, guiaRaw.indexOf(";")) : "image/png";
+  const pediuGuia = !!(body.guia_url || body.guia_b64);
+  const guiaInline = pediuGuia
+    ? await inlineParaGemini({ url: body.guia_url, b64: body.guia_b64 })
+    : null;
+  if (pediuGuia && !guiaInline) {
+    return res.status(400).json({ error: "Não foi possível ler a imagem-guia." });
+  }
 
-  if (guiaData && geminiKey) {
+  if (guiaInline && geminiKey) {
     const model = "gemini-2.5-flash-image";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey.trim()}`;
     const promptGuia = [
@@ -382,7 +404,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ inlineData: { mimeType: guiaMime, data: guiaData } }, { text: promptGuia }] }],
+          contents: [{ parts: [{ inlineData: { mimeType: guiaInline.mime, data: guiaInline.data } }, { text: promptGuia }] }],
           generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "16:9" } },
         }),
       });
@@ -398,9 +420,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(502).json({ error: "Gemini não retornou imagem a partir do guia (possível bloqueio de segurança)." });
       }
       const mime = imgPart.inlineData.mimeType ?? "image/png";
-      return res.json({
-        provider: "gemini", status: "completed", mode,
-        url: `data:${mime};base64,${imgPart.inlineData.data}`, prompt: promptGuia,
+      return jsonComImagem(res, auth, imgPart.inlineData.data, mime, {
+        provider: "gemini", status: "completed", mode, prompt: promptGuia,
       });
     } catch (e) {
       return res.status(502).json({ error: `Gemini (guia) indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });
@@ -492,12 +513,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const mime = imgPart.inlineData.mimeType ?? "image/png";
-      return res.json({
-        provider: "gemini",
-        status: "completed",
-        url: `data:${mime};base64,${imgPart.inlineData.data}`,
-        mode,
-        prompt,
+      return jsonComImagem(res, auth, imgPart.inlineData.data, mime, {
+        provider: "gemini", status: "completed", mode, prompt,
       });
     } catch (e) {
       return res.status(502).json({ error: `Gemini indisponível: ${e instanceof Error ? e.message : "erro de rede"}` });

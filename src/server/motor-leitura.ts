@@ -19,13 +19,15 @@ import {
   type PlantaAnalisadaIA,
 } from "../lib/motor-parametrico/interpretar-planta";
 import type { ParedeId } from "../lib/motor-parametrico/tipos";
+import { urlParaModelo } from "./midia";
 
 interface RequestBody {
   formato: FormatoPlanta;
   /** DXF: conteúdo de texto do arquivo. */
   dxf_texto?: string;
-  /** Imagem/PDF: base64 da planta (será enviado à IA Vision). */
+  /** Imagem/PDF: base64 da planta (legado) ou URL https do Storage. */
   planta_b64?: string;
+  planta_url?: string;
   /** Manual: medidas digitadas. */
   medidas?: {
     largura_cm: number;
@@ -36,13 +38,6 @@ interface RequestBody {
   };
   altura_padrao_cm?: number;
   ambiente_descricao?: string;
-}
-
-function detectMime(b64: string): string {
-  if (b64.startsWith("/9j")) return "image/jpeg";
-  if (b64.startsWith("iVBOR")) return "image/png";
-  if (b64.startsWith("UklGR")) return "image/webp";
-  return "image/jpeg";
 }
 
 const SYSTEM_VISION = `Você é especialista em leitura de plantas baixas residenciais brasileiras.
@@ -61,7 +56,7 @@ REGRAS:
 - "x_pct": posição do centro do elemento ao longo da parede, 0.0 a 1.0
 - "altura_cm": pé-direito; se não estiver claro, use 270`;
 
-async function analisarComIA(planta_b64: string, descricao?: string): Promise<PlantaAnalisadaIA> {
+async function analisarComIA(imagemUrl: string, descricao?: string): Promise<PlantaAnalisadaIA> {
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) throw new Error("OPENAI_API_KEY não configurada");
 
@@ -76,7 +71,7 @@ async function analisarComIA(planta_b64: string, descricao?: string): Promise<Pl
           role: "user",
           content: [
             { type: "text", text: `Analise esta planta baixa${descricao ? ` (${descricao})` : ""}. Extraia dimensões e posições de portas e janelas.` },
-            { type: "image_url", image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" } },
+            { type: "image_url", image_url: { url: imagemUrl, detail: "high" } },
           ],
         },
       ],
@@ -102,8 +97,10 @@ export async function lerPlantaHandler(req: VercelRequest, res: VercelResponse) 
 
     // Para imagem/PDF, primeiro chamamos a IA Vision e injetamos o resultado.
     let planta_ia: PlantaAnalisadaIA | undefined;
-    if ((body.formato === "imagem" || body.formato === "pdf") && body.planta_b64) {
-      planta_ia = await analisarComIA(body.planta_b64, body.ambiente_descricao);
+    if ((body.formato === "imagem" || body.formato === "pdf") && (body.planta_b64 || body.planta_url)) {
+      const imagemUrl = await urlParaModelo({ url: body.planta_url, b64: body.planta_b64 });
+      if (!imagemUrl) return res.status(400).json({ error: "Não foi possível ler a planta." });
+      planta_ia = await analisarComIA(imagemUrl, body.ambiente_descricao);
     }
 
     const resultado = interpretarPlanta({

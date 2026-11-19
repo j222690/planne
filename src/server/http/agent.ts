@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-// Primeira função serverless do projeto a importar de src/lib/ — só dados
-// estáticos (JSON) + retrieval puro, sem I/O nem dependência do motor
-// paramétrico. Ver reference_vercel_funcoes: as outras 11 funções são
-// self-contained por causa do limite de 12 do plano Hobby; essa continua
-// contando 1 função só (o import não cria uma função nova).
-import { buscarAtomos, resumirParaPrompt } from "../src/lib/base-conhecimento";
+import { requireUser } from "../require-user";
+
+export const config = { maxDuration: 60 };
+// A base de conhecimento entra no bundle de api/agent.js (o import de src/
+// não resolve sozinho no runtime da Vercel). Continua sendo 1 função.
+import { buscarAtomos, resumirParaPrompt } from "../../lib/base-conhecimento";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -549,12 +549,13 @@ async function registrarUsoIA(
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { messages, userToken } = req.body as {
-    messages: { role: string; content: string }[];
-    userToken: string;
-  };
+  const auth = await requireUser(req, res);
+  if (!auth) return;
 
-  if (!userToken) return res.status(401).json({ error: "Token não fornecido" });
+  const { messages } = (req.body ?? {}) as {
+    messages: { role: string; content: string }[];
+  };
+  const userToken = auth.token;
 
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY não configurada" });

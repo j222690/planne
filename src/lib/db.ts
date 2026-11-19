@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { authFetch } from "./api-client";
 
 // ─── Input types ──────────────────────────────────────────────────────────────
 
@@ -658,7 +659,7 @@ export async function iniciarCheckout(planoId: string): Promise<{ payment_url: s
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Sessão expirada");
 
-  const res = await fetch("/api/fiscal", {
+  const res = await authFetch("/api/fiscal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "criar-assinatura", user_token: session.access_token, plano_id: planoId }),

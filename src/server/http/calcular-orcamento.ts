@@ -1,14 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { calcularOrcamento } from "./_calc";
-import type { MovelInput as CalcMovelInput } from "./_calc";
-import { REGRAS_BASE_MARCENARIA } from "./_regras-base";
-
-function detectMime(b64: string): string {
-  if (b64.startsWith("/9j")) return "image/jpeg";
-  if (b64.startsWith("iVBOR")) return "image/png";
-  if (b64.startsWith("UklGR")) return "image/webp";
-  return "image/jpeg";
-}
+import { calcularOrcamento } from "../../../api/_calc";
+import type { MovelInput as CalcMovelInput } from "../../../api/_calc";
+import { REGRAS_BASE_MARCENARIA } from "../../../api/_regras-base";
+import { requireUser } from "../require-user";
+import { urlParaModelo } from "../midia";
 
 interface MovelConfig {
   id: string;
@@ -152,16 +147,19 @@ RESPONDA APENAS com JSON válido (sem markdown):
   "resumo": "Orçamento detalhado para [ambiente]: [lista dos móveis]. Total calculado com base nas dimensões fornecidas, incluindo ferragens automáticas conforme configuração de portas e gavetas."
 }`;
 
-// Dá folga à função (o caminho com IA/planta pode demorar). O caminho
-// determinístico retorna rápido; isso só evita corte prematuro em cold start.
-export const config = { maxDuration: 60 };
+// O caminho determinístico volta na hora. 30s cobre a visão da planta
+// (o mesmo teto das outras rotas de imagem) sem deixar a função pendurada em 60s.
+export const config = { maxDuration: 30 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
   try {
   const {
-    ambiente, moveis, medidas, descricao, materiais, planta_b64, margem_pct = 300, restricoes_espaciais,
+    ambiente, moveis, medidas, descricao, materiais, planta_b64, planta_url, margem_pct = 300, restricoes_espaciais,
   } = (req.body ?? {}) as {
     ambiente: string;
     moveis?: MovelConfig[];
@@ -169,6 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     descricao?: string;
     materiais: { id: string; nome: string; unidade: string; preco_custo: number; preco_venda: number; categoria: string | null }[];
     planta_b64?: string;
+    planta_url?: string;
     margem_pct?: number;
     restricoes_espaciais?: {
       paredes: { id: string; descricao: string; largura_cm: number; espaco_util_cm: number; obstaculos?: string | null }[];
@@ -177,7 +176,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
 
   if (!materiais?.length) return res.status(400).json({ error: "Nenhum material fornecido" });
-  if (!moveis?.length && !planta_b64) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
+  const temPlanta = !!(planta_b64 || planta_url);
+  if (!moveis?.length && !temPlanta) return res.status(400).json({ error: "Informe os móveis ou uma planta baixa" });
 
   // Rede de segurança: rejeita medidas inválidas (0, negativas, NaN, Infinity)
   // ANTES de calcular — evita divisões por zero / números não-finitos que podem
@@ -224,7 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   // Caminho determinístico: móveis configurados sem planta baixa
-  if (moveis?.length && !planta_b64) {
+  if (moveis?.length && !temPlanta) {
     const itens = calcularOrcamento(moveis as unknown as CalcMovelInput[], catalogoFiltrado, margem_pct);
     return res.json({ itens, resumo: `Orçamento calculado para ${moveis.length} móvel(is).`, total_estimado: 0 });
   }
@@ -254,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userPrompt = [
     `AMBIENTE: ${ambiente}`,
     medidas?.largura ? `MEDIDAS DO AMBIENTE: ${medidas.largura}m L × ${medidas.profundidade}m P × ${medidas.altura}m H` : "",
-    planta_b64 ? "MEDIDAS: extrair da planta baixa fornecida" : "",
+    temPlanta ? "MEDIDAS: extrair da planta baixa fornecida" : "",
     restricoesTexto || "",
     moveisParagraph ? `\nMÓVEIS CONFIGURADOS:\n${moveisParagraph}` : "",
     descricao ? `\nOBSERVAÇÕES: ${descricao}` : "",
@@ -262,6 +262,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `\nMATERIAIS DISPONÍVEIS NO ESTOQUE:\n${catalogoTexto}`,
     "\nCalcule todos os materiais necessários. Retorne 'movel' e 'justificativa' para cada item.",
   ].filter(Boolean).join("\n");
+
+  const imagemUrl = await urlParaModelo({ url: planta_url, b64: planta_b64 });
+  if (!imagemUrl) return res.status(400).json({ error: "Não foi possível ler a planta baixa" });
 
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -274,7 +277,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           role: "user",
           content: [
             { type: "text", text: userPrompt },
-            { type: "image_url", image_url: { url: `data:${detectMime(planta_b64!)};base64,${planta_b64}`, detail: "high" } },
+            { type: "image_url", image_url: { url: imagemUrl, detail: "high" } },
           ],
         },
       ],

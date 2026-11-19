@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { gerarListaCorte } from "./_calc";
-import type { MovelInput, PecaCorte } from "./_calc";
+import { gerarListaCorte } from "../../../api/_calc";
+import type { MovelInput, PecaCorte } from "../../../api/_calc";
+import { requireUser } from "../require-user";
+
+export const config = { maxDuration: 15 };
 
 // ── Chapa padrão ─────────────────────────────────────────────────────────────
 const SHEET_W = 2750; // mm
@@ -128,6 +131,9 @@ function calcularChapas(pecas: PecaCorte[]): { materiais: ChapaMaterial[]; inval
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const auth = await requireUser(req, res);
+  if (!auth) return;
 
   const { moveis } = req.body as { moveis: MovelInput[] };
   if (!moveis?.length) return res.status(400).json({ error: "moveis é obrigatório" });

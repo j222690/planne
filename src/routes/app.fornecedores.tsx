@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getEmpresaAtual, updateFornecedor, deleteFornecedor, getOrcamentos } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -104,7 +105,7 @@ function WhatsAppPedidoModal({
     const moveis = parseMoveis(orc.moveis_config);
     if (!moveis.length) { setListaCorte([]); return; }
     setLoadingLista(true);
-    fetch("/api/lista-corte", {
+    authFetch("/api/lista-corte", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ moveis }),

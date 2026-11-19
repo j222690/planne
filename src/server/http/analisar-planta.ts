@@ -1,14 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-// Nota: plantaToAmbiente importado condicionalmente para evitar
-// dependências circulares entre api/ e src/lib/ em produção Vercel.
+import { requireUser } from "../require-user";
+import { inlineParaGemini, urlParaModelo } from "../midia";
 // A conversão para AmbienteGeometrico é feita inline abaixo.
 
-function detectMime(b64: string): string {
-  if (b64.startsWith("/9j")) return "image/jpeg";
-  if (b64.startsWith("iVBOR")) return "image/png";
-  if (b64.startsWith("UklGR")) return "image/webp";
-  return "image/jpeg";
-}
+export const config = { maxDuration: 30 };
 
 const SYSTEM = `Você é especialista em leitura de plantas baixas residenciais e comerciais brasileiras.
 Analise a planta baixa e extraia com precisão as dimensões do ambiente e a posição exata de cada porta e janela.
@@ -79,7 +74,13 @@ export interface PlantaAnalisada {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const body = req.body as { planta_b64?: string; imagem_b64?: string; ambiente?: string; modo?: string; referencia?: string };
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const body = req.body as {
+    planta_b64?: string; imagem_b64?: string; planta_url?: string; imagem_url?: string;
+    ambiente?: string; modo?: string; referencia?: string;
+  };
 
   // Modo FOTO: estima a medida de UMA parede por foto com objeto de referência
   // (folha A4/régua) via Gemini vision. Consolidado aqui para respeitar o limite
@@ -88,10 +89,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return analisarFotoParede(body, res);
   }
 
-  // Aceita tanto planta_b64 (novo) quanto imagem_b64 (legado) para compatibilidade
-  const planta_b64 = body.planta_b64 ?? body.imagem_b64;
+  // Aceita URL do Storage (preferida) ou base64 legado.
   const { ambiente } = body;
-  if (!planta_b64) return res.status(400).json({ error: "Imagem da planta não fornecida" });
+  const imagemUrl = await urlParaModelo({
+    url: body.planta_url ?? body.imagem_url,
+    b64: body.planta_b64 ?? body.imagem_b64,
+  });
+  if (!imagemUrl) return res.status(400).json({ error: "Imagem da planta não fornecida" });
 
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
@@ -113,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               },
               {
                 type: "image_url",
-                image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" },
+                image_url: { url: imagemUrl, detail: "high" },
               },
             ],
           },
@@ -209,12 +213,15 @@ const REFS_FOTO: Record<string, string> = {
 };
 
 async function analisarFotoParede(
-  body: { imagem_b64?: string; planta_b64?: string; referencia?: string },
+  body: { imagem_b64?: string; planta_b64?: string; imagem_url?: string; planta_url?: string; referencia?: string },
   res: VercelResponse,
 ) {
-  const imagem_b64 = body.imagem_b64 ?? body.planta_b64;
   const ref = REFS_FOTO[body.referencia ?? "a4"] ?? REFS_FOTO.a4;
-  if (!imagem_b64) return res.status(400).json({ error: "Foto da parede não fornecida (imagem_b64)." });
+  const inline = await inlineParaGemini({
+    url: body.imagem_url ?? body.planta_url,
+    b64: body.imagem_b64 ?? body.planta_b64,
+  });
+  if (!inline) return res.status(400).json({ error: "Foto da parede não fornecida (imagem_b64 ou imagem_url)." });
 
   const geminiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
   if (!geminiKey) return res.status(500).json({ error: "GEMINI_API_KEY não configurada" });
@@ -243,7 +250,7 @@ Responda APENAS JSON válido, sem markdown:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: detectMime(imagem_b64), data: imagem_b64 } }] }],
+          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: inline.mime, data: inline.data } }] }],
           generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
         }),
       },

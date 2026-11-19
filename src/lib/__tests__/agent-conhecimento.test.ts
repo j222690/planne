@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { buscarConhecimentoTool } from "../../../api/agent";
+import { buscarConhecimentoTool } from "../../server/http/agent";
 
 describe("buscarConhecimentoTool — retrieval da base de conhecimento pro chat", () => {
   test("pergunta com match direto retorna átomos reais, sourced", () => {
