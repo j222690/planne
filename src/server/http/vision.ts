@@ -1,4 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { requireUser } from "../require-user";
+import { urlParaModelo } from "../midia";
+
+export const config = { maxDuration: 30 };
 
 const SYSTEM = `Você é arquiteto de interiores sênior especialista em marcenaria planejada brasileira (MDF, lacas, madeira). Sua tarefa é criar um projeto COMPLETO do ambiente — não apenas a marcenaria, mas TODOS os elementos do cômodo: portas, janelas, móveis existentes (cama comprada, sofá, etc.) e a marcenaria planejada.
 
@@ -138,13 +142,6 @@ Formato exato do JSON:
   "observacoes_tecnicas": ["observação técnica relevante"]
 }`;
 
-function detectMime(b64: string): string {
-  if (b64.startsWith("/9j")) return "image/jpeg";
-  if (b64.startsWith("iVBOR")) return "image/png";
-  if (b64.startsWith("UklGR")) return "image/webp";
-  return "image/jpeg";
-}
-
 const WALL_PT: Record<string, string> = {
   top: "parede de cima/fundo",
   bottom: "parede de baixo/entrada",
@@ -178,7 +175,10 @@ interface AnaliseIA {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { ambiente, medidas, estilo, descricao, cor_mdf, porta_parede, janelas, planta_b64, referencias_b64, custo_chapa, mao_obra_hora, margem_padrao } = req.body as {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const { ambiente, medidas, estilo, descricao, cor_mdf, porta_parede, janelas, planta_b64, planta_url, referencias_b64, referencias_url, custo_chapa, mao_obra_hora, margem_padrao } = req.body as {
     ambiente: string;
     medidas: { largura: number; profundidade: number; altura: number };
     estilo: string;
@@ -187,7 +187,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     porta_parede?: string;
     janelas?: string[];
     planta_b64?: string;
+    planta_url?: string;
     referencias_b64?: string[];
+    referencias_url?: string[];
     custo_chapa?: number;
     mao_obra_hora?: number;
     margem_padrao?: number;
@@ -204,7 +206,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ? `As JANELAS ficam nas seguintes paredes: ${janelas.map((w) => WALL_PT[w] ?? w).join(", ")}.`
     : "Posicione janela(s) nas paredes mais adequadas para iluminação natural.";
 
-  const temPlanta = !!planta_b64;
+  const temPlanta = !!(planta_b64 || planta_url);
   const medidasRef = `${medidas?.largura ?? 4}m × ${medidas?.profundidade ?? 3}m × ${medidas?.altura ?? 2.7}m pé-direito`;
 
   const medidasInstrucao = temPlanta
@@ -241,21 +243,29 @@ LEMBRETE FINAL: Nenhum móvel pode ser maior que o ambiente, mas a marcenaria de
     },
   ];
 
-  if (planta_b64) {
+  if (temPlanta) {
+    const planta = await urlParaModelo({ url: planta_url, b64: planta_b64 });
+    if (!planta) return res.status(400).json({ error: "Não foi possível ler a planta." });
     userContent.push({
       type: "text",
       text: `PLANTA BAIXA — leia desta imagem: dimensões reais do cômodo, posição e parede da porta principal, posição e paredes das janelas, vigas ou pilares se houver. Use estas informações para preencher o JSON.`,
     });
     userContent.push({
       type: "image_url",
-      image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" },
+      image_url: { url: planta, detail: "high" },
     });
   }
 
-  for (const b64 of (referencias_b64 ?? []).filter(Boolean).slice(0, 3)) {
+  const referencias = [
+    ...(referencias_url ?? []).filter(Boolean).slice(0, 3).map((url) => ({ url })),
+    ...(referencias_b64 ?? []).filter(Boolean).slice(0, 3).map((b64) => ({ b64 })),
+  ].slice(0, 3);
+  for (const ref of referencias) {
+    const url = await urlParaModelo(ref);
+    if (!url) continue;
     userContent.push({
       type: "image_url",
-      image_url: { url: `data:${detectMime(b64)};base64,${b64}`, detail: "low" },
+      image_url: { url, detail: "low" },
     });
   }
 

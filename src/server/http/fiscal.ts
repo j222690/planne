@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import { requireUser } from "../require-user";
 
 function getSupabase(userToken: string) {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
@@ -460,15 +461,13 @@ async function criarAssinatura(
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { action, user_token } = req.body as { action: string; user_token: string };
+  const auth = await requireUser(req, res);
+  if (!auth) return;
 
-  if (!user_token) return res.status(400).json({ error: "user_token é obrigatório" });
+  const { action } = (req.body ?? {}) as { action: string };
 
-  const sb = getSupabase(user_token);
+  const sb = getSupabase(auth.token);
   if (!sb) return res.status(500).json({ error: "Supabase não configurado" });
-
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return res.status(401).json({ error: "Não autorizado" });
 
   if (action === "emitir-nfe") return emitirNfe(req, res, sb);
   if (action === "gerar-boleto") return gerarCobranca(req, res, sb);

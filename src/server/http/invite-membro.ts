@@ -1,13 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import { requireUser } from "../require-user";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { email, role, userToken } = req.body as { email: string; role: string; userToken: string };
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const { email, role } = (req.body ?? {}) as { email: string; role: string };
+  const userToken = auth.token;
 
   if (!email || !role) return res.status(400).json({ error: "email e role são obrigatórios" });
-  if (!userToken) return res.status(401).json({ error: "Token não fornecido" });
 
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

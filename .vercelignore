@@ -1,0 +1,14 @@
+# Fora do runtime do app. O render 3D sobe pelo Modal, não pela Vercel.
+# Incluir estes arquivos infla o upload do deploy (os .blend passam de 100 MB).
+render-worker
+playwright-report
+test-results
+tests
+docs
+.claude
+.lovable
+supabase
+*.sql
+renders-exemplo-gemini
+**/*.blend
+**/*.hdr

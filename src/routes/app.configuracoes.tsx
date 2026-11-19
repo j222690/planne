@@ -4,6 +4,8 @@ import { Save, Loader2, Upload, Image as ImageIcon, Palette, CheckCircle2, Users
 import { useState, useEffect, useRef } from "react";
 import { getEmpresaAtual } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/api-client";
+import { camposImagem, prepararMidiaIA } from "@/lib/midia-ia";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/configuracoes")({
@@ -236,20 +238,11 @@ function Configuracoes() {
     if (!empresa) return;
     setPlantaAnalisando(ambiente);
     try {
-      const b64 = await new Promise<string>((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          res(result.split(",")[1] ?? "");
-        };
-        reader.onerror = rej;
-        reader.readAsDataURL(file);
-      });
-
-      const resp = await fetch("/api/analisar-planta", {
+      const midia = await prepararMidiaIA(file);
+      const resp = await authFetch("/api/analisar-planta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagem_b64: b64, ambiente }),
+        body: JSON.stringify({ ...camposImagem("imagem", midia), ambiente }),
       });
       if (!resp.ok) throw new Error(`API error: ${resp.statusText}`);
       const json = await resp.json() as PlantaInfo;
@@ -289,7 +282,7 @@ function Configuracoes() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Sessão expirada"); return; }
-      const res = await fetch("/api/invite-membro", {
+      const res = await authFetch("/api/invite-membro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole, userToken: session.access_token }),

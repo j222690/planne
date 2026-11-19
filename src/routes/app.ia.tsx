@@ -8,6 +8,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/api-client";
 
 export const Route = createFileRoute("/app/ia")({
   component: IA,
@@ -105,7 +106,7 @@ function IA() {
       .map((m) => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch("/api/agent", {
+      const res = await authFetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: history, userToken }),

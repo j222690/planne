@@ -16,7 +16,7 @@ await build({
   target: "node20",
   outfile: "api/motor.js",
   // @vercel/node fornece apenas tipos (apagados na transpilação) — não bundlar.
-  external: ["@vercel/node"],
+  external: ["@vercel/node", "@supabase/supabase-js"],
   banner: { js: "// ARQUIVO GERADO por scripts/bundle-motor.mjs — NÃO EDITAR.\n// Edite src/server/motor-entry.ts e os módulos do motor; rode npm run build." },
   logLevel: "info",
 });

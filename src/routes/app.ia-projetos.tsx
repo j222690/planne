@@ -35,6 +35,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/api-client";
+import { camposImagem, prepararDataUriIA, prepararMidiaIA } from "@/lib/midia-ia";
+import { acompanharRender3D, acompanharRenderFlux } from "@/lib/render-poll";
 import { getEmpresaAtual, getClientes, upsertOrcamento } from "@/lib/db";
 import { checkAndConsumeCredito, getCreditosDisponiveis } from "@/lib/credits";
 import { useNavigate } from "@tanstack/react-router";
@@ -238,18 +241,6 @@ const BRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -613,17 +604,21 @@ function IAProjetoPage() {
         if (projetoId) update({ projetoId });
       }
 
-      const planta_b64 = wizard.planta ? await fileToBase64(wizard.planta) : undefined;
-      const referencias_b64 = await Promise.all(wizard.referencias.map(fileToBase64));
-
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada");
 
+      const planta = wizard.planta ? await prepararMidiaIA(wizard.planta) : null;
+      const referencias = await Promise.all(
+        wizard.referencias.map((file) => prepararMidiaIA(file, { maxEdge: 1024, quality: 0.6 })),
+      );
+      const referencias_url = referencias.flatMap((r) => (r.url ? [r.url] : []));
+      const referencias_b64 = referencias.flatMap((r) => (!r.url && r.b64 ? [r.b64] : []));
+
       // 2.1: quando há planta, extrair o AmbienteGeometrico real (paredes,
       // portas, janelas) em PARALELO com a análise Vision — sem somar latência.
-      const visionPromise = fetch("/api/vision", {
+      const visionPromise = authFetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -638,19 +633,20 @@ function IAProjetoPage() {
           cor_mdf: wizard.form.cor_mdf,
           porta_parede: wizard.form.porta_parede,
           janelas: wizard.form.janelas,
-          planta_b64,
-          referencias_b64: referencias_b64.length ? referencias_b64 : undefined,
+          ...camposImagem("planta", planta),
+          ...(referencias_url.length ? { referencias_url } : {}),
+          ...(referencias_b64.length ? { referencias_b64 } : {}),
           custo_chapa: empresaParams.mdf_custo_chapa,
           mao_obra_hora: empresaParams.mao_obra_hora,
           margem_padrao: empresaParams.margem_padrao,
         }),
       });
 
-      const ambientePromise: Promise<Record<string, unknown> | null> = planta_b64
-        ? fetch("/api/analisar-planta", {
+      const ambientePromise: Promise<Record<string, unknown> | null> = planta
+        ? authFetch("/api/analisar-planta", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ planta_b64, formato: "imagem" }),
+            body: JSON.stringify({ ...camposImagem("planta", planta), formato: "imagem" }),
           })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => (d?.ambiente_geometrico as Record<string, unknown>) ?? null)
@@ -794,11 +790,12 @@ function IAProjetoPage() {
         tipo_elemento: m.tipo_elemento,
       }));
 
-      // Imagem-guia: o layout 2D vira PNG e vai como DIREÇÃO exata para o Gemini.
-      let guia_b64: string | undefined;
+      // Imagem-guia: o layout 2D vira JPEG comprimido no Storage (fallback base64).
+      let guia: Awaited<ReturnType<typeof prepararDataUriIA>> | null = null;
       try {
         const svg = document.getElementById("layout-2d-guia") as SVGSVGElement | null;
-        if (svg) guia_b64 = (await svgParaPngDataUri(svg)) ?? undefined;
+        const dataUri = svg ? await svgParaPngDataUri(svg) : null;
+        if (dataUri) guia = await prepararDataUriIA(dataUri);
       } catch {
         /* sem guia → cai no render por texto */
       }
@@ -813,41 +810,10 @@ function IAProjetoPage() {
         .filter(Boolean)
         .join(", ");
 
-      // Polling de um job até concluir → resolve com a URL (ou null em falha).
-      const pollRenderJob = (jobId: string): Promise<string | null> =>
-        new Promise((resolve) => {
-          let attempts = 0;
-          const poll = setInterval(async () => {
-            attempts++;
-            try {
-              const r = await fetch(`/api/render?job_id=${jobId}`);
-              if (!r.ok) {
-                clearInterval(poll);
-                resolve(null);
-                return;
-              }
-              const s = (await r.json()) as { status: string; url?: string; error?: string };
-              if (s.status === "completed" && s.url) {
-                clearInterval(poll);
-                resolve(s.url);
-              } else if (s.status === "error" || s.error) {
-                clearInterval(poll);
-                resolve(null);
-              } else if (attempts > 40) {
-                clearInterval(poll);
-                resolve(null);
-              }
-            } catch {
-              clearInterval(poll);
-              resolve(null);
-            }
-          }, 3000);
-        });
-
       // Gera uma vista (ângulo de câmera) e resolve com a URL final.
       const gerarVista = async (vista: string): Promise<string | null> => {
         try {
-          const res = await fetch("/api/render", {
+          const res = await authFetch("/api/render", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -860,14 +826,14 @@ function IAProjetoPage() {
               moveis: moveisPayload,
               descricao: wizard.analise!.resumo,
               descricao_comercial: wizard.analise!.descricao_comercial,
-              guia_b64,
+              ...camposImagem("guia", guia),
               materiais_txt,
             }),
           });
           if (!res.ok) return null;
           const data = (await res.json()) as { url?: string; job_id?: string; status: string };
           if (data.status === "completed" && data.url) return data.url;
-          if (data.job_id) return await pollRenderJob(data.job_id);
+          if (data.job_id) return await acompanharRenderFlux(data.job_id);
           return null;
         } catch {
           return null;
@@ -927,7 +893,7 @@ function IAProjetoPage() {
     if (!wizard?.analise?.moveis?.length) return;
     update({ listaCorteLoading: true });
     try {
-      const res = await fetch("/api/lista-corte", {
+      const res = await authFetch("/api/lista-corte", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2703,7 +2669,7 @@ function MotorResultadoPainel({
       if (insertErr || !job)
         throw new Error(insertErr?.message ?? "Falha ao criar o job de render");
 
-      const res = await fetch("/api/render", {
+      const res = await authFetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "render3d_enqueue", job_id: job.id }),
@@ -2713,27 +2679,9 @@ function MotorResultadoPainel({
         throw new Error(enqueueData.error ?? "Falha ao acionar o worker de render");
 
       setRenderJob({ status: "processing" });
-      let tentativas = 0;
-      const poll = setInterval(async () => {
-        tentativas++;
-        const { data: row } = await supabase
-          .from("render3d_job")
-          .select("status, image_path, error")
-          .eq("id", job.id)
-          .single();
-        if (!row) return;
-        if (row.status === "completed" && row.image_path) {
-          clearInterval(poll);
-          const { data: pub } = supabase.storage.from("renders3d").getPublicUrl(row.image_path);
-          setRenderJob({ status: "completed", imageUrl: pub.publicUrl });
-        } else if (row.status === "error") {
-          clearInterval(poll);
-          setRenderJob({ status: "error", error: row.error ?? "Erro no render" });
-        } else if (tentativas > 60) {
-          clearInterval(poll);
-          setRenderJob({ status: "error", error: "Tempo esgotado aguardando o render." });
-        }
-      }, 3000);
+      const fim = await acompanharRender3D(job.id);
+      if (fim.ok) setRenderJob({ status: "completed", imageUrl: fim.imageUrl });
+      else setRenderJob({ status: "error", error: fim.error });
     } catch (e) {
       setRenderJob({
         status: "error",
@@ -3331,7 +3279,7 @@ function Step4Layout({
   const handleGerarDoEditor = async (placements: PlacementPayload[]) => {
     setGerandoEditor(true);
     try {
-      const res = await fetch("/api/motor?action=gerar", {
+      const res = await authFetch("/api/motor?action=gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(montarPayloadMotor({ modulos_manuais: placements })),
@@ -3356,7 +3304,7 @@ function Step4Layout({
     if (!tipoLayoutMotor) return;
     setMotorLoading(true);
     try {
-      const res = await fetch("/api/motor?action=gerar", {
+      const res = await authFetch("/api/motor?action=gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(montarPayloadMotor()),
@@ -3438,7 +3386,7 @@ function Step4Layout({
     if (!tipoLayoutMotor) return;
     setGerandoGuilhotina(true);
     try {
-      const res = await fetch("/api/motor?action=gerar", {
+      const res = await authFetch("/api/motor?action=gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(montarPayloadMotor({ incluir_nesting_guilhotina: true })),
@@ -3469,7 +3417,7 @@ function Step4Layout({
     if (!tipoLayoutMotor) return;
     setGerandoGiben(true);
     try {
-      const res = await fetch("/api/motor?action=gerar", {
+      const res = await authFetch("/api/motor?action=gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(montarPayloadMotor({ incluir_giben: true })),
@@ -3501,7 +3449,7 @@ function Step4Layout({
     if (!tipoLayoutMotor) return;
     setGerandoDAE(true);
     try {
-      const res = await fetch("/api/motor?action=gerar", {
+      const res = await authFetch("/api/motor?action=gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(montarPayloadMotor({ incluir_dae: true })),

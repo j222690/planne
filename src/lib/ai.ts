@@ -1,3 +1,5 @@
+import { authFetch } from "@/lib/api-client";
+
 export type AIMessage = { role: "user" | "assistant"; content: string };
 
 export type AIConfig = {
@@ -8,7 +10,7 @@ export type AIConfig = {
 };
 
 export async function askAI(config: AIConfig): Promise<{ text: string; provider: "groq" | "openai" }> {
-  const res = await fetch("/api/ai", {
+  const res = await authFetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),

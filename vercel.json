@@ -4,14 +4,14 @@
   "framework": "vite",
   "functions": {
     "api/motor.js": { "maxDuration": 60 },
-    "api/render.ts": { "maxDuration": 60 },
-    "api/calcular-orcamento.ts": { "maxDuration": 30 },
-    "api/agent.ts": { "maxDuration": 60 },
-    "api/analisar-planta.ts": { "maxDuration": 30 },
-    "api/pdf-orcamento.ts": { "maxDuration": 30 },
-    "api/lista-corte.ts": { "maxDuration": 30 },
-    "api/vision.ts": { "maxDuration": 30 },
-    "api/ai.ts": { "maxDuration": 30 }
+    "api/render.*": { "maxDuration": 60 },
+    "api/agent.*": { "maxDuration": 60 },
+    "api/calcular-orcamento.*": { "maxDuration": 30 },
+    "api/analisar-planta.*": { "maxDuration": 30 },
+    "api/pdf-orcamento.*": { "maxDuration": 30 },
+    "api/vision.*": { "maxDuration": 30 },
+    "api/ai.*": { "maxDuration": 30 },
+    "api/lista-corte.*": { "maxDuration": 15 }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

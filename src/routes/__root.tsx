@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/lib/theme";
 import { isConnectionError } from "@/lib/supabase";
@@ -27,10 +27,11 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
-  const semConexao = error?.message === "CONEXAO_INDISPONIVEL" || isConnectionError(error);
+  const message = error instanceof Error ? error.message : "";
+  const semConexao = message === "CONEXAO_INDISPONIVEL" || isConnectionError(error);
 
   const titulo = semConexao ? "Servidor temporariamente indisponível" : "Algo deu errado";
   const descricao = semConexao

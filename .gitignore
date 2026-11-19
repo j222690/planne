@@ -33,6 +33,7 @@ dist-ssr
 
 .vercel
 supabase/.temp/
+.bundle-check/
 
 vercel-out.txt
 vercel-dev.log

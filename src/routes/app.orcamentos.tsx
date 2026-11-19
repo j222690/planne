@@ -19,6 +19,9 @@ import {
   upsertOrdemProducao, upsertLancamento,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/api-client";
+import { camposImagem, prepararMidiaIA } from "@/lib/midia-ia";
+import { acompanharRender3D } from "@/lib/render-poll";
 import { analisarMovel, resumirProjeto } from "@/lib/base-conhecimento/analise-movel";
 import type { ChapaAlocada } from "@/lib/motor-parametrico/tipos";
 import { toast } from "sonner";
@@ -1158,18 +1161,13 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const [fotoAnalisando, setFotoAnalisando] = useState<string | null>(null);
   const [refFoto, setRefFoto] = useState<Record<string, "a4" | "regua">>({});
   const analisarFotoParede = async (comodoId: string, paredeId: string, file: File) => {
-    const b64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string).split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
     const key = `${comodoId}|${paredeId}`;
     setFotoAnalisando(key);
     try {
-      const res = await fetch("/api/analisar-planta", {
+      const midia = await prepararMidiaIA(file);
+      const res = await authFetch("/api/analisar-planta", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagem_b64: b64, modo: "foto", referencia: refFoto[comodoId] ?? "a4" }),
+        body: JSON.stringify({ ...camposImagem("imagem", midia), modo: "foto", referencia: refFoto[comodoId] ?? "a4" }),
       });
       const r = await res.json() as { largura_cm: number; altura_cm: number; porta: boolean; janela: boolean; confianca: string; error?: string };
       if (!res.ok) { toast.error(r.error ?? "Erro ao analisar a foto"); return; }
@@ -1204,17 +1202,12 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   };
 
   const analisarPlantaComodo = async (id: string, file: File) => {
-    const b64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string).split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    updateComodo(id, { plantaB64: b64, plantaNome: file.name, plantaInfo: null, analisando: true });
+    updateComodo(id, { plantaB64: "1", plantaNome: file.name, plantaInfo: null, analisando: true });
     try {
-      const res = await fetch("/api/analisar-planta", {
+      const midia = await prepararMidiaIA(file);
+      const res = await authFetch("/api/analisar-planta", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planta_b64: b64 }),
+        body: JSON.stringify(camposImagem("planta", midia)),
       });
       if (res.ok) {
         const info = await res.json() as PlantaInfo;
@@ -1345,7 +1338,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         .single();
       if (insertErr || !job) throw new Error(insertErr?.message ?? "Falha ao criar o job de render");
 
-      const res = await fetch("/api/render", {
+      const res = await authFetch("/api/render", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "render3d_enqueue", job_id: job.id }),
       });
@@ -1354,28 +1347,14 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
 
       setRenderJobs((prev) => ({ ...prev, [key]: { status: "processing" } }));
 
-      // Poll até completed/error (o worker roda na GPU do Modal — leva ~30-90s).
-      let tentativas = 0;
-      const poll = setInterval(async () => {
-        tentativas++;
-        const { data: row } = await supabase
-          .from("render3d_job")
-          .select("status, image_path, error")
-          .eq("id", job.id)
-          .single();
-        if (!row) return;
-        if (row.status === "completed" && row.image_path) {
-          clearInterval(poll);
-          const { data: pub } = supabase.storage.from("renders3d").getPublicUrl(row.image_path);
-          setRenderJobs((prev) => ({ ...prev, [key]: { status: "completed", imageUrl: pub.publicUrl } }));
-        } else if (row.status === "error") {
-          clearInterval(poll);
-          setRenderJobs((prev) => ({ ...prev, [key]: { status: "error", error: row.error ?? "Erro no render" } }));
-        } else if (tentativas > 60) { // ~3min
-          clearInterval(poll);
-          setRenderJobs((prev) => ({ ...prev, [key]: { status: "error", error: "Tempo esgotado aguardando o render." } }));
-        }
-      }, 3000);
+      // O worker roda na GPU do Modal (~30–90s). Backoff até 4 min.
+      const fim = await acompanharRender3D(job.id);
+      setRenderJobs((prev) => ({
+        ...prev,
+        [key]: fim.ok
+          ? { status: "completed", imageUrl: fim.imageUrl }
+          : { status: "error", error: fim.error },
+      }));
     } catch (e) {
       setRenderJobs((prev) => ({ ...prev, [key]: { status: "error", error: msgErro(e, "Erro ao gerar render 3D") } }));
     }
@@ -1397,7 +1376,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
       const chapasAcc: ChapaCorte[] = [];
       const renderAcc: MotorRenderCandidato[] = [];
       for (const c of suportados) {
-        const res = await fetch("/api/motor?action=gerar", {
+        const res = await authFetch("/api/motor?action=gerar", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "gerar",
@@ -1647,23 +1626,18 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
   const handlePlantaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const b64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string).split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    setPlantaB64(b64);
+    setPlantaB64("1");
     setPlantaNome(file.name);
     setPlantaInfo(null);
     if (plantaRef.current) plantaRef.current.value = "";
 
     setAnalisandoPlanta(true);
     try {
-      const res = await fetch("/api/analisar-planta", {
+      const midia = await prepararMidiaIA(file);
+      const res = await authFetch("/api/analisar-planta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planta_b64: b64 }),
+        body: JSON.stringify(camposImagem("planta", midia)),
       });
       if (res.ok) {
         const info = await res.json() as PlantaInfo;
@@ -1684,16 +1658,11 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch("/api/pdf-orcamento", {
+      const midia = await prepararMidiaIA(file);
+      const res = await authFetch("/api/pdf-orcamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pdf_b64: b64, tipo_mime: file.type || "image/jpeg" }),
+        body: JSON.stringify({ ...camposImagem("pdf", midia), tipo_mime: midia.mime || file.type || "image/jpeg" }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -1735,7 +1704,7 @@ function OrcamentoModal({ onClose, onSaved, editOrc }: {
         comodos: comodosMedidas,
         ...(primeiro && primeiro.largura ? { medidas: { largura: primeiro.largura, profundidade: primeiro.profundidade, altura: primeiro.altura } } : {}),
       };
-      const res = await fetch("/api/calcular-orcamento", {
+      const res = await authFetch("/api/calcular-orcamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -3485,7 +3454,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     if (!session) { toast.error("Sessão expirada"); return; }
     setNfeLoading(true);
     try {
-      const res = await fetch("/api/fiscal", {
+      const res = await authFetch("/api/fiscal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "emitir-nfe", orcamento_id: orc.id, user_token: session.access_token }),
@@ -3514,7 +3483,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     if (tipo === "BOLETO") setBoletoLoading(true);
     else setPixLoading(true);
     try {
-      const res = await fetch("/api/fiscal", {
+      const res = await authFetch("/api/fiscal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "gerar-boleto", orcamento_id: orc.id, user_token: session.access_token, tipo }),
@@ -3579,7 +3548,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     setListaCorteLoading(true);
     setShowCorte(true);
     try {
-      const res = await fetch("/api/lista-corte", {
+      const res = await authFetch("/api/lista-corte", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ moveis: moveisCfg }),
@@ -3611,7 +3580,7 @@ function OrcDetalheModal({ orc, onClose, onChanged, onEdit }: {
     try {
       const dias = Math.floor((Date.now() - new Date(orc.created_at).getTime()) / 86400000);
       const total = (orc.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const res = await fetch("/api/ai", {
+      const res = await authFetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

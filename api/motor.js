@@ -7105,13 +7105,58 @@ function erro(formato, mensagem) {
   };
 }
 
-// src/server/motor-leitura.ts
+// src/server/midia.ts
+import { createClient } from "@supabase/supabase-js";
+var MAX_BYTES = 8 * 1024 * 1024;
+var MAX_B64_CHARS = 6e6;
 function detectMime(b64) {
   if (b64.startsWith("/9j")) return "image/jpeg";
   if (b64.startsWith("iVBOR")) return "image/png";
   if (b64.startsWith("UklGR")) return "image/webp";
+  if (b64.startsWith("JVBER")) return "application/pdf";
   return "image/jpeg";
 }
+function stripDataUrl(value) {
+  return value.replace(/^data:[^;]+;base64,/, "");
+}
+function isSupabaseHttpsUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (host.endsWith(".supabase.co") || host.endsWith(".supabase.in")) return true;
+    const configured = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+    if (!configured) return false;
+    return new URL(configured).hostname.toLowerCase() === host;
+  } catch {
+    return false;
+  }
+}
+async function urlParaModelo(opts) {
+  if (opts.url && isSupabaseHttpsUrl(opts.url)) {
+    const looksPdf = (opts.mime ?? "").includes("pdf") || /\.pdf(\?|$)/i.test(opts.url);
+    if (!looksPdf) return opts.url;
+    const inline = await baixarMidiaPermitida(opts.url);
+    if (!inline) return null;
+    return `data:${inline.mime};base64,${inline.data}`;
+  }
+  if (!opts.b64) return null;
+  const raw = stripDataUrl(opts.b64);
+  if (!raw || raw.length > MAX_B64_CHARS) return null;
+  const mime = opts.mime || detectMime(raw);
+  return `data:${mime};base64,${raw}`;
+}
+async function baixarMidiaPermitida(url) {
+  if (!isSupabaseHttpsUrl(url)) return null;
+  const response = await fetch(url);
+  if (!response.ok) return null;
+  const buf = Buffer.from(await response.arrayBuffer());
+  if (buf.length === 0 || buf.length > MAX_BYTES) return null;
+  const mime = (response.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
+  return { data: buf.toString("base64"), mime };
+}
+
+// src/server/motor-leitura.ts
 var SYSTEM_VISION = `Voc\xEA \xE9 especialista em leitura de plantas baixas residenciais brasileiras.
 Extraia com precis\xE3o as dimens\xF5es do ambiente e a posi\xE7\xE3o de cada porta e janela.
 RETORNE APENAS JSON v\xE1lido (sem markdown):
@@ -7127,7 +7172,7 @@ REGRAS:
 - "parede": top (fundo), bottom (entrada), left, right \u2014 vista de cima
 - "x_pct": posi\xE7\xE3o do centro do elemento ao longo da parede, 0.0 a 1.0
 - "altura_cm": p\xE9-direito; se n\xE3o estiver claro, use 270`;
-async function analisarComIA(planta_b64, descricao) {
+async function analisarComIA(imagemUrl, descricao) {
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) throw new Error("OPENAI_API_KEY n\xE3o configurada");
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -7141,7 +7186,7 @@ async function analisarComIA(planta_b64, descricao) {
           role: "user",
           content: [
             { type: "text", text: `Analise esta planta baixa${descricao ? ` (${descricao})` : ""}. Extraia dimens\xF5es e posi\xE7\xF5es de portas e janelas.` },
-            { type: "image_url", image_url: { url: `data:${detectMime(planta_b64)};base64,${planta_b64}`, detail: "high" } }
+            { type: "image_url", image_url: { url: imagemUrl, detail: "high" } }
           ]
         }
       ],
@@ -7162,8 +7207,10 @@ async function lerPlantaHandler(req, res) {
   try {
     const inicio = Date.now();
     let planta_ia;
-    if ((body.formato === "imagem" || body.formato === "pdf") && body.planta_b64) {
-      planta_ia = await analisarComIA(body.planta_b64, body.ambiente_descricao);
+    if ((body.formato === "imagem" || body.formato === "pdf") && (body.planta_b64 || body.planta_url)) {
+      const imagemUrl = await urlParaModelo({ url: body.planta_url, b64: body.planta_b64 });
+      if (!imagemUrl) return res.status(400).json({ error: "N\xE3o foi poss\xEDvel ler a planta." });
+      planta_ia = await analisarComIA(imagemUrl, body.ambiente_descricao);
     }
     const resultado = interpretarPlanta({
       formato: body.formato,
@@ -7592,11 +7639,54 @@ async function chatHandler(req, res) {
   }
 }
 
+// src/server/require-user.ts
+import { createClient as createClient2 } from "@supabase/supabase-js";
+function header(req, name) {
+  const value = req.headers[name.toLowerCase()];
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+function readAccessToken(req) {
+  const raw = header(req, "authorization");
+  if (raw) {
+    const match = raw.match(/^Bearer\s+(\S+)/i);
+    if (match?.[1]) return match[1].trim();
+  }
+  const body = req.body;
+  const fromBody = body?.userToken ?? body?.user_token;
+  if (typeof fromBody === "string" && fromBody.trim()) return fromBody.trim();
+  return null;
+}
+async function requireUser(req, res) {
+  const token = readAccessToken(req);
+  if (!token) {
+    res.status(401).json({ error: "N\xE3o autenticado" });
+    return null;
+  }
+  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    res.status(500).json({ error: "Supabase n\xE3o configurado" });
+    return null;
+  }
+  const sb = createClient2(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  const { data, error } = await sb.auth.getUser(token);
+  if (error || !data.user) {
+    res.status(401).json({ error: "N\xE3o autenticado" });
+    return null;
+  }
+  return { id: data.user.id, token };
+}
+
 // src/server/motor-entry.ts
 async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
+  const auth = await requireUser(req, res);
+  if (!auth) return;
   const body = req.body ?? {};
   const acao = req.query.action ?? body.action;
   switch (acao) {
